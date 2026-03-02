@@ -24,6 +24,7 @@ debugging/
 .agents/
 skills-lock.json
 category_changes_*/
+icons/
 
 # Editor directories and files
 .vscode/*
