@@ -21,8 +21,11 @@ export default function GoalsView({
     name: "",
     targetAmount: "",
     deadline: "",
-    type: "pot",
-    linkedId: pots[0]?.id || "reserve",
+    potId: pots[0]?.id || "",
+    transferCategory: "",       // "" = Topf-Gesamtstand
+    startMode: "zero",          // "zero" | "date" | "custom"
+    startDate: "",
+    startAmount: "",
   });
 
   // Berechne Fortschritt und Prognose für alle Ziele
@@ -40,8 +43,11 @@ export default function GoalsView({
       name: "",
       targetAmount: "",
       deadline: "",
-      type: "pot",
-      linkedId: pots[0]?.id || "reserve",
+      potId: pots[0]?.id || "",
+      transferCategory: "",
+      startMode: "zero",
+      startDate: "",
+      startAmount: "",
     });
     setDialogOpen(true);
   }
@@ -52,8 +58,11 @@ export default function GoalsView({
       name: goal.name || "",
       targetAmount: String(goal.targetAmount || ""),
       deadline: goal.deadline || "",
-      type: goal.type || "pot",
-      linkedId: goal.linkedId || pots[0]?.id || "reserve",
+      potId: goal.potId || pots[0]?.id || "",
+      transferCategory: goal.transferCategory || "",
+      startMode: goal.startMode || "zero",
+      startDate: goal.startDate || "",
+      startAmount: String(goal.startAmount || ""),
     });
     setDialogOpen(true);
   }
@@ -69,36 +78,32 @@ export default function GoalsView({
     const numericAmount = parseFloat(draft.targetAmount.replace(",", "."));
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
     if (!draft.name.trim()) return;
-    if (!draft.linkedId) return;
+    if (!draft.potId) return;
+
+    const goalData = {
+      name: draft.name.trim(),
+      targetAmount: numericAmount,
+      deadline: draft.deadline || null,
+      potId: draft.potId,
+      transferCategory: draft.transferCategory || null,
+      startMode: draft.startMode,
+      startDate: draft.startMode === "date" ? (draft.startDate || null) : null,
+      startAmount: draft.startMode === "custom"
+        ? (parseFloat(String(draft.startAmount).replace(",", ".")) || 0)
+        : 0,
+    };
 
     if (editingGoal) {
-      // Update existing goal
       const updatedGoals = goals.map((g) =>
-        g.id === editingGoal.id
-          ? {
-              ...g,
-              name: draft.name.trim(),
-              targetAmount: numericAmount,
-              deadline: draft.deadline || null,
-              type: draft.type,
-              linkedId: draft.linkedId,
-            }
-          : g
+        g.id === editingGoal.id ? { ...g, ...goalData } : g
       );
-
       onUpdateBook({ ...activeBook, goals: updatedGoals });
     } else {
-      // Create new goal
       const newGoal = {
         id: generateGoalId(),
-        name: draft.name.trim(),
-        targetAmount: numericAmount,
-        deadline: draft.deadline || null,
-        type: draft.type,
-        linkedId: draft.linkedId,
+        ...goalData,
         createdAt: todayISO(),
       };
-
       onUpdateBook({ ...activeBook, goals: [...goals, newGoal] });
     }
 
@@ -107,14 +112,11 @@ export default function GoalsView({
 
   function deleteGoal(goalId) {
     if (!activeBook) return;
-
     const goal = goals.find((g) => g.id === goalId);
     const msg = goal
-      ? `Sparziel "${goal.name}" wirklich loschen?`
-      : "Sparziel wirklich loschen?";
-
+      ? `Sparziel "${goal.name}" wirklich löschen?`
+      : "Sparziel wirklich löschen?";
     if (!window.confirm(msg)) return;
-
     const updatedGoals = goals.filter((g) => g.id !== goalId);
     onUpdateBook({ ...activeBook, goals: updatedGoals });
   }
@@ -123,28 +125,14 @@ export default function GoalsView({
     if (!draft.name.trim()) return false;
     const n = parseFloat(draft.targetAmount.replace(",", "."));
     if (!Number.isFinite(n) || n <= 0) return false;
-    if (!draft.linkedId) return false;
+    if (!draft.potId) return false;
+    if (draft.startMode === "date" && !draft.startDate) return false;
     return true;
   }, [draft]);
 
-  // Optionen für die Verknüpfung
-  const linkOptions = useMemo(() => {
-    if (draft.type === "pot") {
-      return pots.map((p) => ({ id: p.id, name: p.name }));
-    } else {
-      return transferCategories.map((cat) => ({ id: cat, name: cat }));
-    }
-  }, [draft.type, pots, transferCategories]);
-
-  // Wenn Typ wechselt, erste Option als default setzen
-  function handleTypeChange(newType) {
-    let newLinkedId = "";
-    if (newType === "pot") {
-      newLinkedId = pots[0]?.id || "";
-    } else {
-      newLinkedId = transferCategories[0] || "";
-    }
-    setDraft((d) => ({ ...d, type: newType, linkedId: newLinkedId }));
+  function getPotName(goal) {
+    const pot = pots.find((p) => p.id === goal.potId);
+    return pot ? pot.name : goal.potId || "—";
   }
 
   function formatDate(dateStr) {
@@ -161,12 +149,16 @@ export default function GoalsView({
     }
   }
 
-  function getLinkedName(goal) {
-    if (goal.type === "pot") {
-      const pot = pots.find((p) => p.id === goal.linkedId);
-      return pot ? pot.name : goal.linkedId;
+  function getStartModeLabel(goal) {
+    switch (goal.startMode) {
+      case "date":
+        return `Ab ${formatDate(goal.startDate)}`;
+      case "custom":
+        return `Anfangsbetrag: ${toCHF(goal.startAmount || 0)}`;
+      case "zero":
+      default:
+        return "Ab Null (alle Buchungen)";
     }
-    return goal.linkedId;
   }
 
   return (
@@ -201,14 +193,20 @@ export default function GoalsView({
                   <div>
                     <h3 style={{ margin: 0, fontSize: 16 }}>{goal.name}</h3>
                     <div className="hb-muted" style={{ marginTop: 4 }}>
-                      {goal.type === "pot" ? "Topf" : "Transfer-Zweck"}:{" "}
-                      <strong>{getLinkedName(goal)}</strong>
-                      {goal.deadline && (
+                      Topf: <strong>{getPotName(goal)}</strong>
+                      {goal.transferCategory && (
                         <>
-                          {" "}
-                          | Deadline: <strong>{formatDate(goal.deadline)}</strong>
+                          {" "} | Zweck: <strong>{goal.transferCategory}</strong>
                         </>
                       )}
+                      {goal.deadline && (
+                        <>
+                          {" "} | Deadline: <strong>{formatDate(goal.deadline)}</strong>
+                        </>
+                      )}
+                    </div>
+                    <div className="hb-muted" style={{ fontSize: 11, marginTop: 2 }}>
+                      {getStartModeLabel(goal)}
                     </div>
                   </div>
 
@@ -217,7 +215,7 @@ export default function GoalsView({
                       Bearbeiten
                     </Button>
                     <Button variant="outline" onClick={() => deleteGoal(goal.id)}>
-                      Loschen
+                      Löschen
                     </Button>
                   </div>
                 </div>
@@ -308,7 +306,7 @@ export default function GoalsView({
                       </>
                     ) : (
                       <span className="hb-muted">
-                        Noch keine Daten fur Prognose vorhanden. Buche Transfers, um eine
+                        Noch keine Daten für Prognose vorhanden. Buche Transfers, um eine
                         Prognose zu erhalten.
                       </span>
                     )}
@@ -319,14 +317,14 @@ export default function GoalsView({
                   <div
                     style={{
                       padding: "10px 12px",
-                      background: "rgba(89, 161, 79, 0.1)",
+                      background: "var(--green-soft)",
                       borderRadius: 6,
                       marginTop: 8,
                       color: "var(--green)",
                       fontWeight: 600,
                     }}
                   >
-                    Ziel erreicht! Herzlichen Gluckwunsch!
+                    Ziel erreicht! Herzlichen Glückwunsch!
                   </div>
                 )}
               </CardContent>
@@ -377,44 +375,84 @@ export default function GoalsView({
               value={draft.deadline}
               onChange={(e) => setDraft((d) => ({ ...d, deadline: e.target.value }))}
             />
-            <div className="hb-muted" style={{ marginTop: 4 }}>
-              Optional: Bis wann mochtest du das Ziel erreichen?
-            </div>
           </div>
 
           <div className="hb-field">
-            <div className="hb-label">Typ</div>
+            <div className="hb-label">Spartopf</div>
             <select
               className="hb-input"
-              value={draft.type}
-              onChange={(e) => handleTypeChange(e.target.value)}
+              value={draft.potId}
+              onChange={(e) => setDraft((d) => ({ ...d, potId: e.target.value }))}
             >
-              <option value="pot">Topf (Gesamtstand)</option>
-              <option value="category">Transfer-Zweck (Kategorie-Summe)</option>
-            </select>
-            <div className="hb-muted" style={{ marginTop: 4 }}>
-              {draft.type === "pot"
-                ? "Misst den aktuellen Stand eines Topfes (Einzahlungen - Entnahmen)"
-                : "Misst die Summe aller Transfers mit diesem Zweck"}
-            </div>
-          </div>
-
-          <div className="hb-field">
-            <div className="hb-label">
-              {draft.type === "pot" ? "Verknupfter Topf" : "Verknupfter Transfer-Zweck"}
-            </div>
-            <select
-              className="hb-input"
-              value={draft.linkedId}
-              onChange={(e) => setDraft((d) => ({ ...d, linkedId: e.target.value }))}
-            >
-              {linkOptions.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.name}
-                </option>
+              {pots.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
           </div>
+
+          <div className="hb-field">
+            <div className="hb-label">Transfer-Zweck (optional)</div>
+            <select
+              className="hb-input"
+              value={draft.transferCategory}
+              onChange={(e) => setDraft((d) => ({ ...d, transferCategory: e.target.value }))}
+            >
+              <option value="">Alle (Topf-Gesamtstand)</option>
+              {transferCategories.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+            <div className="hb-muted" style={{ marginTop: 4 }}>
+              {draft.transferCategory
+                ? "Nur Transfers mit diesem Zweck werden gezählt"
+                : "Der gesamte Topf-Stand wird gemessen (Einzahlungen - Entnahmen)"}
+            </div>
+          </div>
+
+          <div className="hb-field">
+            <div className="hb-label">Startpunkt</div>
+            <select
+              className="hb-input"
+              value={draft.startMode}
+              onChange={(e) => setDraft((d) => ({ ...d, startMode: e.target.value }))}
+            >
+              <option value="zero">Ab Null (alle Buchungen zählen)</option>
+              <option value="date">Ab bestimmtem Datum</option>
+              <option value="custom">Manueller Anfangsbetrag</option>
+            </select>
+          </div>
+
+          {draft.startMode === "date" && (
+            <div className="hb-field">
+              <div className="hb-label">Startdatum</div>
+              <input
+                className="hb-input"
+                type="date"
+                value={draft.startDate}
+                onChange={(e) => setDraft((d) => ({ ...d, startDate: e.target.value }))}
+              />
+              <div className="hb-muted" style={{ marginTop: 4 }}>
+                Nur Buchungen ab diesem Datum werden berücksichtigt
+              </div>
+            </div>
+          )}
+
+          {draft.startMode === "custom" && (
+            <div className="hb-field">
+              <div className="hb-label">Anfangsbetrag (CHF)</div>
+              <input
+                className="hb-input"
+                type="text"
+                inputMode="decimal"
+                placeholder="z.B. 500"
+                value={draft.startAmount}
+                onChange={(e) => setDraft((d) => ({ ...d, startAmount: e.target.value }))}
+              />
+              <div className="hb-muted" style={{ marginTop: 4 }}>
+                Dieser Betrag wird als Startbasis zum berechneten Fortschritt addiert
+              </div>
+            </div>
+          )}
         </div>
       </EditDialog>
     </div>

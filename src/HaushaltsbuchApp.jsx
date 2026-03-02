@@ -5,6 +5,8 @@ import "./styles/haushaltsbuch.css";
 import { Button, Card, CardContent } from "./components/ui.jsx";
 import EditDialog from "./components/EditDialog.jsx";
 import CategoryPicker from "./components/CategoryPicker.jsx";
+import { HierarchicalCategoryPicker } from "./components/HierarchicalCategoryPicker.jsx";
+import CategoryManagerDialog from "./components/CategoryManagerDialog.jsx";
 
 import SettingsDialog from "./features/SettingsDialog.jsx";
 import Charts from "./features/Charts.jsx";
@@ -16,11 +18,11 @@ import FixedCostsView from "./features/FixedCostsView.jsx";
 import NavDrawer from "./features/NavDrawer.jsx";
 import InvestmentsView from "./features/InvestmentsView.jsx";
 
-import { toCHF, todayISO, parseAmount, makeDefaultBook, normalizeBooks, getCategoryNames } from "./utils/hbUtils.js";
-import { PIE_PALETTE, makeCategoryColorMap, CHART_COLORS } from "./utils/hbPalette.js";
+import { toCHF, todayISO, parseAmount, makeDefaultBook, normalizeBooks, getCategoryNames, DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./utils/hbUtils.js";
 import { calcPotBalance } from "./utils/potUtils.js";
 import { calcExpenseByCategory, calcBudgetStatus } from "./utils/budgetUtils.js";
 import { loadBooks, saveBooks, getSetting, setSetting } from "./dal/storage.js";
+import { useCategoryStats } from "./hooks/useCategoryStats.js";
 
 export default function HaushaltsbuchApp() {
   // Dark Mode
@@ -39,11 +41,30 @@ export default function HaushaltsbuchApp() {
   const [category, setCategory] = useState("Allgemein");
   const [kind, setKind] = useState("expense"); // NEU: war "type"
   const [source, setSource] = useState("month"); // NEU
-  const [potId, setPotId] = useState("reserve"); // NEU: Standard-Topf
+  const [potId, setPotId] = useState(""); // wird per useEffect auf ersten verfügbaren Topf gesetzt
   const [note, setNote] = useState("");
-  const [date, setDate] = useState(todayISO());
+  const [date, setDate] = useState(() => todayISO());
   const [newCategory, setNewCategory] = useState("");
   const [monthFilter, setMonthFilter] = useState("");
+
+  // Hierarchische Kategorien (Phase 3)
+  const [categoryId, setCategoryId] = useState("cat_unkategorisiert");
+  const [subcategoryId, setSubcategoryId] = useState(null);
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+
+  // Dialog: Buchung hinzufügen
+  const [addEntryOpen, setAddEntryOpen] = useState(false);
+
+  function closeAddEntry() {
+    setAddEntryOpen(false);
+    setAmount("");
+    setNote("");
+    setDate(todayISO());
+    setKind("expense");
+    setSource("month");
+    setCategoryId("cat_unkategorisiert");
+    setSubcategoryId(null);
+  }
 
   // Dialog: Eintrag bearbeiten
   const [editOpen, setEditOpen] = useState(false);
@@ -52,8 +73,10 @@ export default function HaushaltsbuchApp() {
     date: todayISO(),
     kind: "expense",
     source: "month",
-    potId: "reserve",
+    potId: "",
     category: "Allgemein",
+    categoryId: null,
+    subcategoryId: null,
     note: "",
     amount: "",
   });
@@ -72,7 +95,9 @@ export default function HaushaltsbuchApp() {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    setSetting('darkMode', String(darkMode));
+    if (!isInitialLoad.current) {
+      setSetting('darkMode', String(darkMode));
+    }
   }, [darkMode]);
 
   // Laden (async für Electron-Kompatibilität)
@@ -132,6 +157,15 @@ export default function HaushaltsbuchApp() {
     return books.find((b) => b.id === activeBookId) || books[0] || null;
   }, [books, activeBookId]);
 
+  // potId synchronisieren: falls aktueller Topf nicht mehr existiert, ersten verfügbaren wählen
+  useEffect(() => {
+    const pots = activeBook?.pots || [];
+    if (pots.length === 0) { setPotId(""); return; }
+    if (!pots.some((p) => p.id === potId)) {
+      setPotId(pots[0].id);
+    }
+  }, [activeBook?.pots]);
+
   const entries = activeBook?.entries || [];
   const indicateCategories = activeBook?.categories || [{ name: "Allgemein", budget: null }];
   const indicateCategoryNames = useMemo(() => getCategoryNames(indicateCategories), [indicateCategories]);
@@ -180,13 +214,28 @@ export default function HaushaltsbuchApp() {
     }
   }, [activeBookId, activeBook, indicateCategoryNames, indicateTransferCategories, category, kind]);
 
+  // Kategorie-Reset wenn kind wechselt
+  useEffect(() => {
+    if (kind === "expense") {
+      setCategoryId("cat_unkategorisiert");
+      setSubcategoryId(null);
+    } else if (kind === "income") {
+      setCategoryId("cat_einnahmen");
+      setSubcategoryId(null);
+    } else {
+      // transfer, withdrawal
+      setCategoryId(null);
+      setSubcategoryId(null);
+    }
+  }, [kind]);
+
   // Buch actions
   function createBook() {
     const name = newBookName.trim() || "Neues Haushaltsbuch";
     const b = makeDefaultBook(name);
     setBooks((prev) => [...prev, b]);
     setActiveBookId(b.id);
-    setCategory(b.categories[0]?.name || "Allgemein");
+    setCategory("Allgemein");
     setNewBookOpen(false);
     setView("book");
   }
@@ -275,20 +324,36 @@ export default function HaushaltsbuchApp() {
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
     if (!date) return;
 
+    // Rückwärtskompatibles category-String-Feld
+    let legacyCategory = category;
+    if (kind === "expense") {
+      legacyCategory =
+        (activeBook.expenseCategories || DEFAULT_EXPENSE_CATEGORIES).find(
+          (c) => c.id === categoryId
+        )?.name || "";
+    } else if (kind === "income") {
+      legacyCategory =
+        (activeBook.incomeCategories || DEFAULT_INCOME_CATEGORIES).find(
+          (c) => c.id === categoryId
+        )?.name || "";
+    }
+
     const entry = {
       id: Date.now(),
       amount: numericAmount,
-      category,
+      category: kind === "withdrawal" ? null : legacyCategory,
       kind,
       note: note.trim(),
       date,
+      categoryId: (kind === "expense" || kind === "income") ? categoryId : null,
+      subcategoryId: (kind === "expense" || kind === "income") ? subcategoryId : null,
     };
 
     if (kind === "expense") {
-      entry.source = source;
+      entry.source = "month";
     }
 
-    if (kind === "transfer" || (kind === "expense" && source === "pot")) {
+    if (kind === "transfer" || kind === "withdrawal") {
       entry.potId = potId;
     }
 
@@ -311,7 +376,7 @@ export default function HaushaltsbuchApp() {
     let prettyType = "Ausgabe";
     if (target?.kind === "income") prettyType = "Einnahme";
     else if (target?.kind === "transfer") prettyType = "Transfer";
-    else if (target?.kind === "expense" && target?.source === "pot") prettyType = "Ausgabe (Topf)";
+    else if (target?.kind === "withdrawal") prettyType = "Entnahme";
     
     const prettyAmount = target ? toCHF(Number(target.amount || 0)) : "";
 
@@ -372,6 +437,8 @@ Notiz: ${target.note}` : ""}`
       source: entry.source || "month",
       potId: entry.potId || "reserve",
       category: entry.category || "Allgemein",
+      categoryId: entry.categoryId ?? null,
+      subcategoryId: entry.subcategoryId ?? null,
       note: entry.note || "",
       amount: String(entry.amount ?? ""),
     });
@@ -396,22 +463,38 @@ Notiz: ${target.note}` : ""}`
       entries: (b.entries || []).map((e) => {
         if (e.id !== editingId) return e;
 
+        // Rückwärtskompatibles category-String-Feld für Edit
+        let legacyCat = editDraft.category;
+        if (editDraft.kind === "expense") {
+          legacyCat =
+            (activeBook.expenseCategories || DEFAULT_EXPENSE_CATEGORIES).find(
+              (c) => c.id === editDraft.categoryId
+            )?.name || editDraft.category;
+        } else if (editDraft.kind === "income") {
+          legacyCat =
+            (activeBook.incomeCategories || DEFAULT_INCOME_CATEGORIES).find(
+              (c) => c.id === editDraft.categoryId
+            )?.name || editDraft.category;
+        }
+
         const updated = {
           ...e,
           date: editDraft.date,
           kind: editDraft.kind,
-          category: editDraft.category,
+          category: editDraft.kind === "withdrawal" ? null : legacyCat,
+          categoryId: (editDraft.kind === "expense" || editDraft.kind === "income") ? (editDraft.categoryId ?? null) : null,
+          subcategoryId: (editDraft.kind === "expense" || editDraft.kind === "income") ? (editDraft.subcategoryId ?? null) : null,
           note: String(editDraft.note || "").trim(),
           amount: numericAmount,
         };
 
         if (editDraft.kind === "expense") {
-          updated.source = editDraft.source;
+          updated.source = "month";
         } else {
           delete updated.source;
         }
 
-        if (editDraft.kind === "transfer" || (editDraft.kind === "expense" && editDraft.source === "pot")) {
+        if (editDraft.kind === "transfer" || editDraft.kind === "withdrawal") {
           updated.potId = editDraft.potId;
         } else {
           delete updated.potId;
@@ -425,12 +508,27 @@ Notiz: ${target.note}` : ""}`
     setEditingId(null);
   }
 
+  const canAddEntry = useMemo(() => {
+    if (!date) return false;
+    const n = parseAmount(amount);
+    if (!Number.isFinite(n) || n <= 0) return false;
+    if (kind === "transfer" && !category) return false;
+    if (kind === "withdrawal" && !potId) return false;
+    return true;
+  }, [date, amount, kind, category, potId]);
+
+  function handleAddEntry() {
+    addEntry();
+    closeAddEntry();
+  }
+
   const canSaveEdit = useMemo(() => {
     if (!editDraft.date) return false;
     const n = parseAmount(editDraft.amount);
     if (!Number.isFinite(n) || n <= 0) return false;
-    if (!editDraft.category) return false;
     if (!editDraft.kind) return false;
+    // Transfer: needs the legacy category string; income/expense: needs categoryId
+    if (editDraft.kind === "transfer" && !editDraft.category) return false;
     return true;
   }, [editDraft]);
 
@@ -464,51 +562,19 @@ Notiz: ${target.note}` : ""}`
 
   const balance = totalIncome - totalExpense - totalTransfers;
 
-  const expenseCategories = useMemo(() => {
-    const set = new Set(
-      filteredEntries
-        .filter((e) => e.kind === "expense" && e.source === "month")
-        .map((e) => String(e.category || "").trim())
-        .filter(Boolean)
-    );
-    return Array.from(set);
-  }, [filteredEntries]);
-
-  const expenseByCategory = useMemo(() => {
-    return expenseCategories
-      .map((cat) => ({
-        name: cat,
-        value: filteredEntries
-          .filter((e) => e.kind === "expense" && e.source === "month" && e.category === cat)
-          .reduce((sum, e) => sum + Number(e.amount || 0), 0),
-      }))
-      .filter((d) => d.value > 0);
-  }, [expenseCategories, filteredEntries]);
-
   const totalPotTransfers = useMemo(() => {
     return filteredEntries
       .filter((e) => e.kind === "transfer")
       .reduce((sum, e) => sum + Number(e.amount || 0), 0);
   }, [filteredEntries]);
 
-  const pieData = useMemo(() => {
-    const data = totalPotTransfers > 0
-      ? [...expenseByCategory, { name: "Rücklagen", value: totalPotTransfers }]
-      : expenseByCategory;
-    return [...data].sort((a, b) => b.value - a.value);
-  }, [expenseByCategory, totalPotTransfers]);
-
-  const catColor = useMemo(() => {
-    const names = pieData.map((d) => d.name);
-    return makeCategoryColorMap(names, PIE_PALETTE);
-  }, [pieData]);
-
-  const barData = useMemo(() => {
-    return [
-      { name: "Einnahmen", value: totalIncome, fill: CHART_COLORS.income },
-      { name: "Ausgaben", value: totalExpense, fill: CHART_COLORS.expense },
-    ];
-  }, [totalIncome, totalExpense]);
+  // Hierarchische Kategorie-Statistiken (Phase 4)
+  const { expenseByHierarchy, incomeByHierarchy } = useCategoryStats(
+    filteredEntries,
+    activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES,
+    activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES,
+    monthFilter
+  );
 
   // NEU: Topf-Stände berechnen
   const potBalances = useMemo(() => {
@@ -656,7 +722,11 @@ Notiz: ${target.note}` : ""}`
               onClick={() => setDarkMode(!darkMode)}
               aria-label={darkMode ? 'Light Mode' : 'Dark Mode'}
             >
-              {darkMode ? '\u2600' : '\u263E'}
+              <img
+                src={darkMode ? '/icons/brightmode.svg' : '/icons/darkmode.svg'}
+                alt={darkMode ? 'Light Mode' : 'Dark Mode'}
+                className="hb-icon-svg"
+              />
             </button>
 
             <button
@@ -666,7 +736,7 @@ Notiz: ${target.note}` : ""}`
               onClick={() => setSettingsOpen(true)}
               aria-label="Einstellungen"
             >
-              ⚙
+              <img src="/icons/settings.svg" alt="Einstellungen" className="hb-icon-svg" />
             </button>
           </div>
         </div>
@@ -715,131 +785,165 @@ Notiz: ${target.note}` : ""}`
         />
       ) : (
         <>
-          <Card style={{ marginBottom: 16 }}>
-            <CardContent>
-              <div className="hb-form">
-                <div className="hb-field">
-                  <div className="hb-label">Datum</div>
-                  <input
-                    className="hb-input"
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                  />
-                </div>
+          <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+            <Button onClick={() => setAddEntryOpen(true)}>
+              Buchung hinzufügen
+            </Button>
+            <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
+              Kategorien bearbeiten
+            </Button>
+          </div>
 
-                <div className="hb-field">
-                  <div className="hb-label">Betrag</div>
-                  <input
-                    className="hb-input"
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="z.B. 12.50"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                  />
-                </div>
+          <EditDialog
+            open={addEntryOpen}
+            title="Buchung hinzufügen"
+            onClose={closeAddEntry}
+            onSave={handleAddEntry}
+            canSave={canAddEntry}
+            saveLabel="Hinzufügen"
+            size="wide"
+          >
+            <div className="hb-two" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="hb-field">
+                <div className="hb-label">Datum</div>
+                <input
+                  className="hb-input"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </div>
 
-                {/* Kategorie: je nach Art unterschiedliche Listen */}
-                {kind === "income" ? (
-                  <div className="hb-field hb-field-category">
-                    <div className="hb-label">Kategorie</div>
+              <div className="hb-field">
+                <div className="hb-label">Betrag</div>
+                <input
+                  className="hb-input"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="z.B. 12.50"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+              </div>
+
+              <div className="hb-field">
+                <div className="hb-label">Art</div>
+                <select className="hb-input" value={kind} onChange={(e) => setKind(e.target.value)}>
+                  <option value="income">Einnahme</option>
+                  <option value="expense">Ausgabe</option>
+                  <option value="withdrawal">Entnahme</option>
+                  <option value="transfer">Transfer</option>
+                </select>
+              </div>
+
+              {kind === "expense" && (
+                <div className="hb-field">
+                  <div className="hb-label">Quelle</div>
+                  <input className="hb-input" type="text" value="Monatsbudget" disabled
+                    style={{ background: "var(--hover-bg)", color: "var(--muted)" }} />
+                </div>
+              )}
+
+              {kind === "withdrawal" && (
+                <div className="hb-field">
+                  <div className="hb-label">Aus Topf</div>
+                  <select className="hb-input" value={potId} onChange={(e) => setPotId(e.target.value)}>
+                    {(activeBook?.pots || []).map((pot) => (
+                      <option key={pot.id} value={pot.id}>
+                        {pot.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {kind === "transfer" && (
+                <div className="hb-field">
+                  <div className="hb-label">In Topf</div>
+                  <select className="hb-input" value={potId} onChange={(e) => setPotId(e.target.value)}>
+                    {(activeBook?.pots || []).map((pot) => (
+                      <option key={pot.id} value={pot.id}>
+                        {pot.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="hb-field" style={{ gridColumn: "1 / -1" }}>
+                <div className="hb-label">Notiz (optional)</div>
+                <input
+                  className="hb-input"
+                  type="text"
+                  placeholder="z.B. Migros, Abo, ..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </div>
+
+            </div>
+
+            {/* Kategorie-Auswahl: volle Breite unter den anderen Feldern */}
+            {kind === "expense" ? (
+              <div style={{ marginTop: 16 }}>
+                <HierarchicalCategoryPicker
+                  label="Kategorie"
+                  value={{ categoryId, subcategoryId }}
+                  categories={activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES}
+                  onChange={({ categoryId: cid, subcategoryId: sid }) => {
+                    setCategoryId(cid);
+                    setSubcategoryId(sid);
+                  }}
+                />
+              </div>
+            ) : kind === "income" ? (
+              <div style={{ marginTop: 16 }}>
+                <HierarchicalCategoryPicker
+                  label="Kategorie"
+                  value={{ categoryId, subcategoryId }}
+                  categories={activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES}
+                  onChange={({ categoryId: cid, subcategoryId: sid }) => {
+                    setCategoryId(cid);
+                    setSubcategoryId(sid);
+                  }}
+                />
+              </div>
+            ) : kind === "transfer" ? (
+              <div style={{ marginTop: 16 }}>
+                <CategoryPicker
+                  className="hb-field-category"
+                  label="Transfer-Zweck"
+                  value={category}
+                  categories={indicateTransferCategories}
+                  onChange={setCategory}
+                  onDelete={deleteTransferCategory}
+                  isDeletable={(cat) => indicateTransferCategories.includes(cat) && indicateTransferCategories.length > 1}
+                />
+
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-end", marginTop: 12 }}>
+                  <div className="hb-field" style={{ flex: 1 }}>
+                    <div className="hb-label">Neuer Transfer-Zweck</div>
                     <input
                       className="hb-input"
                       type="text"
-                      value="Allgemein"
-                      disabled
-                      style={{ background: "var(--hover-bg)", color: "var(--muted)" }}
+                      placeholder="Neuer Transfer-Zweck"
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
                     />
                   </div>
-                ) : kind === "transfer" ? (
-                  <CategoryPicker
-                    className="hb-field-category"
-                    label="Transfer-Zweck"
-                    value={category}
-                    categories={indicateTransferCategories}
-                    onChange={setCategory}
-                    onDelete={deleteTransferCategory}
-                    isDeletable={(cat) => indicateTransferCategories.includes(cat) && indicateTransferCategories.length > 1}
-                  />
-                ) : (
-                  <CategoryPicker
-                    className="hb-field-category"
-                    label="Kategorie"
-                    value={category}
-                    categories={indicateCategories}
-                    onChange={setCategory}
-                    onDelete={deleteCategory}
-                    isDeletable={isDeletableCategory}
-                  />
-                )}
-
-                <div className="hb-field">
-                  <div className="hb-label">Art</div>
-                  <select className="hb-input" value={kind} onChange={(e) => setKind(e.target.value)}>
-                    <option value="income">Einnahme</option>
-                    <option value="expense">Ausgabe</option>
-                    <option value="transfer">Transfer/Rücklage</option>
-                  </select>
-                </div>
-
-                {kind === "expense" && (
-                  <div className="hb-field">
-                    <div className="hb-label">Bezahlt aus</div>
-                    <select className="hb-input" value={source} onChange={(e) => setSource(e.target.value)}>
-                      <option value="month">Monatsbudget</option>
-                      <option value="pot">Topf</option>
-                    </select>
-                  </div>
-                )}
-
-                {(kind === "transfer" || (kind === "expense" && source === "pot")) && (
-                  <div className="hb-field">
-                    <div className="hb-label">{kind === "transfer" ? "In Topf" : "Aus Topf"}</div>
-                    <select className="hb-input" value={potId} onChange={(e) => setPotId(e.target.value)}>
-                      {(activeBook?.pots || []).map((pot) => (
-                        <option key={pot.id} value={pot.id}>
-                          {pot.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div className="hb-field hb-field-note" style={{ flex: 1, minWidth: 220 }}>
-                  <div className="hb-label">Notiz (optional)</div>
-                  <input
-                    className="hb-input"
-                    type="text"
-                    placeholder="z.B. Migros, Abo, ..."
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                  />
-                </div>
-
-                <Button onClick={addEntry}>Hinzufügen</Button>
-
-                <div className="hb-topline hb-full">
-                  <input
-                    className="hb-input"
-                    type="text"
-                    placeholder={kind === "transfer" ? "Neuer Transfer-Zweck" : "Neue Kategorie"}
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    style={{ minWidth: 260 }}
-                    disabled={kind === "income"}
-                  />
-                  <Button 
-                    variant="outline" 
-                    onClick={addCategory}
-                    disabled={kind === "income"}
-                  >
-                    {kind === "transfer" ? "Transfer-Zweck hinzufügen" : "Kategorie hinzufügen"}
+                  <Button variant="outline" onClick={addCategory}>
+                    Hinzufügen
                   </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            ) : null /* withdrawal: keine Kategorie */}
+
+            {!canAddEntry && amount ? (
+              <div style={{ marginTop: 10, color: "var(--red)", fontSize: 12 }}>
+                Bitte Datum & einen gültigen Betrag (&gt; 0) setzen.
+              </div>
+            ) : null}
+          </EditDialog>
 
           {/* NEU: 4 Kacheln statt 3 */}
           <Card style={{ marginBottom: 16 }}>
@@ -913,7 +1017,11 @@ Notiz: ${target.note}` : ""}`
             </Card>
           )}
 
-          <Charts expenseByCategory={pieData} catColor={catColor} toCHF={toCHF} barData={barData} />
+          <Charts
+            expenseByHierarchy={expenseByHierarchy}
+            incomeByHierarchy={incomeByHierarchy}
+            toCHF={toCHF}
+          />
 
           <EntriesTable
             entriesSorted={entriesSorted}
@@ -950,22 +1058,30 @@ Notiz: ${target.note}` : ""}`
                 >
                   <option value="income">Einnahme</option>
                   <option value="expense">Ausgabe</option>
-                  <option value="transfer">Transfer/Rücklage</option>
+                  <option value="withdrawal">Entnahme</option>
+                  <option value="transfer">Transfer</option>
                 </select>
               </div>
 
               {/* Kategorie: je nach Art unterschiedliche Listen */}
-              {editDraft.kind === "income" ? (
-                <div className="hb-field hb-field-category">
-                  <div className="hb-label">Kategorie</div>
-                  <input
-                    className="hb-input"
-                    type="text"
-                    value="Allgemein"
-                    disabled
-                    style={{ background: "var(--hover-bg)", color: "var(--muted)" }}
-                  />
-                </div>
+              {editDraft.kind === "expense" ? (
+                <HierarchicalCategoryPicker
+                  label="Kategorie"
+                  value={{ categoryId: editDraft.categoryId, subcategoryId: editDraft.subcategoryId }}
+                  categories={activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES}
+                  onChange={({ categoryId: cid, subcategoryId: sid }) =>
+                    setEditDraft((d) => ({ ...d, categoryId: cid, subcategoryId: sid }))
+                  }
+                />
+              ) : editDraft.kind === "income" ? (
+                <HierarchicalCategoryPicker
+                  label="Kategorie"
+                  value={{ categoryId: editDraft.categoryId, subcategoryId: editDraft.subcategoryId }}
+                  categories={activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES}
+                  onChange={({ categoryId: cid, subcategoryId: sid }) =>
+                    setEditDraft((d) => ({ ...d, categoryId: cid, subcategoryId: sid }))
+                  }
+                />
               ) : editDraft.kind === "transfer" ? (
                 <CategoryPicker
                   className="hb-field-category"
@@ -976,33 +1092,17 @@ Notiz: ${target.note}` : ""}`
                   onDelete={deleteTransferCategory}
                   isDeletable={(cat) => indicateTransferCategories.includes(cat) && indicateTransferCategories.length > 1}
                 />
-              ) : (
-                <CategoryPicker
-                  className="hb-field-category"
-                  label="Kategorie"
-                  value={editDraft.category}
-                  categories={indicateCategories}
-                  onChange={(cat) => setEditDraft((d) => ({ ...d, category: cat }))}
-                  onDelete={deleteCategory}
-                  isDeletable={isDeletableCategory}
-                />
-              )}
+              ) : null /* withdrawal: keine Kategorie */}
 
               {editDraft.kind === "expense" && (
                 <div className="hb-field">
-                  <div className="hb-label">Bezahlt aus</div>
-                  <select
-                    className="hb-input"
-                    value={editDraft.source}
-                    onChange={(e) => setEditDraft((d) => ({ ...d, source: e.target.value }))}
-                  >
-                    <option value="month">Monatsbudget</option>
-                    <option value="pot">Topf</option>
-                  </select>
+                  <div className="hb-label">Quelle</div>
+                  <input className="hb-input" type="text" value="Monatsbudget" disabled
+                    style={{ background: "var(--hover-bg)", color: "var(--muted)" }} />
                 </div>
               )}
 
-              {(editDraft.kind === "transfer" || (editDraft.kind === "expense" && editDraft.source === "pot")) && (
+              {(editDraft.kind === "transfer" || editDraft.kind === "withdrawal") && (
                 <div className="hb-field">
                   <div className="hb-label">{editDraft.kind === "transfer" ? "In Topf" : "Aus Topf"}</div>
                   <select
@@ -1088,6 +1188,19 @@ Notiz: ${target.note}` : ""}`
         onRestoreAll={restoreAll}
         activeBook={activeBook}
         onUpdateBook={updateBook}
+      />
+
+      <CategoryManagerDialog
+        open={categoryManagerOpen}
+        onClose={() => setCategoryManagerOpen(false)}
+        expenseCategories={activeBook?.expenseCategories || []}
+        incomeCategories={activeBook?.incomeCategories || []}
+        onUpdateExpenseCategories={(newCats) =>
+          patchActiveBook((b) => ({ ...b, expenseCategories: newCats }))
+        }
+        onUpdateIncomeCategories={(newCats) =>
+          patchActiveBook((b) => ({ ...b, incomeCategories: newCats }))
+        }
       />
     </div>
   );

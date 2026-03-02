@@ -42,13 +42,11 @@ export default function SettingsDialog({
       setPotDrafts(drafts);
     }
 
-    // Budget-Drafts initialisieren
-    if (open && activeBook?.categories) {
+    // Budget-Drafts initialisieren (aus expenseCategories, Oberkategorien)
+    if (open && activeBook?.expenseCategories) {
       const bDrafts = {};
-      activeBook.categories.forEach((cat) => {
-        const name = typeof cat === "string" ? cat : cat.name;
-        const budget = typeof cat === "object" ? cat.budget : null;
-        bDrafts[name] = budget ?? "";
+      activeBook.expenseCategories.forEach((cat) => {
+        bDrafts[cat.id] = cat.budget ?? "";
       });
       setBudgetDrafts(bDrafts);
     }
@@ -210,7 +208,7 @@ export default function SettingsDialog({
 
     // Zähle Verwendungen
     const usageCount = activeBook.entries.filter(
-      (e) => (e.kind === "transfer" || e.source === "pot") && e.potId === potId
+      (e) => (e.kind === "transfer" || e.kind === "withdrawal") && e.potId === potId
     ).length;
 
     const ok = window.confirm(
@@ -236,31 +234,30 @@ export default function SettingsDialog({
 
   // === KATEGORIE-BUDGETS ===
 
-  function updateBudgetDraft(categoryName, value) {
+  function updateBudgetDraft(categoryId, value) {
     setBudgetDrafts((prev) => ({
       ...prev,
-      [categoryName]: value,
+      [categoryId]: value,
     }));
   }
 
   function saveBudgets() {
-    if (!activeBook?.categories) return;
+    if (!activeBook?.expenseCategories) return;
 
-    const updatedCategories = activeBook.categories.map((cat) => {
-      const name = typeof cat === "string" ? cat : cat.name;
-      const draftValue = budgetDrafts[name];
+    const updatedExpenseCategories = activeBook.expenseCategories.map((cat) => {
+      const draftValue = budgetDrafts[cat.id];
       const budget =
         draftValue === "" || draftValue == null
           ? null
           : Math.max(0, Number(draftValue));
 
       return {
-        name,
+        ...cat,
         budget: Number.isFinite(budget) && budget > 0 ? budget : null,
       };
     });
 
-    onUpdateBook?.({ ...activeBook, categories: updatedCategories });
+    onUpdateBook?.({ ...activeBook, expenseCategories: updatedExpenseCategories });
     window.alert("Budgets gespeichert.");
   }
 
@@ -274,7 +271,7 @@ export default function SettingsDialog({
       saveLabel="Schließen"
     >
       <div className="hb-field">
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>Backup</div>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>Backup</div>
         <div className="hb-muted" style={{ marginBottom: 10 }}>
           Export erstellt eine .json Datei. Import überschreibt alle aktuellen Daten.
         </div>
@@ -304,7 +301,7 @@ export default function SettingsDialog({
 
       {/* NEU: TÖPFE-VERWALTUNG */}
       <div className="hb-field" style={{ marginTop: 24 }}>
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>Töpfe verwalten</div>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>Töpfe verwalten</div>
         <div className="hb-muted" style={{ marginBottom: 12 }}>
           Bearbeite die Namen deiner Töpfe.
         </div>
@@ -318,7 +315,7 @@ export default function SettingsDialog({
                   key={pot.id}
                   style={{
                     border: "1px solid var(--border)",
-                    borderRadius: 8,
+                    borderRadius: 6,
                     padding: 12,
                     background: "var(--hover-bg)",
                   }}
@@ -364,7 +361,7 @@ export default function SettingsDialog({
             <div
               style={{
                 border: "1px solid var(--border)",
-                borderRadius: 8,
+                borderRadius: 6,
                 padding: 12,
                 background: "var(--hover-bg)",
               }}
@@ -405,20 +402,19 @@ export default function SettingsDialog({
 
       {/* KATEGORIE-BUDGETS */}
       <div className="hb-field" style={{ marginTop: 24 }}>
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>Kategorie-Budgets</div>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>Kategorie-Budgets</div>
         <div className="hb-muted" style={{ marginBottom: 12 }}>
           Setze optionale monatliche Limits für deine Ausgaben-Kategorien.
         </div>
 
-        {activeBook?.categories?.length > 0 ? (
+        {activeBook?.expenseCategories?.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {activeBook.categories.map((cat) => {
-              const name = typeof cat === "string" ? cat : cat.name;
-              const draftValue = budgetDrafts[name] ?? "";
+            {activeBook.expenseCategories.map((cat) => {
+              const draftValue = budgetDrafts[cat.id] ?? "";
 
               return (
                 <div
-                  key={name}
+                  key={cat.id}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -428,7 +424,7 @@ export default function SettingsDialog({
                     borderRadius: 6,
                   }}
                 >
-                  <span style={{ flex: 1, fontWeight: 500 }}>{name}</span>
+                  <span style={{ flex: 1, fontWeight: 500 }}>{cat.name}</span>
                   <input
                     className="hb-input"
                     type="number"
@@ -436,7 +432,7 @@ export default function SettingsDialog({
                     step="50"
                     placeholder="kein Limit"
                     value={draftValue}
-                    onChange={(e) => updateBudgetDraft(name, e.target.value)}
+                    onChange={(e) => updateBudgetDraft(cat.id, e.target.value)}
                     style={{ width: 120, textAlign: "right" }}
                   />
                   <span className="hb-muted">CHF</span>

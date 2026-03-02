@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Button } from "./ui.jsx";
 
 export default function EditDialog({
@@ -9,7 +9,30 @@ export default function EditDialog({
   canSave,
   children,
   saveLabel,
+  size = "default",
+  hideFooter = false,
 }) {
+  const panelRef = useRef(null);
+
+  // Fokus ins Modal setzen wenn es öffnet (Electron braucht explizites focus management)
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => {
+      // Zuerst Electron-Window-Fokus sichern
+      window.focus();
+      // Dann erstes Input/Textarea/Select im Modal fokussieren
+      const firstFocusable = panelRef.current?.querySelector(
+        'input:not([disabled]), textarea:not([disabled]), select:not([disabled])'
+      );
+      if (firstFocusable) {
+        firstFocusable.focus();
+      } else {
+        panelRef.current?.focus();
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => {
@@ -34,7 +57,12 @@ export default function EditDialog({
       }}
     >
       <div className="hb-modal-overlay" />
-      <div className="hb-modal-panel">
+      <div
+        className={`hb-modal-panel${size === "medium" ? " hb-modal-panel-medium" : size === "wide" ? " hb-modal-panel-wide" : size === "full" ? " hb-modal-panel-full" : ""}`}
+        ref={panelRef}
+        tabIndex={-1}
+        style={{ outline: "none" }}
+      >
         <div className="hb-modal-head">
           <div>
             <div className="hb-modal-title">{title}</div>
@@ -47,14 +75,16 @@ export default function EditDialog({
 
         <div className="hb-modal-body">{children}</div>
 
-        <div className="hb-modal-foot">
-          <Button variant="outline" onClick={onClose}>
-            Abbrechen
-          </Button>
-          <Button onClick={onSave} disabled={!canSave}>
-            {saveLabel || "Speichern"}
-          </Button>
-        </div>
+        {!hideFooter && (
+          <div className="hb-modal-foot">
+            <Button variant="outline" onClick={onClose}>
+              Abbrechen
+            </Button>
+            <Button onClick={onSave} disabled={!canSave}>
+              {saveLabel || "Speichern"}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

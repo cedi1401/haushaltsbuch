@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
+import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
 import { generateRecurringId } from "../utils/recurringUtils.js";
-import { getCategoryNames } from "../utils/hbUtils.js";
+import { getCategoryLabel, DEFAULT_EXPENSE_CATEGORIES } from "../utils/hbUtils.js";
 
 export default function FixedCostsView({
   activeBook,
@@ -14,8 +15,8 @@ export default function FixedCostsView({
 }) {
   const recurringExpenses = activeBook?.recurringExpenses || [];
   const pots = activeBook?.pots || [];
-  const categories = activeBook?.categories || [];
-  const categoryNames = useMemo(() => getCategoryNames(categories), [categories]);
+  const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
+  const incomeCategories = activeBook?.incomeCategories || [];
   const transferCategories = activeBook?.transferCategories || [];
 
   // Dialog-State
@@ -25,9 +26,10 @@ export default function FixedCostsView({
     name: "",
     amount: "",
     kind: "expense",
-    category: categoryNames[0] || "Allgemein",
+    categoryId: "cat_unkategorisiert",
+    subcategoryId: null,
     transferCategory: transferCategories[0] || "Steuern",
-    potId: pots[0]?.id || "reserve",
+    potId: pots[0]?.id || "",
     active: true,
   });
 
@@ -55,9 +57,10 @@ export default function FixedCostsView({
       name: "",
       amount: "",
       kind: "expense",
-      category: categoryNames[0] || "Allgemein",
+      categoryId: "cat_unkategorisiert",
+      subcategoryId: null,
       transferCategory: transferCategories[0] || "Steuern",
-      potId: pots[0]?.id || "reserve",
+      potId: pots[0]?.id || "",
       active: true,
     });
     setDialogOpen(true);
@@ -69,9 +72,10 @@ export default function FixedCostsView({
       name: item.name || "",
       amount: String(item.amount || ""),
       kind: item.kind || "expense",
-      category: item.category || categoryNames[0] || "Allgemein",
+      categoryId: item.categoryId || "cat_unkategorisiert",
+      subcategoryId: item.subcategoryId || null,
       transferCategory: item.transferCategory || transferCategories[0] || "Steuern",
-      potId: item.potId || pots[0]?.id || "reserve",
+      potId: item.potId || pots[0]?.id || "",
       active: item.active !== false,
     });
     setDialogOpen(true);
@@ -98,7 +102,8 @@ export default function FixedCostsView({
               name: draft.name.trim(),
               amount: numericAmount,
               kind: draft.kind,
-              category: draft.kind === "expense" ? draft.category : undefined,
+              categoryId: draft.kind === "expense" ? draft.categoryId : undefined,
+              subcategoryId: draft.kind === "expense" ? (draft.subcategoryId || null) : undefined,
               transferCategory: draft.kind === "transfer" ? draft.transferCategory : undefined,
               potId: draft.kind === "transfer" ? draft.potId : undefined,
               active: draft.active,
@@ -118,7 +123,8 @@ export default function FixedCostsView({
       };
 
       if (draft.kind === "expense") {
-        newItem.category = draft.category;
+        newItem.categoryId = draft.categoryId;
+        newItem.subcategoryId = draft.subcategoryId || null;
       } else if (draft.kind === "transfer") {
         newItem.transferCategory = draft.transferCategory;
         newItem.potId = draft.potId;
@@ -160,7 +166,9 @@ export default function FixedCostsView({
       id: Date.now(),
       date: today,
       amount: item.amount,
-      category: item.kind === "expense" ? item.category : item.transferCategory,
+      category: item.kind === "transfer" ? item.transferCategory : undefined,
+      categoryId: item.kind === "expense" ? (item.categoryId || null) : null,
+      subcategoryId: item.kind === "expense" ? (item.subcategoryId || null) : null,
       kind: item.kind,
       note: item.name,
     };
@@ -186,7 +194,12 @@ export default function FixedCostsView({
 
   function getCategoryDisplay(item) {
     if (item.kind === "expense") {
-      return item.category || "Allgemein";
+      // Neues Format: categoryId vorhanden
+      if (item.categoryId) {
+        return getCategoryLabel(expenseCategories, incomeCategories, item.categoryId, item.subcategoryId);
+      }
+      // Legacy-Fallback: altes category-String-Feld
+      return item.category || "Unkategorisiert";
     } else if (item.kind === "transfer") {
       const potName = pots.find((p) => p.id === item.potId)?.name || item.potId;
       return `${item.transferCategory || "Transfer"} → ${potName}`;
@@ -206,12 +219,12 @@ export default function FixedCostsView({
             zIndex: 100,
             background: "var(--green)",
             color: "#fff",
-            padding: "12px 24px",
-            borderRadius: 8,
+            padding: "10px 20px",
+            borderRadius: 6,
             fontWeight: 600,
             fontSize: 14,
-            boxShadow: "var(--shadow-md)",
-            animation: "slideUp 0.25s ease-out",
+            boxShadow: "var(--shadow-lg)",
+            animation: "slideUp 0.2s ease-out",
           }}
         >
           &laquo;{bookedName}&raquo; wurde gebucht
@@ -330,36 +343,44 @@ export default function FixedCostsView({
         onSave={saveItem}
         canSave={canSave}
         saveLabel={editingItem ? "Speichern" : "Erstellen"}
+        size="medium"
       >
-        <div className="hb-form" style={{ flexDirection: "column", gap: 14 }}>
-          <div className="hb-field">
-            <div className="hb-label">Name</div>
-            <input
-              className="hb-input"
-              type="text"
-              placeholder="z.B. Spotify, Miete, Versicherung"
-              value={draft.name}
-              onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-              autoFocus
-            />
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
+          {/* Name + Betrag nebeneinander */}
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, width: "100%" }}>
+            <div className="hb-field">
+              <div className="hb-label">Name</div>
+              <input
+                className="hb-input"
+                style={{ width: "100%", minWidth: 0 }}
+                type="text"
+                placeholder="z.B. Spotify, Miete, Versicherung"
+                value={draft.name}
+                onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                autoFocus
+              />
+            </div>
+
+            <div className="hb-field">
+              <div className="hb-label">Betrag (CHF)</div>
+              <input
+                className="hb-input"
+                style={{ width: "100%", minWidth: 0 }}
+                type="text"
+                inputMode="decimal"
+                placeholder="z.B. 12.90"
+                value={draft.amount}
+                onChange={(e) => setDraft((d) => ({ ...d, amount: e.target.value }))}
+              />
+            </div>
           </div>
 
-          <div className="hb-field">
-            <div className="hb-label">Betrag (CHF)</div>
-            <input
-              className="hb-input"
-              type="text"
-              inputMode="decimal"
-              placeholder="z.B. 12.90"
-              value={draft.amount}
-              onChange={(e) => setDraft((d) => ({ ...d, amount: e.target.value }))}
-            />
-          </div>
-
-          <div className="hb-field">
+          {/* Art Dropdown — linksbündig */}
+          <div className="hb-field" style={{ alignSelf: "flex-start", maxWidth: 220 }}>
             <div className="hb-label">Art</div>
             <select
               className="hb-input"
+              style={{ width: "100%", minWidth: 0 }}
               value={draft.kind}
               onChange={(e) => setDraft((d) => ({ ...d, kind: e.target.value }))}
             >
@@ -368,21 +389,16 @@ export default function FixedCostsView({
             </select>
           </div>
 
+          {/* Kategorie-Auswahl: HierarchicalCategoryPicker statt Dropdown */}
           {draft.kind === "expense" && (
-            <div className="hb-field">
-              <div className="hb-label">Kategorie</div>
-              <select
-                className="hb-input"
-                value={draft.category}
-                onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}
-              >
-                {categoryNames.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <HierarchicalCategoryPicker
+              label="Kategorie"
+              value={{ categoryId: draft.categoryId, subcategoryId: draft.subcategoryId }}
+              categories={expenseCategories}
+              onChange={({ categoryId, subcategoryId }) =>
+                setDraft((d) => ({ ...d, categoryId, subcategoryId }))
+              }
+            />
           )}
 
           {draft.kind === "transfer" && (

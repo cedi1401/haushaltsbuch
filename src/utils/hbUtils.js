@@ -57,15 +57,7 @@ export const DEFAULT_POTS = [
   { id: "surplus", name: "Überschuss" },
 ];
 
-// Standard-Kategorien für Ausgaben (mit optionalem Budget)
-export const DEFAULT_CATEGORIES = [
-  { name: "Allgemein", budget: null },
-  { name: "Miete", budget: null },
-  { name: "Lebensmittel", budget: null },
-  { name: "Freizeit", budget: null },
-];
-
-// Standard-Kategorien für Transfers (Rücklagen-Zwecke)
+// Standard-Kategorien für Transfers
 export const DEFAULT_TRANSFER_CATEGORIES = [
   "Steuern",
   "KFZ-Versicherung",
@@ -73,17 +65,483 @@ export const DEFAULT_TRANSFER_CATEGORIES = [
   "Notgroschen",
 ];
 
-// Erstellt ein neues Haushaltsbuch mit Töpfen
+// ============================================
+// Rückwärtskompatibilität: altes flaches Format
+// ============================================
+
+// Wird noch beim Import alter Backups benötigt (Migration)
+export const DEFAULT_CATEGORIES = [
+  { name: "Allgemein", budget: null },
+  { name: "Miete", budget: null },
+  { name: "Lebensmittel", budget: null },
+  { name: "Freizeit", budget: null },
+];
+
+// ============================================
+// Hierarchische Standard-Kategorien (NEU)
+// ============================================
+
+export const DEFAULT_EXPENSE_CATEGORIES = [
+  {
+    id: "cat_wohnen",
+    name: "Wohnen",
+    color: "#0078d4",
+    type: "expense",
+    isDefault: true,
+    budget: null,
+    subcategories: [
+      { id: "sub_wohnnebenkosten", name: "Wohnnebenkosten", parentId: "cat_wohnen", isDefault: true },
+      { id: "sub_immobilienkredit", name: "Immobilienkredit", parentId: "cat_wohnen", isDefault: true },
+      { id: "sub_haushaltsdienstleistungen", name: "Haushaltsdienstleistungen", parentId: "cat_wohnen", isDefault: true },
+      { id: "sub_moebel_haushaltsgeraete", name: "Möbel und Haushaltsgeräte", parentId: "cat_wohnen", isDefault: true },
+      { id: "sub_miete_wohngeld", name: "Miete / Wohngeld", parentId: "cat_wohnen", isDefault: true },
+      { id: "sub_heimwerken_garten", name: "Heimwerken und Garten", parentId: "cat_wohnen", isDefault: true },
+      { id: "sub_strom", name: "Strom", parentId: "cat_wohnen", isDefault: true },
+      { id: "sub_gas", name: "Gas", parentId: "cat_wohnen", isDefault: true },
+      { id: "sub_oel", name: "Öl", parentId: "cat_wohnen", isDefault: true },
+    ],
+  },
+  {
+    id: "cat_versicherung",
+    name: "Versicherung",
+    color: "#7160e8",
+    type: "expense",
+    isDefault: true,
+    budget: null,
+    subcategories: [
+      { id: "sub_bu_versicherung", name: "Berufsunfähigkeitsversicherung", parentId: "cat_versicherung", isDefault: true },
+      { id: "sub_haftpflicht", name: "Haftpflichtversicherung", parentId: "cat_versicherung", isDefault: true },
+      { id: "sub_krankenversicherung", name: "Krankenversicherung", parentId: "cat_versicherung", isDefault: true },
+      { id: "sub_risiko_leben", name: "Risiko-Lebensversicherung", parentId: "cat_versicherung", isDefault: true },
+      { id: "sub_pflegeversicherung", name: "Pflegeversicherung", parentId: "cat_versicherung", isDefault: true },
+      { id: "sub_rechtsschutz", name: "Rechtsschutzversicherung", parentId: "cat_versicherung", isDefault: true },
+      { id: "sub_unfallversicherung", name: "Unfallversicherung", parentId: "cat_versicherung", isDefault: true },
+      { id: "sub_reiseversicherung", name: "Reiseversicherung", parentId: "cat_versicherung", isDefault: true },
+      { id: "sub_kranken_zusatz", name: "Kranken-Zusatzversicherung", parentId: "cat_versicherung", isDefault: true },
+      { id: "sub_hausratversicherung", name: "Hausratversicherung", parentId: "cat_versicherung", isDefault: true },
+      { id: "sub_wohngebaeudeversicherung", name: "Wohngebäudeversicherung", parentId: "cat_versicherung", isDefault: true },
+      { id: "sub_tierversicherung", name: "Tierversicherung", parentId: "cat_versicherung", isDefault: true },
+    ],
+  },
+  {
+    id: "cat_sparen",
+    name: "Sparen und Anlegen",
+    color: "#0f7b0f",
+    type: "expense",
+    isDefault: true,
+    budget: null,
+    subcategories: [
+      { id: "sub_wertpapieranlage", name: "Wertpapieranlage", parentId: "cat_sparen", isDefault: true },
+      { id: "sub_wertgegenstaende", name: "Wertgegenstände", parentId: "cat_sparen", isDefault: true },
+      { id: "sub_edelmetalle", name: "Edelmetalle", parentId: "cat_sparen", isDefault: true },
+      { id: "sub_krypto", name: "Krypto", parentId: "cat_sparen", isDefault: true },
+      { id: "sub_immobilien", name: "Immobilien", parentId: "cat_sparen", isDefault: true },
+    ],
+  },
+  {
+    id: "cat_shopping",
+    name: "Shopping und Unterhaltung",
+    color: "#9d5d00",
+    type: "expense",
+    isDefault: true,
+    budget: null,
+    subcategories: [
+      { id: "sub_buecher_zeitungen", name: "Bücher / Zeitungen / Zeitschriften", parentId: "cat_shopping", isDefault: true },
+      { id: "sub_tv_video_musik", name: "TV / Video / Musik", parentId: "cat_shopping", isDefault: true },
+      { id: "sub_bekleidung_schuhe", name: "Bekleidung / Schuhe / Accessoires", parentId: "cat_shopping", isDefault: true },
+      { id: "sub_geschenke", name: "Geschenke", parentId: "cat_shopping", isDefault: true },
+    ],
+  },
+  {
+    id: "cat_reisen",
+    name: "Reisen",
+    color: "#c42b1c",
+    type: "expense",
+    isDefault: true,
+    budget: null,
+    subcategories: [
+      { id: "sub_hotel_unterkunft", name: "Hotel und Unterkunft", parentId: "cat_reisen", isDefault: true },
+      { id: "sub_pauschalreise", name: "Pauschalreise", parentId: "cat_reisen", isDefault: true },
+      { id: "sub_reise_transport", name: "Transport", parentId: "cat_reisen", isDefault: true },
+    ],
+  },
+  {
+    id: "cat_mobilitaet",
+    name: "Mobilität",
+    color: "#ca5010",
+    type: "expense",
+    isDefault: true,
+    budget: null,
+    subcategories: [
+      { id: "sub_kfz_versicherung", name: "KFZ-Versicherung", parentId: "cat_mobilitaet", isDefault: true },
+      { id: "sub_tanken", name: "Tanken", parentId: "cat_mobilitaet", isDefault: true },
+      { id: "sub_kfz_kredit", name: "KFZ-Kredit / Leasingrate / KFZ-Kauf", parentId: "cat_mobilitaet", isDefault: true },
+      { id: "sub_kfz_sonstige", name: "KFZ Sonstige", parentId: "cat_mobilitaet", isDefault: true },
+    ],
+  },
+  {
+    id: "cat_lebenshaltung",
+    name: "Lebenshaltung",
+    color: "#038387",
+    type: "expense",
+    isDefault: true,
+    budget: null,
+    subcategories: [
+      { id: "sub_drogerie", name: "Drogerie", parentId: "cat_lebenshaltung", isDefault: true },
+      { id: "sub_festnetz_internet", name: "Festnetz und Internet", parentId: "cat_lebenshaltung", isDefault: true },
+      { id: "sub_handy", name: "Handy", parentId: "cat_lebenshaltung", isDefault: true },
+      { id: "sub_lebensmittel_zuhause", name: "Lebensmittel zu Hause", parentId: "cat_lebenshaltung", isDefault: true },
+      { id: "sub_lebensmittel_auswaerts", name: "Lebensmittel auswärts", parentId: "cat_lebenshaltung", isDefault: true },
+      { id: "sub_haustierbedarf", name: "Haustierbedarf", parentId: "cat_lebenshaltung", isDefault: true },
+      { id: "sub_haushaltsbedarf", name: "Haushaltsbedarf", parentId: "cat_lebenshaltung", isDefault: true },
+    ],
+  },
+  {
+    id: "cat_kinder",
+    name: "Kinder",
+    color: "#e3008c",
+    type: "expense",
+    isDefault: true,
+    budget: null,
+    subcategories: [
+      { id: "sub_spielwaren", name: "Spielwaren", parentId: "cat_kinder", isDefault: true },
+      { id: "sub_taschengeld", name: "Taschengeld / Unterhalt", parentId: "cat_kinder", isDefault: true },
+      { id: "sub_kinderbetreuung", name: "Kinderbetreuung", parentId: "cat_kinder", isDefault: true },
+    ],
+  },
+  {
+    id: "cat_gesundheit",
+    name: "Gesundheit und Wellness",
+    color: "#b4a00e",
+    type: "expense",
+    isDefault: true,
+    budget: null,
+    subcategories: [
+      { id: "sub_arznei_heilmittel", name: "Arznei- und Heilmittel", parentId: "cat_gesundheit", isDefault: true },
+      { id: "sub_wellness_beauty", name: "Wellness und Beauty", parentId: "cat_gesundheit", isDefault: true },
+      { id: "sub_arztbesuch", name: "Arztbesuch / Krankenhaus", parentId: "cat_gesundheit", isDefault: true },
+    ],
+  },
+  {
+    id: "cat_freizeit",
+    name: "Freizeit, Hobbies und Soziales",
+    color: "#498205",
+    type: "expense",
+    isDefault: true,
+    budget: null,
+    subcategories: [
+      { id: "sub_spenden", name: "Spenden", parentId: "cat_freizeit", isDefault: true },
+      { id: "sub_restaurant_cafe", name: "Restaurant / Cafe / Bar", parentId: "cat_freizeit", isDefault: true },
+      { id: "sub_sport_fitness", name: "Sport und Fitness", parentId: "cat_freizeit", isDefault: true },
+      { id: "sub_freizeitaktivitaeten", name: "Freizeitaktivitäten", parentId: "cat_freizeit", isDefault: true },
+    ],
+  },
+  {
+    id: "cat_bank",
+    name: "Bank und Kredit",
+    color: "#4f6bed",
+    type: "expense",
+    isDefault: true,
+    budget: null,
+    subcategories: [
+      { id: "sub_bankgebuehren", name: "Bankgebühren", parentId: "cat_bank", isDefault: true },
+      { id: "sub_barauszahlung", name: "Barauszahlung", parentId: "cat_bank", isDefault: true },
+      { id: "sub_kreditkartenabrechnung", name: "Kreditkartenabrechnung", parentId: "cat_bank", isDefault: true },
+      { id: "sub_tilgung", name: "Tilgung", parentId: "cat_bank", isDefault: true },
+    ],
+  },
+  {
+    id: "cat_unkategorisiert",
+    name: "Unkategorisiert",
+    color: "#6b6b6b",
+    type: "expense",
+    isDefault: true,
+    budget: null,
+    subcategories: [],
+  },
+];
+
+export const DEFAULT_INCOME_CATEGORIES = [
+  {
+    id: "cat_einnahmen",
+    name: "Einnahmen",
+    color: "#10893e",
+    type: "income",
+    isDefault: true,
+    budget: null,
+    subcategories: [
+      { id: "sub_gehalt", name: "Gehalt", parentId: "cat_einnahmen", isDefault: true },
+      { id: "sub_kapitaleinkommen", name: "Kapitaleinkommen", parentId: "cat_einnahmen", isDefault: true },
+      { id: "sub_mieteinnahmen", name: "Mieteinnahmen", parentId: "cat_einnahmen", isDefault: true },
+      { id: "sub_rente_pension", name: "Rente und Pension", parentId: "cat_einnahmen", isDefault: true },
+      { id: "sub_staatliche_leistung", name: "Staatliche Leistung und Förderung", parentId: "cat_einnahmen", isDefault: true },
+      { id: "sub_unterhalt_einnahme", name: "Unterhalt", parentId: "cat_einnahmen", isDefault: true },
+      { id: "sub_bareinzahlung", name: "Bareinzahlung", parentId: "cat_einnahmen", isDefault: true },
+    ],
+  },
+];
+
+// ============================================
+// Hilfsfunktionen für das hierarchische Modell
+// ============================================
+
+/**
+ * Findet eine Oberkategorie anhand ihrer ID (expense oder income).
+ * @returns {object|null}
+ */
+export function findCategoryById(expenseCategories, incomeCategories, categoryId) {
+  if (!categoryId) return null;
+  const all = [...(expenseCategories || []), ...(incomeCategories || [])];
+  return all.find((c) => c.id === categoryId) || null;
+}
+
+/**
+ * Findet eine Unterkategorie anhand ihrer ID.
+ * @returns {{ parent: object, sub: object }|null}
+ */
+export function findSubcategoryById(expenseCategories, incomeCategories, subcategoryId) {
+  if (!subcategoryId) return null;
+  const all = [...(expenseCategories || []), ...(incomeCategories || [])];
+  for (const parent of all) {
+    const sub = (parent.subcategories || []).find((s) => s.id === subcategoryId);
+    if (sub) return { parent, sub };
+  }
+  return null;
+}
+
+/**
+ * Gibt einen lesbaren Kategorie-Label zurück.
+ * Beispiel: "Wohnen > Miete / Wohngeld" oder "Unkategorisiert"
+ */
+export function getCategoryLabel(expenseCategories, incomeCategories, categoryId, subcategoryId) {
+  if (!categoryId) return "Unkategorisiert";
+  const parent = findCategoryById(expenseCategories, incomeCategories, categoryId);
+  if (!parent) return "Unkategorisiert";
+  if (subcategoryId) {
+    const sub = (parent.subcategories || []).find((s) => s.id === subcategoryId);
+    if (sub) return `${parent.name} > ${sub.name}`;
+  }
+  return parent.name;
+}
+
+/**
+ * Gibt den Kurznamen zurück (nur Unterkategorie, oder Oberkategorie falls keine Unterkategorie).
+ */
+export function getCategoryShortName(expenseCategories, incomeCategories, categoryId, subcategoryId) {
+  if (!categoryId) return "Unkategorisiert";
+  const parent = findCategoryById(expenseCategories, incomeCategories, categoryId);
+  if (!parent) return "Unkategorisiert";
+  if (subcategoryId) {
+    const sub = (parent.subcategories || []).find((s) => s.id === subcategoryId);
+    if (sub) return sub.name;
+  }
+  return parent.name;
+}
+
+/**
+ * Prüft ob eine Kategorie oder Unterkategorie eine Standard-Kategorie ist (nicht löschbar).
+ */
+export function isCategoryDefault(expenseCategories, incomeCategories, categoryId, subcategoryId) {
+  const parent = findCategoryById(expenseCategories, incomeCategories, categoryId);
+  if (!parent) return false;
+  if (subcategoryId) {
+    const sub = (parent.subcategories || []).find((s) => s.id === subcategoryId);
+    return sub?.isDefault ?? false;
+  }
+  return parent.isDefault ?? false;
+}
+
+// ============================================
+// Migration: Legacy-Kategorienamen → neue IDs
+// ============================================
+
+// Migration: entfernte Unterkategorie-IDs → Ersatz-IDs
+const REMOVED_SUB_MAP = new Map([
+  ["sub_bausparen", { categoryId: "cat_sparen", subcategoryId: null }],
+  ["sub_festgeld_tagesgeld", { categoryId: "cat_sparen", subcategoryId: null }],
+  ["sub_private_rente", { categoryId: "cat_sparen", subcategoryId: null }],
+  ["sub_kapitallebensversicherung", { categoryId: "cat_sparen", subcategoryId: null }],
+  ["sub_elektronik_software", { categoryId: "cat_shopping", subcategoryId: null }],
+  ["sub_bueromaterial", { categoryId: "cat_shopping", subcategoryId: null }],
+  ["sub_taxi_oepnv", { categoryId: "cat_mobilitaet", subcategoryId: null }],
+  ["sub_kontentransfer", { categoryId: "cat_bank", subcategoryId: null }],
+  // Umbenannte IDs (alte ID → neue ID)
+  ["sub_lebensmittel_getraenke", { categoryId: "cat_lebenshaltung", subcategoryId: "sub_lebensmittel_zuhause" }],
+  ["sub_haustier", { categoryId: "cat_lebenshaltung", subcategoryId: "sub_haustierbedarf" }],
+  ["sub_kirche_spende", { categoryId: "cat_freizeit", subcategoryId: "sub_spenden" }],
+  ["sub_kredittilgung", { categoryId: "cat_bank", subcategoryId: "sub_tilgung" }],
+]);
+
+// Bekannte Mappings: alter Kategoriename (lowercase) → neue categoryId + subcategoryId
+const LEGACY_EXPENSE_NAME_MAP = new Map([
+  ["allgemein", { categoryId: "cat_unkategorisiert", subcategoryId: null }],
+  ["miete", { categoryId: "cat_wohnen", subcategoryId: "sub_miete_wohngeld" }],
+  ["lebensmittel", { categoryId: "cat_lebenshaltung", subcategoryId: "sub_lebensmittel_zuhause" }],
+  ["freizeit", { categoryId: "cat_freizeit", subcategoryId: "sub_freizeitaktivitaeten" }],
+  ["wohnen", { categoryId: "cat_wohnen", subcategoryId: null }],
+  ["versicherung", { categoryId: "cat_versicherung", subcategoryId: null }],
+  ["sparen", { categoryId: "cat_sparen", subcategoryId: null }],
+  ["sparen und anlegen", { categoryId: "cat_sparen", subcategoryId: null }],
+  ["shopping", { categoryId: "cat_shopping", subcategoryId: null }],
+  ["shopping und unterhaltung", { categoryId: "cat_shopping", subcategoryId: null }],
+  ["reisen", { categoryId: "cat_reisen", subcategoryId: null }],
+  ["mobilität", { categoryId: "cat_mobilitaet", subcategoryId: null }],
+  ["mobilitaet", { categoryId: "cat_mobilitaet", subcategoryId: null }],
+  ["lebenshaltung", { categoryId: "cat_lebenshaltung", subcategoryId: null }],
+  ["kinder", { categoryId: "cat_kinder", subcategoryId: null }],
+  ["gesundheit", { categoryId: "cat_gesundheit", subcategoryId: null }],
+  ["gesundheit und wellness", { categoryId: "cat_gesundheit", subcategoryId: null }],
+  ["freizeit, hobbies und soziales", { categoryId: "cat_freizeit", subcategoryId: null }],
+  ["bank", { categoryId: "cat_bank", subcategoryId: null }],
+  ["bank und kredit", { categoryId: "cat_bank", subcategoryId: null }],
+  ["unkategorisiert", { categoryId: "cat_unkategorisiert", subcategoryId: null }],
+]);
+
+/**
+ * Generiert eine stabile, deterministische ID für eine Custom-Kategorie anhand des Namens.
+ */
+function makeCustomCategoryId(name) {
+  const hash = hashStringFNV1a(String(name).toLowerCase().trim());
+  return `cat_custom_${(hash >>> 0).toString(16)}`;
+}
+
+/**
+ * Versucht, einen alten Kategorie-String in eine neue categoryId + subcategoryId aufzulösen.
+ * Reihenfolge: bekannte Legacy-Namen → Namenssuche in expenseCategories → Fallback Unkategorisiert
+ */
+function resolveLegacyCategoryName(legacyName, expenseCategories) {
+  if (!legacyName) return { categoryId: "cat_unkategorisiert", subcategoryId: null };
+
+  const key = String(legacyName).toLowerCase().trim();
+
+  if (LEGACY_EXPENSE_NAME_MAP.has(key)) {
+    return LEGACY_EXPENSE_NAME_MAP.get(key);
+  }
+
+  // Namenssuche in expenseCategories (für custom-Kategorien die während der Migration erzeugt wurden)
+  for (const cat of expenseCategories || []) {
+    if (cat.name.toLowerCase() === key) {
+      return { categoryId: cat.id, subcategoryId: null };
+    }
+    for (const sub of cat.subcategories || []) {
+      if (sub.name.toLowerCase() === key) {
+        return { categoryId: cat.id, subcategoryId: sub.id };
+      }
+    }
+  }
+
+  return { categoryId: "cat_unkategorisiert", subcategoryId: null };
+}
+
+/**
+ * Baut das neue expenseCategories-Array aus dem alten flachen categories-Array.
+ * Standard-Defaults werden immer übernommen; user-definierte Kategorien
+ * werden als custom Oberkategorien ohne Unterkategorien hinzugefügt.
+ */
+function buildMigratedExpenseCategories(oldCategories) {
+  const knownLegacyNames = new Set(
+    [...LEGACY_EXPENSE_NAME_MAP.keys(), ...DEFAULT_CATEGORIES.map((c) => c.name.toLowerCase())]
+  );
+
+  const customCategories = (oldCategories || [])
+    .map(normalizeCategory)
+    .filter((c) => !knownLegacyNames.has(c.name.toLowerCase()))
+    .map((c) => ({
+      id: makeCustomCategoryId(c.name),
+      name: c.name,
+      color: colorFromCategoryName(c.name),
+      type: "expense",
+      isDefault: false,
+      budget: c.budget || null,
+      subcategories: [],
+    }))
+    // Deduplizieren anhand der ID (falls mehrere Kategorien denselben Hash ergeben)
+    .filter((c, idx, arr) => arr.findIndex((x) => x.id === c.id) === idx);
+
+  return [
+    ...DEFAULT_EXPENSE_CATEGORIES.map((c) => ({
+      ...c,
+      subcategories: c.subcategories.map((s) => ({ ...s })),
+    })),
+    ...customCategories,
+  ];
+}
+
+/**
+ * Fügt neue Default-Kategorien zu einem bestehenden Array hinzu,
+ * ohne bereits vorhandene (per ID) zu überschreiben.
+ */
+function mergeDefaultCategories(existing, defaults) {
+  const existingIds = new Set((existing || []).map((c) => c.id));
+  const toAdd = defaults.filter((d) => !existingIds.has(d.id));
+  return [
+    ...(existing || []),
+    ...toAdd.map((c) => ({ ...c, subcategories: c.subcategories.map((s) => ({ ...s })) })),
+  ];
+}
+
+/**
+ * Synchronisiert Default-Unterkategorien in bestehenden Büchern:
+ * - Fügt neue Default-Subcategories hinzu (falls nicht vorhanden)
+ * - Entfernt gelöschte Default-Subcategories (falls isDefault)
+ * - Benennt Subcategories um, deren ID sich nicht geändert hat
+ */
+function syncDefaultSubcategories(existingCategories, defaultCategories) {
+  return (existingCategories || []).map((cat) => {
+    const defaultCat = defaultCategories.find((d) => d.id === cat.id);
+    if (!defaultCat) return cat;
+
+    const defaultSubIds = new Set(defaultCat.subcategories.map((s) => s.id));
+    const removedDefaultIds = new Set([...REMOVED_SUB_MAP.keys()]);
+
+    // Bestehende Subs: behalten wenn custom ODER in den neuen Defaults enthalten
+    const keptSubs = (cat.subcategories || []).filter((sub) => {
+      if (!sub.isDefault) return true; // Custom subs immer behalten
+      if (removedDefaultIds.has(sub.id)) return false; // Gelöschte Defaults entfernen
+      return true;
+    }).map((sub) => {
+      // Name von Default-Subs aktualisieren
+      if (sub.isDefault) {
+        const defaultSub = defaultCat.subcategories.find((d) => d.id === sub.id);
+        if (defaultSub) return { ...sub, name: defaultSub.name };
+      }
+      return sub;
+    });
+
+    // Neue Default-Subs hinzufügen
+    const existingSubIds = new Set(keptSubs.map((s) => s.id));
+    const newSubs = defaultCat.subcategories
+      .filter((d) => !existingSubIds.has(d.id))
+      .map((s) => ({ ...s }));
+
+    return {
+      ...cat,
+      subcategories: [...keptSubs, ...newSubs],
+    };
+  });
+}
+
+// ============================================
+// Datenmodell: Standard-Buch erstellen
+// ============================================
+
 export function makeDefaultBook(name = "Mein Haushaltsbuch") {
   return {
     id: `book_${Date.now()}`,
     name,
-    categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })), // für Ausgaben (mit Budget)
-    transferCategories: [...DEFAULT_TRANSFER_CATEGORIES], // für Transfers
+    expenseCategories: DEFAULT_EXPENSE_CATEGORIES.map((c) => ({
+      ...c,
+      subcategories: c.subcategories.map((s) => ({ ...s })),
+    })),
+    incomeCategories: DEFAULT_INCOME_CATEGORIES.map((c) => ({
+      ...c,
+      subcategories: c.subcategories.map((s) => ({ ...s })),
+    })),
+    transferCategories: [...DEFAULT_TRANSFER_CATEGORIES],
     entries: [],
-    pots: DEFAULT_POTS.map((p) => ({ ...p })),
-    goals: [], // Sparziele
-    recurringExpenses: [], // Fixkosten
+    pots: [],
+    goals: [],
+    recurringExpenses: [],
     investmentPortfolios: [],
     investmentAssetTypes: [...DEFAULT_ASSET_TYPES],
     investmentRegions: [...DEFAULT_REGIONS],
@@ -92,13 +550,13 @@ export function makeDefaultBook(name = "Mein Haushaltsbuch") {
 }
 
 // ============================================
-// Migration: Kategorien normalisieren (String → Objekt)
+// Migration: Kategorien normalisieren (altes Format: String → Objekt)
 // ============================================
 
 /**
- * Migriert Kategorie von String zu Objekt
- * @param {string|object} cat - Alte String-Kategorie oder neues Objekt
- * @returns {object} - { name: string, budget: number|null }
+ * Migriert Kategorie von String zu Objekt (für altes flaches Format)
+ * @param {string|object} cat
+ * @returns {{ name: string, budget: number|null }}
  */
 export function normalizeCategory(cat) {
   if (typeof cat === "string") {
@@ -114,9 +572,9 @@ export function normalizeCategory(cat) {
 }
 
 /**
- * Extrahiert Kategorie-Namen aus Objekt-Array
- * @param {Array} categories - Array von Kategorie-Objekten oder Strings
- * @returns {Array<string>} - Array von Namen
+ * Extrahiert Kategorie-Namen aus Objekt-Array (Rückwärtskompatibilität)
+ * @param {Array} categories
+ * @returns {Array<string>}
  */
 export function getCategoryNames(categories) {
   return (categories || []).map((c) =>
@@ -129,7 +587,7 @@ export function getCategoryNames(categories) {
 // ============================================
 
 /**
- * Konvertiert alte Einträge (type: income/expense) 
+ * Konvertiert alte Einträge (type: income/expense)
  * ins neue Format (kind, source, potId)
  */
 export function normalizeEntry(entry) {
@@ -157,11 +615,15 @@ export function normalizeEntry(entry) {
   return normalized;
 }
 
+// ============================================
+// Hauptmigration: normalizeBook()
+// ============================================
+
 /**
  * Normalisiert ein komplettes Buch:
- * - Fügt pots hinzu, falls nicht vorhanden
- * - Fügt transferCategories hinzu, falls nicht vorhanden
- * - Migriert alle Einträge
+ * - Migiert altes flaches Kategorie-System → hierarchisches System
+ * - Fügt categoryId + subcategoryId zu Einträgen hinzu
+ * - Fügt fehlende Felder (pots, goals, etc.) hinzu
  */
 export function normalizeBook(book) {
   if (!book) return book;
@@ -187,22 +649,88 @@ export function normalizeBook(book) {
     normalized.transferCategories = normalized.transferCategories.filter(
       (cat) => cat !== "Allgemein"
     );
-    // Falls leer nach Filterung, defaults hinzufügen
     if (normalized.transferCategories.length === 0) {
       normalized.transferCategories = [...DEFAULT_TRANSFER_CATEGORIES];
     }
   }
 
-  // Alle Einträge migrieren
+  // Alle Einträge mit kind/source migrieren
   if (Array.isArray(normalized.entries)) {
     normalized.entries = normalized.entries.map(normalizeEntry);
   }
 
-  // Kategorien migrieren (String → Objekt mit Budget)
-  if (Array.isArray(normalized.categories)) {
-    normalized.categories = normalized.categories.map(normalizeCategory);
+  // === Hierarchische Kategorie-Migration ===
+  const needsCategoryMigration = !Array.isArray(normalized.expenseCategories);
+
+  if (needsCategoryMigration) {
+    // Aus altem flachen categories-Array neue hierarchische Struktur aufbauen
+    normalized.expenseCategories = buildMigratedExpenseCategories(normalized.categories);
+    normalized.incomeCategories = DEFAULT_INCOME_CATEGORIES.map((c) => ({
+      ...c,
+      subcategories: c.subcategories.map((s) => ({ ...s })),
+    }));
+
+    // Altes categories-Feld entfernen
+    delete normalized.categories;
   } else {
-    normalized.categories = DEFAULT_CATEGORIES.map((c) => ({ ...c }));
+    // Neue Default-Kategorien mergen, falls sie seit der letzten Migration hinzugekommen sind
+    normalized.expenseCategories = mergeDefaultCategories(
+      normalized.expenseCategories,
+      DEFAULT_EXPENSE_CATEGORIES
+    );
+    // Unterkategorien synchronisieren (neue hinzufügen, gelöschte entfernen, umbenannte aktualisieren)
+    normalized.expenseCategories = syncDefaultSubcategories(
+      normalized.expenseCategories,
+      DEFAULT_EXPENSE_CATEGORIES
+    );
+    if (!Array.isArray(normalized.incomeCategories)) {
+      normalized.incomeCategories = DEFAULT_INCOME_CATEGORIES.map((c) => ({
+        ...c,
+        subcategories: c.subcategories.map((s) => ({ ...s })),
+      }));
+    } else {
+      normalized.incomeCategories = mergeDefaultCategories(
+        normalized.incomeCategories,
+        DEFAULT_INCOME_CATEGORIES
+      );
+      normalized.incomeCategories = syncDefaultSubcategories(
+        normalized.incomeCategories,
+        DEFAULT_INCOME_CATEGORIES
+      );
+    }
+  }
+
+  // categoryId + subcategoryId zu Einträgen hinzufügen (falls noch nicht vorhanden)
+  // + gelöschte/umbenannte Unterkategorie-IDs migrieren
+  if (Array.isArray(normalized.entries)) {
+    normalized.entries = normalized.entries.map((entry) => {
+      // Bereits migriert
+      if (entry.categoryId !== undefined) {
+        // Prüfe ob subcategoryId in der REMOVED_SUB_MAP ist → migrieren
+        if (entry.subcategoryId && REMOVED_SUB_MAP.has(entry.subcategoryId)) {
+          const replacement = REMOVED_SUB_MAP.get(entry.subcategoryId);
+          return { ...entry, categoryId: replacement.categoryId, subcategoryId: replacement.subcategoryId };
+        }
+        return entry;
+      }
+
+      // Transfer: keine Kategorie-ID nötig
+      if (entry.kind === "transfer") {
+        return { ...entry, categoryId: null, subcategoryId: null };
+      }
+
+      // Einnahme: Standard-Einnahmen-Kategorie
+      if (entry.kind === "income") {
+        return { ...entry, categoryId: "cat_einnahmen", subcategoryId: null };
+      }
+
+      // Ausgabe: aus altem category-String auflösen
+      const { categoryId, subcategoryId } = resolveLegacyCategoryName(
+        entry.category,
+        normalized.expenseCategories
+      );
+      return { ...entry, categoryId, subcategoryId };
+    });
   }
 
   // Sparziele hinzufügen, falls nicht vorhanden
@@ -223,7 +751,7 @@ export function normalizeBook(book) {
 }
 
 /**
- * Normalisiert alle Bücher (z.B. beim Laden aus localStorage)
+ * Normalisiert alle Bücher (z.B. beim Laden aus localStorage/SQLite)
  */
 export function normalizeBooks(books) {
   if (!Array.isArray(books)) return books;

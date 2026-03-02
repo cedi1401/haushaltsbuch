@@ -8,8 +8,24 @@ export function generateGoalId() {
 }
 
 /**
+ * Bestimmt das Startdatum basierend auf dem startMode
+ */
+function resolveStartDate(goal) {
+  if (!goal) return null;
+  switch (goal.startMode) {
+    case "date":
+      return goal.startDate || goal.createdAt || null;
+    case "custom":
+      return goal.createdAt || null;
+    case "zero":
+    default:
+      return null; // kein Startdatum = alle Entries zählen
+  }
+}
+
+/**
  * Berechnet den Fortschritt eines Sparziels
- * @param {Object} goal - Das Sparziel
+ * @param {Object} goal - Das Sparziel (potId, transferCategory, startMode, startDate, startAmount)
  * @param {Array} entries - Alle Einträge
  * @param {Array} pots - Alle Töpfe
  * @returns {{ current: number, target: number, percent: number, remaining: number }}
@@ -20,28 +36,42 @@ export function calcGoalProgress(goal, entries, pots) {
   }
 
   const target = Number(goal.targetAmount) || 0;
+  const potId = goal.potId;
+  const startDate = resolveStartDate(goal);
+
+  // Entries ab Startdatum filtern
+  const relevant = (entries || []).filter((e) => {
+    if (startDate && e.date < startDate) return false;
+    return true;
+  });
+
   let current = 0;
 
-  if (goal.type === "pot") {
-    // Bei type="pot": Topf-Stand berechnen (Summe transfers in - expenses out)
-    const potId = goal.linkedId;
-
-    const transfersIn = (entries || [])
+  if (goal.transferCategory) {
+    // Nur Transfers mit passendem potId + category zählen
+    // Entnahmen werden NICHT abgezogen (sie haben keinen Zweck)
+    current = relevant
+      .filter(
+        (e) =>
+          e.kind === "transfer" &&
+          e.potId === potId &&
+          e.category === goal.transferCategory
+      )
+      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+  } else {
+    // Topf-Gesamtstand: alle transfers rein - alle withdrawals raus
+    const transfersIn = relevant
       .filter((e) => e.kind === "transfer" && e.potId === potId)
       .reduce((sum, e) => sum + Number(e.amount || 0), 0);
-
-    const expensesOut = (entries || [])
-      .filter((e) => e.kind === "expense" && e.source === "pot" && e.potId === potId)
+    const withdrawalsOut = relevant
+      .filter((e) => e.kind === "withdrawal" && e.potId === potId)
       .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    current = transfersIn - withdrawalsOut;
+  }
 
-    current = transfersIn - expensesOut;
-  } else if (goal.type === "category") {
-    // Bei type="category": Summe aller Transfers mit diesem Zweck
-    const categoryName = goal.linkedId;
-
-    current = (entries || [])
-      .filter((e) => e.kind === "transfer" && e.category === categoryName)
-      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+  // Manuellen Anfangsbetrag addieren (für startMode "custom")
+  if (goal.startMode === "custom") {
+    current += Number(goal.startAmount || 0);
   }
 
   const percent = target > 0 ? Math.round((current / target) * 100) : 0;
@@ -59,34 +89,50 @@ export function calcGoalProgress(goal, entries, pots) {
  */
 export function calcGoalPrognosis(goal, entries, todayISO) {
   if (!goal) {
-    return { monthsRemaining: 0, estimatedDate: null, isAchievable: false, avgMonthly: 0 };
+    return {
+      monthsRemaining: 0,
+      estimatedDate: null,
+      isAchievable: false,
+      avgMonthly: 0,
+    };
   }
 
   const progress = calcGoalProgress(goal, entries, []);
   const remaining = progress.remaining;
-  const target = progress.target;
-  const current = progress.current;
 
   // Wenn Ziel bereits erreicht
   if (remaining <= 0) {
-    return { monthsRemaining: 0, estimatedDate: todayISO, isAchievable: true, avgMonthly: 0 };
+    return {
+      monthsRemaining: 0,
+      estimatedDate: todayISO,
+      isAchievable: true,
+      avgMonthly: 0,
+    };
   }
 
   // Berechne durchschnittlichen monatlichen Zufluss
   let relevantEntries = [];
 
-  if (goal.type === "pot") {
+  if (goal.transferCategory) {
     relevantEntries = (entries || []).filter(
-      (e) => e.kind === "transfer" && e.potId === goal.linkedId
+      (e) =>
+        e.kind === "transfer" &&
+        e.potId === goal.potId &&
+        e.category === goal.transferCategory
     );
-  } else if (goal.type === "category") {
+  } else {
     relevantEntries = (entries || []).filter(
-      (e) => e.kind === "transfer" && e.category === goal.linkedId
+      (e) => e.kind === "transfer" && e.potId === goal.potId
     );
   }
 
   if (relevantEntries.length === 0) {
-    return { monthsRemaining: Infinity, estimatedDate: null, isAchievable: false, avgMonthly: 0 };
+    return {
+      monthsRemaining: Infinity,
+      estimatedDate: null,
+      isAchievable: false,
+      avgMonthly: 0,
+    };
   }
 
   // Gruppiere nach Monat
@@ -100,13 +146,23 @@ export function calcGoalPrognosis(goal, entries, todayISO) {
 
   const months = Array.from(monthlyTotals.values());
   if (months.length === 0) {
-    return { monthsRemaining: Infinity, estimatedDate: null, isAchievable: false, avgMonthly: 0 };
+    return {
+      monthsRemaining: Infinity,
+      estimatedDate: null,
+      isAchievable: false,
+      avgMonthly: 0,
+    };
   }
 
   const avgMonthly = months.reduce((a, b) => a + b, 0) / months.length;
 
   if (avgMonthly <= 0) {
-    return { monthsRemaining: Infinity, estimatedDate: null, isAchievable: false, avgMonthly: 0 };
+    return {
+      monthsRemaining: Infinity,
+      estimatedDate: null,
+      isAchievable: false,
+      avgMonthly: 0,
+    };
   }
 
   const monthsRemaining = Math.ceil(remaining / avgMonthly);

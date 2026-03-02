@@ -30,7 +30,7 @@ function monthLabel(ym) {
 
 export default function PotsView({ activeBook, entries, toCHF, onAddTransferEntry, transferCategories, todayISO }) {
   const pots = activeBook?.pots || [];
-  const [selectedPotId, setSelectedPotId] = useState(pots[0]?.id || "reserve");
+  const [selectedPotId, setSelectedPotId] = useState(pots[0]?.id || "");
   const [addEntryOpen, setAddEntryOpen] = useState(false);
   const [newEntryDraft, setNewEntryDraft] = useState({
     date: "",
@@ -142,7 +142,7 @@ export default function PotsView({ activeBook, entries, toCHF, onAddTransferEntr
       <div className="hb-row" style={{ marginBottom: 12, alignItems: "flex-start" }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 18 }}>Topf-Übersicht</h2>
-          <div className="hb-muted">Entwicklung & Zusammensetzung deiner Rücklagen</div>
+          <div className="hb-muted">Entwicklung & Zusammensetzung deiner Transfers</div>
         </div>
 
         <div className="hb-group">
@@ -183,8 +183,8 @@ export default function PotsView({ activeBook, entries, toCHF, onAddTransferEntr
             </div>
             <div
               style={{
-                fontSize: 36,
-                fontWeight: 800,
+                fontSize: 32,
+                fontWeight: 700,
                 color: currentBalance >= 0 ? "var(--green)" : "var(--red)",
               }}
             >
@@ -271,7 +271,7 @@ export default function PotsView({ activeBook, entries, toCHF, onAddTransferEntr
                 </div>
 
                 <div className="hb-note">
-                  Zeigt den kumulierten Stand des Topfes. Steigt = mehr Rücklagen, fällt = Entnahmen.
+                  Zeigt den kumulierten Stand des Topfes. Steigt = mehr Transfers, fällt = Entnahmen.
                 </div>
               </CardContent>
             </Card>
@@ -312,7 +312,7 @@ export default function PotsView({ activeBook, entries, toCHF, onAddTransferEntr
                 </div>
 
                 <div className="hb-note">
-                  Grün = Einzahlungen (Transfers), Rot = Entnahmen (Ausgaben aus Topf).
+                  Grün = Einzahlungen (Transfers), Rot = Entnahmen.
                 </div>
               </CardContent>
             </Card>

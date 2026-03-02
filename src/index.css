@@ -32,19 +32,19 @@ body {
 
 /* Link styles */
 a {
-  color: var(--blue, #5b8dc7);
+  color: var(--accent, #0078d4);
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: color 0.15s ease;
 }
 
 a:hover {
-  color: var(--blue, #4a7ab5);
+  color: var(--accent-hover, #106ebe);
   text-decoration: underline;
 }
 
 /* Selection styles */
 ::selection {
-  background: rgba(91, 141, 199, 0.2);
+  background: rgba(0, 120, 212, 0.2);
   color: inherit;
 }
 

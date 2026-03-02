@@ -21,25 +21,24 @@ export default function EntriesTable({
         {entriesSorted.length === 0 ? (
           <p className="hb-muted">Noch keine Einträge.</p>
         ) : (
-          <div style={{ overflow: "auto", marginTop: 10 }}>
-            <table className="hb-table">
+          <div className="hb-table-wrap" style={{ marginTop: 10 }}>
+            <table className="hb-table hb-entries-table">
               <thead>
                 <tr>
-                  <th>Datum</th>
-                  <th>Art</th>
-                  <th>Kategorie</th>
-                  <th>Notiz</th>
-                  <th className="hb-right">Betrag</th>
-                  <th className="hb-right" style={{ whiteSpace: "nowrap" }}></th>
+                  <th className="hb-col-date">Datum</th>
+                  <th className="hb-col-type">Art</th>
+                  <th className="hb-col-category">Kategorie</th>
+                  <th className="hb-col-note">Notiz</th>
+                  <th className="hb-col-amount hb-right">Betrag</th>
+                  <th className="hb-col-actions"></th>
                 </tr>
               </thead>
               <tbody>
                 {entriesSorted.map((e) => {
-                  // NEU: kind statt type
                   const isIncome = e.kind === "income";
                   const isTransfer = e.kind === "transfer";
-                  const isPotExpense = e.kind === "expense" && e.source === "pot";
-                  
+                  const isWithdrawal = e.kind === "withdrawal";
+
                   let typeLabel = "Ausgabe";
                   let sign = "-";
                   let colorClass = "hb-bad";
@@ -52,23 +51,23 @@ export default function EntriesTable({
                     typeLabel = "Transfer";
                     sign = "→";
                     colorClass = "hb-transfer";
-                  } else if (isPotExpense) {
-                    typeLabel = "Ausgabe (Topf)";
-                    sign = "-";
-                    colorClass = "hb-bad";
+                  } else if (isWithdrawal) {
+                    typeLabel = "Entnahme";
+                    sign = "↓";
+                    colorClass = "hb-withdrawal";
                   }
 
                   return (
                     <tr key={e.id}>
-                      <td style={{ whiteSpace: "nowrap" }}>{e.date}</td>
-                      <td>{typeLabel}</td>
-                      <td>{e.category}</td>
-                      <td style={{ minWidth: 180 }}>{e.note || "—"}</td>
-                      <td className={`hb-right ${colorClass}`} style={{ whiteSpace: "nowrap" }}>
+                      <td className="hb-col-date">{e.date}</td>
+                      <td className="hb-col-type">{typeLabel}</td>
+                      <td className="hb-col-category">{e.category}</td>
+                      <td className="hb-col-note">{e.note || "—"}</td>
+                      <td className={`hb-col-amount hb-right ${colorClass}`}>
                         {sign}
                         {toCHF(Number(e.amount || 0))}
                       </td>
-                      <td className="hb-right" style={{ whiteSpace: "nowrap" }}>
+                      <td className="hb-col-actions">
                         <div className="hb-actions">
                           <Button variant="outline" onClick={() => startEdit(e)}>
                             Bearbeiten

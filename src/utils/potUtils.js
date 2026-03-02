@@ -47,7 +47,7 @@ export function calcPotBalance(entries, potId) {
     .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
   const expensesOut = entries
-    .filter((e) => e.kind === "expense" && e.source === "pot" && e.potId === potId)
+    .filter((e) => e.kind === "withdrawal" && e.potId === potId)
     .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
   return transfersIn - expensesOut;
@@ -70,7 +70,7 @@ export function calcPotSeries(entries, potId) {
       prev.transfersIn += Number(e.amount || 0);
     }
 
-    if (e.kind === "expense" && e.source === "pot" && e.potId === potId) {
+    if (e.kind === "withdrawal" && e.potId === potId) {
       prev.expensesOut += Number(e.amount || 0);
     }
 

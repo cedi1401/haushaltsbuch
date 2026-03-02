@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 
 export default function CategoryPicker({
   label,
@@ -11,16 +11,58 @@ export default function CategoryPicker({
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
+  const btnRef = useRef(null);
+  const menuRef = useRef(null);
+  const [menuStyle, setMenuStyle] = useState({});
+
+  // Position des Dropdown-Menüs berechnen (fixed, damit es nicht von overflow abgeschnitten wird)
+  const updateMenuPosition = useCallback(() => {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const menuHeight = 280; // max-height des Menüs
+
+    if (spaceBelow >= menuHeight || spaceBelow >= rect.top) {
+      // Dropdown nach unten
+      setMenuStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+      });
+    } else {
+      // Dropdown nach oben
+      setMenuStyle({
+        position: "fixed",
+        bottom: window.innerHeight - rect.top + 4,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) return;
+    updateMenuPosition();
+
     const onDown = (e) => {
       if (!wrapRef.current) return;
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
       if (!wrapRef.current.contains(e.target)) setOpen(false);
     };
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
+
+    // Position bei Scroll/Resize aktualisieren
+    const onScrollOrResize = () => updateMenuPosition();
+    window.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize);
+
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("scroll", onScrollOrResize, true);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [open, updateMenuPosition]);
 
   // Kategorie-Namen extrahieren (unterstützt String-Array und Objekt-Array)
   const categoryNames = useMemo(() => {
@@ -43,6 +85,7 @@ export default function CategoryPicker({
         <button
           type="button"
           className="hb-input hb-input-btn"
+          ref={btnRef}
           onClick={() => setOpen((v) => !v)}
         >
           <span className={!categoryNames.includes(value) ? "hb-orphan" : ""}>{value}</span>
@@ -50,7 +93,7 @@ export default function CategoryPicker({
         </button>
 
         {open ? (
-          <div className="hb-dropdown-menu">
+          <div className="hb-dropdown-menu" ref={menuRef} style={menuStyle}>
             {displayCategories.map((cat) => {
               const orphan = !categoryNames.includes(cat);
               const deletable = canDelete(cat);

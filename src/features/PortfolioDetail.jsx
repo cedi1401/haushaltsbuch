@@ -462,10 +462,10 @@ export default function PortfolioDetail({
                             onClick={() => openBuySellDialog(a)}
                             style={{
                               fontSize: 13,
-                              padding: "5px 8px",
+                              padding: "4px 8px",
                               minHeight: "auto",
                               lineHeight: 1.4,
-                              borderRadius: 6,
+                              borderRadius: 4,
                               verticalAlign: "middle",
                             }}
                           >K/V</Button>
@@ -670,7 +670,7 @@ export default function PortfolioDetail({
             </div>
           )}
           {buySellDraft.action === "sell" && buySellAsset && parseAmount(buySellDraft.quantity) > buySellAsset.quantity && (
-            <div style={{ color: "var(--bad)", fontSize: 12 }}>Verkaufsmenge übersteigt Bestand.</div>
+            <div style={{ color: "var(--red)", fontSize: 12 }}>Verkaufsmenge übersteigt Bestand.</div>
           )}
         </div>
       </EditDialog>

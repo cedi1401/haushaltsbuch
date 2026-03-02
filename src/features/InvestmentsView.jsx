@@ -33,7 +33,7 @@ export default function InvestmentsView({ activeBook, toCHF, onUpdateBook, today
             padding: 0,
             fontSize: 14,
             fontWeight: 600,
-            color: subView === "detail" ? "var(--primary)" : "var(--text)",
+            color: subView === "detail" ? "var(--accent)" : "var(--text)",
           }}
           onClick={subView === "detail" ? goBack : undefined}
           type="button"
