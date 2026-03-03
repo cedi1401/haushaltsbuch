@@ -92,6 +92,9 @@ export default function HaushaltsbuchApp() {
   // Einstellungen (Zahnrad)
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Auto-Update
+  const [updateReady, setUpdateReady] = useState(false);
+
   // Dark Mode: DOM-Update und Persistierung
   useEffect(() => {
     if (darkMode) {
@@ -154,6 +157,12 @@ export default function HaushaltsbuchApp() {
     // Small delay to ensure all load-effects have run
     const timer = setTimeout(() => { isInitialLoad.current = false; }, 100);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Listen for auto-update events from Electron
+  useEffect(() => {
+    if (!window.electronAPI?.onUpdateDownloaded) return;
+    window.electronAPI.onUpdateDownloaded(() => setUpdateReady(true));
   }, []);
 
   const activeBook = useMemo(() => {
@@ -634,6 +643,17 @@ Notiz: ${target.note}` : ""}`
 
   return (
     <div className="hb-page">
+      {updateReady && (
+        <div className="hb-update-banner">
+          <span>Neue Version verfügbar!</span>
+          <button onClick={() => window.electronAPI.installUpdate()}>
+            Jetzt neu starten
+          </button>
+          <button className="hb-update-dismiss" onClick={() => setUpdateReady(false)}>
+            Später
+          </button>
+        </div>
+      )}
       <NavDrawer
         open={navOpen}
         onClose={() => setNavOpen(false)}
