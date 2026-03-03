@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import EditDialog from "./EditDialog.jsx";
 import CategoryCreateDialog from "./CategoryCreateDialog.jsx";
 import CategoryEditDialog from "./CategoryEditDialog.jsx";
+import iconEdit from "/icons/edit.svg";
 
 // -------------------------------------------------------
 // Haupt-Dialog: Alle Kategorien verwalten
@@ -273,7 +274,7 @@ export default function CategoryManagerDialog({
                 aria-label={`${cat.name} bearbeiten`}
                 title="Bearbeiten"
               >
-                <img src="/icons/edit.svg" alt="Bearbeiten" />
+                <img src={iconEdit} alt="Bearbeiten" />
               </button>
             )}
             {hasSubs && (
@@ -303,7 +304,7 @@ export default function CategoryManagerDialog({
                         aria-label={`${sub.name} bearbeiten`}
                         title="Bearbeiten"
                       >
-                        <img src="/icons/edit.svg" alt="Bearbeiten" />
+                        <img src={iconEdit} alt="Bearbeiten" />
                       </button>
                     )}
                   </div>

@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 
 import "./styles/haushaltsbuch.css";
 
+import iconBrightmode from "/icons/brightmode.svg";
+import iconDarkmode from "/icons/darkmode.svg";
+import iconSettings from "/icons/settings.svg";
+
 import { Button, Card, CardContent } from "./components/ui.jsx";
 import EditDialog from "./components/EditDialog.jsx";
 import CategoryPicker from "./components/CategoryPicker.jsx";
@@ -723,7 +727,7 @@ Notiz: ${target.note}` : ""}`
               aria-label={darkMode ? 'Light Mode' : 'Dark Mode'}
             >
               <img
-                src={darkMode ? '/icons/brightmode.svg' : '/icons/darkmode.svg'}
+                src={darkMode ? iconBrightmode : iconDarkmode}
                 alt={darkMode ? 'Light Mode' : 'Dark Mode'}
                 className="hb-icon-svg"
               />
@@ -736,7 +740,7 @@ Notiz: ${target.note}` : ""}`
               onClick={() => setSettingsOpen(true)}
               aria-label="Einstellungen"
             >
-              <img src="/icons/settings.svg" alt="Einstellungen" className="hb-icon-svg" />
+              <img src={iconSettings} alt="Einstellungen" className="hb-icon-svg" />
             </button>
           </div>
         </div>
