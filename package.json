@@ -63,9 +63,7 @@
     "nsis": {
       "oneClick": true,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": false,
-      "installerIcon": "public/icon.png",
-      "uninstallerIcon": "public/icon.png"
+      "allowToChangeInstallationDirectory": false
     },
     "mac": {
       "target": [
