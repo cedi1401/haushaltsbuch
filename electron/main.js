@@ -21,6 +21,7 @@ function createWindow() {
       nodeIntegration: false,
     },
     title: 'Haushaltsbuch',
+    icon: path.join(__dirname, '../public/icon.png'),
   });
 
   // Dev or production

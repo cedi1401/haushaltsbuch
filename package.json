@@ -1,7 +1,7 @@
 {
   "name": "haushaltsbuch",
   "private": true,
-  "version": "2.0.2",
+  "version": "2.0.3",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -47,6 +47,7 @@
       "dist/**/*",
       "dist-electron/**/*"
     ],
+    "icon": "public/icon.png",
     "extraResources": [],
     "win": {
       "target": [
@@ -62,7 +63,9 @@
     "nsis": {
       "oneClick": true,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": false
+      "allowToChangeInstallationDirectory": false,
+      "installerIcon": "public/icon.png",
+      "uninstallerIcon": "public/icon.png"
     },
     "mac": {
       "target": [
