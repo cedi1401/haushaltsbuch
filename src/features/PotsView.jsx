@@ -85,17 +85,20 @@ export default function PotsView({ activeBook, entries, toCHF, onAddTransferEntr
     }));
   }, [potSeries]);
 
-  // Transfer-Kategorien Auswertung (Pie Chart)
+  // Transfer-Kategorien Auswertung (Pie Chart) — Netto: Einzahlungen minus Entnahmen je Zweck
   const transfersByCategory = useMemo(() => {
     if (!selectedPot) return [];
 
     const map = new Map();
 
     for (const e of entries || []) {
-      if (e.kind === "transfer" && e.potId === selectedPot.id) {
-        const cat = String(e.category || "Sonstiges").trim();
-        const prev = map.get(cat) || 0;
+      if (e.potId !== selectedPot.id) continue;
+      const cat = String(e.category || "Sonstiges").trim();
+      const prev = map.get(cat) || 0;
+      if (e.kind === "transfer") {
         map.set(cat, prev + Number(e.amount || 0));
+      } else if (e.kind === "withdrawal") {
+        map.set(cat, prev - Number(e.amount || 0));
       }
     }
 
@@ -382,8 +385,7 @@ export default function PotsView({ activeBook, entries, toCHF, onAddTransferEntr
                 </div>
 
                 <div className="hb-note">
-                  Zeigt, wie viel du insgesamt für welchen Zweck in diesen Topf eingezahlt hast.
-                  (Basierend auf Transfer-Kategorien)
+                  Aktueller Netto-Stand pro Transferzweck (Einzahlungen minus Entnahmen).
                 </div>
               </CardContent>
             </Card>

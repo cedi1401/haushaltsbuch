@@ -22,13 +22,19 @@ export default function SettingsDialog({
 }) {
   const backupInputRef = useRef(null);
 
+  // Electron-Erkennung als React State — wird beim Mount ausgewertet, danach reaktiv
+  const [isElectronEnv, setIsElectronEnv] = useState(false);
+  useEffect(() => {
+    setIsElectronEnv(window.electronAPI?.isElectron === true);
+  }, []);
+
   // App-Version
   const [appVersion, setAppVersion] = useState(null);
   useEffect(() => {
-    if (open && window.electronAPI?.isElectron && window.electronAPI?.getAppVersion) {
+    if (open && isElectronEnv && window.electronAPI?.getAppVersion) {
       window.electronAPI.getAppVersion().then(setAppVersion).catch(() => {});
     }
-  }, [open]);
+  }, [open, isElectronEnv]);
 
   // Update-Check
   const [updateStatus, setUpdateStatus] = useState(null); // null | "checking" | "available" | "not-available" | "error"
@@ -76,7 +82,7 @@ export default function SettingsDialog({
 
   async function doExportBackup() {
     if (!activeBook) return;
-    if (window.electronAPI?.isElectron) {
+    if (isElectronEnv) {
       await exportBackupFile({ book: activeBook, monthFilter });
     } else {
       exportBackup({ book: activeBook, monthFilter });
@@ -84,7 +90,7 @@ export default function SettingsDialog({
   }
 
   async function triggerImportBackup() {
-    if (window.electronAPI?.isElectron) {
+    if (isElectronEnv) {
       // Electron: native file dialog via IPC
       try {
         const result = await importBackupNative();
@@ -324,7 +330,7 @@ export default function SettingsDialog({
       </div>
 
       {/* App-Updates (nur Electron) */}
-      {window.electronAPI?.isElectron && (
+      {isElectronEnv && (
         <div className="hb-field" style={{ marginTop: 24 }}>
           <div style={{ fontWeight: 600, marginBottom: 6 }}>App-Updates</div>
           {appVersion && (
