@@ -48,20 +48,19 @@ function validateBackupObject(obj) {
 }
 
 /**
- * Creates and downloads a backup JSON.
+ * Creates and downloads a backup JSON for a single book.
  *
  * @param {Object} args
- * @param {Array} args.books
- * @param {string|null} args.activeBookId
+ * @param {Object} args.book - The active book to export
  * @param {string} args.monthFilter
  */
-export function exportBackup({ books, activeBookId, monthFilter }) {
+export function exportBackup({ book, monthFilter }) {
   const payload = {
     format: "haushaltsbuch-backup",
     version: 1,
     exportedAt: new Date().toISOString(),
-    books: Array.isArray(books) ? books : [],
-    activeBookId: typeof activeBookId === "string" ? activeBookId : null,
+    books: [book],
+    activeBookId: book?.id || null,
     monthFilter: typeof monthFilter === "string" ? monthFilter : "",
   };
 

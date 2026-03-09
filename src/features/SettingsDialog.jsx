@@ -2,25 +2,47 @@ import React, { useRef, useState, useEffect } from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import { Button } from "../components/ui.jsx";
 import { exportBackupFile, importBackupFile as importBackupNative, isElectron } from "../dal/storage.js";
-import { exportBackup, importBackupFile as importBackupLegacy } from "../backup.js";
+import { exportBackup } from "../backup.js";
+import { normalizeBook } from "../utils/hbUtils.js";
 
 export default function SettingsDialog({
   open,
   onClose,
 
   // State needed for backup
-  books,
-  activeBookId,
   monthFilter,
 
-  // callback to apply restored data in parent
+  // callbacks for backup
   onRestoreAll,
+  onImportBook,
 
   // NEU: für Töpfe-Verwaltung
   activeBook,
   onUpdateBook,
 }) {
   const backupInputRef = useRef(null);
+
+  // App-Version
+  const [appVersion, setAppVersion] = useState(null);
+  useEffect(() => {
+    if (open && isElectron && window.electronAPI?.getAppVersion) {
+      window.electronAPI.getAppVersion().then(setAppVersion).catch(() => {});
+    }
+  }, [open]);
+
+  // Update-Check
+  const [updateStatus, setUpdateStatus] = useState(null); // null | "checking" | "available" | "not-available" | "error"
+
+  async function checkForUpdates() {
+    if (!window.electronAPI?.checkForUpdates) return;
+    setUpdateStatus("checking");
+    try {
+      const result = await window.electronAPI.checkForUpdates();
+      setUpdateStatus(result?.available ? "available" : "not-available");
+    } catch {
+      setUpdateStatus("error");
+    }
+  }
 
   // NEU: State für Töpfe-Verwaltung
   const [potDrafts, setPotDrafts] = useState({});
@@ -53,10 +75,11 @@ export default function SettingsDialog({
   }, [open, activeBook]);
 
   async function doExportBackup() {
+    if (!activeBook) return;
     if (isElectron) {
-      await exportBackupFile({ books, activeBookId, monthFilter });
+      await exportBackupFile({ book: activeBook, monthFilter });
     } else {
-      exportBackup({ books, activeBookId, monthFilter });
+      exportBackup({ book: activeBook, monthFilter });
     }
   }
 
@@ -64,27 +87,23 @@ export default function SettingsDialog({
     if (isElectron) {
       // Electron: native file dialog via IPC
       try {
-        const ok = window.confirm(
-          "Backup importieren?\n\nAchtung: Das überschreibt deine aktuellen Daten."
-        );
-        if (!ok) return;
-
         const result = await importBackupNative();
         if (result.canceled) return;
 
         const obj = result.data;
-        if (!obj || obj.format !== 'haushaltsbuch-backup' || obj.version !== 1 || !Array.isArray(obj.books)) {
+        if (!obj || obj.format !== 'haushaltsbuch-backup' || obj.version !== 1 || !Array.isArray(obj.books) || obj.books.length === 0) {
           window.alert("Ungültiges Backup-Format.");
           return;
         }
 
-        onRestoreAll?.({
-          books: obj.books,
-          activeBookId: obj.activeBookId || obj.books[0]?.id || null,
-          monthFilter: obj.monthFilter || '',
-        });
+        const bookToImport = normalizeBook(obj.books[0]);
+        const ok = window.confirm(
+          `Haushaltsbuch "${bookToImport.name}" importieren?\n\nEs wird zur bestehenden Datenbank hinzugefügt.`
+        );
+        if (!ok) return;
 
-        window.alert("Erfolgreich: Backup importiert.");
+        onImportBook?.(bookToImport);
+        window.alert(`Erfolgreich: "${bookToImport.name}" importiert.`);
         onClose?.();
       } catch (e) {
         console.error(e);
@@ -100,21 +119,26 @@ export default function SettingsDialog({
     if (!file) return;
 
     try {
+      const text = await file.text();
+      const obj = JSON.parse(text);
+
+      if (!obj || obj.format !== 'haushaltsbuch-backup' || obj.version !== 1 || !Array.isArray(obj.books) || obj.books.length === 0) {
+        window.alert("Ungültiges Backup-Format. Ist es wirklich ein gültiges Haushaltsbuch-Backup (.json)?");
+        return;
+      }
+
+      const bookToImport = normalizeBook(obj.books[0]);
       const ok = window.confirm(
-        "Backup importieren?\n\nAchtung: Das überschreibt deine aktuellen Daten."
+        `Haushaltsbuch "${bookToImport.name}" importieren?\n\nEs wird zur bestehenden Datenbank hinzugefügt.`
       );
       if (!ok) return;
 
-      const restored = await importBackupLegacy(file);
-      onRestoreAll?.(restored);
-
-      window.alert("Erfolgreich: Backup importiert.");
+      onImportBook?.(bookToImport);
+      window.alert(`Erfolgreich: "${bookToImport.name}" importiert.`);
       onClose?.();
     } catch (e) {
       console.error(e);
-      window.alert(
-        "Import fehlgeschlagen. Ist es wirklich ein gültiges Haushaltsbuch-Backup (.json)?"
-      );
+      window.alert("Import fehlgeschlagen. Ist es wirklich ein gültiges Haushaltsbuch-Backup (.json)?");
     } finally {
       if (backupInputRef.current) backupInputRef.current.value = "";
     }
@@ -273,7 +297,7 @@ export default function SettingsDialog({
       <div className="hb-field">
         <div style={{ fontWeight: 600, marginBottom: 6 }}>Backup</div>
         <div className="hb-muted" style={{ marginBottom: 10 }}>
-          Export erstellt eine .json Datei. Import überschreibt alle aktuellen Daten.
+          Export speichert das aktive Haushaltsbuch als .json Datei. Import fügt ein Buch zur bestehenden Datenbank hinzu.
         </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -298,6 +322,42 @@ export default function SettingsDialog({
 
         <div className="hb-note">Tipp: Bewahre dein Backup z.B. in OneDrive/Dropbox/USB auf.</div>
       </div>
+
+      {/* App-Updates (nur Electron) */}
+      {isElectron && (
+        <div className="hb-field" style={{ marginTop: 24 }}>
+          <div style={{ fontWeight: 600, marginBottom: 6 }}>App-Updates</div>
+          {appVersion && (
+            <div className="hb-muted" style={{ marginBottom: 8, fontSize: 13 }}>
+              Aktuelle Version: <strong>v{appVersion}</strong>
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <Button
+              variant="outline"
+              onClick={checkForUpdates}
+              disabled={updateStatus === "checking"}
+            >
+              {updateStatus === "checking" ? "Suche läuft…" : "Nach Update suchen"}
+            </Button>
+            {updateStatus === "available" && (
+              <span style={{ color: "var(--green)", fontSize: 13 }}>
+                Update verfügbar — wird automatisch heruntergeladen.
+              </span>
+            )}
+            {updateStatus === "not-available" && (
+              <span className="hb-muted" style={{ fontSize: 13 }}>
+                Bereits auf dem neuesten Stand.
+              </span>
+            )}
+            {updateStatus === "error" && (
+              <span style={{ color: "var(--red)", fontSize: 13 }}>
+                Fehler beim Suchen. Internetverbindung prüfen.
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* NEU: TÖPFE-VERWALTUNG */}
       <div className="hb-field" style={{ marginTop: 24 }}>

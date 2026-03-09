@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportBackup: (data) => ipcRenderer.invoke('backup:export', data),
   importBackup: () => ipcRenderer.invoke('backup:import'),
 
+  // App info
+  getAppVersion: () => ipcRenderer.invoke('app:version'),
+
   // Updates
   checkForUpdates: () => ipcRenderer.invoke('updates:check'),
   installUpdate: () => ipcRenderer.invoke('updates:install'),

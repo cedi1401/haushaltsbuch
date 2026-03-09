@@ -28,7 +28,7 @@ function monthLabel(ym) {
   return `${names[mm - 1] || m} ${y}`;
 }
 
-export default function PotsView({ activeBook, entries, toCHF, onAddTransferEntry, transferCategories, todayISO }) {
+export default function PotsView({ activeBook, entries, toCHF, onAddTransferEntry, transferCategories, todayISO, onEditEntry, onRemoveEntry }) {
   const pots = activeBook?.pots || [];
   const [selectedPotId, setSelectedPotId] = useState(pots[0]?.id || "");
   const [addEntryOpen, setAddEntryOpen] = useState(false);
@@ -109,6 +109,19 @@ export default function PotsView({ activeBook, entries, toCHF, onAddTransferEntr
     const names = transfersByCategory.map((d) => d.name);
     return makeCategoryColorMap(names, PIE_PALETTE);
   }, [transfersByCategory]);
+
+  // Alle Einzelbuchungen (Transfers + Entnahmen) für den gewählten Topf
+  const potEntries = useMemo(() => {
+    if (!selectedPot) return [];
+    return (entries || [])
+      .filter((e) => e.potId === selectedPot.id && (e.kind === "transfer" || e.kind === "withdrawal"))
+      .sort((a, b) => {
+        const da = String(a.date || "");
+        const db = String(b.date || "");
+        if (da !== db) return db.localeCompare(da);
+        return Number(b.id) - Number(a.id);
+      });
+  }, [entries, selectedPot]);
 
   // Highlights
   const highlights = useMemo(() => {
@@ -377,6 +390,61 @@ export default function PotsView({ activeBook, entries, toCHF, onAddTransferEntr
           )}
         </>
       )}
+
+      {/* Buchungsliste für diesen Topf */}
+      <Card style={{ marginTop: 16 }}>
+        <CardContent>
+          <div className="hb-row" style={{ alignItems: "baseline", marginBottom: 10 }}>
+            <h3 style={{ margin: 0, fontSize: 16 }}>Buchungen: {selectedPot.name}</h3>
+            <div className="hb-muted">{potEntries.length} Einträge</div>
+          </div>
+
+          {potEntries.length === 0 ? (
+            <p className="hb-muted">Noch keine Buchungen für diesen Topf.</p>
+          ) : (
+            <div className="hb-table-wrap">
+              <table className="hb-table hb-entries-table">
+                <thead>
+                  <tr>
+                    <th className="hb-col-date">Datum</th>
+                    <th className="hb-col-type">Art</th>
+                    <th className="hb-col-category">Zweck</th>
+                    <th className="hb-col-note">Notiz</th>
+                    <th className="hb-col-amount hb-right">Betrag</th>
+                    <th className="hb-col-actions"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {potEntries.map((e) => {
+                    const isTransfer = e.kind === "transfer";
+                    return (
+                      <tr key={e.id}>
+                        <td className="hb-col-date">{e.date}</td>
+                        <td className="hb-col-type">{isTransfer ? "Einzahlung" : "Entnahme"}</td>
+                        <td className="hb-col-category">{e.category || "—"}</td>
+                        <td className="hb-col-note">{e.note || "—"}</td>
+                        <td className={`hb-col-amount hb-right ${isTransfer ? "hb-ok" : "hb-bad"}`}>
+                          {isTransfer ? "+" : "−"}{toCHF(Number(e.amount || 0))}
+                        </td>
+                        <td className="hb-col-actions">
+                          <div className="hb-actions">
+                            <Button variant="outline" onClick={() => onEditEntry?.(e)}>
+                              Bearbeiten
+                            </Button>
+                            <Button variant="outline" onClick={() => onRemoveEntry?.(e.id)}>
+                              Löschen
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <EditDialog
         open={addEntryOpen}

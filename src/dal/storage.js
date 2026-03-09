@@ -39,13 +39,13 @@ export async function setSetting(key, value) {
 
 // --- Backup ---
 
-export async function exportBackupFile({ books, activeBookId, monthFilter }) {
+export async function exportBackupFile({ book, monthFilter }) {
   const payload = {
     format: 'haushaltsbuch-backup',
     version: 1,
     exportedAt: new Date().toISOString(),
-    books: Array.isArray(books) ? books : [],
-    activeBookId: typeof activeBookId === 'string' ? activeBookId : null,
+    books: [book],
+    activeBookId: book?.id || null,
     monthFilter: typeof monthFilter === 'string' ? monthFilter : '',
   };
 

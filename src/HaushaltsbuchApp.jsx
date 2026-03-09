@@ -184,6 +184,33 @@ export default function HaushaltsbuchApp() {
   const indicateCategoryNames = useMemo(() => getCategoryNames(indicateCategories), [indicateCategories]);
   const indicateTransferCategories = activeBook?.transferCategories || [];
 
+  // Transferzwecke die im gewählten Topf (Add-Dialog) bereits eingezahlt wurden
+  const availableWithdrawalCategories = useMemo(() => {
+    const all = indicateTransferCategories;
+    if (!potId || !all.length) return all;
+    const used = new Set(
+      entries
+        .filter((e) => e.kind === "transfer" && e.potId === potId && e.category)
+        .map((e) => e.category)
+    );
+    const filtered = all.filter((cat) => used.has(cat));
+    return filtered.length > 0 ? filtered : all;
+  }, [entries, potId, indicateTransferCategories]);
+
+  // Transferzwecke die im gewählten Topf (Edit-Dialog) bereits eingezahlt wurden
+  const editWithdrawalCategories = useMemo(() => {
+    const all = indicateTransferCategories;
+    const pid = editDraft.potId;
+    if (!pid || !all.length) return all;
+    const used = new Set(
+      entries
+        .filter((e) => e.kind === "transfer" && e.potId === pid && e.category)
+        .map((e) => e.category)
+    );
+    const filtered = all.filter((cat) => used.has(cat));
+    return filtered.length > 0 ? filtered : all;
+  }, [entries, editDraft.potId, indicateTransferCategories]);
+
   // Für Trend-Ansicht: optional über alle Bücher aggregieren
   const allEntries = useMemo(() => {
     return (books || []).flatMap((b) =>
@@ -207,9 +234,9 @@ export default function HaushaltsbuchApp() {
     if (!activeBook) return;
 
     // Je nach kind die richtige Kategorie-Liste verwenden
-    if (kind === "transfer") {
+    if (kind === "transfer" || kind === "withdrawal") {
       if (!indicateTransferCategories.includes(category)) {
-        const fallback = indicateTransferCategories[0] || "Steuern";
+        const fallback = indicateTransferCategories[0] || "";
         setCategory(fallback);
       }
     } else if (kind === "expense") {
@@ -354,7 +381,7 @@ export default function HaushaltsbuchApp() {
     const entry = {
       id: Date.now(),
       amount: numericAmount,
-      category: kind === "withdrawal" ? null : legacyCategory,
+      category: legacyCategory,
       kind,
       note: note.trim(),
       date,
@@ -444,12 +471,16 @@ Notiz: ${target.note}` : ""}`
 
   function startEdit(entry) {
     setEditingId(entry.id);
+    const fallbackCategory =
+      entry.kind === "withdrawal"
+        ? entry.category || (indicateTransferCategories[0] || "")
+        : entry.category || "Allgemein";
     setEditDraft({
       date: entry.date || todayISO(),
       kind: entry.kind || "expense",
       source: entry.source || "month",
       potId: entry.potId || "reserve",
-      category: entry.category || "Allgemein",
+      category: fallbackCategory,
       categoryId: entry.categoryId ?? null,
       subcategoryId: entry.subcategoryId ?? null,
       note: entry.note || "",
@@ -494,7 +525,7 @@ Notiz: ${target.note}` : ""}`
           ...e,
           date: editDraft.date,
           kind: editDraft.kind,
-          category: editDraft.kind === "withdrawal" ? null : legacyCat,
+          category: legacyCat,
           categoryId: (editDraft.kind === "expense" || editDraft.kind === "income") ? (editDraft.categoryId ?? null) : null,
           subcategoryId: (editDraft.kind === "expense" || editDraft.kind === "income") ? (editDraft.subcategoryId ?? null) : null,
           note: String(editDraft.note || "").trim(),
@@ -527,6 +558,7 @@ Notiz: ${target.note}` : ""}`
     if (!Number.isFinite(n) || n <= 0) return false;
     if (kind === "transfer" && !category) return false;
     if (kind === "withdrawal" && !potId) return false;
+    if (kind === "withdrawal" && !category) return false;
     return true;
   }, [date, amount, kind, category, potId]);
 
@@ -540,8 +572,8 @@ Notiz: ${target.note}` : ""}`
     const n = parseAmount(editDraft.amount);
     if (!Number.isFinite(n) || n <= 0) return false;
     if (!editDraft.kind) return false;
-    // Transfer: needs the legacy category string; income/expense: needs categoryId
-    if (editDraft.kind === "transfer" && !editDraft.category) return false;
+    // Transfer/Withdrawal: needs the legacy category string; income/expense: needs categoryId
+    if ((editDraft.kind === "transfer" || editDraft.kind === "withdrawal") && !editDraft.category) return false;
     return true;
   }, [editDraft]);
 
@@ -639,6 +671,15 @@ Notiz: ${target.note}` : ""}`
       const fallback = nextCatNames.includes("Allgemein") ? "Allgemein" : nextCatNames[0];
       setCategory(fallback || "Allgemein");
     }
+  }
+
+  function importBook(bookToImport) {
+    const existingIds = new Set(books.map((b) => b.id));
+    const book = existingIds.has(bookToImport.id)
+      ? { ...bookToImport, id: `book_${Date.now()}` }
+      : bookToImport;
+    setBooks((prev) => [...prev, book]);
+    setActiveBookId(book.id);
   }
 
   return (
@@ -782,6 +823,8 @@ Notiz: ${target.note}` : ""}`
           onAddTransferEntry={addTransferEntry}
           transferCategories={indicateTransferCategories}
           todayISO={todayISO}
+          onEditEntry={startEdit}
+          onRemoveEntry={removeEntry}
         />
       ) : view === "goals" ? (
         <GoalsView
@@ -876,6 +919,21 @@ Notiz: ${target.note}` : ""}`
                       <option key={pot.id} value={pot.id}>
                         {pot.name}
                       </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {kind === "withdrawal" && (
+                <div className="hb-field">
+                  <div className="hb-label">Transfer-Zweck</div>
+                  <select
+                    className="hb-input"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                  >
+                    {availableWithdrawalCategories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
                 </div>
@@ -1116,7 +1174,20 @@ Notiz: ${target.note}` : ""}`
                   onDelete={deleteTransferCategory}
                   isDeletable={(cat) => indicateTransferCategories.includes(cat) && indicateTransferCategories.length > 1}
                 />
-              ) : null /* withdrawal: keine Kategorie */}
+              ) : editDraft.kind === "withdrawal" ? (
+                <div className="hb-field">
+                  <div className="hb-label">Transfer-Zweck</div>
+                  <select
+                    className="hb-input"
+                    value={editDraft.category || ""}
+                    onChange={(e) => setEditDraft((d) => ({ ...d, category: e.target.value }))}
+                  >
+                    {editWithdrawalCategories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
 
               {editDraft.kind === "expense" && (
                 <div className="hb-field">
@@ -1206,10 +1277,9 @@ Notiz: ${target.note}` : ""}`
       <SettingsDialog
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        books={books}
-        activeBookId={activeBookId}
         monthFilter={monthFilter}
         onRestoreAll={restoreAll}
+        onImportBook={importBook}
         activeBook={activeBook}
         onUpdateBook={updateBook}
       />

@@ -107,6 +107,9 @@ function registerIpcHandlers() {
     return { canceled: false, data: JSON.parse(text) };
   });
 
+  // --- App info ---
+  ipcMain.handle('app:version', () => app.getVersion());
+
   // --- Updates ---
   ipcMain.handle('updates:check', async () => {
     try {
