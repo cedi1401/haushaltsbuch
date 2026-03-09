@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import { Button } from "../components/ui.jsx";
-import { exportBackupFile, importBackupFile as importBackupNative, isElectron } from "../dal/storage.js";
+import { exportBackupFile, importBackupFile as importBackupNative } from "../dal/storage.js";
 import { exportBackup } from "../backup.js";
 import { normalizeBook } from "../utils/hbUtils.js";
 
@@ -25,7 +25,7 @@ export default function SettingsDialog({
   // App-Version
   const [appVersion, setAppVersion] = useState(null);
   useEffect(() => {
-    if (open && isElectron && window.electronAPI?.getAppVersion) {
+    if (open && window.electronAPI?.isElectron && window.electronAPI?.getAppVersion) {
       window.electronAPI.getAppVersion().then(setAppVersion).catch(() => {});
     }
   }, [open]);
@@ -76,7 +76,7 @@ export default function SettingsDialog({
 
   async function doExportBackup() {
     if (!activeBook) return;
-    if (isElectron) {
+    if (window.electronAPI?.isElectron) {
       await exportBackupFile({ book: activeBook, monthFilter });
     } else {
       exportBackup({ book: activeBook, monthFilter });
@@ -84,7 +84,7 @@ export default function SettingsDialog({
   }
 
   async function triggerImportBackup() {
-    if (isElectron) {
+    if (window.electronAPI?.isElectron) {
       // Electron: native file dialog via IPC
       try {
         const result = await importBackupNative();
@@ -324,7 +324,7 @@ export default function SettingsDialog({
       </div>
 
       {/* App-Updates (nur Electron) */}
-      {isElectron && (
+      {window.electronAPI?.isElectron && (
         <div className="hb-field" style={{ marginTop: 24 }}>
           <div style={{ fontWeight: 600, marginBottom: 6 }}>App-Updates</div>
           {appVersion && (

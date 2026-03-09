@@ -18,6 +18,8 @@ jobs:
           - os: ubuntu-latest
             platform: linux
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -30,34 +32,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build & Package
-        run: npx vite build && npx electron-builder --${{ matrix.platform }} --publish never
+      - name: Build & Publish
+        run: npx vite build && npx electron-builder --${{ matrix.platform }} --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-${{ matrix.platform }}
-          path: release/*.*
-          retention-days: 30
-
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/*
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
