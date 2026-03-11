@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import {
@@ -11,6 +11,8 @@ import {
   calcAllPortfoliosValue,
   groupByAssetType,
 } from "../utils/investmentUtils.js";
+import { formatCurrency } from "../utils/hbUtils.js";
+import { fetchMarketPrices, isElectron } from "../dal/storage.js";
 
 export default function InvestmentsOverview({
   activeBook,
@@ -20,6 +22,14 @@ export default function InvestmentsOverview({
   onOpenPortfolio,
 }) {
   const portfolios = activeBook?.investmentPortfolios || [];
+  const baseCurrency = activeBook?.baseCurrency || "CHF";
+
+  // Currency formatter using the book's baseCurrency
+  const fmt = useCallback((n) => formatCurrency(n, baseCurrency), [baseCurrency]);
+
+  // All-portfolios price update state
+  const [allPriceLoading, setAllPriceLoading] = useState(false);
+  const [allPriceStatus, setAllPriceStatus] = useState(null);
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -114,24 +124,109 @@ export default function InvestmentsOverview({
 
   const canSave = draft.name.trim().length > 0;
 
+  // Update all assets across all portfolios
+  async function updateAllPrices() {
+    const allAssets = portfolios.flatMap((p) => p.assets || []).filter((a) => a.marketSymbol && a.marketAssetType);
+    if (allAssets.length === 0) return;
+
+    setAllPriceLoading(true);
+    setAllPriceStatus(null);
+
+    try {
+      const results = await fetchMarketPrices(allAssets, baseCurrency);
+      if (!results) {
+        setAllPriceStatus({ unavailable: true });
+        return;
+      }
+
+      let updated = 0;
+      let errors = 0;
+      const resultMap = new Map(results.map((r) => [r.assetId, r]));
+
+      const updatedPortfolios = portfolios.map((portfolio) => ({
+        ...portfolio,
+        assets: (portfolio.assets || []).map((asset) => {
+          const result = resultMap.get(asset.id);
+          if (!result) return asset;
+
+          if (result.success) {
+            updated++;
+            return {
+              ...asset,
+              currentPrice: result.price,
+              originalPrice: result.originalPrice,
+              originalCurrency: result.originalCurrency,
+              fxRate: result.fxRate,
+              priceSource: result.source,
+              lastUpdated: result.lastUpdated,
+              priceError: null,
+            };
+          } else {
+            errors++;
+            return { ...asset, priceError: result.error, lastUpdated: result.lastUpdated };
+          }
+        }),
+      }));
+
+      onUpdateBook({ ...activeBook, investmentPortfolios: updatedPortfolios });
+      setAllPriceStatus({ updated, errors });
+    } catch (err) {
+      setAllPriceStatus({ updated: 0, errors: 1, message: err.message });
+    } finally {
+      setAllPriceLoading(false);
+    }
+  }
+
+  const allAssetsWithMarket = portfolios.flatMap((p) => p.assets || []).filter((a) => a.marketSymbol && a.marketAssetType);
+
   return (
     <div>
       {/* Header */}
       <div className="hb-row" style={{ marginBottom: 12, alignItems: "flex-start" }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 18 }}>Investment-Portfolios</h2>
-          <div className="hb-muted">Verwalte deine Investments und analysiere die Verteilung</div>
+          <div className="hb-muted">
+            Verwalte deine Investments · Basiswährung: <strong>{baseCurrency}</strong>
+          </div>
         </div>
-        <Button onClick={openCreateDialog}>+ Neues Portfolio</Button>
+        <div className="hb-actions">
+          {isElectron && allAssetsWithMarket.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={updateAllPrices}
+              disabled={allPriceLoading}
+            >
+              {allPriceLoading ? "Aktualisiere..." : "Alle Preise aktualisieren"}
+            </Button>
+          )}
+          <Button onClick={openCreateDialog}>+ Neues Portfolio</Button>
+        </div>
       </div>
+
+      {/* All-portfolios price update status */}
+      {allPriceStatus && (
+        <div style={{
+          marginBottom: 12,
+          padding: "8px 12px",
+          borderRadius: "var(--radius-sm, 4px)",
+          fontSize: 13,
+          background: allPriceStatus.errors > 0 ? "var(--yellow-soft)" : "var(--green-soft)",
+          color: allPriceStatus.errors > 0 ? "var(--yellow)" : "var(--green)",
+          border: `1px solid ${allPriceStatus.errors > 0 ? "var(--yellow)" : "var(--green)"}`,
+        }}>
+          {allPriceStatus.unavailable
+            ? "Marktpreise sind nur in der Desktop-App verfugbar."
+            : `${allPriceStatus.updated} Preis${allPriceStatus.updated !== 1 ? "e" : ""} aktualisiert${allPriceStatus.errors > 0 ? `, ${allPriceStatus.errors} Fehler` : ""}.`}
+        </div>
+      )}
 
       {/* Gesamt-Statistik */}
       <Card style={{ marginBottom: 16 }}>
         <CardContent>
           <div className="hb-grid-3">
             <div>
-              <div className="hb-stat-title">Gesamtwert</div>
-              <div className="hb-stat-val">{toCHF(totalValue)}</div>
+              <div className="hb-stat-title">Gesamtwert ({baseCurrency})</div>
+              <div className="hb-stat-val">{fmt(totalValue)}</div>
             </div>
             <div>
               <div className="hb-stat-title">Portfolios</div>
@@ -169,7 +264,7 @@ export default function InvestmentsOverview({
                           <Cell key={d.name} fill={portfolioColorMap.get(d.name)} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(val) => toCHF(val)} />
+                      <Tooltip formatter={(val) => fmt(val)} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -182,7 +277,7 @@ export default function InvestmentsOverview({
                           <span className="hb-dot" style={{ background: portfolioColorMap.get(d.name) }} />
                           <span className="hb-small">{d.name}</span>
                         </div>
-                        <span className="hb-muted">{toCHF(d.value)} ({pct}%)</span>
+                        <span className="hb-muted">{fmt(d.value)} ({pct}%)</span>
                       </div>
                     );
                   })}
@@ -225,7 +320,7 @@ export default function InvestmentsOverview({
                           <span className="hb-dot" style={{ background: assetTypeColorMap.get(d.name) }} />
                           <span className="hb-small">{d.name}</span>
                         </div>
-                        <span className="hb-muted">{toCHF(d.value)} ({pct}%)</span>
+                        <span className="hb-muted">{fmt(d.value)} ({pct}%)</span>
                       </div>
                     );
                   })}
@@ -271,7 +366,7 @@ export default function InvestmentsOverview({
                       </div>
                     </div>
                     <div style={{ textAlign: "right", marginRight: 12 }}>
-                      <div style={{ fontSize: 18, fontWeight: 700 }}>{toCHF(val)}</div>
+                      <div style={{ fontSize: 18, fontWeight: 700 }}>{fmt(val)}</div>
                     </div>
                     <div className="hb-actions" onClick={(e) => e.stopPropagation()}>
                       <Button variant="outline" onClick={(e) => openEditDialog(p, e)}>

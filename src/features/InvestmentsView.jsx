@@ -1,14 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import InvestmentsOverview from "./InvestmentsOverview.jsx";
 import PortfolioDetail from "./PortfolioDetail.jsx";
 import { Button } from "../components/ui.jsx";
+import { onMarketDataUpdated } from "../dal/storage.js";
 
-export default function InvestmentsView({ activeBook, toCHF, onUpdateBook, todayISO }) {
+export default function InvestmentsView({ activeBook, toCHF, onUpdateBook, todayISO, onReloadBooks }) {
   const [subView, setSubView] = useState("overview"); // "overview" | "detail"
   const [selectedPortfolioId, setSelectedPortfolioId] = useState(null);
+  const listenerRegistered = useRef(false);
 
   const portfolios = activeBook?.investmentPortfolios || [];
   const selectedPortfolio = portfolios.find((p) => p.id === selectedPortfolioId) || null;
+
+  // Register listener for scheduler push events (daily 18:00 auto-update)
+  useEffect(() => {
+    if (listenerRegistered.current) return;
+    listenerRegistered.current = true;
+
+    onMarketDataUpdated((data) => {
+      // Scheduler finished a price update — reload books from storage
+      if (onReloadBooks) {
+        onReloadBooks();
+      }
+    });
+  }, [onReloadBooks]);
 
   function openPortfolio(id) {
     setSelectedPortfolioId(id);

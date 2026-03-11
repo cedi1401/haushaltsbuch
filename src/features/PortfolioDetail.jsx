@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import {
@@ -14,7 +14,88 @@ import {
   groupByTags,
   collectAllTags,
 } from "../utils/investmentUtils.js";
-import { parseAmount } from "../utils/hbUtils.js";
+import { parseAmount, formatCurrency } from "../utils/hbUtils.js";
+import { fetchMarketPrices } from "../dal/storage.js";
+import { isElectron } from "../dal/storage.js";
+
+// Market asset type options for the dispatcher routing
+const MARKET_ASSET_TYPES = [
+  { value: "crypto", label: "Kryptowährung", placeholder: "z.B. bitcoin, ethereum" },
+  { value: "stock", label: "Aktie", placeholder: "z.B. AAPL, MSFT, NESN.SW" },
+  { value: "etf", label: "ETF", placeholder: "z.B. SPY, VWRL.L, IUSQ.DE" },
+  { value: "metal", label: "Edelmetall", placeholder: "z.B. XAU, XAG, XPT" },
+];
+
+function formatRelativeTime(isoString) {
+  if (!isoString) return null;
+  try {
+    const diff = Date.now() - new Date(isoString).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "gerade eben";
+    if (mins < 60) return `vor ${mins} Min.`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `vor ${hours} Std.`;
+    const days = Math.floor(hours / 24);
+    return `vor ${days} Tag${days !== 1 ? "en" : ""}`;
+  } catch {
+    return null;
+  }
+}
+
+function PriceStatusBadge({ asset }) {
+  if (asset.priceError) {
+    return (
+      <span
+        title={asset.priceError}
+        style={{
+          display: "inline-block",
+          padding: "2px 8px",
+          borderRadius: "var(--radius-sm, 4px)",
+          fontSize: 11,
+          fontWeight: 600,
+          background: "var(--red-soft)",
+          color: "var(--red)",
+          border: "1px solid var(--red)",
+          cursor: "help",
+        }}
+      >
+        Fehler
+      </span>
+    );
+  }
+  if (!asset.lastUpdated) {
+    return (
+      <span style={{
+        display: "inline-block",
+        padding: "2px 8px",
+        borderRadius: "var(--radius-sm, 4px)",
+        fontSize: 11,
+        fontWeight: 600,
+        background: "var(--bg-subtle)",
+        color: "var(--muted)",
+        border: "1px solid var(--border)",
+      }}>
+        Manuell
+      </span>
+    );
+  }
+  const diffHours = (Date.now() - new Date(asset.lastUpdated).getTime()) / 3600000;
+  const isStale = diffHours > 24;
+  return (
+    <span style={{
+      display: "inline-block",
+      padding: "2px 8px",
+      borderRadius: "var(--radius-sm, 4px)",
+      fontSize: 11,
+      fontWeight: 600,
+      background: isStale ? "var(--yellow-soft)" : "var(--green-soft)",
+      color: isStale ? "var(--yellow)" : "var(--green)",
+      border: `1px solid ${isStale ? "var(--yellow)" : "var(--green)"}`,
+    }}>
+      {isStale ? "Veraltet" : "Aktuell"}
+    </span>
+  );
+}
 
 export default function PortfolioDetail({
   activeBook,
@@ -28,12 +109,20 @@ export default function PortfolioDetail({
   const assets = portfolio.assets || [];
   const assetTypes = activeBook?.investmentAssetTypes || [];
   const regions = activeBook?.investmentRegions || [];
+  const baseCurrency = activeBook?.baseCurrency || "CHF";
+
+  // Currency formatter using the book's baseCurrency
+  const fmt = useCallback((n) => formatCurrency(n, baseCurrency), [baseCurrency]);
 
   // Autocomplete tags from all portfolios
   const allTags = useMemo(() => collectAllTags(portfolios), [portfolios]);
 
   // Chart tab
   const [chartTab, setChartTab] = useState("type"); // "type" | "region" | "tags"
+
+  // Price update state
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [priceStatus, setPriceStatus] = useState(null); // { updated: number, errors: number } | null
 
   // Asset dialog
   const [assetDialogOpen, setAssetDialogOpen] = useState(false);
@@ -49,6 +138,8 @@ export default function PortfolioDetail({
     region: "Welt",
     tags: "",
     note: "",
+    marketSymbol: "",
+    marketAssetType: "",
   });
 
   // Buy/Sell dialog
@@ -94,6 +185,61 @@ export default function PortfolioDetail({
     onUpdateBook({ ...activeBook, investmentPortfolios: updated });
   }
 
+  // --- Market Price Update ---
+  async function updatePrices() {
+    const assetsWithSymbol = assets.filter((a) => a.marketSymbol && a.marketAssetType);
+    if (assetsWithSymbol.length === 0) return;
+
+    setPriceLoading(true);
+    setPriceStatus(null);
+
+    try {
+      const results = await fetchMarketPrices(assetsWithSymbol, baseCurrency);
+      if (!results) {
+        setPriceStatus({ updated: 0, errors: 0, unavailable: true });
+        return;
+      }
+
+      let updated = 0;
+      let errors = 0;
+
+      patchPortfolio((p) => ({
+        ...p,
+        assets: (p.assets || []).map((asset) => {
+          const result = results.find((r) => r.assetId === asset.id);
+          if (!result) return asset;
+
+          if (result.success) {
+            updated++;
+            return {
+              ...asset,
+              currentPrice: result.price,
+              originalPrice: result.originalPrice,
+              originalCurrency: result.originalCurrency,
+              fxRate: result.fxRate,
+              priceSource: result.source,
+              lastUpdated: result.lastUpdated,
+              priceError: null,
+            };
+          } else {
+            errors++;
+            return {
+              ...asset,
+              priceError: result.error,
+              lastUpdated: result.lastUpdated,
+            };
+          }
+        }),
+      }));
+
+      setPriceStatus({ updated, errors });
+    } catch (err) {
+      setPriceStatus({ updated: 0, errors: 1, message: err.message });
+    } finally {
+      setPriceLoading(false);
+    }
+  }
+
   // --- Asset CRUD ---
   function openAssetCreateDialog() {
     setEditingAsset(null);
@@ -108,6 +254,8 @@ export default function PortfolioDetail({
       region: "Welt",
       tags: "",
       note: "",
+      marketSymbol: "",
+      marketAssetType: "",
     });
     setAssetDialogOpen(true);
   }
@@ -125,6 +273,8 @@ export default function PortfolioDetail({
       region: asset.region || "",
       tags: (asset.tags || []).join(", "),
       note: asset.note || "",
+      marketSymbol: asset.marketSymbol || "",
+      marketAssetType: asset.marketAssetType || "",
     });
     setAssetDialogOpen(true);
   }
@@ -164,6 +314,8 @@ export default function PortfolioDetail({
                 region: assetDraft.region || "",
                 tags: parsedTags,
                 note: assetDraft.note.trim(),
+                marketSymbol: assetDraft.marketSymbol.trim() || null,
+                marketAssetType: assetDraft.marketAssetType || null,
               }
             : a
         ),
@@ -182,6 +334,15 @@ export default function PortfolioDetail({
         tags: parsedTags,
         note: assetDraft.note.trim(),
         addedAt: todayISO(),
+        marketSymbol: assetDraft.marketSymbol.trim() || null,
+        marketAssetType: assetDraft.marketAssetType || null,
+        currentPrice: null,
+        originalPrice: null,
+        originalCurrency: null,
+        fxRate: null,
+        priceSource: null,
+        lastUpdated: null,
+        priceError: null,
       };
       patchPortfolio((p) => ({
         ...p,
@@ -274,6 +435,13 @@ export default function PortfolioDetail({
 
   const tabLabels = { type: "Nach Asset-Typ", region: "Nach Region", tags: "Nach Tags" };
 
+  // Assets that have market config (for enabling the update button)
+  const assetsWithMarketConfig = assets.filter((a) => a.marketSymbol && a.marketAssetType);
+
+  // Placeholder text for the market symbol input
+  const selectedMarketType = MARKET_ASSET_TYPES.find((t) => t.value === assetDraft.marketAssetType);
+  const marketSymbolPlaceholder = selectedMarketType?.placeholder || "z.B. bitcoin, AAPL, XAU";
+
   return (
     <div>
       {/* Header */}
@@ -286,18 +454,48 @@ export default function PortfolioDetail({
         </div>
         <div className="hb-actions">
           <Button variant="outline" onClick={onBack}>Zuruck</Button>
+          {isElectron && assetsWithMarketConfig.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={updatePrices}
+              disabled={priceLoading}
+              style={{ minWidth: 140 }}
+            >
+              {priceLoading ? "Aktualisiere..." : "Preise aktualisieren"}
+            </Button>
+          )}
           <Button onClick={openAssetCreateDialog}>+ Asset hinzufugen</Button>
           <Button variant="outline" onClick={openPortfolioEditDialog}>Portfolio bearbeiten</Button>
         </div>
       </div>
 
+      {/* Price update status */}
+      {priceStatus && (
+        <div style={{
+          marginBottom: 12,
+          padding: "8px 12px",
+          borderRadius: "var(--radius-sm, 4px)",
+          fontSize: 13,
+          background: priceStatus.errors > 0 ? "var(--yellow-soft)" : "var(--green-soft)",
+          color: priceStatus.errors > 0 ? "var(--yellow)" : "var(--green)",
+          border: `1px solid ${priceStatus.errors > 0 ? "var(--yellow)" : "var(--green)"}`,
+        }}>
+          {priceStatus.unavailable
+            ? "Marktpreise sind nur in der Desktop-App verfugbar."
+            : `${priceStatus.updated} Preis${priceStatus.updated !== 1 ? "e" : ""} aktualisiert${priceStatus.errors > 0 ? `, ${priceStatus.errors} Fehler` : ""}.`}
+        </div>
+      )}
+
       {/* Portfolio value */}
       <Card style={{ marginBottom: 16 }}>
         <CardContent>
-          <div className="hb-stat-title">Gesamtwert</div>
-          <div className="hb-stat-val" style={{ fontSize: 28 }}>{toCHF(portfolioValue)}</div>
+          <div className="hb-stat-title">Gesamtwert ({baseCurrency})</div>
+          <div className="hb-stat-val" style={{ fontSize: 28 }}>{fmt(portfolioValue)}</div>
           <div className="hb-muted" style={{ marginTop: 4 }}>
             {assets.length} Asset{assets.length !== 1 ? "s" : ""}
+            {assetsWithMarketConfig.length > 0 && (
+              <> · {assetsWithMarketConfig.length} mit Marktpreis-Tracking</>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -324,7 +522,7 @@ export default function PortfolioDetail({
                         <Cell key={d.name} fill={allocationColorMap.get(d.name)} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(val) => toCHF(val)} />
+                    <Tooltip formatter={(val) => fmt(val)} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -337,7 +535,7 @@ export default function PortfolioDetail({
                         <span className="hb-dot" style={{ background: allocationColorMap.get(d.name) }} />
                         <span className="hb-small">{d.name}</span>
                       </div>
-                      <span className="hb-muted">{toCHF(d.value)} ({pct}%)</span>
+                      <span className="hb-muted">{fmt(d.value)} ({pct}%)</span>
                     </div>
                   );
                 })}
@@ -383,7 +581,7 @@ export default function PortfolioDetail({
                           <Cell key={d.name} fill={breakdownColorMap.get(d.name)} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(val) => toCHF(val)} />
+                      <Tooltip formatter={(val) => fmt(val)} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -396,7 +594,7 @@ export default function PortfolioDetail({
                           <span className="hb-dot" style={{ background: breakdownColorMap.get(d.name) }} />
                           <span className="hb-small">{d.name}</span>
                         </div>
-                        <span className="hb-muted">{toCHF(d.value)} ({pct}%)</span>
+                        <span className="hb-muted">{fmt(d.value)} ({pct}%)</span>
                       </div>
                     );
                   })}
@@ -426,7 +624,8 @@ export default function PortfolioDetail({
                     <th>Typ</th>
                     <th>Region</th>
                     <th style={{ textAlign: "right" }}>Menge</th>
-                    <th style={{ textAlign: "right" }}>Preis/Einheit</th>
+                    <th style={{ textAlign: "right" }}>Kaufpreis</th>
+                    <th style={{ textAlign: "right" }}>Marktpreis</th>
                     <th style={{ textAlign: "right" }}>Gesamtwert</th>
                     <th style={{ textAlign: "right" }}>Anteil</th>
                     <th></th>
@@ -436,6 +635,8 @@ export default function PortfolioDetail({
                   {assets.map((a) => {
                     const val = calcAssetValue(a);
                     const pct = portfolioValue > 0 ? ((val / portfolioValue) * 100).toFixed(1) : "0.0";
+                    const hasMarket = a.marketSymbol && a.marketAssetType;
+                    const relTime = formatRelativeTime(a.lastUpdated);
                     return (
                       <tr key={a.id}>
                         <td>
@@ -443,6 +644,11 @@ export default function PortfolioDetail({
                           {(a.ticker || a.isin) && (
                             <div className="hb-muted" style={{ fontSize: 11 }}>
                               {[a.ticker, a.isin].filter(Boolean).join(" | ")}
+                            </div>
+                          )}
+                          {hasMarket && (
+                            <div className="hb-muted" style={{ fontSize: 11, marginTop: 1 }}>
+                              {a.marketSymbol} · {a.marketAssetType}
                             </div>
                           )}
                           {a.tags && a.tags.length > 0 && (
@@ -455,23 +661,46 @@ export default function PortfolioDetail({
                         </td>
                         <td>{a.assetType}</td>
                         <td>{a.region || "-"}</td>
-                        <td style={{ textAlign: "right", whiteSpace: "nowrap", padding: "14px 14px" }}>
-                          <span style={{ marginRight: 12 }}>{a.quantity} {a.unitLabel || "Anteile"}</span>
+                        <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                          <span style={{ marginRight: 8 }}>{a.quantity} {a.unitLabel || "Anteile"}</span>
                           <Button
                             variant="outline"
                             onClick={() => openBuySellDialog(a)}
+                            title="Kaufen / Verkaufen"
                             style={{
-                              fontSize: 13,
-                              padding: "4px 8px",
+                              fontSize: 11,
+                              padding: "2px 6px",
                               minHeight: "auto",
                               lineHeight: 1.4,
-                              borderRadius: 4,
+                              borderRadius: "var(--radius-sm, 4px)",
                               verticalAlign: "middle",
                             }}
                           >K/V</Button>
                         </td>
-                        <td style={{ textAlign: "right" }}>{toCHF(a.pricePerUnit)}</td>
-                        <td style={{ textAlign: "right", fontWeight: 600 }}>{toCHF(val)}</td>
+                        <td style={{ textAlign: "right", color: "var(--muted)" }}>{fmt(a.pricePerUnit)}</td>
+                        <td style={{ textAlign: "right" }}>
+                          {hasMarket ? (
+                            <div>
+                              <div style={{ fontWeight: 500 }}>
+                                {a.currentPrice != null ? fmt(a.currentPrice) : "—"}
+                              </div>
+                              <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", alignItems: "center", marginTop: 3 }}>
+                                <PriceStatusBadge asset={a} />
+                                {relTime && (
+                                  <span className="hb-muted" style={{ fontSize: 11 }}>{relTime}</span>
+                                )}
+                              </div>
+                              {a.originalCurrency && a.originalCurrency !== baseCurrency && a.originalPrice != null && (
+                                <div className="hb-muted" style={{ fontSize: 11, marginTop: 2 }}>
+                                  {a.originalPrice.toFixed(2)} {a.originalCurrency}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="hb-muted" style={{ fontSize: 12 }}>Kein Tracking</span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: "right", fontWeight: 600 }}>{fmt(val)}</td>
                         <td style={{ textAlign: "right" }}>{pct}%</td>
                         <td>
                           <div className="hb-actions" style={{ justifyContent: "flex-end" }}>
@@ -564,7 +793,7 @@ export default function PortfolioDetail({
           </div>
 
           <div className="hb-field">
-            <div className="hb-label">Preis/Einheit (CHF) *</div>
+            <div className="hb-label">Kaufpreis/Einheit ({baseCurrency}) *</div>
             <input
               className="hb-input"
               type="text"
@@ -600,6 +829,44 @@ export default function PortfolioDetail({
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
+          </div>
+
+          {/* Market data tracking section */}
+          <div style={{
+            gridColumn: "1 / -1",
+            borderTop: "1px solid var(--border)",
+            paddingTop: 12,
+            marginTop: 4,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)", marginBottom: 8 }}>
+              Automatisches Marktpreis-Tracking
+            </div>
+          </div>
+
+          <div className="hb-field">
+            <div className="hb-label">API-Typ (optional)</div>
+            <select
+              className="hb-input"
+              value={assetDraft.marketAssetType}
+              onChange={(e) => setAssetDraft((d) => ({ ...d, marketAssetType: e.target.value, marketSymbol: "" }))}
+            >
+              <option value="">— Kein Tracking —</option>
+              {MARKET_ASSET_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="hb-field">
+            <div className="hb-label">Markt-Symbol (optional)</div>
+            <input
+              className="hb-input"
+              type="text"
+              placeholder={marketSymbolPlaceholder}
+              value={assetDraft.marketSymbol}
+              onChange={(e) => setAssetDraft((d) => ({ ...d, marketSymbol: e.target.value }))}
+              disabled={!assetDraft.marketAssetType}
+            />
           </div>
 
           <div className="hb-field" style={{ gridColumn: "1 / -1" }}>

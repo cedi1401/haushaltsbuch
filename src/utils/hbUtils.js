@@ -15,6 +15,23 @@ export function toCHF(n) {
   }
 }
 
+/**
+ * Formats an amount in any ISO-4217 currency using Swiss number formatting.
+ * Falls back to toCHF if currency is invalid.
+ */
+export function formatCurrency(n, currency = "CHF") {
+  try {
+    return new Intl.NumberFormat("de-CH", {
+      style: "currency",
+      currency: String(currency).toUpperCase(),
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(n || 0));
+  } catch {
+    return toCHF(n);
+  }
+}
+
 export function todayISO() {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -546,6 +563,7 @@ export function makeDefaultBook(name = "Mein Haushaltsbuch") {
     investmentAssetTypes: [...DEFAULT_ASSET_TYPES],
     investmentRegions: [...DEFAULT_REGIONS],
     investmentTags: [],
+    baseCurrency: "CHF",
   };
 }
 
@@ -741,6 +759,11 @@ export function normalizeBook(book) {
   // Fixkosten hinzufügen, falls nicht vorhanden
   if (!Array.isArray(normalized.recurringExpenses)) {
     normalized.recurringExpenses = [];
+  }
+
+  // Basiswährung: Standard CHF (bisherige implizite Währung)
+  if (!normalized.baseCurrency) {
+    normalized.baseCurrency = "CHF";
   }
 
   // Investment-Daten normalisieren

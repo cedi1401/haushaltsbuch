@@ -26,6 +26,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('update-downloaded', (_event, info) => callback(info));
   },
 
+  // Market Data
+  fetchMarketPrices: (assets, baseCurrency) =>
+    ipcRenderer.invoke('marketdata:fetchPrices', assets, baseCurrency),
+  triggerMarketUpdate: () =>
+    ipcRenderer.invoke('marketdata:triggerUpdate'),
+  overrideMarketPrice: (symbol, price, currency) =>
+    ipcRenderer.invoke('marketdata:overridePrice', symbol, price, currency),
+  invalidateMarketCaches: () =>
+    ipcRenderer.invoke('marketdata:invalidateCaches'),
+  onMarketDataUpdated: (callback) => {
+    ipcRenderer.on('marketdata:update-complete', (_event, data) => callback(data));
+  },
+
   // Platform info
   isElectron: true,
 });

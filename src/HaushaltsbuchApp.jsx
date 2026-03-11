@@ -133,6 +133,15 @@ export default function HaushaltsbuchApp() {
     load();
   }, []);
 
+  // Reload books from storage (called after the daily market data scheduler fires)
+  async function reloadBooksFromStorage() {
+    const savedBooks = await loadBooks();
+    if (Array.isArray(savedBooks) && savedBooks.length) {
+      const normalized = normalizeBooks(savedBooks);
+      setBooks(normalized);
+    }
+  }
+
   // Speichern (async-safe: fire-and-forget)
   const isInitialLoad = useRef(true);
   useEffect(() => {
@@ -849,6 +858,7 @@ Notiz: ${target.note}` : ""}`
           toCHF={toCHF}
           onUpdateBook={updateBook}
           todayISO={todayISO}
+          onReloadBooks={reloadBooksFromStorage}
         />
       ) : (
         <>
