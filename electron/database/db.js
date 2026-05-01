@@ -26,16 +26,6 @@ export async function initDatabase() {
       data  TEXT NOT NULL DEFAULT '[]'
     );
 
-    CREATE TABLE IF NOT EXISTS price_cache (
-      cache_key   TEXT PRIMARY KEY,
-      symbol      TEXT NOT NULL,
-      date_key    TEXT NOT NULL,
-      price       REAL,
-      currency    TEXT,
-      source      TEXT,
-      fetched_at  TEXT NOT NULL,
-      raw_data    TEXT
-    );
   `);
 
   // Ensure the single row exists
@@ -74,25 +64,6 @@ export function getDb() {
 
     setSetting(key, value) {
       db.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run(key, value);
-    },
-
-    // --- Price Cache ---
-
-    getCachedPrice(cacheKey) {
-      return db.prepare('SELECT * FROM price_cache WHERE cache_key = ?').get(cacheKey) || null;
-    },
-
-    setCachedPrice(cacheKey, symbol, dateKey, price, currency, source, rawData = null) {
-      db.prepare(`
-        INSERT OR REPLACE INTO price_cache (cache_key, symbol, date_key, price, currency, source, fetched_at, raw_data)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(cacheKey, symbol, dateKey, price, currency, source, new Date().toISOString(), rawData ? JSON.stringify(rawData) : null);
-    },
-
-    clearOldPriceCache(daysOld = 7) {
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - daysOld);
-      db.prepare("DELETE FROM price_cache WHERE fetched_at < ?").run(cutoff.toISOString());
     },
   };
 }

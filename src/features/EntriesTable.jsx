@@ -64,8 +64,8 @@ export default function EntriesTable({
                       <td className="hb-col-category">{e.category}</td>
                       <td className="hb-col-note">{e.note || "—"}</td>
                       <td className={`hb-col-amount hb-right ${colorClass}`}>
-                        {sign}
-                        {toCHF(Number(e.amount || 0))}
+                        <span className="hb-sign">{sign}</span>
+                        <span className="hb-amount-value">{toCHF(Number(e.amount || 0))}</span>
                       </td>
                       <td className="hb-col-actions">
                         <div className="hb-actions">

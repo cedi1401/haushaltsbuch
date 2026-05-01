@@ -1,7 +1,5 @@
 // src/utils/hbUtils.js
 
-import { normalizeInvestmentData, DEFAULT_ASSET_TYPES, DEFAULT_REGIONS } from "./investmentUtils.js";
-
 export function toCHF(n) {
   try {
     return new Intl.NumberFormat("de-CH", {
@@ -559,10 +557,6 @@ export function makeDefaultBook(name = "Mein Haushaltsbuch") {
     pots: [],
     goals: [],
     recurringExpenses: [],
-    investmentPortfolios: [],
-    investmentAssetTypes: [...DEFAULT_ASSET_TYPES],
-    investmentRegions: [...DEFAULT_REGIONS],
-    investmentTags: [],
     baseCurrency: "CHF",
   };
 }
@@ -765,10 +759,6 @@ export function normalizeBook(book) {
   if (!normalized.baseCurrency) {
     normalized.baseCurrency = "CHF";
   }
-
-  // Investment-Daten normalisieren
-  const withInvestments = normalizeInvestmentData(normalized);
-  Object.assign(normalized, withInvestments);
 
   return normalized;
 }

@@ -20,9 +20,8 @@ import PotsView from "./features/PotsView.jsx";
 import GoalsView from "./features/GoalsView.jsx";
 import FixedCostsView from "./features/FixedCostsView.jsx";
 import NavDrawer from "./features/NavDrawer.jsx";
-import InvestmentsView from "./features/InvestmentsView.jsx";
 
-import { toCHF, todayISO, parseAmount, makeDefaultBook, normalizeBooks, getCategoryNames, DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./utils/hbUtils.js";
+import { formatCurrency, toCHF, todayISO, parseAmount, makeDefaultBook, normalizeBooks, getCategoryNames, DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./utils/hbUtils.js";
 import { calcPotBalance } from "./utils/potUtils.js";
 import { calcExpenseByCategory, calcBudgetStatus } from "./utils/budgetUtils.js";
 import { loadBooks, saveBooks, getSetting, setSetting } from "./dal/storage.js";
@@ -33,7 +32,7 @@ export default function HaushaltsbuchApp() {
   const [darkMode, setDarkMode] = useState(false);
 
   // Navigation
-  const [view, setView] = useState("book"); // "book" | "trend" | "pots" | "goals" | "fixed" | "investments"
+  const [view, setView] = useState("book"); // "book" | "trend" | "pots" | "goals" | "fixed"
   const [navOpen, setNavOpen] = useState(false);
 
   // Bücher
@@ -133,15 +132,6 @@ export default function HaushaltsbuchApp() {
     load();
   }, []);
 
-  // Reload books from storage (called after the daily market data scheduler fires)
-  async function reloadBooksFromStorage() {
-    const savedBooks = await loadBooks();
-    if (Array.isArray(savedBooks) && savedBooks.length) {
-      const normalized = normalizeBooks(savedBooks);
-      setBooks(normalized);
-    }
-  }
-
   // Speichern (async-safe: fire-and-forget)
   const isInitialLoad = useRef(true);
   useEffect(() => {
@@ -178,6 +168,9 @@ export default function HaushaltsbuchApp() {
     if (!books.length) return null;
     return books.find((b) => b.id === activeBookId) || books[0] || null;
   }, [books, activeBookId]);
+
+  const baseCurrency = activeBook?.baseCurrency || "CHF";
+  const fmt = useMemo(() => (n) => formatCurrency(n, baseCurrency), [baseCurrency]);
 
   // potId synchronisieren: falls aktueller Topf nicht mehr existiert, ersten verfügbaren wählen
   useEffect(() => {
@@ -427,7 +420,7 @@ export default function HaushaltsbuchApp() {
     else if (target?.kind === "transfer") prettyType = "Transfer";
     else if (target?.kind === "withdrawal") prettyType = "Entnahme";
     
-    const prettyAmount = target ? toCHF(Number(target.amount || 0)) : "";
+    const prettyAmount = target ? fmt(Number(target.amount || 0)) : "";
 
     const msg = target
       ? `Eintrag wirklich löschen?
@@ -727,7 +720,7 @@ Notiz: ${target.note}` : ""}`
             <div>
               <h1 className="hb-title">Haushaltsbuch</h1>
               <p className="hb-sub">
-                {view === "trend" ? "(Trend)" : view === "pots" ? "(Töpfe)" : view === "goals" ? "(Sparziele)" : view === "fixed" ? "(Fixkosten)" : view === "investments" ? "(Investments)" : monthLabel}
+                {view === "trend" ? "(Trend)" : view === "pots" ? "(Töpfe)" : view === "goals" ? "(Sparziele)" : view === "fixed" ? "(Fixkosten)" : monthLabel}
               </p>
             </div>
           </div>
@@ -762,16 +755,16 @@ Notiz: ${target.note}` : ""}`
 
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <label className="hb-muted">Monat</label>
-              {view === "trend" || view === "pots" || view === "goals" || view === "fixed" || view === "investments" ? <span className="hb-badge">nur Buch</span> : null}
+              {view === "trend" || view === "pots" || view === "goals" || view === "fixed" ? <span className="hb-badge">nur Buch</span> : null}
             </div>
             <input
               className="hb-input"
               type="month"
               value={monthFilter}
               onChange={(e) => setMonthFilter(e.target.value)}
-              disabled={view === "trend" || view === "pots" || view === "goals" || view === "fixed" || view === "investments"}
+              disabled={view === "trend" || view === "pots" || view === "goals" || view === "fixed"}
               title={
-                view === "trend" || view === "pots" || view === "goals" || view === "fixed" || view === "investments"
+                view === "trend" || view === "pots" || view === "goals" || view === "fixed"
                   ? "Der Monatsfilter gilt nur in der Buch-Ansicht."
                   : undefined
               }
@@ -779,9 +772,9 @@ Notiz: ${target.note}` : ""}`
             <Button
               variant="outline"
               onClick={() => setMonthFilter("")}
-              disabled={view === "trend" || view === "pots" || view === "goals" || view === "fixed" || view === "investments"}
+              disabled={view === "trend" || view === "pots" || view === "goals" || view === "fixed"}
               title={
-                view === "trend" || view === "pots" || view === "goals" || view === "fixed" || view === "investments"
+                view === "trend" || view === "pots" || view === "goals" || view === "fixed"
                   ? "Der Monatsfilter gilt nur in der Buch-Ansicht."
                   : undefined
               }
@@ -823,12 +816,13 @@ Notiz: ${target.note}` : ""}`
       </div>
 
       {view === "trend" ? (
-        <TrendView entries={entries} entriesAll={allEntries} toCHF={toCHF} />
+        <TrendView entries={entries} entriesAll={allEntries} toCHF={fmt} />
       ) : view === "pots" ? (
         <PotsView
           activeBook={activeBook}
           entries={entries}
-          toCHF={toCHF}
+          toCHF={fmt}
+          baseCurrency={baseCurrency}
           onAddTransferEntry={addTransferEntry}
           transferCategories={indicateTransferCategories}
           todayISO={todayISO}
@@ -839,7 +833,8 @@ Notiz: ${target.note}` : ""}`
         <GoalsView
           activeBook={activeBook}
           entries={entries}
-          toCHF={toCHF}
+          toCHF={fmt}
+          baseCurrency={baseCurrency}
           onUpdateBook={updateBook}
           todayISO={todayISO}
         />
@@ -847,18 +842,11 @@ Notiz: ${target.note}` : ""}`
         <FixedCostsView
           activeBook={activeBook}
           entries={entries}
-          toCHF={toCHF}
+          toCHF={fmt}
+          baseCurrency={baseCurrency}
           onUpdateBook={updateBook}
           onAddEntry={addTransferEntry}
           todayISO={todayISO}
-        />
-      ) : view === "investments" ? (
-        <InvestmentsView
-          activeBook={activeBook}
-          toCHF={toCHF}
-          onUpdateBook={updateBook}
-          todayISO={todayISO}
-          onReloadBooks={reloadBooksFromStorage}
         />
       ) : (
         <>
@@ -1043,20 +1031,20 @@ Notiz: ${target.note}` : ""}`
               <div className="hb-grid-3" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
                 <div>
                   <div className="hb-stat-title">Einnahmen</div>
-                  <div className="hb-stat-val hb-ok">+{toCHF(totalIncome)}</div>
+                  <div className="hb-stat-val hb-ok">+{fmt(totalIncome)}</div>
                 </div>
                 <div>
                   <div className="hb-stat-title">Ausgaben</div>
-                  <div className="hb-stat-val hb-bad">-{toCHF(totalExpense)}</div>
+                  <div className="hb-stat-val hb-bad">-{fmt(totalExpense)}</div>
                 </div>
                 <div>
                   <div className="hb-stat-title">Transfers</div>
-                  <div className="hb-stat-val hb-transfer">→{toCHF(totalTransfers)}</div>
+                  <div className="hb-stat-val hb-transfer">→{fmt(totalTransfers)}</div>
                 </div>
                 <div>
                   <div className="hb-stat-title">Saldo</div>
                   <div className={`hb-stat-val ${balance >= 0 ? "hb-ok" : "hb-bad"}`}>
-                    {toCHF(balance)}
+                    {fmt(balance)}
                   </div>
                 </div>
               </div>
@@ -1072,7 +1060,7 @@ Notiz: ${target.note}` : ""}`
                   <div key={pot.id}>
                     <div className="hb-stat-title">{pot.name}</div>
                     <div className={`hb-stat-val ${pot.balance >= 0 ? "hb-ok" : "hb-bad"}`}>
-                      {toCHF(pot.balance)}
+                      {fmt(pot.balance)}
                     </div>
                   </div>
                 ))}
@@ -1093,7 +1081,7 @@ Notiz: ${target.note}` : ""}`
                       <div className="hb-budget-label">
                         <span style={{ fontWeight: 500 }}>{item.name}</span>
                         <span className="hb-muted">
-                          {toCHF(item.spent)} / {toCHF(item.budget)} ({item.percent}%)
+                          {fmt(item.spent)} / {fmt(item.budget)} ({item.percent}%)
                         </span>
                       </div>
                       <div className="hb-budget-bar-bg">
@@ -1112,13 +1100,14 @@ Notiz: ${target.note}` : ""}`
           <Charts
             expenseByHierarchy={expenseByHierarchy}
             incomeByHierarchy={incomeByHierarchy}
-            toCHF={toCHF}
+            toCHF={fmt}
+            baseCurrency={baseCurrency}
           />
 
           <EntriesTable
             entriesSorted={entriesSorted}
             monthLabel={monthLabel}
-            toCHF={toCHF}
+            toCHF={fmt}
             startEdit={startEdit}
             removeEntry={removeEntry}
           />

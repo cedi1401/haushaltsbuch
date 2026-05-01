@@ -9,6 +9,7 @@ export default function FixedCostsView({
   activeBook,
   entries,
   toCHF,
+  baseCurrency = "CHF",
   onUpdateBook,
   onAddEntry,
   todayISO,
@@ -362,7 +363,7 @@ export default function FixedCostsView({
             </div>
 
             <div className="hb-field">
-              <div className="hb-label">Betrag (CHF)</div>
+              <div className="hb-label">Betrag ({baseCurrency})</div>
               <input
                 className="hb-input"
                 style={{ width: "100%", minWidth: 0 }}

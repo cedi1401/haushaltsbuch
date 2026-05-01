@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import { Button } from "../components/ui.jsx";
-import { exportBackupFile, importBackupFile as importBackupNative, invalidateMarketCaches } from "../dal/storage.js";
+import { exportBackupFile, importBackupFile as importBackupNative } from "../dal/storage.js";
 import { exportBackup } from "../backup.js";
 import { normalizeBook } from "../utils/hbUtils.js";
 
@@ -364,49 +364,6 @@ export default function SettingsDialog({
           </div>
         </div>
       )}
-
-      {/* BASISWÄHRUNG */}
-      <div className="hb-field" style={{ marginTop: 24 }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>Basiswährung (Portfolio)</div>
-        <div className="hb-muted" style={{ marginBottom: 10 }}>
-          Alle Marktpreise in deinen Investment-Portfolios werden in dieser Währung angezeigt.
-        </div>
-        <select
-          className="hb-input"
-          style={{ maxWidth: 200 }}
-          value={activeBook?.baseCurrency || "CHF"}
-          onChange={(e) => {
-            const newCurrency = e.target.value;
-            if (!activeBook) return;
-            onUpdateBook?.({ ...activeBook, baseCurrency: newCurrency });
-            // Invalidate cached prices so they get refetched in the new currency
-            invalidateMarketCaches();
-          }}
-        >
-          <option value="CHF">CHF – Schweizer Franken</option>
-          <option value="EUR">EUR – Euro</option>
-          <option value="USD">USD – US-Dollar</option>
-          <option value="GBP">GBP – Britisches Pfund</option>
-          <option value="JPY">JPY – Japanischer Yen</option>
-          <option value="CAD">CAD – Kanadischer Dollar</option>
-          <option value="AUD">AUD – Australischer Dollar</option>
-          <option value="SEK">SEK – Schwedische Krone</option>
-          <option value="NOK">NOK – Norwegische Krone</option>
-          <option value="DKK">DKK – Dänische Krone</option>
-          <option value="PLN">PLN – Polnischer Zloty</option>
-          <option value="CZK">CZK – Tschechische Krone</option>
-          <option value="HUF">HUF – Ungarischer Forint</option>
-          <option value="SGD">SGD – Singapur-Dollar</option>
-          <option value="HKD">HKD – Hongkong-Dollar</option>
-          <option value="NZD">NZD – Neuseeland-Dollar</option>
-        </select>
-        {activeBook?.baseCurrency && activeBook.baseCurrency !== "CHF" && (
-          <div className="hb-muted" style={{ marginTop: 6, fontSize: 12 }}>
-            Hinweis: Preise werden täglich um 18:00 Uhr automatisch aktualisiert.
-            Klicke in den Portfolios auf "Preise aktualisieren" für sofortige Kurse.
-          </div>
-        )}
-      </div>
 
       {/* NEU: TÖPFE-VERWALTUNG */}
       <div className="hb-field" style={{ marginTop: 24 }}>

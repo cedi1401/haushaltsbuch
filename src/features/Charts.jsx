@@ -9,7 +9,7 @@ import {
 } from "recharts";
 import { makeSubcategoryColorShades } from "../utils/hbPalette.js";
 
-export default function Charts({ expenseByHierarchy, incomeByHierarchy, toCHF }) {
+export default function Charts({ expenseByHierarchy, incomeByHierarchy, toCHF, baseCurrency = "CHF" }) {
   const [activeTab, setActiveTab] = useState("expense"); // "expense" | "income"
   const [drilldownId, setDrilldownId] = useState(null);  // null = overview, else categoryId
   const [displayMode, setDisplayMode] = useState("chf"); // "chf" | "percent"
@@ -106,7 +106,7 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, toCHF })
               className={displayMode === "chf" ? "active" : ""}
               onClick={() => setDisplayMode("chf")}
             >
-              CHF
+              {baseCurrency}
             </button>
             <button
               type="button"

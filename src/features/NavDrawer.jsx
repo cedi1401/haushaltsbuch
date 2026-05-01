@@ -80,17 +80,6 @@ export default function NavDrawer({ open, onClose, view, onChangeView }) {
           </button>
 
           <button
-            className={`hb-nav-item ${view === "investments" ? "hb-nav-item-active" : ""}`}
-            onClick={() => {
-              onChangeView?.("investments");
-              onClose?.();
-            }}
-            type="button"
-          >
-            INVESTMENTS
-          </button>
-
-          <button
             className={`hb-nav-item ${view === "trend" ? "hb-nav-item-active" : ""}`}
             onClick={() => {
               onChangeView?.("trend");

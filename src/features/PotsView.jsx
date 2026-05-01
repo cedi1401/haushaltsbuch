@@ -28,7 +28,7 @@ function monthLabel(ym) {
   return `${names[mm - 1] || m} ${y}`;
 }
 
-export default function PotsView({ activeBook, entries, toCHF, onAddTransferEntry, transferCategories, todayISO, onEditEntry, onRemoveEntry }) {
+export default function PotsView({ activeBook, entries, toCHF, baseCurrency = "CHF", onAddTransferEntry, transferCategories, todayISO, onEditEntry, onRemoveEntry }) {
   const pots = activeBook?.pots || [];
   const [selectedPotId, setSelectedPotId] = useState(pots[0]?.id || "");
   const [addEntryOpen, setAddEntryOpen] = useState(false);
@@ -489,7 +489,7 @@ export default function PotsView({ activeBook, entries, toCHF, onAddTransferEntr
           </div>
 
           <div className="hb-field">
-            <div className="hb-label">Betrag (CHF)</div>
+            <div className="hb-label">Betrag ({baseCurrency})</div>
             <input
               className="hb-input"
               type="text"

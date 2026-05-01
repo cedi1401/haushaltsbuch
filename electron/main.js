@@ -3,13 +3,6 @@ import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDatabase, getDb } from './database/db.js';
-import {
-  startScheduler,
-  fetchPricesForAssets,
-  overridePrice,
-  invalidateAllCaches,
-  triggerManualUpdate,
-} from './services/marketdata/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,8 +36,6 @@ app.whenReady().then(async () => {
   await initDatabase();
   registerIpcHandlers();
   createWindow();
-  // Start daily market price scheduler (18:00 Europe/Zurich)
-  startScheduler(() => mainWindow);
 
   // Auto-updates (only in production)
   if (!process.env.VITE_DEV_SERVER_URL) {
@@ -142,29 +133,6 @@ function registerIpcHandlers() {
     mainWindow?.webContents.send('update-downloaded', info);
   });
 
-  // --- Market Data ---
-
-  // Fetch current prices for a list of assets (on-demand, triggered by user)
-  ipcMain.handle('marketdata:fetchPrices', async (_event, assets, baseCurrency) => {
-    return fetchPricesForAssets(assets, baseCurrency);
-  });
-
-  // Trigger a manual full update (same as scheduler, but immediate)
-  ipcMain.handle('marketdata:triggerUpdate', async () => {
-    return triggerManualUpdate(() => mainWindow);
-  });
-
-  // Manual price override for testing/debugging
-  ipcMain.handle('marketdata:overridePrice', (_event, symbol, price, currency) => {
-    overridePrice(symbol, price, currency);
-    return true;
-  });
-
-  // Invalidate all caches (called when baseCurrency changes)
-  ipcMain.handle('marketdata:invalidateCaches', () => {
-    invalidateAllCaches();
-    return true;
-  });
 }
 
 function formatDate() {

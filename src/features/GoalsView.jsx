@@ -7,6 +7,7 @@ export default function GoalsView({
   activeBook,
   entries,
   toCHF,
+  baseCurrency = "CHF",
   onUpdateBook,
   todayISO,
 }) {
@@ -356,7 +357,7 @@ export default function GoalsView({
           </div>
 
           <div className="hb-field">
-            <div className="hb-label">Zielbetrag (CHF)</div>
+            <div className="hb-label">Zielbetrag ({baseCurrency})</div>
             <input
               className="hb-input"
               type="text"
@@ -439,7 +440,7 @@ export default function GoalsView({
 
           {draft.startMode === "custom" && (
             <div className="hb-field">
-              <div className="hb-label">Anfangsbetrag (CHF)</div>
+              <div className="hb-label">Anfangsbetrag ({baseCurrency})</div>
               <input
                 className="hb-input"
                 type="text"

@@ -553,7 +553,7 @@ select.hb-input option {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 .hb-table th {
@@ -598,11 +598,13 @@ select.hb-input option {
 .hb-entries-table .hb-col-date {
   width: 12%;
   white-space: nowrap;
+  overflow: hidden;
 }
 
 .hb-entries-table .hb-col-type {
   width: 10%;
   white-space: nowrap;
+  overflow: hidden;
 }
 
 .hb-entries-table .hb-col-category {
@@ -621,11 +623,20 @@ select.hb-input option {
 .hb-entries-table .hb-col-amount {
   width: 14%;
   white-space: nowrap;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+.hb-sign {
+  display: inline-block;
+  width: 16px;
+  text-align: center;
 }
 
 .hb-entries-table .hb-col-actions {
   width: 16%;
   white-space: nowrap;
+  overflow: hidden;
   text-align: right;
 }
 
