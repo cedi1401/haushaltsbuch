@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import EditDialog from "./EditDialog.jsx";
-import { PIE_PALETTE } from "../utils/hbPalette.js";
+import { CUSTOM_CATEGORY_PALETTE } from "../utils/hbPalette.js";
 
 export default function CategoryCreateDialog({
   open,
@@ -10,7 +10,7 @@ export default function CategoryCreateDialog({
 }) {
   const [mode, setMode] = useState("parent"); // "parent" | "sub"
   const [name, setName] = useState("");
-  const [color, setColor] = useState(PIE_PALETTE[0]);
+  const [color, setColor] = useState(CUSTOM_CATEGORY_PALETTE[0]);
   const [parentId, setParentId] = useState("");
 
   // State zurücksetzen wenn Dialog öffnet
@@ -18,7 +18,7 @@ export default function CategoryCreateDialog({
     if (open) {
       setMode("parent");
       setName("");
-      setColor(PIE_PALETTE[0]);
+      setColor(CUSTOM_CATEGORY_PALETTE[0]);
       setParentId(expenseCategories?.[0]?.id || "");
     }
   }, [open, expenseCategories]);
@@ -84,7 +84,7 @@ export default function CategoryCreateDialog({
         <div className="hb-field" style={{ marginTop: 16 }}>
           <label className="hb-label">Farbe</label>
           <div className="hb-color-picker">
-            {PIE_PALETTE.map((c) => (
+            {CUSTOM_CATEGORY_PALETTE.map((c) => (
               <button
                 key={c}
                 type="button"

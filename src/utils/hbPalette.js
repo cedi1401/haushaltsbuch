@@ -1,27 +1,51 @@
-// WinUI 3 / Fluent-inspired color palette - vivid but tasteful
-// 20 colors - cyclically reused when more categories exist.
-
+// WinUI 3 / Fluent-inspired color palette for fixed costs trend section
+// (Fixkosten-Linienpositionen, nicht Kategorien)
 export const PIE_PALETTE = [
-  "#0078d4", // Fluent blue (primary accent)
-  "#0f7b0f", // green
-  "#c42b1c", // red
-  "#9d5d00", // amber/gold
-  "#7160e8", // purple
-  "#038387", // teal
-  "#ca5010", // orange
-  "#4f6bed", // periwinkle
-  "#8e562e", // brown
-  "#10893e", // forest green
-  "#e3008c", // magenta/rose
-  "#498205", // lime
-  "#5c2d91", // deep purple
-  "#b4a00e", // olive gold
-  "#c239b3", // orchid
-  "#00b7c3", // cyan
-  "#4a154b", // plum
-  "#6b6b6b", // neutral gray
-  "#005b70", // dark teal
-  "#8764b8", // lavender
+  "#0078d4", "#0f7b0f", "#c42b1c", "#9d5d00", "#7160e8",
+  "#038387", "#ca5010", "#4f6bed", "#8e562e", "#10893e",
+  "#e3008c", "#498205", "#5c2d91", "#b4a00e", "#c239b3",
+  "#00b7c3", "#4a154b", "#6b6b6b", "#005b70", "#8764b8",
+];
+
+// Farben für benutzerdefinierte Kategorien — keiner davon ist identisch mit
+// den Hauptkategorie-Farben (Wohnen, Versicherung, Sparen, Shopping, Reisen,
+// Mobilität, Lebenshaltung, Kinder, Gesundheit, Freizeit, Bank,
+// Unkategorisiert, Einnahmen).
+export const CUSTOM_CATEGORY_PALETTE = [
+  "#5c2d91", // Tiefviolett
+  "#4a154b", // Pflaume
+  "#8764b8", // Lavendel
+  "#c239b3", // Orchidee
+  "#881798", // Dunkelmagenta
+  "#8b0057", // Dunkelrose
+  "#6b2737", // Burgund
+  "#005b70", // Dunkelblaugrün
+  "#00b7c3", // Cyan
+  "#018574", // Türkis (Fluent)
+  "#1a6b8a", // Petrol
+  "#003087", // Marine
+  "#00cc6a", // Smaragdgrün
+  "#038387", // Helles Blaugrün (Fluent)
+  "#73aa24", // Gelbgrün (Fluent)
+  "#e8a200", // Goldgelb
+  "#ef6950", // Koralle
+  "#ff7043", // Leuchtendes Orange
+  "#5d4037", // Dunkelbraun
+  "#455a64", // Blaugrau
+];
+
+// Sequenzielle Blau-Palette für Transfer-Kategorien im Topf-Donut-Chart.
+// Gleiche Farbfamilie → kommuniziert visuell „alle Transfers derselben Natur".
+// Sortiert von dunkel → hell: größte Position = dunkelste Farbe, kleinste = hellste.
+export const TRANSFER_PALETTE = [
+  "#1e5fa0", // L≈37%
+  "#2d6a9f", // L≈40%
+  "#3a7cb8", // L≈48%
+  "#52a3cc", // L≈56%
+  "#4a90d9", // L≈57%
+  "#6cbdf0", // L≈68%
+  "#7ec8e3", // L≈69%
+  "#8db4d4", // L≈69%
 ];
 
 // Specific colors for income/expense charts
@@ -36,10 +60,10 @@ export const CHART_COLORS = {
  * Creates a stable category->color mapping based on ordering.
  * Tip: pass your category list (book) and append any "orphan" categories after.
  */
-export function makeCategoryColorMap(categoryNames, palette = PIE_PALETTE) {
+export function makeCategoryColorMap(categoryNames, palette = PIE_PALETTE, startIndex = 0) {
   const colors = Array.isArray(palette) && palette.length ? palette : ["#0078d4"];
   const map = new Map();
-  let i = 0;
+  let i = startIndex;
 
   for (const raw of categoryNames || []) {
     // Support both string arrays and object arrays

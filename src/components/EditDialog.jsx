@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { Button } from "./ui.jsx";
+import { IconClose } from "./icons.jsx";
 
 export default function EditDialog({
   open,
@@ -68,8 +69,14 @@ export default function EditDialog({
             <div className="hb-modal-title">{title}</div>
             <div className="hb-muted">ESC schließt, Ctrl/Cmd+Enter speichert.</div>
           </div>
-          <button className="hb-icon-btn" onClick={onClose} aria-label="Schließen">
-            ✕
+          <button
+            className="hb-icon-btn"
+            onClick={onClose}
+            aria-label="Schließen"
+            title="Schließen"
+            type="button"
+          >
+            <IconClose />
           </button>
         </div>
 

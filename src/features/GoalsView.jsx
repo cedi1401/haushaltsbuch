@@ -1,19 +1,28 @@
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
-import { calcGoalProgress, calcGoalPrognosis, generateGoalId } from "../utils/goalUtils.js";
+import { calcGoalProgress, calcGoalPrognosis } from "../utils/goalUtils.js";
+import { parseAmount } from "../utils/hbUtils.js";
+import { generateId } from "../utils/idUtils.js";
+import { useConfirm } from "../components/ConfirmDialog.jsx";
+import { useToast } from "../components/Toast.jsx";
+import { IconEdit, IconDelete, IconGoals, IconPlus } from "../components/icons.jsx";
+import { useFmt } from "../contexts/CurrencyContext.jsx";
 
 export default function GoalsView({
   activeBook,
   entries,
-  toCHF,
   baseCurrency = "CHF",
   onUpdateBook,
   todayISO,
+  monthStartDay = 1,
 }) {
+  const toCHF = useFmt();
   const goals = activeBook?.goals || [];
   const pots = activeBook?.pots || [];
   const transferCategories = activeBook?.transferCategories || [];
+  const { confirm } = useConfirm();
+  const toast = useToast();
 
   // Dialog-State
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -34,9 +43,9 @@ export default function GoalsView({
     return goals.map((goal) => ({
       ...goal,
       progress: calcGoalProgress(goal, entries, pots),
-      prognosis: calcGoalPrognosis(goal, entries, todayISO()),
+      prognosis: calcGoalPrognosis(goal, entries, todayISO(), monthStartDay),
     }));
-  }, [goals, entries, pots, todayISO]);
+  }, [goals, entries, pots, todayISO, monthStartDay]);
 
   function openCreateDialog() {
     setEditingGoal(null);
@@ -76,7 +85,7 @@ export default function GoalsView({
   function saveGoal() {
     if (!activeBook) return;
 
-    const numericAmount = parseFloat(draft.targetAmount.replace(",", "."));
+    const numericAmount = parseAmount(draft.targetAmount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
     if (!draft.name.trim()) return;
     if (!draft.potId) return;
@@ -90,7 +99,7 @@ export default function GoalsView({
       startMode: draft.startMode,
       startDate: draft.startMode === "date" ? (draft.startDate || null) : null,
       startAmount: draft.startMode === "custom"
-        ? (parseFloat(String(draft.startAmount).replace(",", ".")) || 0)
+        ? (parseAmount(draft.startAmount) || 0)
         : 0,
     };
 
@@ -101,7 +110,7 @@ export default function GoalsView({
       onUpdateBook({ ...activeBook, goals: updatedGoals });
     } else {
       const newGoal = {
-        id: generateGoalId(),
+        id: generateId("goal"),
         ...goalData,
         createdAt: todayISO(),
       };
@@ -111,20 +120,27 @@ export default function GoalsView({
     closeDialog();
   }
 
-  function deleteGoal(goalId) {
+  async function deleteGoal(goalId) {
     if (!activeBook) return;
     const goal = goals.find((g) => g.id === goalId);
     const msg = goal
-      ? `Sparziel "${goal.name}" wirklich löschen?`
+      ? `Sparziel „${goal.name}“ wirklich löschen?`
       : "Sparziel wirklich löschen?";
-    if (!window.confirm(msg)) return;
+    const ok = await confirm({
+      title: "Sparziel löschen",
+      message: msg,
+      confirmLabel: "Löschen",
+      danger: true,
+    });
+    if (!ok) return;
     const updatedGoals = goals.filter((g) => g.id !== goalId);
     onUpdateBook({ ...activeBook, goals: updatedGoals });
+    toast.success("Sparziel gelöscht.");
   }
 
   const canSave = useMemo(() => {
     if (!draft.name.trim()) return false;
-    const n = parseFloat(draft.targetAmount.replace(",", "."));
+    const n = parseAmount(draft.targetAmount);
     if (!Number.isFinite(n) || n <= 0) return false;
     if (!draft.potId) return false;
     if (draft.startMode === "date" && !draft.startDate) return false;
@@ -170,20 +186,27 @@ export default function GoalsView({
           <div className="hb-muted">Definiere Ziele und verfolge deinen Fortschritt</div>
         </div>
 
-        <Button onClick={openCreateDialog}>+ Neues Sparziel</Button>
+        <Button onClick={openCreateDialog}><IconPlus /> Neues Sparziel</Button>
       </div>
 
       {goals.length === 0 ? (
         <Card>
           <CardContent>
-            <div className="hb-muted" style={{ textAlign: "center", padding: "20px 0" }}>
-              Noch keine Sparziele definiert. Erstelle dein erstes Sparziel, um deinen
-              Fortschritt zu verfolgen.
+            <div className="hb-empty">
+              <div className="hb-empty-icon"><IconGoals /></div>
+              <div className="hb-empty-title">Noch keine Sparziele</div>
+              <div className="hb-empty-text">
+                Definiere dein erstes Sparziel, um deinen Fortschritt im Blick zu behalten
+                und eine realistische Prognose zu erhalten.
+              </div>
+              <Button onClick={openCreateDialog}>
+                <IconPlus /> Neues Sparziel
+              </Button>
             </div>
           </CardContent>
         </Card>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className="hb-stack hb-stack--lg">
           {goalsWithProgress.map((goal) => (
             <Card key={goal.id}>
               <CardContent>
@@ -206,18 +229,30 @@ export default function GoalsView({
                         </>
                       )}
                     </div>
-                    <div className="hb-muted" style={{ fontSize: 11, marginTop: 2 }}>
+                    <div className="hb-muted" style={{ fontSize: 12, marginTop: 2 }}>
                       {getStartModeLabel(goal)}
                     </div>
                   </div>
 
                   <div className="hb-actions">
-                    <Button variant="outline" onClick={() => openEditDialog(goal)}>
-                      Bearbeiten
-                    </Button>
-                    <Button variant="outline" onClick={() => deleteGoal(goal.id)}>
-                      Löschen
-                    </Button>
+                    <button
+                      type="button"
+                      className="hb-icon-btn"
+                      onClick={() => openEditDialog(goal)}
+                      title="Bearbeiten"
+                      aria-label="Bearbeiten"
+                    >
+                      <IconEdit />
+                    </button>
+                    <button
+                      type="button"
+                      className="hb-icon-btn"
+                      onClick={() => deleteGoal(goal.id)}
+                      title="Löschen"
+                      aria-label="Löschen"
+                    >
+                      <IconDelete />
+                    </button>
                   </div>
                 </div>
 
@@ -265,7 +300,7 @@ export default function GoalsView({
                     style={{
                       padding: "10px 12px",
                       background: "var(--hover-bg)",
-                      borderRadius: 6,
+                      borderRadius: "var(--radius-md)",
                       marginTop: 8,
                     }}
                   >
@@ -319,7 +354,7 @@ export default function GoalsView({
                     style={{
                       padding: "10px 12px",
                       background: "var(--green-soft)",
-                      borderRadius: 6,
+                      borderRadius: "var(--radius-md)",
                       marginTop: 8,
                       color: "var(--green)",
                       fontWeight: 600,
@@ -352,7 +387,6 @@ export default function GoalsView({
               placeholder="z.B. Urlaub 2026"
               value={draft.name}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-              autoFocus
             />
           </div>
 

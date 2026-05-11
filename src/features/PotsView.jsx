@@ -15,23 +15,29 @@ import {
   Pie,
 } from "recharts";
 import { calcPotSeries } from "../utils/potUtils.js";
-import { PIE_PALETTE, makeCategoryColorMap, CHART_COLORS } from "../utils/hbPalette.js";
+import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
+import { formatDateDE, parseAmount } from "../utils/hbUtils.js";
+import { formatYearMonth } from "../utils/financialMonthUtils.js";
+import { generateId } from "../utils/idUtils.js";
+import { useThemeColors } from "../hooks/useThemeColors.jsx";
+import { useFmt } from "../contexts/CurrencyContext.jsx";
+import {
+  IconEdit,
+  IconDelete,
+  IconPots,
+  IconPlus,
+  IconInbox,
+} from "../components/icons.jsx";
 
-function monthLabel(ym) {
-  const [y, m] = String(ym).split("-");
-  if (!y || !m) return ym;
-  const mm = Number(m);
-  const names = [
-    "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
-    "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
-  ];
-  return `${names[mm - 1] || m} ${y}`;
-}
+const monthLabel = formatYearMonth;
 
-export default function PotsView({ activeBook, entries, toCHF, baseCurrency = "CHF", onAddTransferEntry, transferCategories, todayISO, onEditEntry, onRemoveEntry }) {
+export default function PotsView({ activeBook, entries, baseCurrency = "CHF", onAddTransferEntry, transferCategories, todayISO, onEditEntry, onRemoveEntry, monthStartDay = 1 }) {
+  const toCHF = useFmt();
   const pots = activeBook?.pots || [];
   const [selectedPotId, setSelectedPotId] = useState(pots[0]?.id || "");
+  const themeColors = useThemeColors();
   const [addEntryOpen, setAddEntryOpen] = useState(false);
+  const [showAllEntries, setShowAllEntries] = useState(false);
   const [newEntryDraft, setNewEntryDraft] = useState({
     date: "",
     amount: "",
@@ -46,9 +52,9 @@ export default function PotsView({ activeBook, entries, toCHF, baseCurrency = "C
   // Topf-Entwicklung über Monate
   const potSeries = useMemo(() => {
     if (!selectedPot) return [];
-    const series = calcPotSeries(entries, selectedPot.id);
+    const series = calcPotSeries(entries, selectedPot.id, monthStartDay);
     return series.map((d) => ({ ...d, label: monthLabel(d.month) }));
-  }, [entries, selectedPot]);
+  }, [entries, selectedPot, monthStartDay]);
 
   // Aktueller Stand
   const currentBalance = useMemo(() => {
@@ -102,15 +108,19 @@ export default function PotsView({ activeBook, entries, toCHF, baseCurrency = "C
       }
     }
 
-    return Array.from(map.entries())
-      .map(([name, value]) => ({ name, value }))
-      .filter((d) => d.value > 0)
-      .sort((a, b) => b.value - a.value);
+    const result = [];
+    for (const [name, value] of map) {
+      if (value > 0) result.push({ name, value });
+    }
+    return result.toSorted((a, b) => b.value - a.value);
   }, [entries, selectedPot]);
 
   const transferCatColor = useMemo(() => {
-    const names = transfersByCategory.map((d) => d.name);
-    return makeCategoryColorMap(names, PIE_PALETTE);
+    const map = new Map();
+    transfersByCategory.forEach((d, i) => {
+      map.set(d.name, TRANSFER_PALETTE[i % TRANSFER_PALETTE.length]);
+    });
+    return map;
   }, [transfersByCategory]);
 
   // Alle Einzelbuchungen (Transfers + Entnahmen) für den gewählten Topf
@@ -118,7 +128,7 @@ export default function PotsView({ activeBook, entries, toCHF, baseCurrency = "C
     if (!selectedPot) return [];
     return (entries || [])
       .filter((e) => e.potId === selectedPot.id && (e.kind === "transfer" || e.kind === "withdrawal"))
-      .sort((a, b) => {
+      .toSorted((a, b) => {
         const da = String(a.date || "");
         const db = String(b.date || "");
         if (da !== db) return db.localeCompare(da);
@@ -147,7 +157,14 @@ export default function PotsView({ activeBook, entries, toCHF, baseCurrency = "C
     return (
       <Card>
         <CardContent>
-          <p className="hb-muted">Keine Töpfe vorhanden.</p>
+          <div className="hb-empty">
+            <div className="hb-empty-icon"><IconPots /></div>
+            <div className="hb-empty-title">Noch keine Töpfe</div>
+            <div className="hb-empty-text">
+              Töpfe sind Sparbehälter für Rücklagen oder bestimmte Sparziele.
+              Lege in den Einstellungen deinen ersten Topf an.
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -161,97 +178,106 @@ export default function PotsView({ activeBook, entries, toCHF, baseCurrency = "C
           <div className="hb-muted">Entwicklung & Zusammensetzung deiner Transfers</div>
         </div>
 
-        <div className="hb-group">
-          <label className="hb-muted">Topf</label>
-          <select
-            className="hb-input"
-            value={selectedPotId}
-            onChange={(e) => setSelectedPotId(e.target.value)}
+        <Button
+          onClick={() => {
+            setNewEntryDraft({
+              date: todayISO(),
+              amount: "",
+              category: transferCategories[0] || "",
+              note: "",
+            });
+            setAddEntryOpen(true);
+          }}
+        >
+          <IconPlus /> Buchung hinzufügen
+        </Button>
+      </div>
+
+      {/* Pot-Auswahl als Tab-Gruppe statt Dropdown */}
+      {pots.length > 1 && (
+        <div className="hb-pill-tabs" role="tablist" aria-label="Topf wählen" style={{ marginBottom: 16 }}>
+          {pots.map((pot) => (
+            <button
+              key={pot.id}
+              type="button"
+              role="tab"
+              aria-selected={selectedPotId === pot.id}
+              className={`hb-pill-tab ${selectedPotId === pot.id ? "hb-pill-tab-active" : ""}`}
+              onClick={() => { setSelectedPotId(pot.id); setShowAllEntries(false); }}
+            >
+              {pot.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Top-Stat-Tiles: Aktueller Stand + Einzahlungen + Entnahmen */}
+      <div className="hb-stat-tiles" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+        <div className="hb-stat-tile">
+          <div className="hb-stat-tile-label">Aktueller Stand</div>
+          <div
+            className={`hb-stat-tile-value ${currentBalance >= 0 ? "hb-ok" : "hb-bad"}`}
           >
-            {pots.map((pot) => (
-              <option key={pot.id} value={pot.id}>
-                {pot.name}
-              </option>
-            ))}
-          </select>
-          <Button
-            onClick={() => {
-              setNewEntryDraft({
-                date: todayISO(),
-                amount: "",
-                category: transferCategories[0] || "Steuern",
-                note: "",
-              });
-              setAddEntryOpen(true);
-            }}
-          >
-            + Buchung hinzufügen
-          </Button>
+            {toCHF(currentBalance)}
+          </div>
+          <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
+            {selectedPot.name}
+          </div>
+        </div>
+        <div className="hb-stat-tile">
+          <div className="hb-stat-tile-label">Summe Einzahlungen</div>
+          <div className="hb-stat-tile-value hb-ok">+{toCHF(totals.transfersIn)}</div>
+        </div>
+        <div className="hb-stat-tile">
+          <div className="hb-stat-tile-label">Summe Entnahmen</div>
+          <div className="hb-stat-tile-value hb-bad">-{toCHF(totals.expensesOut)}</div>
         </div>
       </div>
 
-      {/* Aktueller Stand - groß & prominent */}
-      <Card style={{ marginBottom: 16 }}>
-        <CardContent>
-          <div style={{ textAlign: "center" }}>
-            <div className="hb-muted" style={{ marginBottom: 8 }}>
-              Aktueller Stand · {selectedPot.name}
-            </div>
-            <div
-              style={{
-                fontSize: 32,
-                fontWeight: 700,
-                color: currentBalance >= 0 ? "var(--green)" : "var(--red)",
-              }}
-            >
-              {toCHF(currentBalance)}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Highlights */}
+      {/* Highlights als Stat-Pills */}
       {highlights && potSeries.length > 0 ? (
-        <div className="hb-note" style={{ marginBottom: 12 }}>
-          <strong>Highlights:</strong> Höchste Einzahlung:{" "}
-          <strong>{highlights.topTransfer.label}</strong> ({toCHF(highlights.topTransfer.transfersIn)}
-          ), höchste Entnahme: <strong>{highlights.topExpense.label}</strong> (
-          {toCHF(highlights.topExpense.expensesOut)}).
+        <div className="hb-stat-pills">
+          <div className="hb-stat-pill">
+            <span className="hb-stat-pill-label">Höchste Einzahlung</span>
+            <span className="hb-stat-pill-value hb-ok">+{toCHF(highlights.topTransfer.transfersIn)}</span>
+            <span className="hb-muted">· {highlights.topTransfer.label}</span>
+          </div>
+          <div className="hb-stat-pill">
+            <span className="hb-stat-pill-label">Höchste Entnahme</span>
+            <span className="hb-stat-pill-value hb-bad">-{toCHF(highlights.topExpense.expensesOut)}</span>
+            <span className="hb-muted">· {highlights.topExpense.label}</span>
+          </div>
         </div>
       ) : null}
 
       {potSeries.length === 0 ? (
         <Card>
           <CardContent>
-            <div className="hb-muted">
-              Noch keine Bewegungen in diesem Topf. Buche einen Transfer, um die Entwicklung zu
-              sehen.
+            <div className="hb-empty">
+              <div className="hb-empty-icon"><IconInbox /></div>
+              <div className="hb-empty-title">Keine Bewegungen</div>
+              <div className="hb-empty-text">
+                In diesem Topf gab es noch keine Buchungen. Lege eine erste Einzahlung an,
+                um die Entwicklung zu sehen.
+              </div>
+              <Button
+                onClick={() => {
+                  setNewEntryDraft({
+                    date: todayISO(),
+                    amount: "",
+                    category: transferCategories[0] || "",
+                    note: "",
+                  });
+                  setAddEntryOpen(true);
+                }}
+              >
+                <IconPlus /> Buchung hinzufügen
+              </Button>
             </div>
           </CardContent>
         </Card>
       ) : (
         <>
-          {/* Summen */}
-          <div className="hb-two" style={{ marginBottom: 16 }}>
-            <Card>
-              <CardContent>
-                <div className="hb-muted">Summe Einzahlungen</div>
-                <div className="hb-stat-val hb-ok" style={{ marginTop: 8 }}>
-                  +{toCHF(totals.transfersIn)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent>
-                <div className="hb-muted">Summe Entnahmen</div>
-                <div className="hb-stat-val hb-bad" style={{ marginTop: 8 }}>
-                  -{toCHF(totals.expensesOut)}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Charts */}
           <div className="hb-two">
             {/* LineChart: Stand über Zeit */}
@@ -278,7 +304,7 @@ export default function PotsView({ activeBook, entries, toCHF, baseCurrency = "C
                       <Line
                         type="monotone"
                         dataKey="balance"
-                        stroke={CHART_COLORS.income}
+                        stroke={themeColors.green}
                         strokeWidth={3}
                         dot={{ r: 4 }}
                       />
@@ -314,13 +340,13 @@ export default function PotsView({ activeBook, entries, toCHF, baseCurrency = "C
                       <YAxis tick={{ fontSize: 11 }} />
                       <Tooltip formatter={(v) => toCHF(v)} />
                       <Bar dataKey="transfersIn" barSize={12}>
-                        {barChartData.map((d, i) => (
-                          <Cell key={`t-${i}`} fill={CHART_COLORS.income} />
+                        {barChartData.map((d) => (
+                          <Cell key={`t-${d.name}`} fill={themeColors.green} />
                         ))}
                       </Bar>
                       <Bar dataKey="expensesOut" barSize={12}>
-                        {barChartData.map((d, i) => (
-                          <Cell key={`e-${i}`} fill={CHART_COLORS.expense} />
+                        {barChartData.map((d) => (
+                          <Cell key={`e-${d.name}`} fill={themeColors.red} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -402,48 +428,81 @@ export default function PotsView({ activeBook, entries, toCHF, baseCurrency = "C
           </div>
 
           {potEntries.length === 0 ? (
-            <p className="hb-muted">Noch keine Buchungen für diesen Topf.</p>
-          ) : (
-            <div className="hb-table-wrap">
-              <table className="hb-table hb-entries-table">
-                <thead>
-                  <tr>
-                    <th className="hb-col-date">Datum</th>
-                    <th className="hb-col-type">Art</th>
-                    <th className="hb-col-category">Zweck</th>
-                    <th className="hb-col-note">Notiz</th>
-                    <th className="hb-col-amount hb-right">Betrag</th>
-                    <th className="hb-col-actions"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {potEntries.map((e) => {
-                    const isTransfer = e.kind === "transfer";
-                    return (
-                      <tr key={e.id}>
-                        <td className="hb-col-date">{e.date}</td>
-                        <td className="hb-col-type">{isTransfer ? "Einzahlung" : "Entnahme"}</td>
-                        <td className="hb-col-category">{e.category || "—"}</td>
-                        <td className="hb-col-note">{e.note || "—"}</td>
-                        <td className={`hb-col-amount hb-right ${isTransfer ? "hb-ok" : "hb-bad"}`}>
-                          {isTransfer ? "+" : "−"}{toCHF(Number(e.amount || 0))}
-                        </td>
-                        <td className="hb-col-actions">
-                          <div className="hb-actions">
-                            <Button variant="outline" onClick={() => onEditEntry?.(e)}>
-                              Bearbeiten
-                            </Button>
-                            <Button variant="outline" onClick={() => onRemoveEntry?.(e.id)}>
-                              Löschen
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="hb-empty">
+              <div className="hb-empty-icon"><IconInbox /></div>
+              <div className="hb-empty-title">Noch keine Buchungen</div>
+              <div className="hb-empty-text">
+                Für diesen Topf gibt es noch keine Bewegungen.
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="hb-table-wrap">
+                <table className="hb-table hb-entries-table">
+                  <thead>
+                    <tr>
+                      <th className="hb-col-date">Datum</th>
+                      <th className="hb-col-type">Art</th>
+                      <th className="hb-col-category">Zweck</th>
+                      <th className="hb-col-note">Notiz</th>
+                      <th className="hb-col-amount hb-right">Betrag</th>
+                      <th className="hb-col-actions"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(showAllEntries ? potEntries : potEntries.slice(0, 5)).map((e) => {
+                      const isTransfer = e.kind === "transfer";
+                      return (
+                        <tr key={e.id}>
+                          <td className="hb-col-date">{formatDateDE(e.date)}</td>
+                          <td className="hb-col-type">{isTransfer ? "Einzahlung" : "Entnahme"}</td>
+                          <td className="hb-col-category">{e.category || "—"}</td>
+                          <td className="hb-col-note">{e.note || "—"}</td>
+                          <td className={`hb-col-amount hb-right ${isTransfer ? "hb-ok" : "hb-bad"}`}>
+                            {isTransfer ? "+" : "−"}{toCHF(Number(e.amount || 0))}
+                          </td>
+                          <td className="hb-col-actions">
+                            <div className="hb-actions hb-actions-hover">
+                              <button
+                                type="button"
+                                className="hb-icon-btn"
+                                onClick={() => onEditEntry?.(e)}
+                                title="Bearbeiten"
+                                aria-label="Bearbeiten"
+                              >
+                                <IconEdit />
+                              </button>
+                              <button
+                                type="button"
+                                className="hb-icon-btn"
+                                onClick={() => onRemoveEntry?.(e.id)}
+                                title="Löschen"
+                                aria-label="Löschen"
+                              >
+                                <IconDelete />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {potEntries.length > 5 && (
+                <div style={{ marginTop: 12, textAlign: "center" }}>
+                  <button
+                    type="button"
+                    className="hb-btn-ghost"
+                    onClick={() => setShowAllEntries((v) => !v)}
+                  >
+                    {showAllEntries
+                      ? "Weniger anzeigen"
+                      : `Weitere ${potEntries.length - 5} anzeigen`}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -453,12 +512,12 @@ export default function PotsView({ activeBook, entries, toCHF, baseCurrency = "C
         title="Transfer-Buchung hinzufügen"
         onClose={() => setAddEntryOpen(false)}
         onSave={() => {
-          const numericAmount = parseFloat(newEntryDraft.amount.replace(",", "."));
+          const numericAmount = parseAmount(newEntryDraft.amount);
           if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
           if (!newEntryDraft.date || !selectedPot) return;
 
           const entry = {
-            id: Date.now(),
+            id: generateId("entry"),
             date: newEntryDraft.date,
             amount: numericAmount,
             category: newEntryDraft.category,
@@ -473,7 +532,8 @@ export default function PotsView({ activeBook, entries, toCHF, baseCurrency = "C
         canSave={
           newEntryDraft.date &&
           newEntryDraft.amount &&
-          parseFloat(newEntryDraft.amount.replace(",", ".")) > 0
+          parseAmount(newEntryDraft.amount) > 0 &&
+          Boolean(newEntryDraft.category)
         }
         saveLabel="Hinzufügen"
       >

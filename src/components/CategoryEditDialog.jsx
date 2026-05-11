@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import EditDialog from "./EditDialog.jsx";
-import { PIE_PALETTE } from "../utils/hbPalette.js";
+import { CUSTOM_CATEGORY_PALETTE } from "../utils/hbPalette.js";
+import { useConfirm } from "./ConfirmDialog.jsx";
 
 export default function CategoryEditDialog({
   open,
@@ -11,13 +12,14 @@ export default function CategoryEditDialog({
   isSubcategory,
 }) {
   const [name, setName] = useState("");
-  const [color, setColor] = useState(PIE_PALETTE[0]);
+  const [color, setColor] = useState(CUSTOM_CATEGORY_PALETTE[0]);
+  const { confirm } = useConfirm();
 
   // Felder vorausfüllen wenn Kategorie übergeben wird
   useEffect(() => {
     if (open && category) {
       setName(category.name || "");
-      setColor(category.color || PIE_PALETTE[0]);
+      setColor(category.color || CUSTOM_CATEGORY_PALETTE[0]);
     }
   }, [open, category]);
 
@@ -32,10 +34,13 @@ export default function CategoryEditDialog({
     onClose();
   }
 
-  function handleDelete() {
-    const confirmed = window.confirm(
-      `Kategorie "${category?.name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`
-    );
+  async function handleDelete() {
+    const confirmed = await confirm({
+      title: "Kategorie löschen",
+      message: `Kategorie „${category?.name}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
+      confirmLabel: "Löschen",
+      danger: true,
+    });
     if (confirmed) {
       onDelete();
       onClose();
@@ -64,12 +69,12 @@ export default function CategoryEditDialog({
         />
       </div>
 
-      {/* Farbauswahl nur bei Oberkategorie */}
-      {!isSubcategory && (
+      {/* Farbauswahl: nur bei eigenen Oberkategorien (nicht bei Default-Kategorien) */}
+      {!isSubcategory && !category?.isDefault && (
         <div className="hb-field" style={{ marginTop: 16 }}>
           <label className="hb-label">Farbe</label>
           <div className="hb-color-picker">
-            {PIE_PALETTE.map((c) => (
+            {CUSTOM_CATEGORY_PALETTE.map((c) => (
               <button
                 key={c}
                 type="button"

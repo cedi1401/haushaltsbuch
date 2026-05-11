@@ -1,11 +1,6 @@
 // src/utils/goalUtils.js
-
-/**
- * Generiert eine eindeutige Goal-ID
- */
-export function generateGoalId() {
-  return `goal_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
+import { getEntryFinancialMonth } from "./financialMonthUtils.js";
+import { sumAmounts } from "./hbUtils.js";
 
 /**
  * Bestimmt das Startdatum basierend auf dem startMode
@@ -50,22 +45,13 @@ export function calcGoalProgress(goal, entries, pots) {
   if (goal.transferCategory) {
     // Nur Transfers mit passendem potId + category zählen
     // Entnahmen werden NICHT abgezogen (sie haben keinen Zweck)
-    current = relevant
-      .filter(
-        (e) =>
-          e.kind === "transfer" &&
-          e.potId === potId &&
-          e.category === goal.transferCategory
-      )
-      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    current = sumAmounts(relevant, (e) =>
+      e.kind === "transfer" && e.potId === potId && e.category === goal.transferCategory
+    );
   } else {
     // Topf-Gesamtstand: alle transfers rein - alle withdrawals raus
-    const transfersIn = relevant
-      .filter((e) => e.kind === "transfer" && e.potId === potId)
-      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
-    const withdrawalsOut = relevant
-      .filter((e) => e.kind === "withdrawal" && e.potId === potId)
-      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    const transfersIn = sumAmounts(relevant, (e) => e.kind === "transfer" && e.potId === potId);
+    const withdrawalsOut = sumAmounts(relevant, (e) => e.kind === "withdrawal" && e.potId === potId);
     current = transfersIn - withdrawalsOut;
   }
 
@@ -87,7 +73,7 @@ export function calcGoalProgress(goal, entries, pots) {
  * @param {string} todayISO - Heutiges Datum als ISO-String (YYYY-MM-DD)
  * @returns {{ monthsRemaining: number, estimatedDate: string|null, isAchievable: boolean, avgMonthly: number }}
  */
-export function calcGoalPrognosis(goal, entries, todayISO) {
+export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
   if (!goal) {
     return {
       monthsRemaining: 0,
@@ -138,7 +124,7 @@ export function calcGoalPrognosis(goal, entries, todayISO) {
   // Gruppiere nach Monat
   const monthlyTotals = new Map();
   for (const e of relevantEntries) {
-    const ym = typeof e.date === "string" ? e.date.slice(0, 7) : "";
+    const ym = getEntryFinancialMonth(e, monthStartDay);
     if (!ym) continue;
     const prev = monthlyTotals.get(ym) || 0;
     monthlyTotals.set(ym, prev + Number(e.amount || 0));

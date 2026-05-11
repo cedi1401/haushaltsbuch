@@ -8,13 +8,14 @@ export function Card({ children, style }) {
   );
 }
 
-export function CardContent({ children }) {
-  return <div className="hb-card-content">{children}</div>;
+export function CardContent({ children, style }) {
+  return <div className="hb-card-content" style={style}>{children}</div>;
 }
 
-export function Button({ children, onClick, variant = "solid", disabled, type = "button", style, className }) {
+export function Button({ children, onClick, variant = "solid", size, disabled, type = "button", style, className }) {
   const cls = [
     variant === "outline" ? "hb-btn hb-btn-outline" : "hb-btn",
+    size === "sm" ? "hb-btn-sm" : null,
     className,
   ].filter(Boolean).join(" ");
   return (

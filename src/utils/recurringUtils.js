@@ -1,14 +1,5 @@
 // src/utils/recurringUtils.js
-
-/**
- * Generiert eine eindeutige ID für wiederkehrende Ausgaben
- * @returns {string}
- */
-export function generateRecurringId() {
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8);
-  return `rec_${timestamp}_${random}`;
-}
+import { RECURRING_DUE_THRESHOLD_DAYS } from "./constants.js";
 
 /**
  * Berechnet das nächste Fälligkeitsdatum basierend auf dem Tag des Monats
@@ -71,10 +62,10 @@ export function calcDaysUntilDue(dueDateISO, todayISO) {
  * Zählt die Anzahl der Fixkosten, die bald fällig sind
  * @param {Array} expenses - Array von recurringExpense-Objekten
  * @param {string} todayISO - Heutiges Datum im ISO-Format
- * @param {number} [threshold=7] - Schwellenwert in Tagen
+ * @param {number} [threshold] - Schwellenwert in Tagen
  * @returns {number} - Anzahl der bald fälligen Items
  */
-export function calcDueSoonCount(expenses, todayISO, threshold = 7) {
+export function calcDueSoonCount(expenses, todayISO, threshold = RECURRING_DUE_THRESHOLD_DAYS) {
   if (!Array.isArray(expenses)) return 0;
 
   return expenses.filter((item) => {

@@ -2,17 +2,7 @@
 // Simple JSON backup/restore for the Haushaltsbuch app.
 // Import behavior is designed for FULL RESTORE (overwrite), no merging.
 
-import { normalizeBook } from "./utils/hbUtils.js";
-
-function safeFileStamp() {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${yyyy}${mm}${dd}-${hh}${mi}`;
-}
+import { normalizeBook, formatFileStamp } from "./utils/hbUtils.js";
 
 function downloadJson(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -64,7 +54,7 @@ export function exportBackup({ book, monthFilter }) {
     monthFilter: typeof monthFilter === "string" ? monthFilter : "",
   };
 
-  downloadJson(`haushaltsbuch-backup-${safeFileStamp()}.json`, payload);
+  downloadJson(`haushaltsbuch-backup-${formatFileStamp()}.json`, payload);
 }
 
 /**

@@ -1,6 +1,8 @@
 // Data Access Layer — abstracts storage between Electron (SQLite) and Browser (localStorage).
 // The React app calls these functions; they route to the right backend automatically.
 
+import { formatFileStamp } from "../utils/hbUtils.js";
+
 const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
 
 // --- Books ---
@@ -58,7 +60,7 @@ export async function exportBackupFile({ book, monthFilter }) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `haushaltsbuch-backup-${formatStamp()}.json`;
+  a.download = `haushaltsbuch-backup-${formatFileStamp()}.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -88,18 +90,6 @@ export async function importBackupFile() {
     };
     input.click();
   });
-}
-
-// --- Helpers ---
-
-function formatStamp() {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mi = String(d.getMinutes()).padStart(2, '0');
-  return `${yyyy}${mm}${dd}-${hh}${mi}`;
 }
 
 export { isElectron };

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { CHART_COLORS } from "../utils/hbPalette.js";
 
 /**
  * HierarchicalCategoryPicker
@@ -104,7 +105,7 @@ export function HierarchicalCategoryPicker({
                   <span
                     className="hb-cat-dot"
                     style={{
-                      background: cat.color || "#636363",
+                      background: cat.color || CHART_COLORS.transfer,
                       flexShrink: 0,
                     }}
                   />
@@ -170,7 +171,7 @@ export function HierarchicalCategoryPicker({
                         <span
                           className="hb-cat-dot"
                           style={{
-                            background: cat.color || "#636363",
+                            background: cat.color || CHART_COLORS.transfer,
                             opacity: 0.55,
                             flexShrink: 0,
                           }}

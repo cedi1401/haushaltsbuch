@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Card, CardContent } from "../components/ui.jsx";
+import { useFmt } from "../contexts/CurrencyContext.jsx";
 import {
   PieChart,
   Pie,
@@ -7,9 +8,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { makeSubcategoryColorShades } from "../utils/hbPalette.js";
+import { makeSubcategoryColorShades, CHART_COLORS } from "../utils/hbPalette.js";
 
-export default function Charts({ expenseByHierarchy, incomeByHierarchy, toCHF, baseCurrency = "CHF" }) {
+export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurrency = "CHF" }) {
+  const toCHF = useFmt();
   const [activeTab, setActiveTab] = useState("expense"); // "expense" | "income"
   const [drilldownId, setDrilldownId] = useState(null);  // null = overview, else categoryId
   const [displayMode, setDisplayMode] = useState("chf"); // "chf" | "percent"
@@ -48,7 +50,7 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, toCHF, b
       name: cat.name,
       value: cat.value,
       entryCount: cat.entryCount,
-      color: cat.color || "#636363",
+      color: cat.color || CHART_COLORS.transfer,
       clickable: (cat.subcategories || []).length > 0,
     }));
     const total = items.reduce((sum, d) => sum + d.value, 0);
@@ -78,7 +80,7 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, toCHF, b
   const isEmpty = hierarchy.length === 0;
 
   return (
-    <Card style={{ marginBottom: 16, width: "100%" }}>
+    <Card style={{ width: "100%" }}>
       <CardContent className="hb-hier-chart-card">
 
         {/* Header: Tab switch + display toggle */}
@@ -155,7 +157,7 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, toCHF, b
                 <span>
                   {displayMode === "percent"
                     ? "100%"
-                    : (activeTab === "expense" ? "-" : "") + toCHF(totalValue)}
+                    : (activeTab === "expense" ? "-" : "+") + toCHF(totalValue)}
                 </span>
               </div>
 
@@ -164,7 +166,7 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, toCHF, b
                 const pct = totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : "0.0";
                 const valueStr = displayMode === "percent"
                   ? `${pct}%`
-                  : (activeTab === "expense" ? "-" : "") + toCHF(item.value);
+                  : (activeTab === "expense" ? "-" : "+") + toCHF(item.value);
                 return (
                   <div
                     key={(item.id || item.name) + i}
@@ -172,7 +174,13 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, toCHF, b
                     onClick={item.clickable ? () => handleLegendRowClick(item) : undefined}
                     role={item.clickable ? "button" : undefined}
                     tabIndex={item.clickable ? 0 : undefined}
-                    onKeyDown={item.clickable ? (e) => { if (e.key === "Enter" || e.key === " ") handleLegendRowClick(item); } : undefined}
+                    aria-label={item.clickable ? `${item.name}: ${valueStr} — Details anzeigen` : undefined}
+                    onKeyDown={item.clickable ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleLegendRowClick(item);
+                      }
+                    } : undefined}
                   >
                     <div className="hb-legend-left">
                       <span
@@ -226,7 +234,7 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, toCHF, b
                 <div className="hb-pie-total-value">
                   {displayMode === "percent"
                     ? "100%"
-                    : (activeTab === "expense" ? "-" : "") + toCHF(totalValue)}
+                    : (activeTab === "expense" ? "-" : "+") + toCHF(totalValue)}
                 </div>
                 <div className="hb-pie-total-label">{centerLabel}</div>
               </div>

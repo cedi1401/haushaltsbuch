@@ -1,24 +1,30 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
-import { generateRecurringId } from "../utils/recurringUtils.js";
-import { getCategoryLabel, DEFAULT_EXPENSE_CATEGORIES } from "../utils/hbUtils.js";
+import { generateId } from "../utils/idUtils.js";
+import { getCategoryLabel, DEFAULT_EXPENSE_CATEGORIES, parseAmount } from "../utils/hbUtils.js";
+import { useConfirm } from "../components/ConfirmDialog.jsx";
+import { useToast } from "../components/Toast.jsx";
+import { IconFixed, IconPlus } from "../components/icons.jsx";
+import { useFmt } from "../contexts/CurrencyContext.jsx";
 
 export default function FixedCostsView({
   activeBook,
   entries,
-  toCHF,
   baseCurrency = "CHF",
   onUpdateBook,
   onAddEntry,
   todayISO,
 }) {
+  const toCHF = useFmt();
   const recurringExpenses = activeBook?.recurringExpenses || [];
   const pots = activeBook?.pots || [];
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
   const incomeCategories = activeBook?.incomeCategories || [];
   const transferCategories = activeBook?.transferCategories || [];
+  const { confirm } = useConfirm();
+  const toast = useToast();
 
   // Dialog-State
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -32,16 +38,8 @@ export default function FixedCostsView({
     transferCategory: transferCategories[0] || "Steuern",
     potId: pots[0]?.id || "",
     active: true,
+    showInOverview: true,
   });
-
-  // Feedback nach "Jetzt buchen"
-  const [bookedName, setBookedName] = useState(null);
-
-  useEffect(() => {
-    if (!bookedName) return;
-    const timer = setTimeout(() => setBookedName(null), 3000);
-    return () => clearTimeout(timer);
-  }, [bookedName]);
 
   // Aktive und inaktive Fixkosten trennen
   const activeItems = recurringExpenses.filter((item) => item.active);
@@ -61,6 +59,7 @@ export default function FixedCostsView({
       categoryId: "cat_unkategorisiert",
       subcategoryId: null,
       transferCategory: transferCategories[0] || "Steuern",
+      showInOverview: false,
       potId: pots[0]?.id || "",
       active: true,
     });
@@ -78,6 +77,7 @@ export default function FixedCostsView({
       transferCategory: item.transferCategory || transferCategories[0] || "Steuern",
       potId: item.potId || pots[0]?.id || "",
       active: item.active !== false,
+      showInOverview: item.showInOverview !== false,
     });
     setDialogOpen(true);
   }
@@ -90,7 +90,7 @@ export default function FixedCostsView({
   function saveItem() {
     if (!activeBook) return;
 
-    const numericAmount = parseFloat(draft.amount.replace(",", "."));
+    const numericAmount = parseAmount(draft.amount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
     if (!draft.name.trim()) return;
 
@@ -108,6 +108,7 @@ export default function FixedCostsView({
               transferCategory: draft.kind === "transfer" ? draft.transferCategory : undefined,
               potId: draft.kind === "transfer" ? draft.potId : undefined,
               active: draft.active,
+              showInOverview: draft.showInOverview === true,
             }
           : item
       );
@@ -116,12 +117,14 @@ export default function FixedCostsView({
     } else {
       // Create new item
       const newItem = {
-        id: generateRecurringId(),
+        id: generateId("rec"),
         name: draft.name.trim(),
         amount: numericAmount,
         kind: draft.kind,
         active: true,
       };
+
+      newItem.showInOverview = draft.showInOverview === true;
 
       if (draft.kind === "expense") {
         newItem.categoryId = draft.categoryId;
@@ -150,21 +153,27 @@ export default function FixedCostsView({
     onUpdateBook({ ...activeBook, recurringExpenses: updatedItems });
   }
 
-  function deleteItem(item) {
+  async function deleteItem(item) {
     if (!activeBook) return;
 
-    const msg = `Fixkosten "${item.name}" wirklich loschen?`;
-    if (!window.confirm(msg)) return;
+    const ok = await confirm({
+      title: "Fixkosten löschen",
+      message: `Fixkosten „${item.name}“ wirklich löschen?`,
+      confirmLabel: "Löschen",
+      danger: true,
+    });
+    if (!ok) return;
 
     const updatedItems = recurringExpenses.filter((i) => i.id !== item.id);
     onUpdateBook({ ...activeBook, recurringExpenses: updatedItems });
+    toast.success("Fixkosten gelöscht.");
   }
 
   function bookNow(item) {
     const today = todayISO();
 
     const entry = {
-      id: Date.now(),
+      id: generateId("entry"),
       date: today,
       amount: item.amount,
       category: item.kind === "transfer" ? item.transferCategory : undefined,
@@ -183,12 +192,12 @@ export default function FixedCostsView({
     }
 
     onAddEntry(entry);
-    setBookedName(item.name);
+    toast.success(`„${item.name}“ wurde gebucht.`);
   }
 
   const canSave = useMemo(() => {
     if (!draft.name.trim()) return false;
-    const n = parseFloat(draft.amount.replace(",", "."));
+    const n = parseAmount(draft.amount);
     if (!Number.isFinite(n) || n <= 0) return false;
     return true;
   }, [draft]);
@@ -210,28 +219,6 @@ export default function FixedCostsView({
 
   return (
     <div>
-      {bookedName && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 24,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 100,
-            background: "var(--green)",
-            color: "#fff",
-            padding: "10px 20px",
-            borderRadius: 6,
-            fontWeight: 600,
-            fontSize: 14,
-            boxShadow: "var(--shadow-lg)",
-            animation: "slideUp 0.2s ease-out",
-          }}
-        >
-          &laquo;{bookedName}&raquo; wurde gebucht
-        </div>
-      )}
-
       <div className="hb-row" style={{ marginBottom: 12, alignItems: "flex-start" }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 18 }}>Fixkosten</h2>
@@ -240,15 +227,22 @@ export default function FixedCostsView({
           </div>
         </div>
 
-        <Button onClick={openCreateDialog}>+ Neue Fixkosten</Button>
+        <Button onClick={openCreateDialog}><IconPlus /> Neue Fixkosten</Button>
       </div>
 
       {activeItems.length === 0 && inactiveItems.length === 0 ? (
         <Card>
           <CardContent>
-            <div className="hb-muted" style={{ textAlign: "center", padding: "20px 0" }}>
-              Noch keine Fixkosten definiert. Erstelle deine ersten Fixkosten, um wiederkehrende
-              Ausgaben zu verwalten.
+            <div className="hb-empty">
+              <div className="hb-empty-icon"><IconFixed /></div>
+              <div className="hb-empty-title">Noch keine Fixkosten</div>
+              <div className="hb-empty-text">
+                Erfasse wiederkehrende Ausgaben wie Miete, Abos oder Versicherungen,
+                um sie monatlich mit einem Klick zu buchen.
+              </div>
+              <Button onClick={openCreateDialog}>
+                <IconPlus /> Neue Fixkosten
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -281,7 +275,7 @@ export default function FixedCostsView({
                           Deaktivieren
                         </Button>
                         <Button variant="outline" onClick={() => deleteItem(item)}>
-                          Loschen
+                          Löschen
                         </Button>
                       </div>
                     </div>
@@ -323,7 +317,7 @@ export default function FixedCostsView({
                             Bearbeiten
                           </Button>
                           <Button variant="outline" onClick={() => deleteItem(item)}>
-                            Loschen
+                            Löschen
                           </Button>
                         </div>
                       </div>
@@ -386,7 +380,7 @@ export default function FixedCostsView({
               onChange={(e) => setDraft((d) => ({ ...d, kind: e.target.value }))}
             >
               <option value="expense">Ausgabe</option>
-              <option value="transfer">Transfer/Rucklage</option>
+              <option value="transfer">Transfer/Rücklage</option>
             </select>
           </div>
 
@@ -449,6 +443,21 @@ export default function FixedCostsView({
               </select>
             </div>
           )}
+
+          <label className="hb-fct-annual-toggle">
+            <input
+              type="checkbox"
+              checked={draft.showInOverview}
+              onChange={(e) => setDraft((d) => ({ ...d, showInOverview: e.target.checked }))}
+              style={{ accentColor: "var(--accent)" }}
+            />
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 13 }}>In Übersicht anzeigen</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+                Position in der Fixkosten-Übersicht im Trendview anzeigen (inkl. Jahresbetrag)
+              </div>
+            </div>
+          </label>
         </div>
       </EditDialog>
     </div>

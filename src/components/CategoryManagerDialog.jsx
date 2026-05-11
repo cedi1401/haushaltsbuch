@@ -1,8 +1,64 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import EditDialog from "./EditDialog.jsx";
 import CategoryCreateDialog from "./CategoryCreateDialog.jsx";
 import CategoryEditDialog from "./CategoryEditDialog.jsx";
-import iconEdit from "/icons/edit.svg";
+import { IconEdit, IconPlus, IconDelete, IconWallet, IconLock } from "./icons.jsx";
+import { CHART_COLORS } from "../utils/hbPalette.js";
+import { Button } from "./ui.jsx";
+import { useToast } from "./Toast.jsx";
+import { useConfirm } from "./ConfirmDialog.jsx";
+import { canSetParentBudget, canSetSubBudget } from "../utils/hbUtils.js";
+import { useFmt } from "../contexts/CurrencyContext.jsx";
+
+function filterCategories(categories, search, filter) {
+  const q = search.trim().toLowerCase();
+  return (categories || [])
+    .filter((cat) => {
+      if (filter === "custom" && cat.isDefault) return false;
+      if (!q) return true;
+      if (cat.name.toLowerCase().includes(q)) return true;
+      return (cat.subcategories || []).some((s) => s.name.toLowerCase().includes(q));
+    })
+    .map((cat) => {
+      if (!q) return cat;
+      return {
+        ...cat,
+        subcategories: (cat.subcategories || []).filter(
+          (s) => s.name.toLowerCase().includes(q) || cat.name.toLowerCase().includes(q)
+        ),
+      };
+    });
+}
+
+function BudgetEditor({ inputRef, value, onChange, onSave, onRemove, onCancel }) {
+  return (
+    <div className="hb-cat-budget-editor" onClick={(e) => e.stopPropagation()}>
+      <input
+        ref={inputRef}
+        className="hb-input hb-cat-budget-input"
+        type="number"
+        min="0"
+        step="1"
+        placeholder="Monatsbudget..."
+        value={value}
+        onChange={onChange}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onSave();
+          if (e.key === "Escape") onCancel();
+        }}
+      />
+      <Button size="sm" onClick={onSave}>OK</Button>
+      {onRemove && (
+        <Button size="sm" className="hb-cat-budget-remove-btn" onClick={onRemove}>
+          Entfernen
+        </Button>
+      )}
+      <button className="hb-btn-ghost hb-btn-sm" onClick={onCancel}>
+        Abbrechen
+      </button>
+    </div>
+  );
+}
 
 // -------------------------------------------------------
 // Haupt-Dialog: Alle Kategorien verwalten
@@ -12,9 +68,15 @@ export default function CategoryManagerDialog({
   onClose,
   expenseCategories,
   incomeCategories,
+  transferCategories = [],
   onUpdateExpenseCategories,
   onUpdateIncomeCategories,
+  onUpdateTransferCategories,
 }) {
+  const fmt = useFmt();
+  const toast = useToast();
+  const { confirm } = useConfirm();
+  const [newTransferName, setNewTransferName] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"); // "all" | "custom"
   const [openAccordions, setOpenAccordions] = useState(new Set());
@@ -25,6 +87,18 @@ export default function CategoryManagerDialog({
   const [editTarget, setEditTarget] = useState(null);
   // editTarget: { category, isSubcategory, parentCategory? }
 
+  // Budget-Inline-Editor
+  // budgetTarget: { type: "parent"|"sub", categoryId, parentCategoryId? }
+  const [budgetTarget, setBudgetTarget] = useState(null);
+  const [budgetDraft, setBudgetDraft] = useState("");
+  const budgetInputRef = useRef(null);
+
+  useEffect(() => {
+    if (budgetTarget) {
+      setTimeout(() => budgetInputRef.current?.focus(), 50);
+    }
+  }, [budgetTarget]);
+
   // Reset beim Schliessen
   useEffect(() => {
     if (!open) {
@@ -34,58 +108,55 @@ export default function CategoryManagerDialog({
       setCreateOpen(false);
       setEditOpen(false);
       setEditTarget(null);
+      setNewTransferName("");
+      setBudgetTarget(null);
+      setBudgetDraft("");
     }
   }, [open]);
 
   // -------------------------------------------------------
+  // Transfer-Zwecke CRUD
+  // -------------------------------------------------------
+  function addTransferCategory() {
+    const trimmed = newTransferName.trim();
+    if (!trimmed) return;
+    if (transferCategories.includes(trimmed)) {
+      toast.warning("Dieser Transfer-Zweck existiert bereits.");
+      return;
+    }
+    onUpdateTransferCategories?.([...transferCategories, trimmed]);
+    setNewTransferName("");
+    toast.success(`Transfer-Zweck „${trimmed}“ erstellt.`);
+  }
+
+  async function deleteTransferCategory(name) {
+    if (transferCategories.length <= 1) {
+      toast.warning("Du brauchst mindestens einen Transfer-Zweck.");
+      return;
+    }
+    const ok = await confirm({
+      title: "Transfer-Zweck löschen",
+      message: `Transfer-Zweck „${name}“ wirklich löschen?`,
+      confirmLabel: "Löschen",
+      danger: true,
+    });
+    if (!ok) return;
+    onUpdateTransferCategories?.(transferCategories.filter((c) => c !== name));
+    toast.success("Transfer-Zweck gelöscht.");
+  }
+
+  // -------------------------------------------------------
   // Gefilterte Kategorien
   // -------------------------------------------------------
-  const filteredExpense = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return (expenseCategories || [])
-      .filter((cat) => {
-        if (filter === "custom" && cat.isDefault) return false;
-        if (!q) return true;
-        if (cat.name.toLowerCase().includes(q)) return true;
-        return (cat.subcategories || []).some((s) =>
-          s.name.toLowerCase().includes(q)
-        );
-      })
-      .map((cat) => {
-        if (!q) return cat;
-        // Unterkategorien ebenfalls nach Suche filtern
-        return {
-          ...cat,
-          subcategories: (cat.subcategories || []).filter((s) =>
-            s.name.toLowerCase().includes(q) ||
-            cat.name.toLowerCase().includes(q)
-          ),
-        };
-      });
-  }, [expenseCategories, search, filter]);
+  const filteredExpense = useMemo(
+    () => filterCategories(expenseCategories, search, filter),
+    [expenseCategories, search, filter]
+  );
 
-  const filteredIncome = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return (incomeCategories || [])
-      .filter((cat) => {
-        if (filter === "custom" && cat.isDefault) return false;
-        if (!q) return true;
-        if (cat.name.toLowerCase().includes(q)) return true;
-        return (cat.subcategories || []).some((s) =>
-          s.name.toLowerCase().includes(q)
-        );
-      })
-      .map((cat) => {
-        if (!q) return cat;
-        return {
-          ...cat,
-          subcategories: (cat.subcategories || []).filter((s) =>
-            s.name.toLowerCase().includes(q) ||
-            cat.name.toLowerCase().includes(q)
-          ),
-        };
-      });
-  }, [incomeCategories, search, filter]);
+  const filteredIncome = useMemo(
+    () => filterCategories(incomeCategories, search, filter),
+    [incomeCategories, search, filter]
+  );
 
   // -------------------------------------------------------
   // Accordion toggle
@@ -228,6 +299,68 @@ export default function CategoryManagerDialog({
   }
 
   // -------------------------------------------------------
+  // Budget-Handling
+  // -------------------------------------------------------
+  function openBudgetEdit(cat, sub = null) {
+    if (sub) {
+      setBudgetTarget({ type: "sub", categoryId: sub.id, parentCategoryId: cat.id });
+      setBudgetDraft(sub.budget != null ? String(sub.budget) : "");
+    } else {
+      setBudgetTarget({ type: "parent", categoryId: cat.id });
+      setBudgetDraft(cat.budget != null ? String(cat.budget) : "");
+    }
+  }
+
+  function closeBudgetEdit() {
+    setBudgetTarget(null);
+    setBudgetDraft("");
+  }
+
+  function applyBudget(budget) {
+    if (!budgetTarget) return;
+    if (budgetTarget.type === "parent") {
+      const updateList = (list) =>
+        list.map((cat) =>
+          cat.id === budgetTarget.categoryId ? { ...cat, budget } : cat
+        );
+      const inExpense = (expenseCategories || []).some((c) => c.id === budgetTarget.categoryId);
+      if (inExpense) onUpdateExpenseCategories(updateList(expenseCategories || []));
+      else onUpdateIncomeCategories(updateList(incomeCategories || []));
+    } else {
+      const updateList = (list) =>
+        list.map((cat) =>
+          cat.id === budgetTarget.parentCategoryId
+            ? {
+                ...cat,
+                subcategories: (cat.subcategories || []).map((sub) =>
+                  sub.id === budgetTarget.categoryId ? { ...sub, budget } : sub
+                ),
+              }
+            : cat
+        );
+      const inExpense = (expenseCategories || []).some((c) => c.id === budgetTarget.parentCategoryId);
+      if (inExpense) onUpdateExpenseCategories(updateList(expenseCategories || []));
+      else onUpdateIncomeCategories(updateList(incomeCategories || []));
+    }
+    closeBudgetEdit();
+    toast.success(budget != null ? "Budget gespeichert." : "Budget entfernt.");
+  }
+
+  function saveBudget() {
+    const raw = budgetDraft.trim().replace(",", ".");
+    if (raw === "") {
+      applyBudget(null);
+      return;
+    }
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value < 0) {
+      toast.warning("Bitte einen gültigen Betrag eingeben.");
+      return;
+    }
+    applyBudget(value === 0 ? null : value);
+  }
+
+  // -------------------------------------------------------
   // Hilfsfunktionen
   // -------------------------------------------------------
   function openEditForParent(cat) {
@@ -244,28 +377,59 @@ export default function CategoryManagerDialog({
   // Render
   // -------------------------------------------------------
 
-  // Kategorie-Liste rendern (Expense + Income zusammengemischt nach Typ-Trennlinie)
-  function renderCategoryList(categories, labelPrefix = "") {
+  // Kategorie-Liste rendern
+  // isExpense: nur Ausgabenkategorien erhalten Budget-Buttons
+  function renderCategoryList(categories, isExpense = false) {
     return categories.map((cat) => {
       const isOpen = openAccordions.has(cat.id);
       const hasSubs = (cat.subcategories || []).length > 0;
       const isCustom = !cat.isDefault;
+      const isBudgetEditorOpen = budgetTarget?.type === "parent" && budgetTarget?.categoryId === cat.id;
+      const canParent = isExpense ? canSetParentBudget(cat) : false;
 
       return (
         <div key={cat.id} className={`hb-cat-accordion-item${isOpen ? " hb-cat-accordion-open" : ""}`}>
           {/* Accordion Header */}
           <div
             className="hb-cat-accordion-header"
-            onClick={() => toggleAccordion(cat.id)}
+            onClick={() => !isBudgetEditorOpen && toggleAccordion(cat.id)}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") toggleAccordion(cat.id); }}
+            onKeyDown={(e) => {
+              if ((e.key === "Enter" || e.key === " ") && !isBudgetEditorOpen)
+                toggleAccordion(cat.id);
+            }}
           >
-            <span
-              className="hb-cat-dot"
-              style={{ background: cat.color || "#636363" }}
-            />
+            <span className="hb-cat-dot" style={{ background: cat.color || CHART_COLORS.transfer }} />
             <span className="hb-cat-name">{cat.name}</span>
+
+            {/* Budget-Chip: dauerhaft sichtbar wenn Budget gesetzt */}
+            {isExpense && cat.budget != null && !isBudgetEditorOpen && (
+              <span className="hb-cat-budget-chip">
+                {fmt ? fmt(cat.budget, 0) : cat.budget}
+              </span>
+            )}
+
+            {/* Budget-Button (nur Ausgaben, hover-reveal) */}
+            {isExpense && !isBudgetEditorOpen && (
+              <button
+                type="button"
+                className={`hb-cat-budget-btn${!canParent ? " hb-cat-budget-btn--locked" : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!canParent) {
+                    toast.warning("Entferne zuerst die Sub-Kategorien-Budgets.");
+                    return;
+                  }
+                  openBudgetEdit(cat);
+                }}
+                title={cat.budget != null ? "Budget ändern" : "Monatsbudget setzen"}
+                aria-label="Budget bearbeiten"
+              >
+                {canParent ? <IconWallet /> : <IconLock />}
+              </button>
+            )}
+
             {isCustom && (
               <button
                 type="button"
@@ -274,40 +438,94 @@ export default function CategoryManagerDialog({
                 aria-label={`${cat.name} bearbeiten`}
                 title="Bearbeiten"
               >
-                <img src={iconEdit} alt="Bearbeiten" />
+                <IconEdit />
               </button>
             )}
             {hasSubs && (
-              <span className={`hb-cat-chevron${isOpen ? " hb-cat-chevron-open" : ""}`}>
-                ▼
-              </span>
+              <span className={`hb-cat-chevron${isOpen ? " hb-cat-chevron-open" : ""}`}>▼</span>
             )}
           </div>
+
+          {/* Budget-Editor für Oberkategorie */}
+          {isExpense && isBudgetEditorOpen && (
+            <BudgetEditor
+              inputRef={budgetInputRef}
+              value={budgetDraft}
+              onChange={(e) => setBudgetDraft(e.target.value)}
+              onSave={saveBudget}
+              onRemove={cat.budget != null ? () => applyBudget(null) : null}
+              onCancel={closeBudgetEdit}
+            />
+          )}
 
           {/* Unterkategorien */}
           {isOpen && hasSubs && (
             <div className="hb-cat-sublist">
               {(cat.subcategories || []).map((sub) => {
                 const isCustomSub = !sub.isDefault;
+                const canSub = isExpense ? canSetSubBudget(cat) : false;
+                const isSubEditorOpen = budgetTarget?.type === "sub" && budgetTarget?.categoryId === sub.id;
                 return (
-                  <div key={sub.id} className="hb-cat-subitem">
-                    <span
-                      className="hb-cat-dot"
-                      style={{ background: cat.color || "#636363", opacity: 0.65 }}
-                    />
-                    <span className="hb-cat-subitem-name">{sub.name}</span>
-                    {isCustomSub && (
-                      <button
-                        type="button"
-                        className="hb-cat-edit-btn"
-                        onClick={() => openEditForSub(sub, cat)}
-                        aria-label={`${sub.name} bearbeiten`}
-                        title="Bearbeiten"
-                      >
-                        <img src={iconEdit} alt="Bearbeiten" />
-                      </button>
+                  <React.Fragment key={sub.id}>
+                    <div className="hb-cat-subitem">
+                      <span
+                        className="hb-cat-dot"
+                        style={{ background: cat.color || CHART_COLORS.transfer, opacity: 0.65 }}
+                      />
+                      <span className="hb-cat-subitem-name">{sub.name}</span>
+
+                      {/* Budget-Chip Sub */}
+                      {isExpense && sub.budget != null && !isSubEditorOpen && (
+                        <span className="hb-cat-budget-chip">
+                          {fmt ? fmt(sub.budget, 0) : sub.budget}
+                        </span>
+                      )}
+
+                      {/* Budget-Button Sub (hover-reveal) */}
+                      {isExpense && !isSubEditorOpen && (
+                        <button
+                          type="button"
+                          className={`hb-cat-budget-btn${!canSub ? " hb-cat-budget-btn--locked" : ""}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!canSub) {
+                              toast.warning(`„${cat.name}" hat bereits ein Oberkategorien-Budget.`);
+                              return;
+                            }
+                            openBudgetEdit(cat, sub);
+                          }}
+                          title={sub.budget != null ? "Budget ändern" : "Monatsbudget setzen"}
+                          aria-label="Sub-Budget bearbeiten"
+                        >
+                          {canSub ? <IconWallet /> : <IconLock />}
+                        </button>
+                      )}
+
+                      {isCustomSub && (
+                        <button
+                          type="button"
+                          className="hb-cat-edit-btn"
+                          onClick={() => openEditForSub(sub, cat)}
+                          aria-label={`${sub.name} bearbeiten`}
+                          title="Bearbeiten"
+                        >
+                          <IconEdit />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Budget-Editor für Unterkategorie */}
+                    {isExpense && isSubEditorOpen && (
+                      <BudgetEditor
+                        inputRef={budgetInputRef}
+                        value={budgetDraft}
+                        onChange={(e) => setBudgetDraft(e.target.value)}
+                        onSave={saveBudget}
+                        onRemove={sub.budget != null ? () => applyBudget(null) : null}
+                        onCancel={closeBudgetEdit}
+                      />
                     )}
-                  </div>
+                  </React.Fragment>
                 );
               })}
             </div>
@@ -347,13 +565,9 @@ export default function CategoryManagerDialog({
                 autoComplete="off"
               />
             </div>
-            <button
-              type="button"
-              className="hb-btn hb-btn-sm"
-              onClick={() => setCreateOpen(true)}
-            >
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
               + Neue Kategorie
-            </button>
+            </Button>
           </div>
 
           {/* Filter-Radio */}
@@ -395,7 +609,7 @@ export default function CategoryManagerDialog({
                     Ausgaben
                   </div>
                 )}
-                {renderCategoryList(allExpense)}
+                {renderCategoryList(allExpense, true)}
               </>
             )}
 
@@ -404,9 +618,73 @@ export default function CategoryManagerDialog({
                 <div className="hb-label" style={{ padding: "12px 0 4px" }}>
                   Einnahmen
                 </div>
-                {renderCategoryList(allIncome)}
+                {renderCategoryList(allIncome, false)}
               </>
             )}
+
+            {/* Transfer-Zwecke */}
+            <div className="hb-label" style={{ padding: "12px 0 4px" }}>
+              Transfer-Zwecke
+            </div>
+            <div className="hb-cat-accordion-item">
+              <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
+                {transferCategories.length === 0 ? (
+                  <div className="hb-muted" style={{ fontSize: 13, padding: "4px 0" }}>
+                    Noch keine Transfer-Zwecke.
+                  </div>
+                ) : (
+                  transferCategories.map((cat) => (
+                    <div
+                      key={cat}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 10,
+                        padding: "6px 0",
+                      }}
+                    >
+                      <span style={{ fontSize: 14, color: "var(--text)" }}>{cat}</span>
+                      <button
+                        type="button"
+                        className="hb-icon-btn"
+                        onClick={() => deleteTransferCategory(cat)}
+                        aria-label={`„${cat}“ löschen`}
+                        title="Löschen"
+                        disabled={transferCategories.length <= 1}
+                        style={{ width: 30, height: 30 }}
+                      >
+                        <IconDelete />
+                      </button>
+                    </div>
+                  ))
+                )}
+
+                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <input
+                    className="hb-input"
+                    type="text"
+                    value={newTransferName}
+                    onChange={(e) => setNewTransferName(e.target.value)}
+                    placeholder="Neuer Transfer-Zweck..."
+                    style={{ flex: 1 }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addTransferCategory();
+                      }
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={addTransferCategory}
+                    disabled={!newTransferName.trim()}
+                  >
+                    <IconPlus /> Hinzufügen
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </EditDialog>

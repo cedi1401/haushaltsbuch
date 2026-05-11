@@ -1,6 +1,22 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
+import {
+  IconBook,
+  IconPots,
+  IconGoals,
+  IconFixed,
+  IconTrend,
+} from "../components/icons.jsx";
 
-export default function NavDrawer({ open, onClose, view, onChangeView }) {
+const NAV_ITEMS = [
+  { id: "book", label: "Haushaltsbuch", Icon: IconBook },
+  { id: "pots", label: "Töpfe", Icon: IconPots },
+  { id: "goals", label: "Sparziele", Icon: IconGoals },
+  { id: "fixed", label: "Fixkosten", Icon: IconFixed },
+  { id: "trend", label: "Trend", Icon: IconTrend },
+];
+
+export default function NavDrawer({ open, onClose, view, onChangeView, anchor }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => {
@@ -12,87 +28,34 @@ export default function NavDrawer({ open, onClose, view, onChangeView }) {
 
   if (!open) return null;
 
-  return (
-    <div
-      className="hb-drawer"
-      role="dialog"
-      aria-modal="true"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose?.();
-      }}
-    >
-      <div className="hb-drawer-overlay" />
-
-      <div className="hb-drawer-panel">
-        <div className="hb-drawer-head">
-          <div>
-            <div className="hb-drawer-title">MENÜ</div>
-            <div className="hb-muted">ANSICHT WÄHLEN</div>
-          </div>
-          <button className="hb-icon-btn" onClick={onClose} aria-label="Schließen" type="button">
-            ✕
-          </button>
-        </div>
-
-        <div className="hb-drawer-body">
+  return createPortal(
+    <>
+      <div className="hb-nav-popup-backdrop" onMouseDown={() => onClose?.()} />
+      <div
+        className="hb-nav-popup"
+        role="menu"
+        style={{
+          top: anchor?.top ?? 56,
+          left: Math.min(anchor?.left ?? 8, window.innerWidth - 240),
+        }}
+      >
+        {NAV_ITEMS.map(({ id, label, Icon }) => (
           <button
-            className={`hb-nav-item ${view === "book" ? "hb-nav-item-active" : ""}`}
+            key={id}
+            className={`hb-nav-item ${view === id ? "hb-nav-item-active" : ""}`}
             onClick={() => {
-              onChangeView?.("book");
+              onChangeView?.(id);
               onClose?.();
             }}
+            role="menuitem"
             type="button"
           >
-            HAUSHALTSBUCH
+            <span className="hb-nav-item-icon"><Icon /></span>
+            {label}
           </button>
-
-          <button
-            className={`hb-nav-item ${view === "pots" ? "hb-nav-item-active" : ""}`}
-            onClick={() => {
-              onChangeView?.("pots");
-              onClose?.();
-            }}
-            type="button"
-          >
-            TÖPFE
-          </button>
-
-          <button
-            className={`hb-nav-item ${view === "goals" ? "hb-nav-item-active" : ""}`}
-            onClick={() => {
-              onChangeView?.("goals");
-              onClose?.();
-            }}
-            type="button"
-          >
-            SPARZIELE
-          </button>
-
-          <button
-            className={`hb-nav-item ${view === "fixed" ? "hb-nav-item-active" : ""}`}
-            onClick={() => {
-              onChangeView?.("fixed");
-              onClose?.();
-            }}
-            type="button"
-          >
-            FIXKOSTEN
-          </button>
-
-          <button
-            className={`hb-nav-item ${view === "trend" ? "hb-nav-item-active" : ""}`}
-            onClick={() => {
-              onChangeView?.("trend");
-              onClose?.();
-            }}
-            type="button"
-          >
-            TREND
-          </button>
-        </div>
-
-        <div className="hb-drawer-foot hb-muted">TIPP: ESC SCHLIEẞT. KLICK AUSSERHALB SCHLIEẞT.</div>
+        ))}
       </div>
-    </div>
+    </>,
+    document.body
   );
 }

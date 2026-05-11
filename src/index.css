@@ -44,7 +44,7 @@ a:hover {
 
 /* Selection styles */
 ::selection {
-  background: rgba(0, 120, 212, 0.2);
+  background: var(--selection-bg, rgba(0, 120, 212, 0.2));
   color: inherit;
 }
 

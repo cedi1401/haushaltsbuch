@@ -1,629 +1,148 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useState, useMemo } from "react";
 
 import "./styles/haushaltsbuch.css";
 
-import iconBrightmode from "/icons/brightmode.svg";
-import iconDarkmode from "/icons/darkmode.svg";
-import iconSettings from "/icons/settings.svg";
-
 import { Button, Card, CardContent } from "./components/ui.jsx";
 import EditDialog from "./components/EditDialog.jsx";
-import CategoryPicker from "./components/CategoryPicker.jsx";
-import { HierarchicalCategoryPicker } from "./components/HierarchicalCategoryPicker.jsx";
 import CategoryManagerDialog from "./components/CategoryManagerDialog.jsx";
+import OverflowMenu from "./components/OverflowMenu.jsx";
+import RenameDialog from "./components/RenameDialog.jsx";
+import { useToast } from "./components/Toast.jsx";
+import { useConfirm } from "./components/ConfirmDialog.jsx";
+import { IconMenu, IconClose, IconInfo, IconSettings, IconSun, IconMoon } from "./components/icons.jsx";
 
 import SettingsDialog from "./features/SettingsDialog.jsx";
 import Charts from "./features/Charts.jsx";
+import InsightsPanel from "./features/InsightsPanel.jsx";
 import EntriesTable from "./features/EntriesTable.jsx";
 import TrendView from "./features/TrendView.jsx";
 import PotsView from "./features/PotsView.jsx";
 import GoalsView from "./features/GoalsView.jsx";
 import FixedCostsView from "./features/FixedCostsView.jsx";
 import NavDrawer from "./features/NavDrawer.jsx";
+import EntryFormDialog from "./features/EntryFormDialog.jsx";
+import EditEntryDialog from "./features/EditEntryDialog.jsx";
 
-import { formatCurrency, toCHF, todayISO, parseAmount, makeDefaultBook, normalizeBooks, getCategoryNames, DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./utils/hbUtils.js";
+import {
+  getCategoryNames,
+  todayISO,
+  DEFAULT_EXPENSE_CATEGORIES,
+  DEFAULT_INCOME_CATEGORIES,
+  sumAmounts,
+} from "./utils/hbUtils.js";
+import CurrencyContext from "./contexts/CurrencyContext.jsx";
+import { getEntryFinancialMonth, getFinancialMonthRange } from "./utils/financialMonthUtils.js";
 import { calcPotBalance } from "./utils/potUtils.js";
-import { calcExpenseByCategory, calcBudgetStatus } from "./utils/budgetUtils.js";
-import { loadBooks, saveBooks, getSetting, setSetting } from "./dal/storage.js";
+
+import { useBookManager } from "./hooks/useBookManager.js";
+import { useAppSettings } from "./hooks/useAppSettings.js";
+import { useEntryActions } from "./hooks/useEntryActions.js";
 import { useCategoryStats } from "./hooks/useCategoryStats.js";
 
+const VIEW_LABELS = { trend: "Trend", pots: "Töpfe", goals: "Sparziele", fixed: "Fixkosten" };
+
 export default function HaushaltsbuchApp() {
-  // Dark Mode
-  const [darkMode, setDarkMode] = useState(false);
+  const toast = useToast();
+  const { confirm } = useConfirm();
 
-  // Navigation
-  const [view, setView] = useState("book"); // "book" | "trend" | "pots" | "goals" | "fixed"
+  // UI state
+  const [view, setView] = useState("book");
   const [navOpen, setNavOpen] = useState(false);
-
-  // Bücher
-  const [books, setBooks] = useState([]);
-  const [activeBookId, setActiveBookId] = useState(null);
-
-  // Eingabe
-  const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState("Allgemein");
-  const [kind, setKind] = useState("expense"); // NEU: war "type"
-  const [source, setSource] = useState("month"); // NEU
-  const [potId, setPotId] = useState(""); // wird per useEffect auf ersten verfügbaren Topf gesetzt
-  const [note, setNote] = useState("");
-  const [date, setDate] = useState(() => todayISO());
-  const [newCategory, setNewCategory] = useState("");
-  const [monthFilter, setMonthFilter] = useState("");
-
-  // Hierarchische Kategorien (Phase 3)
-  const [categoryId, setCategoryId] = useState("cat_unkategorisiert");
-  const [subcategoryId, setSubcategoryId] = useState(null);
+  const [navAnchor, setNavAnchor] = useState(null);
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
-
-  // Dialog: Buchung hinzufügen
-  const [addEntryOpen, setAddEntryOpen] = useState(false);
-
-  function closeAddEntry() {
-    setAddEntryOpen(false);
-    setAmount("");
-    setNote("");
-    setDate(todayISO());
-    setKind("expense");
-    setSource("month");
-    setCategoryId("cat_unkategorisiert");
-    setSubcategoryId(null);
-  }
-
-  // Dialog: Eintrag bearbeiten
-  const [editOpen, setEditOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [editDraft, setEditDraft] = useState({
-    date: todayISO(),
-    kind: "expense",
-    source: "month",
-    potId: "",
-    category: "Allgemein",
-    categoryId: null,
-    subcategoryId: null,
-    note: "",
-    amount: "",
-  });
-
-  // Dialog: Neues Buch
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showAllPots, setShowAllPots] = useState(false);
   const [newBookOpen, setNewBookOpen] = useState(false);
   const [newBookName, setNewBookName] = useState("Neues Haushaltsbuch");
+  const [renameBookOpen, setRenameBookOpen] = useState(false);
 
-  // Einstellungen (Zahnrad)
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const bookManager = useBookManager({ toast, confirm });
+  const {
+    books, setBooks, setActiveBookId,
+    activeBook, baseCurrency, monthStartDay, fmt,
+    patchActiveBook, updateBook,
+    createBook, applyRenameActiveBook, deleteActiveBook,
+    importBook, handleMonthStartDayChange,
+    isInitialLoad,
+  } = bookManager;
 
-  // Auto-Update
-  const [updateReady, setUpdateReady] = useState(false);
-
-  // Dark Mode: DOM-Update und Persistierung
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    if (!isInitialLoad.current) {
-      setSetting('darkMode', String(darkMode));
-    }
-  }, [darkMode]);
-
-  // Laden (async für Electron-Kompatibilität)
-  useEffect(() => {
-    async function load() {
-      const [savedBooks, savedActive, savedMonth, savedDark] = await Promise.all([
-        loadBooks(),
-        getSetting('activeBookId'),
-        getSetting('month'),
-        getSetting('darkMode'),
-      ]);
-
-      if (Array.isArray(savedBooks) && savedBooks.length) {
-        const normalized = normalizeBooks(savedBooks);
-        setBooks(normalized);
-        setActiveBookId(savedActive || normalized[0]?.id || null);
-      } else {
-        const b = makeDefaultBook();
-        setBooks([b]);
-        setActiveBookId(b.id);
-      }
-
-      if (typeof savedMonth === "string") setMonthFilter(savedMonth);
-      if (savedDark === 'true') setDarkMode(true);
-    }
-    load();
-  }, []);
-
-  // Speichern (async-safe: fire-and-forget)
-  const isInitialLoad = useRef(true);
-  useEffect(() => {
-    if (isInitialLoad.current) return; // Skip first render (loading phase)
-    if (!books.length) return;
-    saveBooks(books);
-  }, [books]);
-
-  useEffect(() => {
-    if (isInitialLoad.current) return;
-    if (!activeBookId) return;
-    setSetting('activeBookId', activeBookId);
-  }, [activeBookId]);
-
-  useEffect(() => {
-    if (isInitialLoad.current) return;
-    setSetting('month', monthFilter);
-  }, [monthFilter]);
-
-  // Mark initial load as done after first render cycle
-  useEffect(() => {
-    // Small delay to ensure all load-effects have run
-    const timer = setTimeout(() => { isInitialLoad.current = false; }, 100);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Listen for auto-update events from Electron
-  useEffect(() => {
-    if (!window.electronAPI?.onUpdateDownloaded) return;
-    window.electronAPI.onUpdateDownloaded(() => setUpdateReady(true));
-  }, []);
-
-  const activeBook = useMemo(() => {
-    if (!books.length) return null;
-    return books.find((b) => b.id === activeBookId) || books[0] || null;
-  }, [books, activeBookId]);
-
-  const baseCurrency = activeBook?.baseCurrency || "CHF";
-  const fmt = useMemo(() => (n) => formatCurrency(n, baseCurrency), [baseCurrency]);
-
-  // potId synchronisieren: falls aktueller Topf nicht mehr existiert, ersten verfügbaren wählen
-  useEffect(() => {
-    const pots = activeBook?.pots || [];
-    if (pots.length === 0) { setPotId(""); return; }
-    if (!pots.some((p) => p.id === potId)) {
-      setPotId(pots[0].id);
-    }
-  }, [activeBook?.pots]);
+  const appSettings = useAppSettings({ isInitialLoad });
+  const { darkMode, setDarkMode, monthFilter, setMonthFilter, updateReady, setUpdateReady } = appSettings;
 
   const entries = activeBook?.entries || [];
+  const indicateTransferCategories = activeBook?.transferCategories || [];
   const indicateCategories = activeBook?.categories || [{ name: "Allgemein", budget: null }];
   const indicateCategoryNames = useMemo(() => getCategoryNames(indicateCategories), [indicateCategories]);
-  const indicateTransferCategories = activeBook?.transferCategories || [];
 
-  // Transferzwecke die im gewählten Topf (Add-Dialog) bereits eingezahlt wurden
-  const availableWithdrawalCategories = useMemo(() => {
-    const all = indicateTransferCategories;
-    if (!potId || !all.length) return all;
-    const used = new Set(
-      entries
-        .filter((e) => e.kind === "transfer" && e.potId === potId && e.category)
-        .map((e) => e.category)
-    );
-    const filtered = all.filter((cat) => used.has(cat));
-    return filtered.length > 0 ? filtered : all;
-  }, [entries, potId, indicateTransferCategories]);
+  const entryActions = useEntryActions({
+    activeBook,
+    patchActiveBook,
+    fmt,
+    confirm,
+    indicateTransferCategories,
+    indicateCategoryNames,
+  });
 
-  // Transferzwecke die im gewählten Topf (Edit-Dialog) bereits eingezahlt wurden
-  const editWithdrawalCategories = useMemo(() => {
-    const all = indicateTransferCategories;
-    const pid = editDraft.potId;
-    if (!pid || !all.length) return all;
-    const used = new Set(
-      entries
-        .filter((e) => e.kind === "transfer" && e.potId === pid && e.category)
-        .map((e) => e.category)
-    );
-    const filtered = all.filter((cat) => used.has(cat));
-    return filtered.length > 0 ? filtered : all;
-  }, [entries, editDraft.potId, indicateTransferCategories]);
-
-  // Für Trend-Ansicht: optional über alle Bücher aggregieren
-  const allEntries = useMemo(() => {
-    return (books || []).flatMap((b) =>
-      (b.entries || []).map((e) => ({ ...e, __bookId: b.id, __bookName: b.name }))
-    );
-  }, [books]);
-
-  function patchActiveBook(patchFn) {
-    if (!activeBook) return;
-    setBooks((prev) => prev.map((b) => (b.id === activeBook.id ? patchFn(b) : b)));
+  function openNav(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setNavAnchor({ top: rect.bottom + 6, left: rect.left });
+    setNavOpen(true);
   }
 
-  // NEU: Direktes Update eines Buchs (für Settings-Dialog)
-  function updateBook(updatedBook) {
-    if (!updatedBook) return;
-    setBooks((prev) => prev.map((b) => (b.id === updatedBook.id ? updatedBook : b)));
+  // Restores a full backup: orchestrates multiple hooks
+  function restoreAll(restored) {
+    setBooks(restored.books);
+    setActiveBookId(restored.activeBookId);
+    setMonthFilter(restored.monthFilter);
+
+    const nextBook =
+      restored.books.find((b) => b.id === restored.activeBookId) || restored.books[0];
+    const nextCatNames = getCategoryNames(nextBook?.categories || []);
+    if (!nextCatNames.includes(entryActions.addDraft.category)) {
+      const fallback = nextCatNames.includes("Allgemein") ? "Allgemein" : nextCatNames[0];
+      entryActions.setAddField("category", fallback || "Allgemein");
+    }
   }
 
-  // Wenn Buch wechselt und aktuell gewählte Kategorie nicht existiert → fallback
-  useEffect(() => {
-    if (!activeBook) return;
-
-    // Je nach kind die richtige Kategorie-Liste verwenden
-    if (kind === "transfer" || kind === "withdrawal") {
-      if (!indicateTransferCategories.includes(category)) {
-        const fallback = indicateTransferCategories[0] || "";
-        setCategory(fallback);
-      }
-    } else if (kind === "expense") {
-      if (!indicateCategoryNames.includes(category)) {
-        const fallback = indicateCategoryNames.includes("Allgemein")
-          ? "Allgemein"
-          : indicateCategoryNames[0];
-        setCategory(fallback || "Allgemein");
-      }
-    } else if (kind === "income") {
-      // Income hat immer "Allgemein"
-      if (category !== "Allgemein") {
-        setCategory("Allgemein");
-      }
-    }
-  }, [activeBookId, activeBook, indicateCategoryNames, indicateTransferCategories, category, kind]);
-
-  // Kategorie-Reset wenn kind wechselt
-  useEffect(() => {
-    if (kind === "expense") {
-      setCategoryId("cat_unkategorisiert");
-      setSubcategoryId(null);
-    } else if (kind === "income") {
-      setCategoryId("cat_einnahmen");
-      setSubcategoryId(null);
-    } else {
-      // transfer, withdrawal
-      setCategoryId(null);
-      setSubcategoryId(null);
-    }
-  }, [kind]);
-
-  // Buch actions
-  function createBook() {
-    const name = newBookName.trim() || "Neues Haushaltsbuch";
-    const b = makeDefaultBook(name);
-    setBooks((prev) => [...prev, b]);
-    setActiveBookId(b.id);
-    setCategory("Allgemein");
+  function handleCreateBook() {
+    createBook(newBookName);
+    entryActions.setAddField("category", "Allgemein");
     setNewBookOpen(false);
     setView("book");
   }
 
-  function renameActiveBook() {
-    if (!activeBook) return;
-    const name = window.prompt("Neuer Name für dieses Haushaltsbuch:", activeBook.name);
-    if (!name) return;
-    const trimmed = name.trim();
-    if (!trimmed) return;
-
-    setBooks((prev) =>
-      prev.map((b) => (b.id === activeBook.id ? { ...b, name: trimmed } : b))
-    );
-  }
-
-  function deleteActiveBook() {
-    if (!activeBook) return;
-    if (books.length <= 1) return;
-
-    const ok = window.confirm(`Haushaltsbuch "${activeBook.name}" wirklich löschen?`);
-    if (!ok) return;
-
-    const remaining = books.filter((b) => b.id !== activeBook.id);
-    setBooks(remaining);
-    setActiveBookId(remaining[0]?.id || null);
-  }
-
-  // Kategorie actions
-  function deleteCategory(catName) {
-    if (!activeBook) return;
-
-    if (indicateCategoryNames.length <= 1) {
-      window.alert("Du brauchst mindestens eine Kategorie.");
-      return;
-    }
-
-    const ok = window.confirm(`Kategorie "${catName}" wirklich löschen?`);
-    if (!ok) return;
-
-    const remainingCats = indicateCategories.filter((c) => {
-      const name = typeof c === "string" ? c : c.name;
-      return name !== catName;
-    });
-
-    patchActiveBook((b) => ({
-      ...b,
-      categories: remainingCats,
-    }));
-
-    if (category === catName) {
-      const remainingNames = getCategoryNames(remainingCats);
-      const fallback = remainingNames.includes("Allgemein") ? "Allgemein" : remainingNames[0];
-      setCategory(fallback || "Allgemein");
-    }
-  }
-
-  function deleteTransferCategory(cat) {
-    if (!activeBook) return;
-
-    if (indicateTransferCategories.length <= 1) {
-      window.alert("Du brauchst mindestens eine Transfer-Kategorie.");
-      return;
-    }
-
-    const ok = window.confirm(`Transfer-Kategorie "${cat}" wirklich löschen?`);
-    if (!ok) return;
-
-    const remainingCats = indicateTransferCategories.filter((c) => c !== cat);
-
-    patchActiveBook((b) => ({
-      ...b,
-      transferCategories: remainingCats,
-    }));
-
-    if (category === cat) {
-      const fallback = remainingCats[0] || "Allgemein";
-      setCategory(fallback);
-    }
-  }
-
-  // Entry actions
-  function addEntry() {
-    if (!activeBook) return;
-    const numericAmount = parseAmount(amount);
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
-    if (!date) return;
-
-    // Rückwärtskompatibles category-String-Feld
-    let legacyCategory = category;
-    if (kind === "expense") {
-      legacyCategory =
-        (activeBook.expenseCategories || DEFAULT_EXPENSE_CATEGORIES).find(
-          (c) => c.id === categoryId
-        )?.name || "";
-    } else if (kind === "income") {
-      legacyCategory =
-        (activeBook.incomeCategories || DEFAULT_INCOME_CATEGORIES).find(
-          (c) => c.id === categoryId
-        )?.name || "";
-    }
-
-    const entry = {
-      id: Date.now(),
-      amount: numericAmount,
-      category: legacyCategory,
-      kind,
-      note: note.trim(),
-      date,
-      categoryId: (kind === "expense" || kind === "income") ? categoryId : null,
-      subcategoryId: (kind === "expense" || kind === "income") ? subcategoryId : null,
-    };
-
-    if (kind === "expense") {
-      entry.source = "month";
-    }
-
-    if (kind === "transfer" || kind === "withdrawal") {
-      entry.potId = potId;
-    }
-
-    patchActiveBook((b) => ({ ...b, entries: [...(b.entries || []), entry] }));
-
-    setAmount("");
-    setNote("");
-  }
-
-  function addTransferEntry(entry) {
-    if (!activeBook) return;
-    patchActiveBook((b) => ({ ...b, entries: [...(b.entries || []), entry] }));
-  }
-
-  function removeEntry(id) {
-    if (!activeBook) return;
-
-    const target = (activeBook.entries || []).find((e) => e.id === id) || null;
-    
-    let prettyType = "Ausgabe";
-    if (target?.kind === "income") prettyType = "Einnahme";
-    else if (target?.kind === "transfer") prettyType = "Transfer";
-    else if (target?.kind === "withdrawal") prettyType = "Entnahme";
-    
-    const prettyAmount = target ? fmt(Number(target.amount || 0)) : "";
-
-    const msg = target
-      ? `Eintrag wirklich löschen?
-
-${target.date || ""} · ${prettyType} · ${target.category || ""}
-Betrag: ${prettyAmount}${target.note ? `
-Notiz: ${target.note}` : ""}`
-      : "Eintrag wirklich löschen?";
-
-    const ok = window.confirm(msg);
-    if (!ok) return;
-
-    if (editingId === id) {
-      setEditOpen(false);
-      setEditingId(null);
-    }
-
-    patchActiveBook((b) => ({
-      ...b,
-      entries: (b.entries || []).filter((e) => e.id !== id),
-    }));
-  }
-
-  function addCategory() {
-    if (!activeBook) return;
-    const trimmed = newCategory.trim();
-    if (!trimmed) return;
-
-    // Je nach Art in die richtige Liste einfügen
-    if (kind === "transfer") {
-      if ((activeBook.transferCategories || []).includes(trimmed)) return;
-      patchActiveBook((b) => ({
-        ...b,
-        transferCategories: [...(b.transferCategories || []), trimmed],
-      }));
-    } else {
-      // Prüfen ob Kategorie-Name bereits existiert
-      const existingNames = getCategoryNames(activeBook.categories || []);
-      if (existingNames.includes(trimmed)) return;
-      // Neue Kategorie als Objekt hinzufügen
-      patchActiveBook((b) => ({
-        ...b,
-        categories: [...(b.categories || []), { name: trimmed, budget: null }],
-      }));
-    }
-
-    setCategory(trimmed);
-    setNewCategory("");
-  }
-
-  function startEdit(entry) {
-    setEditingId(entry.id);
-    const fallbackCategory =
-      entry.kind === "withdrawal"
-        ? entry.category || (indicateTransferCategories[0] || "")
-        : entry.category || "Allgemein";
-    setEditDraft({
-      date: entry.date || todayISO(),
-      kind: entry.kind || "expense",
-      source: entry.source || "month",
-      potId: entry.potId || "reserve",
-      category: fallbackCategory,
-      categoryId: entry.categoryId ?? null,
-      subcategoryId: entry.subcategoryId ?? null,
-      note: entry.note || "",
-      amount: String(entry.amount ?? ""),
-    });
-    setEditOpen(true);
-  }
-
-  function closeEdit() {
-    setEditOpen(false);
-    setEditingId(null);
-  }
-
-  function saveEdit() {
-    if (!activeBook) return;
-    if (editingId == null) return;
-    if (!editDraft.date) return;
-
-    const numericAmount = parseAmount(editDraft.amount);
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
-
-    patchActiveBook((b) => ({
-      ...b,
-      entries: (b.entries || []).map((e) => {
-        if (e.id !== editingId) return e;
-
-        // Rückwärtskompatibles category-String-Feld für Edit
-        let legacyCat = editDraft.category;
-        if (editDraft.kind === "expense") {
-          legacyCat =
-            (activeBook.expenseCategories || DEFAULT_EXPENSE_CATEGORIES).find(
-              (c) => c.id === editDraft.categoryId
-            )?.name || editDraft.category;
-        } else if (editDraft.kind === "income") {
-          legacyCat =
-            (activeBook.incomeCategories || DEFAULT_INCOME_CATEGORIES).find(
-              (c) => c.id === editDraft.categoryId
-            )?.name || editDraft.category;
-        }
-
-        const updated = {
-          ...e,
-          date: editDraft.date,
-          kind: editDraft.kind,
-          category: legacyCat,
-          categoryId: (editDraft.kind === "expense" || editDraft.kind === "income") ? (editDraft.categoryId ?? null) : null,
-          subcategoryId: (editDraft.kind === "expense" || editDraft.kind === "income") ? (editDraft.subcategoryId ?? null) : null,
-          note: String(editDraft.note || "").trim(),
-          amount: numericAmount,
-        };
-
-        if (editDraft.kind === "expense") {
-          updated.source = "month";
-        } else {
-          delete updated.source;
-        }
-
-        if (editDraft.kind === "transfer" || editDraft.kind === "withdrawal") {
-          updated.potId = editDraft.potId;
-        } else {
-          delete updated.potId;
-        }
-
-        return updated;
-      }),
-    }));
-
-    setEditOpen(false);
-    setEditingId(null);
-  }
-
-  const canAddEntry = useMemo(() => {
-    if (!date) return false;
-    const n = parseAmount(amount);
-    if (!Number.isFinite(n) || n <= 0) return false;
-    if (kind === "transfer" && !category) return false;
-    if (kind === "withdrawal" && !potId) return false;
-    if (kind === "withdrawal" && !category) return false;
-    return true;
-  }, [date, amount, kind, category, potId]);
-
-  function handleAddEntry() {
-    addEntry();
-    closeAddEntry();
-  }
-
-  const canSaveEdit = useMemo(() => {
-    if (!editDraft.date) return false;
-    const n = parseAmount(editDraft.amount);
-    if (!Number.isFinite(n) || n <= 0) return false;
-    if (!editDraft.kind) return false;
-    // Transfer/Withdrawal: needs the legacy category string; income/expense: needs categoryId
-    if ((editDraft.kind === "transfer" || editDraft.kind === "withdrawal") && !editDraft.category) return false;
-    return true;
-  }, [editDraft]);
-
+  // Derived data
   const filteredEntries = useMemo(() => {
     const month = monthFilter?.trim();
     if (!month) return entries;
-    return entries.filter((e) => typeof e.date === "string" && e.date.slice(0, 7) === month);
-  }, [entries, monthFilter]);
+    return entries.filter((e) => getEntryFinancialMonth(e, monthStartDay) === month);
+  }, [entries, monthFilter, monthStartDay]);
 
-  // ============================================
-  // BERECHNUNGEN (NEU: mit kind statt type)
-  // ============================================
+  const totalIncome = useMemo(
+    () => sumAmounts(filteredEntries, (e) => e.kind === "income"),
+    [filteredEntries]
+  );
 
-  const totalIncome = useMemo(() => {
-    return filteredEntries
-      .filter((e) => e.kind === "income")
-      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
-  }, [filteredEntries]);
+  const totalExpense = useMemo(
+    () => sumAmounts(filteredEntries, (e) => e.kind === "expense" && e.source === "month"),
+    [filteredEntries]
+  );
 
-  const totalExpense = useMemo(() => {
-    return filteredEntries
-      .filter((e) => e.kind === "expense" && e.source === "month")
-      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
-  }, [filteredEntries]);
-
-  const totalTransfers = useMemo(() => {
-    return filteredEntries
-      .filter((e) => e.kind === "transfer")
-      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
-  }, [filteredEntries]);
+  const totalTransfers = useMemo(
+    () => sumAmounts(filteredEntries, (e) => e.kind === "transfer"),
+    [filteredEntries]
+  );
 
   const balance = totalIncome - totalExpense - totalTransfers;
 
-  const totalPotTransfers = useMemo(() => {
-    return filteredEntries
-      .filter((e) => e.kind === "transfer")
-      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
-  }, [filteredEntries]);
-
-  // Hierarchische Kategorie-Statistiken (Phase 4)
   const { expenseByHierarchy, incomeByHierarchy } = useCategoryStats(
     filteredEntries,
     activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES,
     activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES,
-    monthFilter
+    monthFilter,
+    monthStartDay
   );
 
-  // NEU: Topf-Stände berechnen
   const potBalances = useMemo(() => {
     if (!activeBook?.pots) return [];
     return activeBook.pots.map((pot) => ({
@@ -632,670 +151,411 @@ Notiz: ${target.note}` : ""}`
     }));
   }, [activeBook?.pots, entries]);
 
-  // Budget-Status für Kategorien mit Limit
-  const budgetStatus = useMemo(() => {
-    if (!indicateCategories?.length) return [];
-    const expenseMap = calcExpenseByCategory(filteredEntries, monthFilter);
-    return calcBudgetStatus(indicateCategories, expenseMap);
-  }, [indicateCategories, filteredEntries, monthFilter]);
+  const entriesSorted = useMemo(
+    () =>
+      filteredEntries.toSorted((a, b) => {
+        const da = String(a.date || ""), db = String(b.date || "");
+        if (da !== db) return db.localeCompare(da);
+        return Number(b.id) - Number(a.id);
+      }),
+    [filteredEntries]
+  );
 
-  const entriesSorted = useMemo(() => {
-    return [...filteredEntries].sort((a, b) => {
-      const da = String(a.date || "");
-      const db = String(b.date || "");
-      if (da !== db) return db.localeCompare(da);
-      return Number(b.id) - Number(a.id);
-    });
-  }, [filteredEntries]);
+  const monthLabel = useMemo(() => {
+    if (!monthFilter) return "(Alle Monate)";
+    if (monthStartDay === 1) return `(${monthFilter})`;
+    const range = getFinancialMonthRange(monthFilter, monthStartDay);
+    if (!range) return `(${monthFilter})`;
+    const months = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+    const fmtDate = (iso) => {
+      if (!iso) return "";
+      const [, mm, dd] = iso.split("-");
+      return `${Number(dd)}. ${months[Number(mm) - 1]}`;
+    };
+    return `(${monthFilter} · ${fmtDate(range.startDate)} – ${fmtDate(range.endDate)})`;
+  }, [monthFilter, monthStartDay]);
 
-  const monthLabel = monthFilter ? `(${monthFilter})` : "(Alle Monate)";
+  const allEntries = useMemo(
+    () =>
+      (books || []).flatMap((b) =>
+        (b.entries || []).map((e) => ({ ...e, __bookId: b.id, __bookName: b.name }))
+      ),
+    [books]
+  );
 
-  const editingEntry = useMemo(() => {
-    if (editingId == null) return null;
-    return entries.find((e) => e.id === editingId) || null;
-  }, [entries, editingId]);
-
-  const isDeletableCategory = (cat) => {
-    if (kind === "transfer") {
-      return indicateTransferCategories.includes(cat) && indicateTransferCategories.length > 1;
-    }
-    return indicateCategoryNames.includes(cat) && indicateCategoryNames.length > 1;
-  };
-
-  function restoreAll(restored) {
-    setBooks(restored.books);
-    setActiveBookId(restored.activeBookId);
-    setMonthFilter(restored.monthFilter);
-
-    const nextBook = restored.books.find((b) => b.id === restored.activeBookId) || restored.books[0];
-    const nextCatNames = getCategoryNames(nextBook?.categories || []);
-    if (!nextCatNames.includes(category)) {
-      const fallback = nextCatNames.includes("Allgemein") ? "Allgemein" : nextCatNames[0];
-      setCategory(fallback || "Allgemein");
-    }
-  }
-
-  function importBook(bookToImport) {
-    const existingIds = new Set(books.map((b) => b.id));
-    const book = existingIds.has(bookToImport.id)
-      ? { ...bookToImport, id: `book_${Date.now()}` }
-      : bookToImport;
-    setBooks((prev) => [...prev, book]);
-    setActiveBookId(book.id);
-  }
+  const isViewWithoutMonth = view in VIEW_LABELS;
+  const themeTooltip = darkMode ? "Zu Light Mode wechseln" : "Zu Dark Mode wechseln";
+  const viewLabel = VIEW_LABELS[view];
 
   return (
+    <CurrencyContext.Provider value={fmt}>
     <div className="hb-page">
-      {updateReady && (
-        <div className="hb-update-banner">
-          <span>Neue Version verfügbar!</span>
-          <button onClick={() => window.electronAPI.installUpdate()}>
-            Jetzt neu starten
-          </button>
-          <button className="hb-update-dismiss" onClick={() => setUpdateReady(false)}>
-            Später
-          </button>
-        </div>
-      )}
-      <NavDrawer
-        open={navOpen}
-        onClose={() => setNavOpen(false)}
-        view={view}
-        onChangeView={setView}
-      />
-
-      <div className="hb-top">
-        <div className="hb-row">
-          <div className="hb-title-row">
-            <button
-              className="hb-icon-btn hb-hamburger-btn"
-              type="button"
-              title="Menü"
-              aria-label="Menü"
-              onClick={() => setNavOpen(true)}
-            >
-              ☰
-            </button>
-
-            <div>
-              <h1 className="hb-title">Haushaltsbuch</h1>
-              <p className="hb-sub">
-                {view === "trend" ? "(Trend)" : view === "pots" ? "(Töpfe)" : view === "goals" ? "(Sparziele)" : view === "fixed" ? "(Fixkosten)" : monthLabel}
-              </p>
+      <div className="hb-page-container">
+        {updateReady && (
+          <div className="hb-infobar" role="status">
+            <div className="hb-infobar-icon"><IconInfo /></div>
+            <div className="hb-infobar-content">
+              <div className="hb-infobar-title">Update bereit</div>
+              <div className="hb-infobar-message">
+                Eine neue Version wurde heruntergeladen. Beim Neustart wird sie installiert.
+              </div>
+            </div>
+            <div className="hb-infobar-actions">
+              <Button onClick={() => window.electronAPI.installUpdate()}>Jetzt neu starten</Button>
+              <button
+                type="button"
+                className="hb-icon-btn"
+                onClick={() => setUpdateReady(false)}
+                aria-label="Schließen"
+                title="Schließen"
+              >
+                <IconClose />
+              </button>
             </div>
           </div>
+        )}
 
-          <div className="hb-group">
-            <label className="hb-muted">Buch</label>
-            <select
-              className="hb-input"
-              value={activeBook?.id || ""}
-              onChange={(e) => setActiveBookId(e.target.value)}
-            >
-              {books.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-
-            {view === "book" && (
-              <Button variant="outline" onClick={() => setNewBookOpen(true)}>
-                Neues Buch
-              </Button>
-            )}
-            <Button variant="outline" onClick={renameActiveBook}>
-              Umbenennen
-            </Button>
-            <Button variant="outline" onClick={deleteActiveBook} disabled={books.length <= 1}>
-              Löschen
-            </Button>
-
-            <div className="hb-divider" />
-
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <label className="hb-muted">Monat</label>
-              {view === "trend" || view === "pots" || view === "goals" || view === "fixed" ? <span className="hb-badge">nur Buch</span> : null}
-            </div>
-            <input
-              className="hb-input"
-              type="month"
-              value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
-              disabled={view === "trend" || view === "pots" || view === "goals" || view === "fixed"}
-              title={
-                view === "trend" || view === "pots" || view === "goals" || view === "fixed"
-                  ? "Der Monatsfilter gilt nur in der Buch-Ansicht."
-                  : undefined
-              }
-            />
-            <Button
-              variant="outline"
-              onClick={() => setMonthFilter("")}
-              disabled={view === "trend" || view === "pots" || view === "goals" || view === "fixed"}
-              title={
-                view === "trend" || view === "pots" || view === "goals" || view === "fixed"
-                  ? "Der Monatsfilter gilt nur in der Buch-Ansicht."
-                  : undefined
-              }
-            >
-              Alle
-            </Button>
-
-            <button
-              className="hb-icon-btn hb-gear-btn"
-              type="button"
-              title={darkMode ? 'Light Mode' : 'Dark Mode'}
-              onClick={() => setDarkMode(!darkMode)}
-              aria-label={darkMode ? 'Light Mode' : 'Dark Mode'}
-            >
-              <img
-                src={darkMode ? iconBrightmode : iconDarkmode}
-                alt={darkMode ? 'Light Mode' : 'Dark Mode'}
-                className="hb-icon-svg"
-              />
-            </button>
-
-            <button
-              className="hb-icon-btn hb-gear-btn"
-              type="button"
-              title="Einstellungen"
-              onClick={() => setSettingsOpen(true)}
-              aria-label="Einstellungen"
-            >
-              <img src={iconSettings} alt="Einstellungen" className="hb-icon-svg" />
-            </button>
-          </div>
-        </div>
-
-        {activeBook ? (
-          <div className="hb-muted">
-            Aktives Buch: <strong>{activeBook.name}</strong>
-          </div>
-        ) : null}
-      </div>
-
-      {view === "trend" ? (
-        <TrendView entries={entries} entriesAll={allEntries} toCHF={fmt} />
-      ) : view === "pots" ? (
-        <PotsView
-          activeBook={activeBook}
-          entries={entries}
-          toCHF={fmt}
-          baseCurrency={baseCurrency}
-          onAddTransferEntry={addTransferEntry}
-          transferCategories={indicateTransferCategories}
-          todayISO={todayISO}
-          onEditEntry={startEdit}
-          onRemoveEntry={removeEntry}
+        <NavDrawer
+          open={navOpen}
+          onClose={() => setNavOpen(false)}
+          view={view}
+          onChangeView={setView}
+          anchor={navAnchor}
         />
-      ) : view === "goals" ? (
-        <GoalsView
-          activeBook={activeBook}
-          entries={entries}
-          toCHF={fmt}
-          baseCurrency={baseCurrency}
-          onUpdateBook={updateBook}
-          todayISO={todayISO}
-        />
-      ) : view === "fixed" ? (
-        <FixedCostsView
-          activeBook={activeBook}
-          entries={entries}
-          toCHF={fmt}
-          baseCurrency={baseCurrency}
-          onUpdateBook={updateBook}
-          onAddEntry={addTransferEntry}
-          todayISO={todayISO}
-        />
-      ) : (
-        <>
-          <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-            <Button onClick={() => setAddEntryOpen(true)}>
-              Buchung hinzufügen
-            </Button>
-            <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
-              Kategorien bearbeiten
-            </Button>
-          </div>
 
-          <EditDialog
-            open={addEntryOpen}
-            title="Buchung hinzufügen"
-            onClose={closeAddEntry}
-            onSave={handleAddEntry}
-            canSave={canAddEntry}
-            saveLabel="Hinzufügen"
-            size="wide"
+        {/* Mobile-only kompakte Toolbar (< 768px) */}
+        <div className="hb-mobile-toolbar">
+          <button className="hb-icon-btn" type="button" title="Menü" aria-label="Menü" onClick={openNav}>
+            <IconMenu />
+          </button>
+          <div className="hb-mobile-toolbar-title">{viewLabel || "Haushaltsbuch"}</div>
+          <button
+            className="hb-icon-btn"
+            type="button"
+            title="Einstellungen"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Einstellungen"
           >
-            <div className="hb-two" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div className="hb-field">
-                <div className="hb-label">Datum</div>
-                <input
-                  className="hb-input"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
+            <IconSettings />
+          </button>
+        </div>
+
+        <div className="hb-top hb-desktop-toolbar">
+          <div className="hb-row">
+            <div className="hb-title-row">
+              <button
+                className="hb-icon-btn hb-hamburger-btn"
+                type="button"
+                title="Menü"
+                aria-label="Menü"
+                onClick={openNav}
+              >
+                <IconMenu />
+              </button>
+              <div>
+                <h1 className="hb-title">Haushaltsbuch</h1>
+                <p className="hb-sub">{viewLabel ? `(${viewLabel})` : monthLabel}</p>
               </div>
-
-              <div className="hb-field">
-                <div className="hb-label">Betrag</div>
-                <input
-                  className="hb-input"
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="z.B. 12.50"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
-              </div>
-
-              <div className="hb-field">
-                <div className="hb-label">Art</div>
-                <select className="hb-input" value={kind} onChange={(e) => setKind(e.target.value)}>
-                  <option value="income">Einnahme</option>
-                  <option value="expense">Ausgabe</option>
-                  <option value="withdrawal">Entnahme</option>
-                  <option value="transfer">Transfer</option>
-                </select>
-              </div>
-
-              {kind === "expense" && (
-                <div className="hb-field">
-                  <div className="hb-label">Quelle</div>
-                  <input className="hb-input" type="text" value="Monatsbudget" disabled
-                    style={{ background: "var(--hover-bg)", color: "var(--muted)" }} />
-                </div>
-              )}
-
-              {kind === "withdrawal" && (
-                <div className="hb-field">
-                  <div className="hb-label">Aus Topf</div>
-                  <select className="hb-input" value={potId} onChange={(e) => setPotId(e.target.value)}>
-                    {(activeBook?.pots || []).map((pot) => (
-                      <option key={pot.id} value={pot.id}>
-                        {pot.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {kind === "withdrawal" && (
-                <div className="hb-field">
-                  <div className="hb-label">Transfer-Zweck</div>
-                  <select
-                    className="hb-input"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                  >
-                    {availableWithdrawalCategories.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {kind === "transfer" && (
-                <div className="hb-field">
-                  <div className="hb-label">In Topf</div>
-                  <select className="hb-input" value={potId} onChange={(e) => setPotId(e.target.value)}>
-                    {(activeBook?.pots || []).map((pot) => (
-                      <option key={pot.id} value={pot.id}>
-                        {pot.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="hb-field" style={{ gridColumn: "1 / -1" }}>
-                <div className="hb-label">Notiz (optional)</div>
-                <input
-                  className="hb-input"
-                  type="text"
-                  placeholder="z.B. Migros, Abo, ..."
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                />
-              </div>
-
             </div>
 
-            {/* Kategorie-Auswahl: volle Breite unter den anderen Feldern */}
-            {kind === "expense" ? (
-              <div style={{ marginTop: 16 }}>
-                <HierarchicalCategoryPicker
-                  label="Kategorie"
-                  value={{ categoryId, subcategoryId }}
-                  categories={activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES}
-                  onChange={({ categoryId: cid, subcategoryId: sid }) => {
-                    setCategoryId(cid);
-                    setSubcategoryId(sid);
-                  }}
-                />
-              </div>
-            ) : kind === "income" ? (
-              <div style={{ marginTop: 16 }}>
-                <HierarchicalCategoryPicker
-                  label="Kategorie"
-                  value={{ categoryId, subcategoryId }}
-                  categories={activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES}
-                  onChange={({ categoryId: cid, subcategoryId: sid }) => {
-                    setCategoryId(cid);
-                    setSubcategoryId(sid);
-                  }}
-                />
-              </div>
-            ) : kind === "transfer" ? (
-              <div style={{ marginTop: 16 }}>
-                <CategoryPicker
-                  className="hb-field-category"
-                  label="Transfer-Zweck"
-                  value={category}
-                  categories={indicateTransferCategories}
-                  onChange={setCategory}
-                  onDelete={deleteTransferCategory}
-                  isDeletable={(cat) => indicateTransferCategories.includes(cat) && indicateTransferCategories.length > 1}
-                />
-
-                <div style={{ display: "flex", gap: 10, alignItems: "flex-end", marginTop: 12 }}>
-                  <div className="hb-field" style={{ flex: 1 }}>
-                    <div className="hb-label">Neuer Transfer-Zweck</div>
-                    <input
-                      className="hb-input"
-                      type="text"
-                      placeholder="Neuer Transfer-Zweck"
-                      value={newCategory}
-                      onChange={(e) => setNewCategory(e.target.value)}
-                    />
-                  </div>
-                  <Button variant="outline" onClick={addCategory}>
-                    Hinzufügen
-                  </Button>
-                </div>
-              </div>
-            ) : null /* withdrawal: keine Kategorie */}
-
-            {!canAddEntry && amount ? (
-              <div style={{ marginTop: 10, color: "var(--red)", fontSize: 12 }}>
-                Bitte Datum & einen gültigen Betrag (&gt; 0) setzen.
-              </div>
-            ) : null}
-          </EditDialog>
-
-          {/* NEU: 4 Kacheln statt 3 */}
-          <Card style={{ marginBottom: 16 }}>
-            <CardContent>
-              <div className="hb-grid-3" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-                <div>
-                  <div className="hb-stat-title">Einnahmen</div>
-                  <div className="hb-stat-val hb-ok">+{fmt(totalIncome)}</div>
-                </div>
-                <div>
-                  <div className="hb-stat-title">Ausgaben</div>
-                  <div className="hb-stat-val hb-bad">-{fmt(totalExpense)}</div>
-                </div>
-                <div>
-                  <div className="hb-stat-title">Transfers</div>
-                  <div className="hb-stat-val hb-transfer">→{fmt(totalTransfers)}</div>
-                </div>
-                <div>
-                  <div className="hb-stat-title">Saldo</div>
-                  <div className={`hb-stat-val ${balance >= 0 ? "hb-ok" : "hb-bad"}`}>
-                    {fmt(balance)}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* NEU: Topf-Stände */}
-          <Card style={{ marginBottom: 16 }}>
-            <CardContent>
-              <h3 style={{ margin: 0, marginBottom: 12, fontSize: 16 }}>Topf-Stände</h3>
-              <div className="hb-grid-3" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
-                {potBalances.map((pot) => (
-                  <div key={pot.id}>
-                    <div className="hb-stat-title">{pot.name}</div>
-                    <div className={`hb-stat-val ${pot.balance >= 0 ? "hb-ok" : "hb-bad"}`}>
-                      {fmt(pot.balance)}
-                    </div>
-                  </div>
+            <div className="hb-group">
+              <label className="hb-muted" htmlFor="hb-book-select">Buch</label>
+              <select
+                id="hb-book-select"
+                className="hb-input"
+                value={activeBook?.id || ""}
+                onChange={(e) => setActiveBookId(e.target.value)}
+              >
+                {books.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
+              </select>
 
-          {/* Budget-Übersicht (nur wenn Kategorien mit Budget existieren) */}
-          {budgetStatus.length > 0 && (
+              {view === "book" && (
+                <Button variant="outline" onClick={() => setNewBookOpen(true)}>Neues Buch</Button>
+              )}
+
+              <OverflowMenu
+                label="Buchaktionen"
+                items={[
+                  { label: "Umbenennen", onClick: () => setRenameBookOpen(true) },
+                  { label: "Löschen", onClick: deleteActiveBook, disabled: books.length <= 1, danger: true },
+                ]}
+              />
+
+              <div className="hb-divider" />
+
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <label className="hb-muted" htmlFor="hb-month-input">Monat</label>
+                {isViewWithoutMonth ? <span className="hb-badge">nur Buch</span> : null}
+              </div>
+              <div className="hb-month-filter">
+                <input
+                  id="hb-month-input"
+                  className="hb-input"
+                  type="month"
+                  value={monthFilter}
+                  onChange={(e) => setMonthFilter(e.target.value)}
+                  disabled={isViewWithoutMonth}
+                  title={isViewWithoutMonth ? "Der Monatsfilter gilt nur in der Buch-Ansicht." : undefined}
+                />
+                <button
+                  type="button"
+                  className="hb-month-filter-clear"
+                  onClick={() => setMonthFilter("")}
+                  disabled={isViewWithoutMonth || !monthFilter}
+                  aria-label="Monatsfilter zurücksetzen"
+                  title="Alle Monate anzeigen"
+                >
+                  <IconClose />
+                </button>
+              </div>
+
+              <button
+                className="hb-icon-btn hb-gear-btn"
+                type="button"
+                title={themeTooltip}
+                onClick={() => setDarkMode(!darkMode)}
+                aria-label={themeTooltip}
+              >
+                {darkMode ? <IconSun /> : <IconMoon />}
+              </button>
+
+              <button
+                className="hb-icon-btn hb-gear-btn"
+                type="button"
+                title="Einstellungen"
+                onClick={() => setSettingsOpen(true)}
+                aria-label="Einstellungen"
+              >
+                <IconSettings />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {view === "trend" ? (
+          <TrendView
+            entries={entries}
+            entriesAll={allEntries}
+            recurringExpenses={activeBook?.recurringExpenses || []}
+            expenseCategories={activeBook?.expenseCategories || []}
+            monthStartDay={monthStartDay}
+          />
+        ) : view === "pots" ? (
+          <PotsView
+            activeBook={activeBook}
+            entries={entries}
+            baseCurrency={baseCurrency}
+            onAddTransferEntry={entryActions.addTransferEntry}
+            transferCategories={indicateTransferCategories}
+            todayISO={todayISO}
+            onEditEntry={entryActions.startEdit}
+            onRemoveEntry={entryActions.removeEntry}
+            monthStartDay={monthStartDay}
+          />
+        ) : view === "goals" ? (
+          <GoalsView
+            activeBook={activeBook}
+            entries={entries}
+            baseCurrency={baseCurrency}
+            onUpdateBook={updateBook}
+            todayISO={todayISO}
+            monthStartDay={monthStartDay}
+          />
+        ) : view === "fixed" ? (
+          <FixedCostsView
+            activeBook={activeBook}
+            entries={entries}
+            baseCurrency={baseCurrency}
+            onUpdateBook={updateBook}
+            onAddEntry={entryActions.addTransferEntry}
+            todayISO={todayISO}
+          />
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+              <Button onClick={() => entryActions.setAddEntryOpen(true)}>Buchung hinzufügen</Button>
+              <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
+                Kategorien bearbeiten
+              </Button>
+            </div>
+
+            <EntryFormDialog
+              open={entryActions.addEntryOpen}
+              onClose={entryActions.closeAddEntry}
+              onSave={entryActions.handleAddEntry}
+              canSave={entryActions.canAddEntry}
+              draft={entryActions.addDraft}
+              setField={entryActions.setAddField}
+              pots={activeBook?.pots || []}
+              expenseCategories={activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES}
+              incomeCategories={activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES}
+              transferCategories={indicateTransferCategories}
+              availableWithdrawalCategories={entryActions.availableWithdrawalCategories}
+              onOpenCategoryManager={() => {
+                entryActions.setAddEntryOpen(false);
+                setCategoryManagerOpen(true);
+              }}
+            />
+
+            <div className="hb-stat-tiles">
+              <div className="hb-stat-tile">
+                <div className="hb-stat-tile-label">Einnahmen</div>
+                <div className="hb-stat-tile-value hb-ok">+{fmt(totalIncome)}</div>
+              </div>
+              <div className="hb-stat-tile">
+                <div className="hb-stat-tile-label">Ausgaben</div>
+                <div className="hb-stat-tile-value hb-bad">-{fmt(totalExpense)}</div>
+              </div>
+              <div className="hb-stat-tile">
+                <div className="hb-stat-tile-label">Transfers</div>
+                <div className="hb-stat-tile-value hb-transfer">→{fmt(totalTransfers)}</div>
+              </div>
+              <div className="hb-stat-tile">
+                <div className="hb-stat-tile-label">Saldo</div>
+                <div className={`hb-stat-tile-value ${balance >= 0 ? "hb-ok" : "hb-bad"}`}>
+                  {fmt(balance)}
+                </div>
+              </div>
+            </div>
+
             <Card style={{ marginBottom: 16 }}>
               <CardContent>
-                <h3 style={{ margin: 0, marginBottom: 12, fontSize: 16 }}>
-                  Budget-Übersicht {monthFilter ? `(${monthFilter})` : "(Alle Monate)"}
-                </h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {budgetStatus.map((item) => (
-                    <div key={item.name} className="hb-budget-row">
-                      <div className="hb-budget-label">
-                        <span style={{ fontWeight: 500 }}>{item.name}</span>
-                        <span className="hb-muted">
-                          {fmt(item.spent)} / {fmt(item.budget)} ({item.percent}%)
-                        </span>
-                      </div>
-                      <div className="hb-budget-bar-bg">
-                        <div
-                          className={`hb-budget-bar hb-budget-${item.status}`}
-                          style={{ width: `${Math.min(item.percent, 100)}%` }}
-                        />
+                <div className="hb-row" style={{ marginBottom: 10 }}>
+                  <h3 style={{ margin: 0, fontSize: 16 }}>Topf-Stände</h3>
+                  {potBalances.length > 8 && (
+                    <button
+                      type="button"
+                      className="hb-link-btn"
+                      onClick={() => setShowAllPots((v) => !v)}
+                    >
+                      {showAllPots ? "Weniger anzeigen" : `Alle ${potBalances.length} anzeigen`}
+                    </button>
+                  )}
+                </div>
+                <div className="hb-pot-tiles">
+                  {(showAllPots ? potBalances : potBalances.slice(0, 8)).map((pot) => (
+                    <div key={pot.id} className="hb-pot-tile">
+                      <div className="hb-stat-title">{pot.name}</div>
+                      <div className={`hb-stat-val ${pot.balance >= 0 ? "hb-ok" : "hb-bad"}`}>
+                        {fmt(pot.balance)}
                       </div>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
-          )}
 
-          <Charts
-            expenseByHierarchy={expenseByHierarchy}
-            incomeByHierarchy={incomeByHierarchy}
-            toCHF={fmt}
-            baseCurrency={baseCurrency}
-          />
+            <div className="hb-analysis-grid">
+              <Charts
+                expenseByHierarchy={expenseByHierarchy}
+                incomeByHierarchy={incomeByHierarchy}
+                baseCurrency={baseCurrency}
+              />
+              <InsightsPanel
+                expenseByHierarchy={expenseByHierarchy}
+                filteredEntries={filteredEntries}
+                monthFilter={monthFilter}
+                entries={entries}
+                monthStartDay={monthStartDay}
+                totalIncome={totalIncome}
+                totalExpense={totalExpense}
+                expenseCategories={activeBook?.expenseCategories || []}
+              />
+            </div>
 
-          <EntriesTable
-            entriesSorted={entriesSorted}
-            monthLabel={monthLabel}
-            toCHF={fmt}
-            startEdit={startEdit}
-            removeEntry={removeEntry}
-          />
+            <EntriesTable
+              entriesSorted={entriesSorted}
+              monthLabel={monthLabel}
+              monthFilter={monthFilter}
+              startEdit={entryActions.startEdit}
+              removeEntry={entryActions.removeEntry}
+              onAddEntry={() => entryActions.setAddEntryOpen(true)}
+            />
+          </>
+        )}
 
-        </>
-      )}
+        {/* EditDialog für Eintrag bearbeiten — global, verfügbar in allen Views */}
+        <EditEntryDialog
+          open={entryActions.editOpen}
+          onClose={entryActions.closeEdit}
+          onSave={entryActions.saveEdit}
+          canSave={entryActions.canSaveEdit}
+          editDraft={entryActions.editDraft}
+          setEditDraft={entryActions.setEditDraft}
+          pots={activeBook?.pots || []}
+          expenseCategories={activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES}
+          incomeCategories={activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES}
+          transferCategories={indicateTransferCategories}
+          withdrawalCategories={entryActions.editWithdrawalCategories}
+        />
 
-      {/* EditDialog global: verfügbar in allen Views (book, pots, etc.) */}
-      <EditDialog
-        open={editOpen}
-        title="Eintrag bearbeiten"
-        onClose={closeEdit}
-        onSave={saveEdit}
-        canSave={canSaveEdit}
-      >
-        <div className="hb-two" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <EditDialog
+          open={newBookOpen}
+          title="Neues Haushaltsbuch"
+          onClose={() => setNewBookOpen(false)}
+          onSave={handleCreateBook}
+          canSave={Boolean(newBookName.trim())}
+          saveLabel="Erstellen"
+        >
           <div className="hb-field">
-            <div className="hb-label">Datum</div>
+            <div className="hb-label">Name</div>
             <input
               className="hb-input"
-              type="date"
-              value={editDraft.date}
-              onChange={(e) => setEditDraft((d) => ({ ...d, date: e.target.value }))}
+              value={newBookName}
+              onChange={(e) => setNewBookName(e.target.value)}
+              placeholder="z.B. 2026, WG, Urlaub, ..."
             />
-          </div>
-
-          <div className="hb-field">
-            <div className="hb-label">Art</div>
-            <select
-              className="hb-input"
-              value={editDraft.kind}
-              onChange={(e) => setEditDraft((d) => ({ ...d, kind: e.target.value }))}
-            >
-              <option value="income">Einnahme</option>
-              <option value="expense">Ausgabe</option>
-              <option value="withdrawal">Entnahme</option>
-              <option value="transfer">Transfer</option>
-            </select>
-          </div>
-
-          {/* Kategorie: je nach Art unterschiedliche Listen */}
-          {editDraft.kind === "expense" ? (
-            <HierarchicalCategoryPicker
-              label="Kategorie"
-              value={{ categoryId: editDraft.categoryId, subcategoryId: editDraft.subcategoryId }}
-              categories={activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES}
-              onChange={({ categoryId: cid, subcategoryId: sid }) =>
-                setEditDraft((d) => ({ ...d, categoryId: cid, subcategoryId: sid }))
-              }
-            />
-          ) : editDraft.kind === "income" ? (
-            <HierarchicalCategoryPicker
-              label="Kategorie"
-              value={{ categoryId: editDraft.categoryId, subcategoryId: editDraft.subcategoryId }}
-              categories={activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES}
-              onChange={({ categoryId: cid, subcategoryId: sid }) =>
-                setEditDraft((d) => ({ ...d, categoryId: cid, subcategoryId: sid }))
-              }
-            />
-          ) : editDraft.kind === "transfer" ? (
-            <CategoryPicker
-              className="hb-field-category"
-              label="Transfer-Zweck"
-              value={editDraft.category}
-              categories={indicateTransferCategories}
-              onChange={(cat) => setEditDraft((d) => ({ ...d, category: cat }))}
-              onDelete={deleteTransferCategory}
-              isDeletable={(cat) => indicateTransferCategories.includes(cat) && indicateTransferCategories.length > 1}
-            />
-          ) : editDraft.kind === "withdrawal" ? (
-            <div className="hb-field">
-              <div className="hb-label">Transfer-Zweck</div>
-              <select
-                className="hb-input"
-                value={editDraft.category || ""}
-                onChange={(e) => setEditDraft((d) => ({ ...d, category: e.target.value }))}
-              >
-                {editWithdrawalCategories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-          ) : null}
-
-          {editDraft.kind === "expense" && (
-            <div className="hb-field">
-              <div className="hb-label">Quelle</div>
-              <input className="hb-input" type="text" value="Monatsbudget" disabled
-                style={{ background: "var(--hover-bg)", color: "var(--muted)" }} />
-            </div>
-          )}
-
-          {(editDraft.kind === "transfer" || editDraft.kind === "withdrawal") && (
-            <div className="hb-field">
-              <div className="hb-label">{editDraft.kind === "transfer" ? "In Topf" : "Aus Topf"}</div>
-              <select
-                className="hb-input"
-                value={editDraft.potId}
-                onChange={(e) => setEditDraft((d) => ({ ...d, potId: e.target.value }))}
-              >
-                {(activeBook?.pots || []).map((pot) => (
-                  <option key={pot.id} value={pot.id}>
-                    {pot.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="hb-field">
-            <div className="hb-label">Betrag</div>
-            <input
-              className="hb-input"
-              type="text"
-              inputMode="decimal"
-              placeholder="z.B. 12.50"
-              value={editDraft.amount}
-              onChange={(e) => setEditDraft((d) => ({ ...d, amount: e.target.value }))}
-            />
-            <div className="hb-muted" style={{ marginTop: 6 }}>
-              Komma geht auch (z.B. 12,50).
+            <div className="hb-muted" style={{ marginTop: 8 }}>
+              Du kannst mehrere Bücher führen und oben wechseln.
             </div>
           </div>
+        </EditDialog>
 
-          <div className="hb-field" style={{ gridColumn: "1 / -1" }}>
-            <div className="hb-label">Notiz</div>
-            <input
-              className="hb-input"
-              type="text"
-              placeholder="z.B. Migros, Abo, ..."
-              value={editDraft.note}
-              onChange={(e) => setEditDraft((d) => ({ ...d, note: e.target.value }))}
-            />
-          </div>
-        </div>
+        <RenameDialog
+          open={renameBookOpen}
+          title="Buch umbenennen"
+          label="Neuer Name"
+          initialValue={activeBook?.name || ""}
+          onClose={() => setRenameBookOpen(false)}
+          onSave={(name) => {
+            applyRenameActiveBook(name);
+            setRenameBookOpen(false);
+          }}
+        />
 
-        {!canSaveEdit ? (
-          <div style={{ marginTop: 10, color: "var(--red)", fontSize: 12 }}>
-            Bitte Datum & einen gültigen Betrag (&gt; 0) setzen.
-          </div>
-        ) : null}
-      </EditDialog>
+        <SettingsDialog
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          monthFilter={monthFilter}
+          onRestoreAll={restoreAll}
+          onImportBook={importBook}
+          activeBook={activeBook}
+          onUpdateBook={updateBook}
+          onMonthStartDayChange={(newStartDay) =>
+            handleMonthStartDayChange(newStartDay, setMonthFilter)
+          }
+        />
 
-      <EditDialog
-        open={newBookOpen}
-        title="Neues Haushaltsbuch"
-        onClose={() => setNewBookOpen(false)}
-        onSave={createBook}
-        canSave={Boolean(newBookName.trim())}
-        saveLabel="Erstellen"
-      >
-        <div className="hb-field">
-          <div className="hb-label">Name</div>
-          <input
-            className="hb-input"
-            value={newBookName}
-            onChange={(e) => setNewBookName(e.target.value)}
-            placeholder="z.B. 2026, WG, Urlaub, ..."
-            autoFocus
-          />
-          <div className="hb-muted" style={{ marginTop: 8 }}>
-            Du kannst mehrere Bücher führen und oben wechseln.
-          </div>
-        </div>
-      </EditDialog>
-
-      <SettingsDialog
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        monthFilter={monthFilter}
-        onRestoreAll={restoreAll}
-        onImportBook={importBook}
-        activeBook={activeBook}
-        onUpdateBook={updateBook}
-      />
-
-      <CategoryManagerDialog
-        open={categoryManagerOpen}
-        onClose={() => setCategoryManagerOpen(false)}
-        expenseCategories={activeBook?.expenseCategories || []}
-        incomeCategories={activeBook?.incomeCategories || []}
-        onUpdateExpenseCategories={(newCats) =>
-          patchActiveBook((b) => ({ ...b, expenseCategories: newCats }))
-        }
-        onUpdateIncomeCategories={(newCats) =>
-          patchActiveBook((b) => ({ ...b, incomeCategories: newCats }))
-        }
-      />
+        <CategoryManagerDialog
+          open={categoryManagerOpen}
+          onClose={() => setCategoryManagerOpen(false)}
+          expenseCategories={activeBook?.expenseCategories || []}
+          incomeCategories={activeBook?.incomeCategories || []}
+          transferCategories={indicateTransferCategories}
+          onUpdateExpenseCategories={(newCats) =>
+            patchActiveBook((b) => ({ ...b, expenseCategories: newCats }))
+          }
+          onUpdateIncomeCategories={(newCats) =>
+            patchActiveBook((b) => ({ ...b, incomeCategories: newCats }))
+          }
+          onUpdateTransferCategories={(newCats) =>
+            patchActiveBook((b) => ({ ...b, transferCategories: newCats }))
+          }
+        />
+      </div>
     </div>
+    </CurrencyContext.Provider>
   );
 }

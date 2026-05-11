@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { IconClose } from "./icons.jsx";
+import { useClickOutside } from "../hooks/useClickOutside.js";
 
 export default function CategoryPicker({
   label,
@@ -41,24 +43,17 @@ export default function CategoryPicker({
     }
   }, []);
 
+  useClickOutside(wrapRef, () => setOpen(false), { enabled: open, excludeRef: menuRef });
+
   useEffect(() => {
     if (!open) return;
     updateMenuPosition();
 
-    const onDown = (e) => {
-      if (!wrapRef.current) return;
-      if (menuRef.current && menuRef.current.contains(e.target)) return;
-      if (!wrapRef.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-
-    // Position bei Scroll/Resize aktualisieren
     const onScrollOrResize = () => updateMenuPosition();
     window.addEventListener("scroll", onScrollOrResize, true);
     window.addEventListener("resize", onScrollOrResize);
 
     return () => {
-      document.removeEventListener("mousedown", onDown);
       window.removeEventListener("scroll", onScrollOrResize, true);
       window.removeEventListener("resize", onScrollOrResize);
     };
@@ -115,7 +110,8 @@ export default function CategoryPicker({
 
                   <button
                     type="button"
-                    className={`hb-x ${!orphan && deletable ? "" : "hb-x-disabled"}`}
+                    className={`hb-icon-btn ${!orphan && deletable ? "" : "hb-x-disabled"}`}
+                    aria-label={`Kategorie ${cat} löschen`}
                     disabled={orphan || !deletable}
                     title={orphan ? "Kategorie ist bereits gelöscht" : "Kategorie löschen"}
                     onClick={(e) => {
@@ -124,7 +120,7 @@ export default function CategoryPicker({
                       if (!orphan && deletable) onDelete?.(cat);
                     }}
                   >
-                    ×
+                    <IconClose />
                   </button>
                 </div>
               );

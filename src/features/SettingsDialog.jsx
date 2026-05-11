@@ -3,7 +3,11 @@ import EditDialog from "../components/EditDialog.jsx";
 import { Button } from "../components/ui.jsx";
 import { exportBackupFile, importBackupFile as importBackupNative } from "../dal/storage.js";
 import { exportBackup } from "../backup.js";
-import { normalizeBook } from "../utils/hbUtils.js";
+import { normalizeBook, validateMonthStartDay } from "../utils/hbUtils.js";
+import { getFinancialMonthRange } from "../utils/financialMonthUtils.js";
+import { useToast } from "../components/Toast.jsx";
+import { useConfirm } from "../components/ConfirmDialog.jsx";
+import PotsManager from "./PotsManager.jsx";
 
 export default function SettingsDialog({
   open,
@@ -19,8 +23,12 @@ export default function SettingsDialog({
   // NEU: für Töpfe-Verwaltung
   activeBook,
   onUpdateBook,
+  onMonthStartDayChange,
 }) {
   const backupInputRef = useRef(null);
+
+  const toast = useToast();
+  const { confirm } = useConfirm();
 
   // Electron-Erkennung als React State — wird beim Mount ausgewertet, danach reaktiv
   const [isElectronEnv, setIsElectronEnv] = useState(false);
@@ -50,33 +58,13 @@ export default function SettingsDialog({
     }
   }
 
-  // NEU: State für Töpfe-Verwaltung
-  const [potDrafts, setPotDrafts] = useState({});
-  const [isAddingPot, setIsAddingPot] = useState(false);
-  const [newPotName, setNewPotName] = useState("");
+  // State für Monatsbeginn-Input
+  const [monthStartDayDraft, setMonthStartDayDraft] = useState(1);
 
-  // State für Kategorie-Budgets
-  const [budgetDrafts, setBudgetDrafts] = useState({});
-
-  // Initialisiere potDrafts und budgetDrafts wenn Dialog öffnet
+  // Monatsbeginn-Draft initialisieren wenn Dialog öffnet
   useEffect(() => {
-    if (open && activeBook?.pots) {
-      const drafts = {};
-      activeBook.pots.forEach((pot) => {
-        drafts[pot.id] = {
-          name: pot.name,
-        };
-      });
-      setPotDrafts(drafts);
-    }
-
-    // Budget-Drafts initialisieren (aus expenseCategories, Oberkategorien)
-    if (open && activeBook?.expenseCategories) {
-      const bDrafts = {};
-      activeBook.expenseCategories.forEach((cat) => {
-        bDrafts[cat.id] = cat.budget ?? "";
-      });
-      setBudgetDrafts(bDrafts);
+    if (open && activeBook) {
+      setMonthStartDayDraft(activeBook.monthStartDay ?? 1);
     }
   }, [open, activeBook]);
 
@@ -98,22 +86,24 @@ export default function SettingsDialog({
 
         const obj = result.data;
         if (!obj || obj.format !== 'haushaltsbuch-backup' || obj.version !== 1 || !Array.isArray(obj.books) || obj.books.length === 0) {
-          window.alert("Ungültiges Backup-Format.");
+          toast.error("Ungültiges Backup-Format.");
           return;
         }
 
         const bookToImport = normalizeBook(obj.books[0]);
-        const ok = window.confirm(
-          `Haushaltsbuch "${bookToImport.name}" importieren?\n\nEs wird zur bestehenden Datenbank hinzugefügt.`
-        );
+        const ok = await confirm({
+          title: "Backup importieren",
+          message: `Haushaltsbuch „${bookToImport.name}“ importieren?\n\nEs wird zur bestehenden Datenbank hinzugefügt.`,
+          confirmLabel: "Importieren",
+        });
         if (!ok) return;
 
         onImportBook?.(bookToImport);
-        window.alert(`Erfolgreich: "${bookToImport.name}" importiert.`);
+        toast.success(`„${bookToImport.name}“ importiert.`);
         onClose?.();
       } catch (e) {
         console.error(e);
-        window.alert("Import fehlgeschlagen.");
+        toast.error("Import fehlgeschlagen.");
       }
     } else {
       // Browser: hidden file input
@@ -129,166 +119,27 @@ export default function SettingsDialog({
       const obj = JSON.parse(text);
 
       if (!obj || obj.format !== 'haushaltsbuch-backup' || obj.version !== 1 || !Array.isArray(obj.books) || obj.books.length === 0) {
-        window.alert("Ungültiges Backup-Format. Ist es wirklich ein gültiges Haushaltsbuch-Backup (.json)?");
+        toast.error("Ungültiges Backup-Format. Ist es wirklich ein gültiges Haushaltsbuch-Backup (.json)?");
         return;
       }
 
       const bookToImport = normalizeBook(obj.books[0]);
-      const ok = window.confirm(
-        `Haushaltsbuch "${bookToImport.name}" importieren?\n\nEs wird zur bestehenden Datenbank hinzugefügt.`
-      );
+      const ok = await confirm({
+        title: "Backup importieren",
+        message: `Haushaltsbuch „${bookToImport.name}“ importieren?\n\nEs wird zur bestehenden Datenbank hinzugefügt.`,
+        confirmLabel: "Importieren",
+      });
       if (!ok) return;
 
       onImportBook?.(bookToImport);
-      window.alert(`Erfolgreich: "${bookToImport.name}" importiert.`);
+      toast.success(`„${bookToImport.name}“ importiert.`);
       onClose?.();
     } catch (e) {
       console.error(e);
-      window.alert("Import fehlgeschlagen. Ist es wirklich ein gültiges Haushaltsbuch-Backup (.json)?");
+      toast.error("Import fehlgeschlagen. Ist es wirklich ein gültiges Haushaltsbuch-Backup (.json)?");
     } finally {
       if (backupInputRef.current) backupInputRef.current.value = "";
     }
-  }
-
-  // === TÖPFE-VERWALTUNG ===
-
-  function updatePotDraft(potId, field, value) {
-    setPotDrafts((prev) => ({
-      ...prev,
-      [potId]: { ...(prev[potId] || {}), [field]: value },
-    }));
-  }
-
-  function savePot(potId) {
-    const draft = potDrafts[potId];
-    if (!draft) return;
-
-    const trimmedName = draft.name.trim();
-    if (!trimmedName) {
-      window.alert("Topf-Name darf nicht leer sein.");
-      return;
-    }
-
-    if (trimmedName.length > 50) {
-      window.alert("Name ist zu lang (max. 50 Zeichen).");
-      return;
-    }
-
-    // Prüfe auf Duplikate (außer der aktuelle Topf)
-    const isDuplicate = activeBook.pots.some(
-      (p) => p.id !== potId && p.name === trimmedName
-    );
-    if (isDuplicate) {
-      window.alert("Ein Topf mit diesem Namen existiert bereits.");
-      return;
-    }
-
-    // Aktualisiere Buch
-    const updatedPots = activeBook.pots.map((pot) =>
-      pot.id === potId
-        ? { ...pot, name: trimmedName }
-        : pot
-    );
-
-    onUpdateBook?.({ ...activeBook, pots: updatedPots });
-    window.alert("Erfolgreich: Topf gespeichert.");
-  }
-
-  function addNewPot() {
-    const trimmedName = newPotName.trim();
-    if (!trimmedName) {
-      window.alert("Topf-Name darf nicht leer sein.");
-      return;
-    }
-
-    if (trimmedName.length > 50) {
-      window.alert("Name ist zu lang (max. 50 Zeichen).");
-      return;
-    }
-
-    const isDuplicate = activeBook.pots.some((p) => p.name === trimmedName);
-    if (isDuplicate) {
-      window.alert("Ein Topf mit diesem Namen existiert bereits.");
-      return;
-    }
-
-    // Erstelle neuen Topf
-    const newPot = {
-      id: `pot_${Date.now()}`,
-      name: trimmedName,
-    };
-
-    onUpdateBook?.({ ...activeBook, pots: [...activeBook.pots, newPot] });
-
-    // Reset
-    setNewPotName("");
-    setIsAddingPot(false);
-
-    window.alert(`Erfolgreich: Topf "${trimmedName}" erstellt.`);
-  }
-
-  function deletePot(potId) {
-    if (activeBook.pots.length <= 1) {
-      window.alert("Du brauchst mindestens einen Topf.");
-      return;
-    }
-
-    const pot = activeBook.pots.find((p) => p.id === potId);
-    if (!pot) return;
-
-    // Zähle Verwendungen
-    const usageCount = activeBook.entries.filter(
-      (e) => (e.kind === "transfer" || e.kind === "withdrawal") && e.potId === potId
-    ).length;
-
-    const ok = window.confirm(
-      `Topf "${pot.name}" wirklich löschen?\n\n` +
-      (usageCount > 0
-        ? `Achtung: ${usageCount} Einträge verwenden diesen Topf. Diese bleiben erhalten, zeigen aber dann einen ungültigen Topf.`
-        : `Dieser Topf wird in keinen Einträgen verwendet.`)
-    );
-    if (!ok) return;
-
-    const updatedPots = activeBook.pots.filter((p) => p.id !== potId);
-    onUpdateBook?.({ ...activeBook, pots: updatedPots });
-
-    // Entferne aus potDrafts
-    setPotDrafts((prev) => {
-      const next = { ...prev };
-      delete next[potId];
-      return next;
-    });
-
-    window.alert("Erfolgreich: Topf gelöscht.");
-  }
-
-  // === KATEGORIE-BUDGETS ===
-
-  function updateBudgetDraft(categoryId, value) {
-    setBudgetDrafts((prev) => ({
-      ...prev,
-      [categoryId]: value,
-    }));
-  }
-
-  function saveBudgets() {
-    if (!activeBook?.expenseCategories) return;
-
-    const updatedExpenseCategories = activeBook.expenseCategories.map((cat) => {
-      const draftValue = budgetDrafts[cat.id];
-      const budget =
-        draftValue === "" || draftValue == null
-          ? null
-          : Math.max(0, Number(draftValue));
-
-      return {
-        ...cat,
-        budget: Number.isFinite(budget) && budget > 0 ? budget : null,
-      };
-    });
-
-    onUpdateBook?.({ ...activeBook, expenseCategories: updatedExpenseCategories });
-    window.alert("Budgets gespeichert.");
   }
 
   return (
@@ -365,155 +216,109 @@ export default function SettingsDialog({
         </div>
       )}
 
-      {/* NEU: TÖPFE-VERWALTUNG */}
+      {/* BASISWÄHRUNG */}
       <div className="hb-field" style={{ marginTop: 24 }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>Töpfe verwalten</div>
-        <div className="hb-muted" style={{ marginBottom: 12 }}>
-          Bearbeite die Namen deiner Töpfe.
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>Basiswährung</div>
+        <div className="hb-muted" style={{ marginBottom: 10 }}>
+          Alle Beträge in diesem Haushaltsbuch werden in dieser Währung angezeigt.
         </div>
+        <select
+          className="hb-input"
+          style={{ maxWidth: 200 }}
+          value={activeBook?.baseCurrency || "CHF"}
+          onChange={(e) => {
+            const newCurrency = e.target.value;
+            if (!activeBook) return;
+            onUpdateBook?.({ ...activeBook, baseCurrency: newCurrency });
+          }}
+        >
+          <option value="CHF">CHF – Schweizer Franken</option>
+          <option value="EUR">EUR – Euro</option>
+          <option value="USD">USD – US-Dollar</option>
+        </select>
+      </div>
 
-        {activeBook?.pots?.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {activeBook.pots.map((pot) => {
-              const draft = potDrafts[pot.id] || { name: pot.name };
-              return (
-                <div
-                  key={pot.id}
-                  style={{
-                    border: "1px solid var(--border)",
-                    borderRadius: 6,
-                    padding: 12,
-                    background: "var(--hover-bg)",
-                  }}
-                >
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {/* Name */}
-                    <div className="hb-field">
-                      <label className="hb-label">Name</label>
-                      <input
-                        className="hb-input"
-                        type="text"
-                        value={draft.name}
-                        onChange={(e) => updatePotDraft(pot.id, "name", e.target.value)}
-                        placeholder="z.B. Rücklagen, Urlaub"
-                      />
-                    </div>
-
-                    {/* Aktionen */}
-                    <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                      <Button variant="solid" onClick={() => savePot(pot.id)}>
-                        Speichern
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => deletePot(pot.id)}
-                        disabled={activeBook.pots.length <= 1}
-                      >
-                        Löschen
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="hb-muted">Keine Töpfe vorhanden.</div>
-        )}
-
-        {/* Neuen Topf hinzufügen */}
-        <div style={{ marginTop: 16 }}>
-          {isAddingPot ? (
-            <div
-              style={{
-                border: "1px solid var(--border)",
-                borderRadius: 6,
-                padding: 12,
-                background: "var(--hover-bg)",
-              }}
+      {/* MONATSBEGINN */}
+      <div className="hb-field" style={{ marginTop: 24 }}>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>Monatsbeginn</div>
+        <div className="hb-muted" style={{ marginBottom: 10 }}>
+          Ab welchem Tag beginnt dein finanzieller Monat? Einträge ab diesem Tag werden dem Folgemonat zugerechnet.
+          Standard ist der 1. (Kalendermonat). Maximum ist der 28.
+        </div>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <input
+            className="hb-input"
+            type="number"
+            min="1"
+            max="28"
+            value={monthStartDayDraft}
+            onChange={(e) => {
+              setMonthStartDayDraft(validateMonthStartDay(e.target.value));
+            }}
+            style={{ width: 80 }}
+          />
+          <span className="hb-muted">. des Monats</span>
+          {monthStartDayDraft !== 1 && (
+            <button
+              className="hb-muted"
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 13, textDecoration: "underline" }}
+              onClick={() => setMonthStartDayDraft(1)}
             >
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div className="hb-field">
-                  <label className="hb-label">Name</label>
-                  <input
-                    className="hb-input"
-                    type="text"
-                    value={newPotName}
-                    onChange={(e) => setNewPotName(e.target.value)}
-                    placeholder="z.B. Notgroschen, Auto"
-                    autoFocus
-                  />
-                </div>
-
-                <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                  <Button variant="solid" onClick={addNewPot}>
-                    Topf erstellen
-                  </Button>
-                  <Button variant="outline" onClick={() => {
-                    setIsAddingPot(false);
-                    setNewPotName("");
-                  }}>
-                    Abbrechen
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <Button variant="outline" onClick={() => setIsAddingPot(true)}>
-              + Neuer Topf
-            </Button>
+              Auf 1. zurücksetzen
+            </button>
           )}
         </div>
-      </div>
-
-      {/* KATEGORIE-BUDGETS */}
-      <div className="hb-field" style={{ marginTop: 24 }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>Kategorie-Budgets</div>
-        <div className="hb-muted" style={{ marginBottom: 12 }}>
-          Setze optionale monatliche Limits für deine Ausgaben-Kategorien.
-        </div>
-
-        {activeBook?.expenseCategories?.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {activeBook.expenseCategories.map((cat) => {
-              const draftValue = budgetDrafts[cat.id] ?? "";
-
-              return (
-                <div
-                  key={cat.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "8px 12px",
-                    background: "var(--hover-bg)",
-                    borderRadius: 6,
-                  }}
-                >
-                  <span style={{ flex: 1, fontWeight: 500 }}>{cat.name}</span>
-                  <input
-                    className="hb-input"
-                    type="number"
-                    min="0"
-                    step="50"
-                    placeholder="kein Limit"
-                    value={draftValue}
-                    onChange={(e) => updateBudgetDraft(cat.id, e.target.value)}
-                    style={{ width: 120, textAlign: "right" }}
-                  />
-                  <span className="hb-muted">CHF</span>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="hb-muted">Keine Kategorien vorhanden.</div>
-        )}
-
-        <Button variant="solid" onClick={saveBudgets} style={{ marginTop: 12 }}>
-          Budgets speichern
+        {(() => {
+          const d = monthStartDayDraft;
+          if (d === 1) {
+            return (
+              <div className="hb-note" style={{ marginTop: 8 }}>
+                Einträge vom 1. bis letzten Tag des Monats zählen als Kalendermonat.
+              </div>
+            );
+          }
+          const today = new Date();
+          const m = today.getMonth() + 1;
+          const y = today.getFullYear();
+          const yyyymm = `${y}-${String(m).padStart(2, "0")}`;
+          const range = getFinancialMonthRange(yyyymm, d);
+          const nextM = m === 12 ? 1 : m + 1;
+          const nextY = m === 12 ? y + 1 : y;
+          const nextYYYYMM = `${nextY}-${String(nextM).padStart(2, "0")}`;
+          const nextRange = getFinancialMonthRange(nextYYYYMM, d);
+          const months = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+          const fmtDate = (iso) => {
+            if (!iso) return "";
+            const [, mm, dd] = iso.split("-");
+            return `${Number(dd)}. ${months[Number(mm) - 1]}`;
+          };
+          return (
+            <div className="hb-note" style={{ marginTop: 8 }}>
+              Beispiel: {fmtDate(range?.startDate)} – {fmtDate(range?.endDate)} zählen als „{months[m - 1]}"
+              <br />
+              {fmtDate(nextRange?.startDate)} – {fmtDate(nextRange?.endDate)} zählen als „{months[nextM - 1]}"
+            </div>
+          );
+        })()}
+        <Button
+          variant="solid"
+          style={{ marginTop: 12 }}
+          onClick={() => {
+            if (!activeBook) return;
+            onUpdateBook?.({ ...activeBook, monthStartDay: monthStartDayDraft });
+            onMonthStartDayChange?.(monthStartDayDraft);
+            toast.success("Monatsbeginn gespeichert.");
+          }}
+        >
+          Monatsbeginn speichern
         </Button>
       </div>
+
+      {/* TÖPFE-VERWALTUNG */}
+      <div className="hb-field" style={{ marginTop: 24 }}>
+        <PotsManager activeBook={activeBook} onUpdateBook={onUpdateBook} />
+      </div>
+
     </EditDialog>
   );
 }

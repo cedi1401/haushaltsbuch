@@ -1,4 +1,5 @@
 // src/utils/hbUtils.js
+import { CUSTOM_CATEGORY_PALETTE } from "./hbPalette.js";
 
 export function toCHF(n) {
   try {
@@ -13,18 +14,29 @@ export function toCHF(n) {
   }
 }
 
+// Currencies where de-CH returns the ISO code instead of a symbol.
+// Map them to their proper symbols for display.
+const CURRENCY_SYMBOLS = { EUR: "€", USD: "$", GBP: "£", JPY: "¥" };
+
 /**
  * Formats an amount in any ISO-4217 currency using Swiss number formatting.
+ * de-CH returns "EUR" instead of "€" for foreign currencies; we post-process
+ * known codes to their symbols. CHF has no distinct symbol and stays as "CHF".
  * Falls back to toCHF if currency is invalid.
  */
-export function formatCurrency(n, currency = "CHF") {
+export function formatCurrency(n, currency = "CHF", fractionDigits = 2) {
+  const cur = String(currency).toUpperCase();
   try {
-    return new Intl.NumberFormat("de-CH", {
+    const formatted = new Intl.NumberFormat("de-CH", {
       style: "currency",
-      currency: String(currency).toUpperCase(),
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      currency: cur,
+      currencyDisplay: "narrowSymbol",
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
     }).format(Number(n || 0));
+    // Replace ISO code with symbol where applicable (e.g. "EUR" → "€").
+    const symbol = CURRENCY_SYMBOLS[cur];
+    return symbol ? formatted.replace(cur, symbol) : formatted;
   } catch {
     return toCHF(n);
   }
@@ -38,12 +50,56 @@ export function todayISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+/**
+ * Formatiert ein ISO-Datum (YYYY-MM-DD) im europäischen Format (DD.MM.YYYY).
+ * Gibt einen leeren String zurück, falls das Eingabedatum ungültig ist.
+ */
+export function formatDateDE(isoDate) {
+  if (!isoDate) return "";
+  const s = String(isoDate);
+  // Bereits DD.MM.YYYY? -> unverändert zurück
+  if (/^\d{2}\.\d{2}\.\d{4}$/.test(s)) return s;
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return s;
+  const [, yyyy, mm, dd] = m;
+  return `${dd}.${mm}.${yyyy}`;
+}
+
+const MONTHS_DE_LONG = [
+  "Januar", "Februar", "März", "April", "Mai", "Juni",
+  "Juli", "August", "September", "Oktober", "November", "Dezember",
+];
+
+export function formatDateDELong(isoDate) {
+  if (!isoDate) return "";
+  const m = String(isoDate).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return isoDate;
+  return `${Number(m[3])}. ${MONTHS_DE_LONG[Number(m[2]) - 1]} ${m[1]}`;
+}
+
+export function validateMonthStartDay(day) {
+  return Math.max(1, Math.min(28, Number(day) || 1));
+}
+
+export function formatFileStamp() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${yyyy}${mm}${dd}-${hh}${mi}`;
+}
+
 export function parseAmount(input) {
   const n = Number(String(input ?? "").trim().replace(",", "."));
   return Number.isFinite(n) ? n : NaN;
 }
 
-// Stabile Farben pro Kategorie-Name
+export function sumAmounts(entries, predicate = () => true) {
+  return (entries || []).filter(predicate).reduce((s, e) => s + Number(e.amount || 0), 0);
+}
+
 export function hashStringFNV1a(str) {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
@@ -51,15 +107,6 @@ export function hashStringFNV1a(str) {
     h = Math.imul(h, 16777619);
   }
   return h >>> 0;
-}
-
-export function colorFromCategoryName(name) {
-  const s = String(name ?? "").trim();
-  const h = hashStringFNV1a(s || "(leer)");
-  const hue = h % 360;
-  const sat = 68;
-  const light = 46;
-  return `hsl(${hue}, ${sat}%, ${light}%)`;
 }
 
 // ============================================
@@ -141,7 +188,7 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
   {
     id: "cat_sparen",
     name: "Sparen und Anlegen",
-    color: "#0f7b0f",
+    color: "#e8a200",
     type: "expense",
     isDefault: true,
     budget: null,
@@ -156,7 +203,7 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
   {
     id: "cat_shopping",
     name: "Shopping und Unterhaltung",
-    color: "#9d5d00",
+    color: "#e3008c",
     type: "expense",
     isDefault: true,
     budget: null,
@@ -170,7 +217,7 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
   {
     id: "cat_reisen",
     name: "Reisen",
-    color: "#c42b1c",
+    color: "#e74856",
     type: "expense",
     isDefault: true,
     budget: null,
@@ -183,7 +230,7 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
   {
     id: "cat_mobilitaet",
     name: "Mobilität",
-    color: "#ca5010",
+    color: "#f7630c",
     type: "expense",
     isDefault: true,
     budget: null,
@@ -214,7 +261,7 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
   {
     id: "cat_kinder",
     name: "Kinder",
-    color: "#e3008c",
+    color: "#c239b3",
     type: "expense",
     isDefault: true,
     budget: null,
@@ -227,7 +274,7 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
   {
     id: "cat_gesundheit",
     name: "Gesundheit und Wellness",
-    color: "#b4a00e",
+    color: "#9acd32",
     type: "expense",
     isDefault: true,
     budget: null,
@@ -461,10 +508,10 @@ function buildMigratedExpenseCategories(oldCategories) {
   const customCategories = (oldCategories || [])
     .map(normalizeCategory)
     .filter((c) => !knownLegacyNames.has(c.name.toLowerCase()))
-    .map((c) => ({
+    .map((c, i) => ({
       id: makeCustomCategoryId(c.name),
       name: c.name,
-      color: colorFromCategoryName(c.name),
+      color: CUSTOM_CATEGORY_PALETTE[i % CUSTOM_CATEGORY_PALETTE.length],
       type: "expense",
       isDefault: false,
       budget: c.budget || null,
@@ -480,6 +527,20 @@ function buildMigratedExpenseCategories(oldCategories) {
     })),
     ...customCategories,
   ];
+}
+
+/**
+ * Überschreibt die Farbe von isDefault-Kategorien mit dem aktuellen Default-Wert.
+ * Notwendig damit Farbänderungen an Default-Kategorien in bestehenden Büchern ankommen.
+ */
+function syncDefaultCategoryColors(existingCategories, defaultCategories) {
+  const colorById = new Map(defaultCategories.map((c) => [c.id, c.color]));
+  return (existingCategories || []).map((cat) => {
+    if (cat.isDefault && colorById.has(cat.id)) {
+      return { ...cat, color: colorById.get(cat.id) };
+    }
+    return cat;
+  });
 }
 
 /**
@@ -558,6 +619,7 @@ export function makeDefaultBook(name = "Mein Haushaltsbuch") {
     goals: [],
     recurringExpenses: [],
     baseCurrency: "CHF",
+    monthStartDay: 1,
   };
 }
 
@@ -695,6 +757,11 @@ export function normalizeBook(book) {
       normalized.expenseCategories,
       DEFAULT_EXPENSE_CATEGORIES
     );
+    // Farben von Default-Kategorien immer auf den aktuellen Stand bringen
+    normalized.expenseCategories = syncDefaultCategoryColors(
+      normalized.expenseCategories,
+      DEFAULT_EXPENSE_CATEGORIES
+    );
     if (!Array.isArray(normalized.incomeCategories)) {
       normalized.incomeCategories = DEFAULT_INCOME_CATEGORIES.map((c) => ({
         ...c,
@@ -706,6 +773,10 @@ export function normalizeBook(book) {
         DEFAULT_INCOME_CATEGORIES
       );
       normalized.incomeCategories = syncDefaultSubcategories(
+        normalized.incomeCategories,
+        DEFAULT_INCOME_CATEGORIES
+      );
+      normalized.incomeCategories = syncDefaultCategoryColors(
         normalized.incomeCategories,
         DEFAULT_INCOME_CATEGORIES
       );
@@ -760,6 +831,9 @@ export function normalizeBook(book) {
     normalized.baseCurrency = "CHF";
   }
 
+  // Finanzieller Monatsbeginn: Standard 1 = Kalendermonat
+  normalized.monthStartDay = validateMonthStartDay(normalized.monthStartDay);
+
   return normalized;
 }
 
@@ -769,4 +843,26 @@ export function normalizeBook(book) {
 export function normalizeBooks(books) {
   if (!Array.isArray(books)) return books;
   return books.map(normalizeBook);
+}
+
+// ============================================
+// Budget-Validierung
+// ============================================
+
+/**
+ * Darf die Oberkategorie ein Budget bekommen?
+ * Nein, wenn mindestens eine Unterkategorie bereits ein Budget hat.
+ */
+export function canSetParentBudget(category) {
+  return !(category.subcategories || []).some(
+    (sub) => sub.budget != null && sub.budget > 0
+  );
+}
+
+/**
+ * Darf die Unterkategorie ein Budget bekommen?
+ * Nein, wenn die Oberkategorie bereits ein Budget hat.
+ */
+export function canSetSubBudget(parentCategory) {
+  return !(parentCategory.budget != null && parentCategory.budget > 0);
 }
