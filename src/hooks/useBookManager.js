@@ -29,13 +29,10 @@ export function useBookManager({ toast, confirm }) {
         setBooks([b]);
         setActiveBookId(b.id);
       }
+      // Clear flag after React has processed the state updates and run effects
+      setTimeout(() => { isInitialLoad.current = false; }, 0);
     }
     load();
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => { isInitialLoad.current = false; }, 100);
-    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {

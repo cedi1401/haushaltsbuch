@@ -10,7 +10,6 @@ import {
   Tooltip,
   BarChart,
   Bar,
-  Cell,
 } from "recharts";
 import { useThemeColors } from "../hooks/useThemeColors.jsx";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
@@ -22,7 +21,7 @@ import CashflowHeatmap from "./CashflowHeatmap.jsx";
 const monthLabel = formatYearMonth;
 
 export default function TrendView({ entries, entriesAll, recurringExpenses = [], expenseCategories = [], monthStartDay = 1 }) {
-  const toCHF = useFmt();
+  const fmt = useFmt();
   const [range, setRange] = useState(12); // months
   const hasAll = Array.isArray(entriesAll) && entriesAll.length > 0;
   const [userScope, setUserScope] = useState("book"); // "book" | "all"
@@ -185,11 +184,11 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
         <div className="hb-stat-pills">
           <div className="hb-stat-pill hb-stat-pill--ok">
             <span className="hb-stat-pill-label">Ø Einnahmen / Monat</span>
-            <span className="hb-stat-pill-value">{toCHF(avg.income)}</span>
+            <span className="hb-stat-pill-value">{fmt(avg.income)}</span>
           </div>
           <div className="hb-stat-pill hb-stat-pill--bad">
             <span className="hb-stat-pill-label">Ø Ausgaben / Monat</span>
-            <span className="hb-stat-pill-value">{toCHF(avg.expense)}</span>
+            <span className="hb-stat-pill-value">{fmt(avg.expense)}</span>
           </div>
           <div className={`hb-stat-pill hb-stat-pill--primary ${savingsRate >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
             <span className="hb-stat-pill-label">Sparquote (Ø)</span>
@@ -206,13 +205,13 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
           </div>
           <div className="hb-stat-pill hb-stat-pill--ok">
             <span className="hb-stat-pill-label">Bester Saldo</span>
-            <span className="hb-stat-pill-value">{toCHF(highlights.bestBalance.balance)}</span>
+            <span className="hb-stat-pill-value">{fmt(highlights.bestBalance.balance)}</span>
             <span className="hb-stat-pill-sub">{highlights.bestBalance.label}</span>
           </div>
           {worstBalance && (
             <div className="hb-stat-pill hb-stat-pill--bad">
               <span className="hb-stat-pill-label">Schlechtester Saldo</span>
-              <span className="hb-stat-pill-value">{toCHF(worstBalance.balance)}</span>
+              <span className="hb-stat-pill-value">{fmt(worstBalance.balance)}</span>
               <span className="hb-stat-pill-sub">{worstBalance.label}</span>
             </div>
           )}
@@ -270,7 +269,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                               {payload.filter((p) => p.value != null).map((p) => (
                                 <div key={p.dataKey} style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
                                   <span style={{ color: colorMap[p.dataKey] }}>{labelMap[p.dataKey] || p.dataKey}</span>
-                                  <span>{toCHF(p.value)}</span>
+                                  <span>{fmt(p.value)}</span>
                                 </div>
                               ))}
                             </div>
@@ -300,17 +299,9 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                     <BarChart data={chartData} barCategoryGap={12}>
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
                       <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(v) => toCHF(v)} />
-                      <Bar dataKey="income" barSize={12}>
-                        {chartData.map((d) => (
-                          <Cell key={`i-${d.name}`} fill={themeColors.green} />
-                        ))}
-                      </Bar>
-                      <Bar dataKey="expense" barSize={12}>
-                        {chartData.map((d) => (
-                          <Cell key={`e-${d.name}`} fill={themeColors.red} />
-                        ))}
-                      </Bar>
+                      <Tooltip formatter={(v) => fmt(v)} />
+                      <Bar dataKey="income" barSize={12} fill={themeColors.green} />
+                      <Bar dataKey="expense" barSize={12} fill={themeColors.red} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

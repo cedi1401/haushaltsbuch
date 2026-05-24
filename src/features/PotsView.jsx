@@ -32,8 +32,8 @@ import {
 const monthLabel = formatYearMonth;
 
 export default function PotsView({ activeBook, entries, baseCurrency = "CHF", onAddTransferEntry, transferCategories, todayISO, onEditEntry, onRemoveEntry, monthStartDay = 1 }) {
-  const toCHF = useFmt();
-  const pots = activeBook?.pots || [];
+  const fmt = useFmt();
+  const pots = useMemo(() => activeBook?.pots || [], [activeBook?.pots]);
   const [selectedPotId, setSelectedPotId] = useState(pots[0]?.id || "");
   const themeColors = useThemeColors();
   const [addEntryOpen, setAddEntryOpen] = useState(false);
@@ -174,8 +174,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
     <div>
       <div className="hb-row" style={{ marginBottom: 12, alignItems: "flex-start" }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Topf-Übersicht</h2>
-          <div className="hb-muted">Entwicklung & Zusammensetzung deiner Transfers</div>
+          <div style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Entwicklung & Zusammensetzung deiner Transfers</div>
         </div>
 
         <Button
@@ -218,7 +217,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
           <div
             className={`hb-stat-tile-value ${currentBalance >= 0 ? "hb-ok" : "hb-bad"}`}
           >
-            {toCHF(currentBalance)}
+            {fmt(currentBalance)}
           </div>
           <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
             {selectedPot.name}
@@ -226,11 +225,11 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
         </div>
         <div className="hb-stat-tile">
           <div className="hb-stat-tile-label">Summe Einzahlungen</div>
-          <div className="hb-stat-tile-value hb-ok">+{toCHF(totals.transfersIn)}</div>
+          <div className="hb-stat-tile-value hb-ok">+{fmt(totals.transfersIn)}</div>
         </div>
         <div className="hb-stat-tile">
           <div className="hb-stat-tile-label">Summe Entnahmen</div>
-          <div className="hb-stat-tile-value hb-bad">-{toCHF(totals.expensesOut)}</div>
+          <div className="hb-stat-tile-value hb-bad">-{fmt(totals.expensesOut)}</div>
         </div>
       </div>
 
@@ -239,12 +238,12 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
         <div className="hb-stat-pills">
           <div className="hb-stat-pill">
             <span className="hb-stat-pill-label">Höchste Einzahlung</span>
-            <span className="hb-stat-pill-value hb-ok">+{toCHF(highlights.topTransfer.transfersIn)}</span>
+            <span className="hb-stat-pill-value hb-ok">+{fmt(highlights.topTransfer.transfersIn)}</span>
             <span className="hb-muted">· {highlights.topTransfer.label}</span>
           </div>
           <div className="hb-stat-pill">
             <span className="hb-stat-pill-label">Höchste Entnahme</span>
-            <span className="hb-stat-pill-value hb-bad">-{toCHF(highlights.topExpense.expensesOut)}</span>
+            <span className="hb-stat-pill-value hb-bad">-{fmt(highlights.topExpense.expensesOut)}</span>
             <span className="hb-muted">· {highlights.topExpense.label}</span>
           </div>
         </div>
@@ -300,7 +299,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                         height={60}
                       />
                       <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(v) => toCHF(v)} />
+                      <Tooltip formatter={(v) => fmt(v)} />
                       <Line
                         type="monotone"
                         dataKey="balance"
@@ -338,17 +337,9 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                         height={60}
                       />
                       <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(v) => toCHF(v)} />
-                      <Bar dataKey="transfersIn" barSize={12}>
-                        {barChartData.map((d) => (
-                          <Cell key={`t-${d.name}`} fill={themeColors.green} />
-                        ))}
-                      </Bar>
-                      <Bar dataKey="expensesOut" barSize={12}>
-                        {barChartData.map((d) => (
-                          <Cell key={`e-${d.name}`} fill={themeColors.red} />
-                        ))}
-                      </Bar>
+                      <Tooltip formatter={(v) => fmt(v)} />
+                      <Bar dataKey="transfersIn" barSize={12} fill={themeColors.green} />
+                      <Bar dataKey="expensesOut" barSize={12} fill={themeColors.red} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -386,7 +377,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                           ))}
                         </Pie>
                         <Tooltip
-                          formatter={(val) => toCHF(val)}
+                          formatter={(val) => fmt(val)}
                           labelFormatter={(label) => `Zweck: ${label}`}
                         />
                       </PieChart>
@@ -404,7 +395,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                           />
                           <span className="hb-small">{d.name}</span>
                         </div>
-                        <span className="hb-muted">{toCHF(d.value)}</span>
+                        <span className="hb-muted">{fmt(d.value)}</span>
                       </div>
                     ))}
                   </div>
@@ -459,7 +450,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                           <td className="hb-col-category">{e.category || "—"}</td>
                           <td className="hb-col-note">{e.note || "—"}</td>
                           <td className={`hb-col-amount hb-right ${isTransfer ? "hb-ok" : "hb-bad"}`}>
-                            {isTransfer ? "+" : "−"}{toCHF(Number(e.amount || 0))}
+                            {isTransfer ? "+" : "−"}{fmt(Number(e.amount || 0))}
                           </td>
                           <td className="hb-col-actions">
                             <div className="hb-actions hb-actions-hover">

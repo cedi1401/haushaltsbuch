@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from "react";
+
+const EMPTY_ARRAY = [];
 import { Card, CardContent } from "../components/ui.jsx";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import {
@@ -11,13 +13,13 @@ import {
 import { makeSubcategoryColorShades, CHART_COLORS } from "../utils/hbPalette.js";
 
 export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurrency = "CHF" }) {
-  const toCHF = useFmt();
+  const fmt = useFmt();
   const [activeTab, setActiveTab] = useState("expense"); // "expense" | "income"
   const [drilldownId, setDrilldownId] = useState(null);  // null = overview, else categoryId
   const [displayMode, setDisplayMode] = useState("chf"); // "chf" | "percent"
 
   // Determine which hierarchy array is active
-  const hierarchy = activeTab === "expense" ? (expenseByHierarchy || []) : (incomeByHierarchy || []);
+  const hierarchy = activeTab === "expense" ? (expenseByHierarchy || EMPTY_ARRAY) : (incomeByHierarchy || EMPTY_ARRAY);
 
   // Find the active parent category when in drill-down mode
   const activeCat = drilldownId ? hierarchy.find((c) => c.id === drilldownId) : null;
@@ -80,7 +82,7 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurr
   const isEmpty = hierarchy.length === 0;
 
   return (
-    <Card style={{ width: "100%" }}>
+    <Card style={{ width: "100%", height: "100%" }}>
       <CardContent className="hb-hier-chart-card">
 
         {/* Header: Tab switch + display toggle */}
@@ -157,7 +159,7 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurr
                 <span>
                   {displayMode === "percent"
                     ? "100%"
-                    : (activeTab === "expense" ? "-" : "+") + toCHF(totalValue)}
+                    : (activeTab === "expense" ? "-" : "+") + fmt(totalValue)}
                 </span>
               </div>
 
@@ -166,7 +168,7 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurr
                 const pct = totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : "0.0";
                 const valueStr = displayMode === "percent"
                   ? `${pct}%`
-                  : (activeTab === "expense" ? "-" : "+") + toCHF(item.value);
+                  : (activeTab === "expense" ? "-" : "+") + fmt(item.value);
                 return (
                   <div
                     key={(item.id || item.name) + i}
@@ -222,7 +224,7 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurr
                     formatter={(val) =>
                       displayMode === "percent"
                         ? `${((val / totalValue) * 100).toFixed(1)}%`
-                        : toCHF(val)
+                        : fmt(val)
                     }
                     labelFormatter={(label) => label}
                   />
@@ -234,7 +236,7 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurr
                 <div className="hb-pie-total-value">
                   {displayMode === "percent"
                     ? "100%"
-                    : (activeTab === "expense" ? "-" : "+") + toCHF(totalValue)}
+                    : (activeTab === "expense" ? "-" : "+") + fmt(totalValue)}
                 </div>
                 <div className="hb-pie-total-label">{centerLabel}</div>
               </div>

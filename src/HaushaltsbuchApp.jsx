@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from "react";
 
+const EMPTY_ARRAY = [];
+const DEFAULT_CATEGORIES = [{ name: "Allgemein", budget: null }];
+
 import "./styles/haushaltsbuch.css";
 
 import { Button, Card, CardContent } from "./components/ui.jsx";
@@ -40,6 +43,7 @@ import { useEntryActions } from "./hooks/useEntryActions.js";
 import { useCategoryStats } from "./hooks/useCategoryStats.js";
 
 const VIEW_LABELS = { trend: "Trend", pots: "Töpfe", goals: "Sparziele", fixed: "Fixkosten" };
+const VIEW_TITLES = { book: "Dashboard", trend: "Trend", pots: "Töpfe", goals: "Sparziele", fixed: "Fixkosten" };
 
 export default function HaushaltsbuchApp() {
   const toast = useToast();
@@ -69,9 +73,9 @@ export default function HaushaltsbuchApp() {
   const appSettings = useAppSettings({ isInitialLoad });
   const { darkMode, setDarkMode, monthFilter, setMonthFilter, updateReady, setUpdateReady } = appSettings;
 
-  const entries = activeBook?.entries || [];
-  const indicateTransferCategories = activeBook?.transferCategories || [];
-  const indicateCategories = activeBook?.categories || [{ name: "Allgemein", budget: null }];
+  const entries = activeBook?.entries || EMPTY_ARRAY;
+  const indicateTransferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
+  const indicateCategories = activeBook?.categories || DEFAULT_CATEGORIES;
   const indicateCategoryNames = useMemo(() => getCategoryNames(indicateCategories), [indicateCategories]);
 
   const entryActions = useEntryActions({
@@ -149,7 +153,7 @@ export default function HaushaltsbuchApp() {
       ...pot,
       balance: calcPotBalance(entries, pot.id),
     }));
-  }, [activeBook?.pots, entries]);
+  }, [activeBook, entries]);
 
   const entriesSorted = useMemo(
     () =>
@@ -228,7 +232,7 @@ export default function HaushaltsbuchApp() {
           <button className="hb-icon-btn" type="button" title="Menü" aria-label="Menü" onClick={openNav}>
             <IconMenu />
           </button>
-          <div className="hb-mobile-toolbar-title">{viewLabel || "Haushaltsbuch"}</div>
+          <div className="hb-mobile-toolbar-title">{VIEW_TITLES[view] || "Dashboard"}</div>
           <button
             className="hb-icon-btn"
             type="button"
@@ -253,8 +257,7 @@ export default function HaushaltsbuchApp() {
                 <IconMenu />
               </button>
               <div>
-                <h1 className="hb-title">Haushaltsbuch</h1>
-                <p className="hb-sub">{viewLabel ? `(${viewLabel})` : monthLabel}</p>
+                <h1 className="hb-title">{VIEW_TITLES[view] || "Dashboard"}</h1>
               </div>
             </div>
 

@@ -43,7 +43,7 @@ function computeBalanceColor(balance, minBalance, maxBalance, redRgb, blueRgb) {
 }
 
 const CashflowHeatmap = memo(function CashflowHeatmap({ monthMeta, dayMap, minBalance, maxBalance }) {
-  const toCHF = useFmt();
+  const fmt = useFmt();
   const themeColors = useThemeColors();
   const redRgb = hexToRgb(themeColors.red);
   const blueRgb = hexToRgb(themeColors.accent);
@@ -97,7 +97,7 @@ const CashflowHeatmap = memo(function CashflowHeatmap({ monthMeta, dayMap, minBa
                   type="button"
                   className="hb-heatmap-cell"
                   style={{ background: bg }}
-                  aria-label={`${formatDateDELong(dateStr)}: ${toCHF(data.balance)}`}
+                  aria-label={`${formatDateDELong(dateStr)}: ${fmt(data.balance)}`}
                   onMouseEnter={(e) => handleCellEnter(e, dateStr, data)}
                   onMouseLeave={handleCellLeave}
                   onFocus={(e) => handleCellEnter(e, dateStr, data)}
@@ -137,37 +137,37 @@ const CashflowHeatmap = memo(function CashflowHeatmap({ monthMeta, dayMap, minBa
           <div className="hb-heatmap-tooltip-date">{formatDateDELong(tooltip.dateStr)}</div>
           <div className="hb-heatmap-tooltip-row">
             <span>Kontostand</span>
-            <span style={{ fontWeight: 600 }}>{toCHF(tooltip.balance)}</span>
+            <span style={{ fontWeight: 600 }}>{fmt(tooltip.balance)}</span>
           </div>
           <div className="hb-heatmap-tooltip-row">
             <span>Tagesveränderung</span>
             <span style={{
               color: tooltip.net >= 0 ? themeColors.green : themeColors.red,
             }}>
-              {tooltip.net >= 0 ? "+" : ""}{toCHF(tooltip.net)}
+              {tooltip.net >= 0 ? "+" : ""}{fmt(tooltip.net)}
             </span>
           </div>
           {tooltip.income > 0 && (
             <div className="hb-heatmap-tooltip-row">
               <span>Einnahmen</span>
-              <span style={{ color: themeColors.green }}>{toCHF(tooltip.income)}</span>
+              <span style={{ color: themeColors.green }}>{fmt(tooltip.income)}</span>
             </div>
           )}
           {tooltip.expense > 0 && (
             <div className="hb-heatmap-tooltip-row">
               <span>Ausgaben</span>
-              <span style={{ color: themeColors.red }}>{toCHF(tooltip.expense)}</span>
+              <span style={{ color: themeColors.red }}>{fmt(tooltip.expense)}</span>
             </div>
           )}
           {tooltip.transfer > 0 && (
             <div className="hb-heatmap-tooltip-row">
               <span>Transfers</span>
-              <span>{toCHF(tooltip.transfer)}</span>
+              <span>{fmt(tooltip.transfer)}</span>
             </div>
           )}
           {tooltip.topEntry && (
             <div className="hb-heatmap-tooltip-top">
-              {tooltip.topEntry.note || "—"} · {toCHF(Number(tooltip.topEntry.amount || 0))}
+              {tooltip.topEntry.note || "—"} · {fmt(Number(tooltip.topEntry.amount || 0))}
             </div>
           )}
         </div>

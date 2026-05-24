@@ -8,6 +8,7 @@ import { RECURRING_DUE_THRESHOLD_DAYS } from "./constants.js";
  * @returns {string} - ISO-Datum des nächsten Fälligkeitstermins
  */
 export function calcNextDueDate(dayOfMonth, referenceDate) {
+  dayOfMonth = Math.max(1, Math.min(31, Math.floor(Number(dayOfMonth) || 1)));
   const today = referenceDate ? new Date(referenceDate) : new Date();
   const currentDay = today.getDate();
   const currentMonth = today.getMonth();

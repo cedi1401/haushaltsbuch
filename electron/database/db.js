@@ -67,3 +67,14 @@ export function getDb() {
     },
   };
 }
+
+export function closeDatabase() {
+  if (db) {
+    try {
+      db.close();
+    } catch (err) {
+      console.error('[db] close failed:', err);
+    }
+    db = null;
+  }
+}

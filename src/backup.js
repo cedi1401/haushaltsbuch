@@ -29,7 +29,7 @@ function isPlainObject(v) {
   return v != null && typeof v === "object" && !Array.isArray(v);
 }
 
-function validateBackupObject(obj) {
+export function validateBackupObject(obj) {
   if (!isPlainObject(obj)) return false;
   if (obj.format !== "haushaltsbuch-backup") return false;
   if (obj.version !== 1) return false;
@@ -65,7 +65,12 @@ export function exportBackup({ book, monthFilter }) {
  */
 export async function importBackupFile(file) {
   const text = await readFileAsText(file);
-  const obj = JSON.parse(text);
+  let obj;
+  try {
+    obj = JSON.parse(text);
+  } catch {
+    throw new Error("Backup-Datei enthält ungültiges JSON.");
+  }
 
   if (!validateBackupObject(obj)) {
     throw new Error("Ungültiges Backup-Format.");

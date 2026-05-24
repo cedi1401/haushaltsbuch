@@ -9,7 +9,7 @@ import {
 } from "../components/icons.jsx";
 
 const NAV_ITEMS = [
-  { id: "book", label: "Haushaltsbuch", Icon: IconBook },
+  { id: "book", label: "Dashboard", Icon: IconBook },
   { id: "pots", label: "Töpfe", Icon: IconPots },
   { id: "goals", label: "Sparziele", Icon: IconGoals },
   { id: "fixed", label: "Fixkosten", Icon: IconFixed },
@@ -39,21 +39,25 @@ export default function NavDrawer({ open, onClose, view, onChangeView, anchor })
           left: Math.min(anchor?.left ?? 8, window.innerWidth - 240),
         }}
       >
-        {NAV_ITEMS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            className={`hb-nav-item ${view === id ? "hb-nav-item-active" : ""}`}
-            onClick={() => {
-              onChangeView?.(id);
-              onClose?.();
-            }}
-            role="menuitem"
-            type="button"
-          >
-            <span className="hb-nav-item-icon"><Icon /></span>
-            {label}
-          </button>
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const { id, label } = item;
+          const NavIcon = item.Icon;
+          return (
+            <button
+              key={id}
+              className={`hb-nav-item ${view === id ? "hb-nav-item-active" : ""}`}
+              onClick={() => {
+                onChangeView?.(id);
+                onClose?.();
+              }}
+              role="menuitem"
+              type="button"
+            >
+              <span className="hb-nav-item-icon"><NavIcon /></span>
+              {label}
+            </button>
+          );
+        })}
       </div>
     </>,
     document.body

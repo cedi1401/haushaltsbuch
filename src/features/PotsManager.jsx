@@ -1,27 +1,30 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Button } from "../components/ui.jsx";
 import { generateId } from "../utils/idUtils.js";
 import { useToast } from "../components/Toast.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { IconPlus } from "../components/icons.jsx";
 
+function buildPotDrafts(pots) {
+  const drafts = {};
+  (pots || []).forEach((pot) => { drafts[pot.id] = { name: pot.name }; });
+  return drafts;
+}
+
 export default function PotsManager({ activeBook, onUpdateBook }) {
   const toast = useToast();
   const { confirm } = useConfirm();
 
-  const [potDrafts, setPotDrafts] = useState({});
+  const [potDrafts, setPotDrafts] = useState(() => buildPotDrafts(activeBook?.pots));
+  const [prevPots, setPrevPots] = useState(activeBook?.pots);
   const [isAddingPot, setIsAddingPot] = useState(false);
   const [newPotName, setNewPotName] = useState("");
 
-  useEffect(() => {
-    if (activeBook?.pots) {
-      const drafts = {};
-      activeBook.pots.forEach((pot) => {
-        drafts[pot.id] = { name: pot.name };
-      });
-      setPotDrafts(drafts);
-    }
-  }, [activeBook]);
+  // React-sanctioned pattern: update derived state during render when source changes
+  if (activeBook?.pots !== prevPots) {
+    setPrevPots(activeBook?.pots);
+    setPotDrafts(buildPotDrafts(activeBook?.pots));
+  }
 
   function updatePotDraft(potId, field, value) {
     setPotDrafts((prev) => ({

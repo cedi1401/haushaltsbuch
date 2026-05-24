@@ -25,7 +25,7 @@ function KpiRow({ label, value, sub }) {
   );
 }
 
-function LeftAlignedTick({ x, y, payload, fill }) {
+function LeftAlignedTick({ x: _x, y, payload, fill }) {
   return (
     <text x={4} y={y} dy={4} fill={fill} fontSize={12} textAnchor="start">
       {payload.value}

@@ -66,7 +66,7 @@ export function calcBudgetStatus(filteredEntries, expenseCategories) {
     }
   }
 
-  return result.sort((a, b) => b.spent / b.budget - a.spent / a.budget);
+  return result.sort((a, b) => (b.spent / b.budget || 0) - (a.spent / a.budget || 0));
 }
 
 /**

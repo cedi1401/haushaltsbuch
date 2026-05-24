@@ -567,7 +567,6 @@ function syncDefaultSubcategories(existingCategories, defaultCategories) {
     const defaultCat = defaultCategories.find((d) => d.id === cat.id);
     if (!defaultCat) return cat;
 
-    const defaultSubIds = new Set(defaultCat.subcategories.map((s) => s.id));
     const removedDefaultIds = new Set([...REMOVED_SUB_MAP.keys()]);
 
     // Bestehende Subs: behalten wenn custom ODER in den neuen Defaults enthalten
@@ -680,6 +679,12 @@ export function normalizeEntry(entry) {
     normalized.kind = "expense";
     normalized.source = "month"; // alte Ausgaben = aus Monatsbudget
     delete normalized.type;
+  } else if (entry.type === "withdrawal") {
+    normalized.kind = "withdrawal";
+    delete normalized.type;
+  } else if (entry.type === "transfer") {
+    normalized.kind = "transfer";
+    delete normalized.type;
   } else {
     // Fallback für unbekannte Types
     normalized.kind = "expense";
@@ -710,7 +715,7 @@ export function normalizeBook(book) {
   } else {
     // MIGRATION: initialBalance entfernen
     normalized.pots = normalized.pots.map((pot) => {
-      const { initialBalance, ...rest } = pot;
+      const { initialBalance: _initialBalance, ...rest } = pot;
       return rest;
     });
   }

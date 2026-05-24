@@ -18,12 +18,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Updates
   checkForUpdates: () => ipcRenderer.invoke('updates:check'),
+  getDownloadedUpdate: () => ipcRenderer.invoke('updates:getDownloaded'),
   installUpdate: () => ipcRenderer.invoke('updates:install'),
   onUpdateAvailable: (callback) => {
-    ipcRenderer.on('update-available', (_event, info) => callback(info));
+    const handler = (_event, info) => callback(info);
+    ipcRenderer.on('update-available', handler);
+    return () => ipcRenderer.removeListener('update-available', handler);
   },
   onUpdateDownloaded: (callback) => {
-    ipcRenderer.on('update-downloaded', (_event, info) => callback(info));
+    const handler = (_event, info) => callback(info);
+    ipcRenderer.on('update-downloaded', handler);
+    return () => ipcRenderer.removeListener('update-downloaded', handler);
   },
 
   // Platform info

@@ -35,8 +35,8 @@ export default function InsightsPanel({
   );
 
   return (
-    <Card style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
-      <CardContent style={{ flex: 1, display: "flex", flexDirection: "column", padding: "16px 20px 24px" }}>
+    <Card style={{ width: "100%", display: "flex", flexDirection: "column" }}>
+      <CardContent style={{ display: "flex", flexDirection: "column", padding: "16px 20px 24px" }}>
         <InsightTabs activeCard={activeCard} onTabChange={setActiveCard} />
         <div className="hb-insights-body">
           {activeCard === "overview" && (

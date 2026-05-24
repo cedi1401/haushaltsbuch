@@ -52,7 +52,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
   expenseCategories,
   avgMonthlyExpense = 0,
 }) {
-  const toCHF = useFmt();
+  const fmt = useFmt();
   const themeColors = useThemeColors();
   const [showInactive, setShowInactive] = useState(false);
 
@@ -77,7 +77,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
 
     const base = avgMonthlyExpense > 0 ? avgMonthlyExpense : (items.reduce((s, r) => s + r.amount, 0) || 1);
     return items.map((r) => ({ ...r, pct: (r.amount / base) * 100 }));
-  }, [recurringExpenses, expenseCategories]);
+  }, [recurringExpenses, expenseCategories, avgMonthlyExpense]);
 
   const inactiveItems = useMemo(
     () => (recurringExpenses || []).filter((r) => r.active === false),
@@ -105,13 +105,13 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
       <div className="hb-fct-kpis">
         <KpiCard
           label="Konfiguriert / Monat"
-          value={toCHF(kpis.configuredTotal)}
+          value={fmt(kpis.configuredTotal)}
           sub={`${kpis.activeCount} aktive Position${kpis.activeCount !== 1 ? "en" : ""}`}
           accent="var(--accent)"
         />
         <KpiCard
           label="Gebucht (letzter Monat)"
-          value={toCHF(kpis.bookedLast)}
+          value={fmt(kpis.bookedLast)}
           sub={momLabel}
           accent={kpis.momDelta == null ? undefined : kpis.momDelta > 0 ? "var(--red)" : "var(--green)"}
         />
@@ -122,7 +122,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
         />
         <KpiCard
           label="Teuerste Position"
-          value={kpis.mostExpensive ? toCHF(kpis.mostExpensive.amount) : "—"}
+          value={kpis.mostExpensive ? fmt(kpis.mostExpensive.amount) : "—"}
           sub={kpis.mostExpensive?.name ?? null}
         />
       </div>
@@ -152,7 +152,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
             <LineChart data={fixedMonthly} margin={{ top: 4, right: 48, bottom: 0, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={themeColors.muted} strokeOpacity={0.15} />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
-              <YAxis yAxisId="chf" tick={{ fontSize: 11 }} tickFormatter={(v) => toCHF(v)} width={70} />
+              <YAxis yAxisId="chf" tick={{ fontSize: 11 }} tickFormatter={(v) => fmt(v)} width={70} />
               <YAxis yAxisId="pct" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `${v.toFixed(0)}%`} width={40} domain={[0, 100]} />
               <Tooltip
                 content={({ active, payload, label }) => {
@@ -165,7 +165,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                           <span style={{ color: p.stroke }}>
                             {p.dataKey === "fixedTotal" ? "Gebucht" : p.dataKey === "share" ? "Anteil" : p.dataKey}
                           </span>
-                          <span>{p.dataKey === "share" ? `${p.value.toFixed(1)} %` : toCHF(p.value)}</span>
+                          <span>{p.dataKey === "share" ? `${p.value.toFixed(1)} %` : fmt(p.value)}</span>
                         </div>
                       ))}
                     </div>
@@ -194,7 +194,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
             <div className="hb-row" style={{ alignItems: "center", marginBottom: 16 }}>
               <h4 style={{ margin: 0, fontSize: 15 }}>Positionen-Übersicht</h4>
               <span className="hb-muted" style={{ fontSize: 12, marginLeft: "auto" }}>
-                Total: {toCHF(configuredTotal)} / Monat
+                Total: {fmt(configuredTotal)} / Monat
               </span>
             </div>
 
@@ -229,7 +229,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 >
                   <ProportionBar pct={item.pct} color={item.color} />
                   <div className="hb-fct-bar-meta">
-                    <span className="hb-fct-overview-amount">{toCHF(item.amount)}</span>
+                    <span className="hb-fct-overview-amount">{fmt(item.amount)}</span>
                     <span className="hb-fct-overview-pct">{item.pct.toFixed(1)} %</span>
                   </div>
                 </div>,
@@ -242,7 +242,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                   className="hb-fct-annual-cell"
                   style={{ gridColumn: 3, gridRow: i + 2 }}
                 >
-                  <span className="hb-fct-annual-amount">{toCHF(item.amount * 12)}</span>
+                  <span className="hb-fct-annual-amount">{fmt(item.amount * 12)}</span>
                   <span className="hb-fct-annual-label">/ Jahr</span>
                 </div>
               ))}
@@ -251,7 +251,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
               {annualTotal > 0 && (
                 <div className="hb-fct-annual-total" style={{ gridColumn: 3, gridRow: activeItems.length + 2 }}>
                   <span className="hb-fct-annual-total-label">Total</span>
-                  <span className="hb-fct-annual-total-value">{toCHF(annualTotal)} / Jahr</span>
+                  <span className="hb-fct-annual-total-value">{fmt(annualTotal)} / Jahr</span>
                 </div>
               )}
             </div>
@@ -280,7 +280,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                           </span>
                         </div>
                         <span style={{ marginLeft: "auto", fontSize: 13, fontVariantNumeric: "tabular-nums", color: "var(--muted)" }}>
-                          {toCHF(Number(item.amount || 0))}
+                          {fmt(Number(item.amount || 0))}
                         </span>
                       </div>
                     ))}

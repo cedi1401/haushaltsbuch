@@ -25,7 +25,7 @@ function resolveStartDate(goal) {
  * @param {Array} pots - Alle Töpfe
  * @returns {{ current: number, target: number, percent: number, remaining: number }}
  */
-export function calcGoalProgress(goal, entries, pots) {
+export function calcGoalProgress(goal, entries, _pots) {
   if (!goal) {
     return { current: 0, target: 0, percent: 0, remaining: 0 };
   }
@@ -36,7 +36,7 @@ export function calcGoalProgress(goal, entries, pots) {
 
   // Entries ab Startdatum filtern
   const relevant = (entries || []).filter((e) => {
-    if (startDate && e.date < startDate) return false;
+    if (startDate && (!e.date || e.date < startDate)) return false;
     return true;
   });
 

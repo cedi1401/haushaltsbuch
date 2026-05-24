@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from "react";
+
+const EMPTY_ARRAY = [];
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import { calcGoalProgress, calcGoalPrognosis } from "../utils/goalUtils.js";
@@ -17,9 +19,9 @@ export default function GoalsView({
   todayISO,
   monthStartDay = 1,
 }) {
-  const toCHF = useFmt();
-  const goals = activeBook?.goals || [];
-  const pots = activeBook?.pots || [];
+  const fmt = useFmt();
+  const goals = activeBook?.goals || EMPTY_ARRAY;
+  const pots = activeBook?.pots || EMPTY_ARRAY;
   const transferCategories = activeBook?.transferCategories || [];
   const { confirm } = useConfirm();
   const toast = useToast();
@@ -171,7 +173,7 @@ export default function GoalsView({
       case "date":
         return `Ab ${formatDate(goal.startDate)}`;
       case "custom":
-        return `Anfangsbetrag: ${toCHF(goal.startAmount || 0)}`;
+        return `Anfangsbetrag: ${fmt(goal.startAmount || 0)}`;
       case "zero":
       default:
         return "Ab Null (alle Buchungen)";
@@ -182,8 +184,7 @@ export default function GoalsView({
     <div>
       <div className="hb-row" style={{ marginBottom: 12, alignItems: "flex-start" }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Sparziele</h2>
-          <div className="hb-muted">Definiere Ziele und verfolge deinen Fortschritt</div>
+          <div style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Definiere Ziele und verfolge deinen Fortschritt</div>
         </div>
 
         <Button onClick={openCreateDialog}><IconPlus /> Neues Sparziel</Button>
@@ -263,8 +264,8 @@ export default function GoalsView({
                     style={{ marginBottom: 6, fontSize: 14 }}
                   >
                     <span>
-                      <strong>{toCHF(goal.progress.current)}</strong> von{" "}
-                      <strong>{toCHF(goal.progress.target)}</strong>
+                      <strong>{fmt(goal.progress.current)}</strong> von{" "}
+                      <strong>{fmt(goal.progress.target)}</strong>
                     </span>
                     <span
                       style={{
@@ -288,7 +289,7 @@ export default function GoalsView({
 
                   {goal.progress.remaining > 0 && (
                     <div className="hb-muted" style={{ marginTop: 6, fontSize: 12 }}>
-                      Noch {toCHF(goal.progress.remaining)} bis zum Ziel
+                      Noch {fmt(goal.progress.remaining)} bis zum Ziel
                     </div>
                   )}
                 </div>
@@ -308,7 +309,7 @@ export default function GoalsView({
                     {goal.prognosis.avgMonthly > 0 ? (
                       <>
                         Bei durchschnittlich{" "}
-                        <strong>{toCHF(goal.prognosis.avgMonthly)}</strong> pro Monat
+                        <strong>{fmt(goal.prognosis.avgMonthly)}</strong> pro Monat
                         erreichst du dein Ziel in ca.{" "}
                         <strong>
                           {goal.prognosis.monthsRemaining === Infinity

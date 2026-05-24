@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from "react";
+
+const EMPTY_ARRAY = [];
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
@@ -11,18 +13,18 @@ import { useFmt } from "../contexts/CurrencyContext.jsx";
 
 export default function FixedCostsView({
   activeBook,
-  entries,
+  entries: _entries,
   baseCurrency = "CHF",
   onUpdateBook,
   onAddEntry,
   todayISO,
 }) {
-  const toCHF = useFmt();
-  const recurringExpenses = activeBook?.recurringExpenses || [];
-  const pots = activeBook?.pots || [];
+  const fmt = useFmt();
+  const recurringExpenses = activeBook?.recurringExpenses || EMPTY_ARRAY;
+  const pots = activeBook?.pots || EMPTY_ARRAY;
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
-  const incomeCategories = activeBook?.incomeCategories || [];
-  const transferCategories = activeBook?.transferCategories || [];
+  const incomeCategories = activeBook?.incomeCategories || EMPTY_ARRAY;
+  const transferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
   const { confirm } = useConfirm();
   const toast = useToast();
 
@@ -41,14 +43,13 @@ export default function FixedCostsView({
     showInOverview: true,
   });
 
-  // Aktive und inaktive Fixkosten trennen
-  const activeItems = recurringExpenses.filter((item) => item.active);
-  const inactiveItems = recurringExpenses.filter((item) => !item.active);
-
-  // Gesamtsumme der aktiven Fixkosten
-  const totalActiveAmount = useMemo(() => {
-    return activeItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  }, [activeItems]);
+  // Aktive und inaktive Fixkosten trennen + Gesamtsumme
+  const { activeItems, inactiveItems, totalActiveAmount } = useMemo(() => {
+    const active = recurringExpenses.filter((item) => item.active);
+    const inactive = recurringExpenses.filter((item) => !item.active);
+    const total = active.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    return { activeItems: active, inactiveItems: inactive, totalActiveAmount: total };
+  }, [recurringExpenses]);
 
   function openCreateDialog() {
     setEditingItem(null);
@@ -221,9 +222,8 @@ export default function FixedCostsView({
     <div>
       <div className="hb-row" style={{ marginBottom: 12, alignItems: "flex-start" }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Fixkosten</h2>
-          <div className="hb-muted">
-            Monatliche Summe: <strong>{toCHF(totalActiveAmount)}</strong>
+          <div style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+            Monatliche Summe: <strong>{fmt(totalActiveAmount)}</strong>
           </div>
         </div>
 
@@ -263,7 +263,7 @@ export default function FixedCostsView({
                             <span>{getCategoryDisplay(item)}</span>
                           </div>
                         </div>
-                        <div className="hb-fixed-amount hb-bad">-{toCHF(item.amount)}</div>
+                        <div className="hb-fixed-amount hb-bad">-{fmt(item.amount)}</div>
                       </div>
 
                       <div className="hb-fixed-actions">
@@ -305,7 +305,7 @@ export default function FixedCostsView({
                             </div>
                           </div>
                           <div className="hb-fixed-amount" style={{ opacity: 0.5 }}>
-                            -{toCHF(item.amount)}
+                            -{fmt(item.amount)}
                           </div>
                         </div>
 

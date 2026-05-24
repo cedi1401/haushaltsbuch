@@ -1801,6 +1801,10 @@ select.hb-input option {
   font-weight: 700;
 }
 
+.hb-amount-value {
+  font-variant-numeric: tabular-nums;
+}
+
 .hb-withdrawal {
   color: var(--orange, #ca5010);
   font-weight: 700;
@@ -3091,9 +3095,6 @@ select.hb-input option {
 /* Pane container */
 .hb-insights-body {
   position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
@@ -3103,6 +3104,10 @@ select.hb-input option {
   display: flex;
   flex-direction: column;
   animation: insightFadeIn 180ms ease-out forwards;
+}
+
+.hb-insights-pane--active {
+  opacity: 1;
 }
 
 @keyframes insightFadeIn {
@@ -3636,9 +3641,6 @@ select.hb-input option {
 .hb-budget-list {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
 }
 
 .hb-budget-row {

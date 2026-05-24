@@ -9,6 +9,8 @@ import {
 import { generateId } from "../utils/idUtils.js";
 import { getWithdrawalCategoriesForPot } from "../utils/potUtils.js";
 
+const EMPTY_ARRAY = [];
+
 const INITIAL_ADD_DRAFT = {
   amount: "",
   category: "Allgemein",
@@ -54,7 +56,7 @@ export function useEntryActions({
     date: todayISO(),
   }));
 
-  const entries = activeBook?.entries || [];
+  const entries = activeBook?.entries || EMPTY_ARRAY;
 
   function setAddField(field, value) {
     setAddDraft((d) => ({ ...d, [field]: value }));
@@ -103,7 +105,7 @@ export function useEntryActions({
       if (d.kind === "income") return { ...d, categoryId: "cat_einnahmen", subcategoryId: null };
       return { ...d, categoryId: null, subcategoryId: null };
     });
-  }, [addDraft.kind]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [addDraft.kind]);
 
   const availableWithdrawalCategories = useMemo(
     () => getWithdrawalCategoriesForPot(entries, addDraft.potId, indicateTransferCategories),

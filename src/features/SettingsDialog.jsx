@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import { Button } from "../components/ui.jsx";
 import { exportBackupFile, importBackupFile as importBackupNative } from "../dal/storage.js";
-import { exportBackup } from "../backup.js";
+import { exportBackup, validateBackupObject } from "../backup.js";
 import { normalizeBook, validateMonthStartDay } from "../utils/hbUtils.js";
 import { getFinancialMonthRange } from "../utils/financialMonthUtils.js";
 import { useToast } from "../components/Toast.jsx";
@@ -17,7 +17,6 @@ export default function SettingsDialog({
   monthFilter,
 
   // callbacks for backup
-  onRestoreAll,
   onImportBook,
 
   // NEU: für Töpfe-Verwaltung
@@ -30,11 +29,7 @@ export default function SettingsDialog({
   const toast = useToast();
   const { confirm } = useConfirm();
 
-  // Electron-Erkennung als React State — wird beim Mount ausgewertet, danach reaktiv
-  const [isElectronEnv, setIsElectronEnv] = useState(false);
-  useEffect(() => {
-    setIsElectronEnv(window.electronAPI?.isElectron === true);
-  }, []);
+  const [isElectronEnv] = useState(() => window.electronAPI?.isElectron === true);
 
   // App-Version
   const [appVersion, setAppVersion] = useState(null);
@@ -44,18 +39,36 @@ export default function SettingsDialog({
     }
   }, [open, isElectronEnv]);
 
-  // Update-Check
-  const [updateStatus, setUpdateStatus] = useState(null); // null | "checking" | "available" | "not-available" | "error"
+  // Update-Check: null | "checking" | { status: "available"|"up-to-date"|"error", version? }
+  const [updateStatus, setUpdateStatus] = useState(null);
+  // null | { version } — heruntergeladenes Update wartet auf Installation
+  const [downloadedUpdate, setDownloadedUpdate] = useState(null);
+
+  // Push-Events vom Main-Prozess
+  useEffect(() => {
+    if (!isElectronEnv) return;
+    const removeAvailable = window.electronAPI?.onUpdateAvailable?.((info) => {
+      setUpdateStatus({ status: "available", version: info.version });
+    });
+    const removeDownloaded = window.electronAPI?.onUpdateDownloaded?.((info) => {
+      setDownloadedUpdate({ version: info.version });
+    });
+    return () => { removeAvailable?.(); removeDownloaded?.(); };
+  }, [isElectronEnv]);
 
   async function checkForUpdates() {
     if (!window.electronAPI?.checkForUpdates) return;
     setUpdateStatus("checking");
     try {
       const result = await window.electronAPI.checkForUpdates();
-      setUpdateStatus(result?.available ? "available" : "not-available");
+      setUpdateStatus(result);
     } catch {
-      setUpdateStatus("error");
+      setUpdateStatus({ status: "error" });
     }
+  }
+
+  async function installUpdate() {
+    await window.electronAPI?.installUpdate?.();
   }
 
   // State für Monatsbeginn-Input
@@ -85,7 +98,7 @@ export default function SettingsDialog({
         if (result.canceled) return;
 
         const obj = result.data;
-        if (!obj || obj.format !== 'haushaltsbuch-backup' || obj.version !== 1 || !Array.isArray(obj.books) || obj.books.length === 0) {
+        if (!validateBackupObject(obj) || obj.books.length === 0) {
           toast.error("Ungültiges Backup-Format.");
           return;
         }
@@ -118,7 +131,7 @@ export default function SettingsDialog({
       const text = await file.text();
       const obj = JSON.parse(text);
 
-      if (!obj || obj.format !== 'haushaltsbuch-backup' || obj.version !== 1 || !Array.isArray(obj.books) || obj.books.length === 0) {
+      if (!validateBackupObject(obj) || obj.books.length === 0) {
         toast.error("Ungültiges Backup-Format. Ist es wirklich ein gültiges Haushaltsbuch-Backup (.json)?");
         return;
       }
@@ -151,7 +164,55 @@ export default function SettingsDialog({
       canSave={true}
       saveLabel="Schließen"
     >
-      <div className="hb-field">
+      {/* App-Updates (nur Electron) */}
+      {isElectronEnv && (
+        <div className="hb-field">
+          <div style={{ fontWeight: 600, marginBottom: 6 }}>App-Updates</div>
+          {appVersion && (
+            <div className="hb-muted" style={{ marginBottom: 8, fontSize: 13 }}>
+              Aktuelle Version: <strong>v{appVersion}</strong>
+            </div>
+          )}
+
+          {downloadedUpdate ? (
+            <div>
+              <div style={{ color: "var(--green)", fontSize: 13, marginBottom: 10 }}>
+                Update <strong>v{downloadedUpdate.version}</strong> wurde heruntergeladen und ist bereit.
+              </div>
+              <Button variant="solid" onClick={installUpdate}>
+                Jetzt installieren &amp; neu starten
+              </Button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <Button
+                variant="outline"
+                onClick={checkForUpdates}
+                disabled={updateStatus === "checking"}
+              >
+                {updateStatus === "checking" ? "Suche läuft…" : "Nach Update suchen"}
+              </Button>
+              {updateStatus?.status === "available" && (
+                <span style={{ color: "var(--green)", fontSize: 13 }}>
+                  Update <strong>v{updateStatus.version}</strong> gefunden — wird heruntergeladen…
+                </span>
+              )}
+              {updateStatus?.status === "up-to-date" && (
+                <span className="hb-muted" style={{ fontSize: 13 }}>
+                  Bereits auf dem neuesten Stand.
+                </span>
+              )}
+              {updateStatus?.status === "error" && (
+                <span style={{ color: "var(--red)", fontSize: 13 }}>
+                  Fehler beim Suchen. Internetverbindung prüfen.
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="hb-field" style={{ marginTop: isElectronEnv ? 24 : 0 }}>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>Backup</div>
         <div className="hb-muted" style={{ marginBottom: 10 }}>
           Export speichert das aktive Haushaltsbuch als .json Datei. Import fügt ein Buch zur bestehenden Datenbank hinzu.
@@ -179,42 +240,6 @@ export default function SettingsDialog({
 
         <div className="hb-note">Tipp: Bewahre dein Backup z.B. in OneDrive/Dropbox/USB auf.</div>
       </div>
-
-      {/* App-Updates (nur Electron) */}
-      {isElectronEnv && (
-        <div className="hb-field" style={{ marginTop: 24 }}>
-          <div style={{ fontWeight: 600, marginBottom: 6 }}>App-Updates</div>
-          {appVersion && (
-            <div className="hb-muted" style={{ marginBottom: 8, fontSize: 13 }}>
-              Aktuelle Version: <strong>v{appVersion}</strong>
-            </div>
-          )}
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <Button
-              variant="outline"
-              onClick={checkForUpdates}
-              disabled={updateStatus === "checking"}
-            >
-              {updateStatus === "checking" ? "Suche läuft…" : "Nach Update suchen"}
-            </Button>
-            {updateStatus === "available" && (
-              <span style={{ color: "var(--green)", fontSize: 13 }}>
-                Update verfügbar — wird automatisch heruntergeladen.
-              </span>
-            )}
-            {updateStatus === "not-available" && (
-              <span className="hb-muted" style={{ fontSize: 13 }}>
-                Bereits auf dem neuesten Stand.
-              </span>
-            )}
-            {updateStatus === "error" && (
-              <span style={{ color: "var(--red)", fontSize: 13 }}>
-                Fehler beim Suchen. Internetverbindung prüfen.
-              </span>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* BASISWÄHRUNG */}
       <div className="hb-field" style={{ marginTop: 24 }}>

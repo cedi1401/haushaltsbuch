@@ -57,7 +57,9 @@ export function ConfirmProvider({ children }) {
 }
 
 function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, onConfirm, onCancel }) {
+  const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
   const confirmBtnRef = useRef(null);
+  const panelRef = useRef(null);
 
   useEffect(() => {
     const timer = setTimeout(() => confirmBtnRef.current?.focus(), 50);
@@ -66,7 +68,21 @@ function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, onCon
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === "Escape") onCancel();
+      if (e.key === "Escape") {
+        onCancel();
+        return;
+      }
+      if (e.key === "Tab" && panelRef.current) {
+        const focusable = Array.from(panelRef.current.querySelectorAll(FOCUSABLE));
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        } else {
+          if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -81,7 +97,7 @@ function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, onCon
       onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div className="hb-modal-overlay" />
-      <div className="hb-modal-panel" tabIndex={-1} style={{ outline: "none" }}>
+      <div ref={panelRef} className="hb-modal-panel" tabIndex={-1} style={{ outline: "none" }}>
         <div className="hb-modal-head">
           <div id="confirm-dialog-title" className="hb-modal-title">{title}</div>
           <button
@@ -115,6 +131,7 @@ function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, onCon
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useConfirm() {
   const ctx = useContext(ConfirmContext);
   if (!ctx) {

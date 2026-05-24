@@ -1,14 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import electron from 'vite-plugin-electron'
-import renderer from 'vite-plugin-electron-renderer'
+import electron from 'vite-plugin-electron/simple'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    electron([
-      {
+    electron({
+      main: {
         entry: 'electron/main.js',
         vite: {
           build: {
@@ -19,18 +18,10 @@ export default defineConfig({
           },
         },
       },
-      {
-        entry: 'electron/preload.mjs',
-        onstart({ reload }) {
-          reload()
-        },
-        vite: {
-          build: {
-            outDir: 'dist-electron',
-          },
-        },
+      preload: {
+        input: 'electron/preload.mjs',
       },
-    ]),
-    renderer(),
+      renderer: {},
+    }),
   ],
 })
