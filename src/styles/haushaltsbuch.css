@@ -3,8 +3,6 @@
    Modern, crisp, layered UI inspired by Windows 11
    ===================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Bitter:wght@300;400;500;600;700&family=Nunito+Sans:wght@300;400;500;600;700&display=swap');
-
 /* =====================================================
    CSS VARIABLES - COLOR PALETTE
    ===================================================== */
@@ -72,7 +70,7 @@
   /* Semantic UI colors */
   --bar-track-bg: rgba(128, 128, 128, 0.12);
   --selection-bg: rgba(0, 120, 212, 0.2);
-  --app-font-family: 'Inter', sans-serif;
+  --app-font-family: 'Inter Variable', sans-serif;
 }
 
 :root.dark {
@@ -122,7 +120,7 @@
 
   /* Dark mode semantic UI colors */
   --selection-bg: rgba(96, 205, 255, 0.3);
-  --app-font-family: 'Inter', sans-serif;
+  --app-font-family: 'Inter Variable', sans-serif;
 }
 
 /* =====================================================

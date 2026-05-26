@@ -1,15 +1,15 @@
 import React, { useMemo, useState } from "react";
-
-const EMPTY_ARRAY = [];
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
 import { generateId } from "../utils/idUtils.js";
-import { getCategoryLabel, DEFAULT_EXPENSE_CATEGORIES, parseAmount } from "../utils/hbUtils.js";
+import { DEFAULT_EXPENSE_CATEGORIES, parseAmount } from "../utils/hbUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { IconFixed, IconPlus, IconDelete, IconDrag } from "../components/icons.jsx";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
+
+const EMPTY_ARRAY = [];
 
 export default function FixedCostsView({
   activeBook,
@@ -24,7 +24,6 @@ export default function FixedCostsView({
   const fixedCostGroups = activeBook?.fixedCostGroups || EMPTY_ARRAY;
   const pots = activeBook?.pots || EMPTY_ARRAY;
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
-  const incomeCategories = activeBook?.incomeCategories || EMPTY_ARRAY;
   const transferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
   const { confirm } = useConfirm();
   const toast = useToast();

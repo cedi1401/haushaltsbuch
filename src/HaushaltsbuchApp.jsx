@@ -189,7 +189,6 @@ export default function HaushaltsbuchApp() {
 
   const isViewWithoutMonth = view in VIEW_LABELS;
   const themeTooltip = darkMode ? "Zu Light Mode wechseln" : "Zu Dark Mode wechseln";
-  const viewLabel = VIEW_LABELS[view];
 
   return (
     <CurrencyContext.Provider value={fmt}>

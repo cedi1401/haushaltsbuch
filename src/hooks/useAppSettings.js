@@ -34,11 +34,11 @@ export function useAppSettings({ isInitialLoad }) {
 
   useEffect(() => {
     const fontMap = {
-      "Inter":       "'Inter', sans-serif",
-      "Bitter":      "'Bitter', serif",
-      "Nunito Sans": "'Nunito Sans', sans-serif",
+      "Inter":       "'Inter Variable', sans-serif",
+      "Bitter":      "'Bitter Variable', serif",
+      "Nunito Sans": "'Nunito Sans Variable', sans-serif",
     };
-    const value = fontMap[fontFamily] ?? "'Inter', sans-serif";
+    const value = fontMap[fontFamily] ?? "'Inter Variable', sans-serif";
     document.documentElement.style.setProperty("--app-font-family", value);
     if (!isInitialLoad.current) {
       setSetting("fontFamily", fontFamily);
