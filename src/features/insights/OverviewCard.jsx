@@ -18,7 +18,7 @@ const OverviewCard = memo(function OverviewCard({ analytics }) {
   const { top5, avgDailyExpense, biggestMomChange } = analytics;
 
   return (
-    <div className="hb-insights-pane hb-insights-pane--active">
+    <div className="hb-insights-pane hb-insights-pane--active" style={{ justifyContent: "center" }}>
       {top5.length > 0 && (
         <div className="hb-insight-section">
           <div className="hb-insight-label" style={{ marginBottom: 8 }}>Top Kategorien</div>

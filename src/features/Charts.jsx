@@ -82,8 +82,8 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurr
   const isEmpty = hierarchy.length === 0;
 
   return (
-    <Card style={{ width: "100%", height: "100%" }}>
-      <CardContent className="hb-hier-chart-card">
+    <Card style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
+      <CardContent style={{ display: "flex", flexDirection: "column", flex: 1, padding: "20px" }}>
 
         {/* Header: Tab switch + display toggle */}
         <div className="hb-chart-tabs-header">
@@ -144,14 +144,12 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurr
                 </button>
               )}
 
-              {/* Section title */}
-              <div className="hb-legend-section-title">
-                {drilldownId && activeCat
-                  ? `Kategorien in ${activeCat.name}`
-                  : activeTab === "expense"
-                  ? "Ausgaben nach Kategorie"
-                  : "Einnahmen nach Kategorie"}
-              </div>
+              {/* Section title — only shown in drilldown */}
+              {drilldownId && activeCat && (
+                <div className="hb-legend-section-title">
+                  {`Kategorien in ${activeCat.name}`}
+                </div>
+              )}
 
               {/* Total row */}
               <div className="hb-legend-total-row">
@@ -215,12 +213,15 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurr
                     outerRadius={150}
                     paddingAngle={2}
                     stroke="none"
+                    startAngle={90}
+                    endAngle={-270}
                   >
                     {pieData.map((d, i) => (
                       <Cell key={(d.id || d.name) + i} fill={d.color} />
                     ))}
                   </Pie>
                   <Tooltip
+                    wrapperStyle={{ zIndex: 10 }}
                     formatter={(val) =>
                       displayMode === "percent"
                         ? `${((val / totalValue) * 100).toFixed(1)}%`
@@ -232,14 +233,21 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurr
               </ResponsiveContainer>
 
               {/* Center overlay */}
-              <div className="hb-pie-center-overlay" style={{ pointerEvents: "none" }}>
-                <div className="hb-pie-total-value">
-                  {displayMode === "percent"
-                    ? "100%"
-                    : (activeTab === "expense" ? "-" : "+") + fmt(totalValue)}
-                </div>
-                <div className="hb-pie-total-label">{centerLabel}</div>
-              </div>
+              {(() => {
+                const centerValue = displayMode === "percent"
+                  ? "100%"
+                  : (activeTab === "expense" ? "-" : "+") + fmt(totalValue);
+                const len = centerValue.length;
+                const fontSize = len >= 15 ? 17 : len >= 12 ? 20 : 24;
+                return (
+                  <div className="hb-pie-center-overlay" style={{ pointerEvents: "none" }}>
+                    <div className="hb-pie-total-value" style={{ fontSize }}>
+                      {centerValue}
+                    </div>
+                    <div className="hb-pie-total-label">{centerLabel}</div>
+                  </div>
+                );
+              })()}
             </div>
 
           </div>

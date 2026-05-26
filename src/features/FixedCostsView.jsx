@@ -8,7 +8,7 @@ import { generateId } from "../utils/idUtils.js";
 import { getCategoryLabel, DEFAULT_EXPENSE_CATEGORIES, parseAmount } from "../utils/hbUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
-import { IconFixed, IconPlus } from "../components/icons.jsx";
+import { IconFixed, IconPlus, IconDelete, IconDrag } from "../components/icons.jsx";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 
 export default function FixedCostsView({
@@ -21,6 +21,7 @@ export default function FixedCostsView({
 }) {
   const fmt = useFmt();
   const recurringExpenses = activeBook?.recurringExpenses || EMPTY_ARRAY;
+  const fixedCostGroups = activeBook?.fixedCostGroups || EMPTY_ARRAY;
   const pots = activeBook?.pots || EMPTY_ARRAY;
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
   const incomeCategories = activeBook?.incomeCategories || EMPTY_ARRAY;
@@ -39,19 +40,80 @@ export default function FixedCostsView({
     subcategoryId: null,
     transferCategory: transferCategories[0] || "Steuern",
     potId: pots[0]?.id || "",
-    active: true,
+    groupId: null,
     showInOverview: true,
   });
 
-  // Aktive und inaktive Fixkosten trennen + Gesamtsumme
-  const { activeItems, inactiveItems, totalActiveAmount } = useMemo(() => {
-    const active = recurringExpenses.filter((item) => item.active);
-    const inactive = recurringExpenses.filter((item) => !item.active);
-    const total = active.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    return { activeItems: active, inactiveItems: inactive, totalActiveAmount: total };
-  }, [recurringExpenses]);
+  // Gruppen-Verwaltung
+  const [renamingGroupId, setRenamingGroupId] = useState(null);
+  const [groupNameDraft, setGroupNameDraft] = useState("");
 
-  function openCreateDialog() {
+  // Drag & Drop
+  const [draggingId, setDraggingId] = useState(null);
+  const [dragOverGroupId, setDragOverGroupId] = useState(undefined);
+  const [dropBeforeId, setDropBeforeId] = useState(null);
+
+  // Gruppierung + Summen
+  const { groupedItems, ungroupedItems, totalAmount, groupTotals } = useMemo(() => {
+    const total = recurringExpenses.reduce((s, i) => s + Number(i.amount || 0), 0);
+    const byGroup = new Map();
+    const ungrouped = [];
+    for (const item of recurringExpenses) {
+      const gid = item.groupId || null;
+      if (gid && fixedCostGroups.some((g) => g.id === gid)) {
+        if (!byGroup.has(gid)) byGroup.set(gid, []);
+        byGroup.get(gid).push(item);
+      } else {
+        ungrouped.push(item);
+      }
+    }
+    const totals = new Map();
+    for (const [gid, items] of byGroup) {
+      totals.set(gid, items.reduce((s, i) => s + Number(i.amount || 0), 0));
+    }
+    return { groupedItems: byGroup, ungroupedItems: ungrouped, totalAmount: total, groupTotals: totals };
+  }, [recurringExpenses, fixedCostGroups]);
+
+  // Gruppen-CRUD
+  function createGroup() {
+    const name = (groupNameDraft || "").trim();
+    if (!name) return;
+    const maxOrder = fixedCostGroups.reduce((m, g) => Math.max(m, g.order ?? 0), 0);
+    const newGroup = { id: generateId("fcg"), name, order: maxOrder + 1 };
+    onUpdateBook({ ...activeBook, fixedCostGroups: [...fixedCostGroups, newGroup] });
+    setGroupNameDraft("");
+    setRenamingGroupId(null);
+  }
+
+  function renameGroup(groupId, newName) {
+    const name = (newName || "").trim();
+    if (!name) { setRenamingGroupId(null); return; }
+    const updated = fixedCostGroups.map((g) => g.id === groupId ? { ...g, name } : g);
+    onUpdateBook({ ...activeBook, fixedCostGroups: updated });
+    setRenamingGroupId(null);
+  }
+
+  async function deleteGroup(group) {
+    const itemCount = recurringExpenses.filter((r) => r.groupId === group.id).length;
+    const ok = await confirm({
+      title: "Gruppe löschen",
+      message: itemCount > 0
+        ? `Gruppe „${group.name}" löschen? Die ${itemCount} enthaltene${itemCount !== 1 ? "n" : ""} Fixkosten werden nach „Weitere" verschoben.`
+        : `Gruppe „${group.name}" wirklich löschen?`,
+      confirmLabel: "Löschen",
+      danger: true,
+    });
+    if (!ok) return;
+    const updatedItems = recurringExpenses.map((r) =>
+      r.groupId === group.id ? { ...r, groupId: null } : r
+    );
+    const updatedGroups = fixedCostGroups.filter((g) => g.id !== group.id);
+    onUpdateBook({ ...activeBook, recurringExpenses: updatedItems, fixedCostGroups: updatedGroups });
+    toast.success("Gruppe gelöscht.");
+  }
+
+  // Dialog
+  function openCreateDialog(presetGroupId = null) {
     setEditingItem(null);
     setDraft({
       name: "",
@@ -60,9 +122,9 @@ export default function FixedCostsView({
       categoryId: "cat_unkategorisiert",
       subcategoryId: null,
       transferCategory: transferCategories[0] || "Steuern",
-      showInOverview: false,
       potId: pots[0]?.id || "",
-      active: true,
+      groupId: presetGroupId,
+      showInOverview: false,
     });
     setDialogOpen(true);
   }
@@ -77,7 +139,7 @@ export default function FixedCostsView({
       subcategoryId: item.subcategoryId || null,
       transferCategory: item.transferCategory || transferCategories[0] || "Steuern",
       potId: item.potId || pots[0]?.id || "",
-      active: item.active !== false,
+      groupId: item.groupId || null,
       showInOverview: item.showInOverview !== false,
     });
     setDialogOpen(true);
@@ -90,13 +152,11 @@ export default function FixedCostsView({
 
   function saveItem() {
     if (!activeBook) return;
-
     const numericAmount = parseAmount(draft.amount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
     if (!draft.name.trim()) return;
 
     if (editingItem) {
-      // Update existing item
       const updatedItems = recurringExpenses.map((item) =>
         item.id === editingItem.id
           ? {
@@ -108,25 +168,21 @@ export default function FixedCostsView({
               subcategoryId: draft.kind === "expense" ? (draft.subcategoryId || null) : undefined,
               transferCategory: draft.kind === "transfer" ? draft.transferCategory : undefined,
               potId: draft.kind === "transfer" ? draft.potId : undefined,
-              active: draft.active,
+              groupId: draft.groupId || null,
               showInOverview: draft.showInOverview === true,
             }
           : item
       );
-
       onUpdateBook({ ...activeBook, recurringExpenses: updatedItems });
     } else {
-      // Create new item
       const newItem = {
         id: generateId("rec"),
         name: draft.name.trim(),
         amount: numericAmount,
         kind: draft.kind,
-        active: true,
+        groupId: draft.groupId || null,
+        showInOverview: draft.showInOverview === true,
       };
-
-      newItem.showInOverview = draft.showInOverview === true;
-
       if (draft.kind === "expense") {
         newItem.categoryId = draft.categoryId;
         newItem.subcategoryId = draft.subcategoryId || null;
@@ -134,45 +190,26 @@ export default function FixedCostsView({
         newItem.transferCategory = draft.transferCategory;
         newItem.potId = draft.potId;
       }
-
-      onUpdateBook({
-        ...activeBook,
-        recurringExpenses: [...recurringExpenses, newItem],
-      });
+      onUpdateBook({ ...activeBook, recurringExpenses: [...recurringExpenses, newItem] });
     }
-
     closeDialog();
-  }
-
-  function toggleActive(item) {
-    if (!activeBook) return;
-
-    const updatedItems = recurringExpenses.map((i) =>
-      i.id === item.id ? { ...i, active: !i.active } : i
-    );
-
-    onUpdateBook({ ...activeBook, recurringExpenses: updatedItems });
   }
 
   async function deleteItem(item) {
     if (!activeBook) return;
-
     const ok = await confirm({
       title: "Fixkosten löschen",
-      message: `Fixkosten „${item.name}“ wirklich löschen?`,
+      message: `Fixkosten „${item.name}" wirklich löschen?`,
       confirmLabel: "Löschen",
       danger: true,
     });
     if (!ok) return;
-
-    const updatedItems = recurringExpenses.filter((i) => i.id !== item.id);
-    onUpdateBook({ ...activeBook, recurringExpenses: updatedItems });
+    onUpdateBook({ ...activeBook, recurringExpenses: recurringExpenses.filter((i) => i.id !== item.id) });
     toast.success("Fixkosten gelöscht.");
   }
 
   function bookNow(item) {
     const today = todayISO();
-
     const entry = {
       id: generateId("entry"),
       date: today,
@@ -183,54 +220,204 @@ export default function FixedCostsView({
       kind: item.kind,
       note: item.name,
     };
-
-    if (item.kind === "transfer") {
-      entry.potId = item.potId;
-    }
-
-    if (item.kind === "expense") {
-      entry.source = "month";
-    }
-
+    if (item.kind === "transfer") entry.potId = item.potId;
+    if (item.kind === "expense") entry.source = "month";
     onAddEntry(entry);
-    toast.success(`„${item.name}“ wurde gebucht.`);
+    toast.success(`„${item.name}" wurde gebucht.`);
+  }
+
+  // Drag & Drop
+  function handleDragStart(e, item) {
+    setDraggingId(item.id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", item.id);
+  }
+
+  function handleDragEnd() {
+    setDraggingId(null);
+    setDragOverGroupId(undefined);
+    setDropBeforeId(null);
+  }
+
+  function handleDragOverItem(e, targetGroupId, beforeId) {
+    if (!draggingId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverGroupId(targetGroupId);
+    setDropBeforeId(beforeId);
+  }
+
+  function handleDragOverGroupBody(e, targetGroupId) {
+    if (!draggingId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverGroupId(targetGroupId);
+    setDropBeforeId(null);
+  }
+
+  function handleDrop(e, targetGroupId, beforeId) {
+    e.preventDefault();
+    e.stopPropagation();
+    const dragId = draggingId || e.dataTransfer.getData("text/plain");
+    if (!dragId) return handleDragEnd();
+    const dragged = recurringExpenses.find((r) => r.id === dragId);
+    if (!dragged) return handleDragEnd();
+
+    const rest = recurringExpenses.filter((r) => r.id !== dragId);
+    const movedItem = { ...dragged, groupId: targetGroupId || null };
+
+    let insertIndex;
+    if (beforeId) {
+      insertIndex = rest.findIndex((r) => r.id === beforeId);
+      if (insertIndex === -1) insertIndex = rest.length;
+    } else {
+      const targetKey = targetGroupId || null;
+      let lastIdx = -1;
+      rest.forEach((r, idx) => {
+        const gid = (r.groupId && fixedCostGroups.some((g) => g.id === r.groupId)) ? r.groupId : null;
+        if (gid === targetKey) lastIdx = idx;
+      });
+      insertIndex = lastIdx === -1 ? rest.length : lastIdx + 1;
+    }
+
+    const next = [...rest.slice(0, insertIndex), movedItem, ...rest.slice(insertIndex)];
+    onUpdateBook({ ...activeBook, recurringExpenses: next });
+    handleDragEnd();
   }
 
   const canSave = useMemo(() => {
     if (!draft.name.trim()) return false;
     const n = parseAmount(draft.amount);
-    if (!Number.isFinite(n) || n <= 0) return false;
-    return true;
+    return Number.isFinite(n) && n > 0;
   }, [draft]);
 
-  function getCategoryDisplay(item) {
-    if (item.kind === "expense") {
-      // Neues Format: categoryId vorhanden
-      if (item.categoryId) {
-        return getCategoryLabel(expenseCategories, incomeCategories, item.categoryId, item.subcategoryId);
-      }
-      // Legacy-Fallback: altes category-String-Feld
-      return item.category || "Unkategorisiert";
-    } else if (item.kind === "transfer") {
+  function renderCatPills(item) {
+    if (item.kind === "transfer") {
       const potName = pots.find((p) => p.id === item.potId)?.name || item.potId;
-      return `${item.transferCategory || "Transfer"} → ${potName}`;
+      return (
+        <span className="hb-fixed-cat-pill">
+          {item.transferCategory || "Transfer"} → {potName}
+        </span>
+      );
     }
-    return "";
+    const cat = expenseCategories.find((c) => c.id === item.categoryId);
+    if (!cat) {
+      return <span className="hb-fixed-cat-pill">{item.category || "Unkategorisiert"}</span>;
+    }
+    const sub = item.subcategoryId
+      ? (cat.subcategories || []).find((s) => s.id === item.subcategoryId)
+      : null;
+    return (
+      <>
+        <span className="hb-fixed-cat-pill">
+          {cat.color && <span className="hb-fixed-cat-dot" style={{ background: cat.color }} />}
+          {cat.name}
+        </span>
+        {sub && <span className="hb-fixed-cat-pill">{sub.name}</span>}
+      </>
+    );
   }
+
+  function renderItemCard(item, groupIdOfSection) {
+    const isDragging = draggingId === item.id;
+    const normGroupId = groupIdOfSection || null;
+    const showDropLine =
+      dragOverGroupId === normGroupId && dropBeforeId === item.id;
+
+    return (
+      <React.Fragment key={item.id}>
+        {showDropLine && <div className="hb-fixed-drop-line" />}
+        <div
+          className={`hb-card hb-fixed-card-wrap${isDragging ? " is-dragging" : ""}`}
+          draggable
+          onDragStart={(e) => handleDragStart(e, item)}
+          onDragEnd={handleDragEnd}
+          onDragOver={(e) => handleDragOverItem(e, normGroupId, item.id)}
+          onDrop={(e) => handleDrop(e, normGroupId, item.id)}
+        >
+          <div className="hb-card-content">
+            <div className="hb-fixed-card">
+              <span className="hb-fixed-drag-handle" aria-hidden="true">
+                <IconDrag />
+              </span>
+              <div className="hb-fixed-body">
+                <div className="hb-fixed-top">
+                  <div className="hb-fixed-info">
+                    <h3 className="hb-fixed-name">{item.name}</h3>
+                    <div className="hb-fixed-pills">
+                      <span
+                        className={
+                          item.kind === "expense"
+                            ? "hb-fixed-kind-pill hb-fixed-kind-pill--expense"
+                            : "hb-fixed-kind-pill hb-fixed-kind-pill--transfer"
+                        }
+                      >
+                        {item.kind === "expense" ? "Ausgabe" : "Transfer"}
+                      </span>
+                      {renderCatPills(item)}
+                    </div>
+                  </div>
+                  <div className="hb-fixed-amount hb-bad">-{fmt(item.amount)}</div>
+                </div>
+                <div className="hb-fixed-actions">
+                  <Button onClick={() => bookNow(item)}>Jetzt buchen</Button>
+                  <Button variant="outline" onClick={() => openEditDialog(item)}>Bearbeiten</Button>
+                  <Button variant="outline" onClick={() => deleteItem(item)}>Löschen</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </React.Fragment>
+    );
+  }
+
+  const sortedGroups = [...fixedCostGroups].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const showUngroupedSection = ungroupedItems.length > 0 || fixedCostGroups.length > 0;
+  const isEmpty = recurringExpenses.length === 0 && fixedCostGroups.length === 0;
 
   return (
     <div>
-      <div className="hb-row" style={{ marginBottom: 12, alignItems: "flex-start" }}>
-        <div>
-          <div style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
-            Monatliche Summe: <strong>{fmt(totalActiveAmount)}</strong>
-          </div>
+      {/* Toolbar */}
+      <div className="hb-fixed-toolbar">
+        <div style={{ fontSize: 18, fontWeight: 600 }}>
+          Monatliche Summe: <strong>{fmt(totalAmount)}</strong>
         </div>
-
-        <Button onClick={openCreateDialog}><IconPlus /> Neue Fixkosten</Button>
+        <div className="hb-fixed-toolbar-actions">
+          <Button
+            variant="outline"
+            onClick={() => { setRenamingGroupId("__new__"); setGroupNameDraft(""); }}
+          >
+            <IconPlus /> Gruppe
+          </Button>
+          <Button onClick={() => openCreateDialog()}>
+            <IconPlus /> Neue Fixkosten
+          </Button>
+        </div>
       </div>
 
-      {activeItems.length === 0 && inactiveItems.length === 0 ? (
+      {/* Neue Gruppe anlegen */}
+      {renamingGroupId === "__new__" && (
+        <div className="hb-fixed-group-create">
+          <input
+            className="hb-input"
+            autoFocus
+            placeholder="Gruppenname (z.B. Wohnen, Abos)"
+            value={groupNameDraft}
+            onChange={(e) => setGroupNameDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") createGroup();
+              if (e.key === "Escape") setRenamingGroupId(null);
+            }}
+          />
+          <Button onClick={createGroup} disabled={!groupNameDraft.trim()}>Anlegen</Button>
+          <Button variant="outline" onClick={() => setRenamingGroupId(null)}>Abbrechen</Button>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {isEmpty ? (
         <Card>
           <CardContent>
             <div className="hb-empty">
@@ -240,94 +427,102 @@ export default function FixedCostsView({
                 Erfasse wiederkehrende Ausgaben wie Miete, Abos oder Versicherungen,
                 um sie monatlich mit einem Klick zu buchen.
               </div>
-              <Button onClick={openCreateDialog}>
+              <Button onClick={() => openCreateDialog()}>
                 <IconPlus /> Neue Fixkosten
               </Button>
             </div>
           </CardContent>
         </Card>
       ) : (
-        <>
-          {/* Aktive Fixkosten */}
-          {activeItems.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {activeItems.map((item) => (
-                <Card key={item.id}>
-                  <CardContent>
-                    <div className="hb-fixed-card">
-                      <div className="hb-fixed-header">
-                        <div>
-                          <h3 className="hb-fixed-name">{item.name}</h3>
-                          <div className="hb-fixed-meta">
-                            <span>{item.kind === "expense" ? "Ausgabe" : "Transfer"}</span>
-                            <span>{getCategoryDisplay(item)}</span>
-                          </div>
-                        </div>
-                        <div className="hb-fixed-amount hb-bad">-{fmt(item.amount)}</div>
-                      </div>
+        <div className="hb-fixed-groups">
+          {/* Definierte Gruppen */}
+          {sortedGroups.map((group) => {
+            const items = groupedItems.get(group.id) || [];
+            const isDropTargetEmpty =
+              dragOverGroupId === group.id && dropBeforeId === null && draggingId !== null;
 
-                      <div className="hb-fixed-actions">
-                        <Button onClick={() => bookNow(item)}>Jetzt buchen</Button>
-                        <Button variant="outline" onClick={() => openEditDialog(item)}>
-                          Bearbeiten
-                        </Button>
-                        <Button variant="outline" onClick={() => toggleActive(item)}>
-                          Deaktivieren
-                        </Button>
-                        <Button variant="outline" onClick={() => deleteItem(item)}>
-                          Löschen
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+            return (
+              <section key={group.id} className="hb-fixed-group">
+                <header className="hb-fixed-group-head">
+                  {renamingGroupId === group.id ? (
+                    <input
+                      className="hb-input hb-fixed-group-rename"
+                      autoFocus
+                      value={groupNameDraft}
+                      onChange={(e) => setGroupNameDraft(e.target.value)}
+                      onBlur={() => renameGroup(group.id, groupNameDraft)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") renameGroup(group.id, groupNameDraft);
+                        if (e.key === "Escape") setRenamingGroupId(null);
+                      }}
+                    />
+                  ) : (
+                    <button
+                      className="hb-fixed-group-title"
+                      onClick={() => { setRenamingGroupId(group.id); setGroupNameDraft(group.name); }}
+                      title="Klicken zum Umbenennen"
+                    >
+                      {group.name}
+                    </button>
+                  )}
+                  <span className="hb-fixed-group-total">{fmt(groupTotals.get(group.id) || 0)}</span>
+                  <button
+                    className="hb-icon-btn"
+                    onClick={() => openCreateDialog(group.id)}
+                    title="Fixkosten zu dieser Gruppe hinzufügen"
+                    aria-label="Fixkosten hinzufügen"
+                  >
+                    <IconPlus width={15} height={15} />
+                  </button>
+                  <button
+                    className="hb-icon-btn hb-icon-btn--danger"
+                    onClick={() => deleteGroup(group)}
+                    title="Gruppe löschen"
+                    aria-label="Gruppe löschen"
+                  >
+                    <IconDelete width={15} height={15} />
+                  </button>
+                </header>
+                <div
+                  className={`hb-fixed-group-body${isDropTargetEmpty ? " is-drop-target" : ""}`}
+                  onDragOver={(e) => handleDragOverGroupBody(e, group.id)}
+                  onDrop={(e) => handleDrop(e, group.id, null)}
+                >
+                  {items.length === 0 ? (
+                    <div className="hb-fixed-group-empty">Fixkosten hierher ziehen</div>
+                  ) : (
+                    items.map((item) => renderItemCard(item, group.id))
+                  )}
+                </div>
+              </section>
+            );
+          })}
 
-          {/* Inaktive Fixkosten */}
-          {inactiveItems.length > 0 && (
-            <div style={{ marginTop: 24 }}>
-              <h3 style={{ margin: "0 0 12px 0", fontSize: 16, color: "var(--muted)" }}>
-                Inaktive Fixkosten
-              </h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {inactiveItems.map((item) => (
-                  <Card key={item.id} className="hb-fixed-inactive">
-                    <CardContent>
-                      <div className="hb-fixed-card">
-                        <div className="hb-fixed-header">
-                          <div>
-                            <h3 className="hb-fixed-name">{item.name}</h3>
-                            <div className="hb-fixed-meta">
-                              <span>{item.kind === "expense" ? "Ausgabe" : "Transfer"}</span>
-                              <span>{getCategoryDisplay(item)}</span>
-                            </div>
-                          </div>
-                          <div className="hb-fixed-amount" style={{ opacity: 0.5 }}>
-                            -{fmt(item.amount)}
-                          </div>
-                        </div>
-
-                        <div className="hb-fixed-actions">
-                          <Button variant="outline" onClick={() => toggleActive(item)}>
-                            Aktivieren
-                          </Button>
-                          <Button variant="outline" onClick={() => openEditDialog(item)}>
-                            Bearbeiten
-                          </Button>
-                          <Button variant="outline" onClick={() => deleteItem(item)}>
-                            Löschen
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+          {/* Weitere (ungegruppiert) */}
+          {showUngroupedSection && (
+            <section className="hb-fixed-group hb-fixed-group--ungrouped">
+              <header className="hb-fixed-group-head">
+                <span className="hb-fixed-group-title hb-fixed-group-title--static">
+                  {fixedCostGroups.length > 0 ? "Weitere" : "Alle Fixkosten"}
+                </span>
+                <span className="hb-fixed-group-total">
+                  {fmt(ungroupedItems.reduce((s, i) => s + Number(i.amount || 0), 0))}
+                </span>
+              </header>
+              <div
+                className={`hb-fixed-group-body${dragOverGroupId === null && dropBeforeId === null && draggingId !== null ? " is-drop-target" : ""}`}
+                onDragOver={(e) => handleDragOverGroupBody(e, null)}
+                onDrop={(e) => handleDrop(e, null, null)}
+              >
+                {ungroupedItems.length === 0 ? (
+                  <div className="hb-fixed-group-empty">Fixkosten hierher ziehen</div>
+                ) : (
+                  ungroupedItems.map((item) => renderItemCard(item, null))
+                )}
               </div>
-            </div>
+            </section>
           )}
-        </>
+        </div>
       )}
 
       {/* Dialog: Fixkosten erstellen/bearbeiten */}
@@ -341,7 +536,6 @@ export default function FixedCostsView({
         size="medium"
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
-          {/* Name + Betrag nebeneinander */}
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, width: "100%" }}>
             <div className="hb-field">
               <div className="hb-label">Name</div>
@@ -355,7 +549,6 @@ export default function FixedCostsView({
                 autoFocus
               />
             </div>
-
             <div className="hb-field">
               <div className="hb-label">Betrag ({baseCurrency})</div>
               <input
@@ -370,21 +563,33 @@ export default function FixedCostsView({
             </div>
           </div>
 
-          {/* Art Dropdown — linksbündig */}
-          <div className="hb-field" style={{ alignSelf: "flex-start", maxWidth: 220 }}>
-            <div className="hb-label">Art</div>
-            <select
-              className="hb-input"
-              style={{ width: "100%", minWidth: 0 }}
-              value={draft.kind}
-              onChange={(e) => setDraft((d) => ({ ...d, kind: e.target.value }))}
-            >
-              <option value="expense">Ausgabe</option>
-              <option value="transfer">Transfer/Rücklage</option>
-            </select>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, width: "100%" }}>
+            <div className="hb-field">
+              <div className="hb-label">Art</div>
+              <select
+                className="hb-input"
+                value={draft.kind}
+                onChange={(e) => setDraft((d) => ({ ...d, kind: e.target.value }))}
+              >
+                <option value="expense">Ausgabe</option>
+                <option value="transfer">Transfer/Rücklage</option>
+              </select>
+            </div>
+            <div className="hb-field">
+              <div className="hb-label">Gruppe</div>
+              <select
+                className="hb-input"
+                value={draft.groupId || ""}
+                onChange={(e) => setDraft((d) => ({ ...d, groupId: e.target.value || null }))}
+              >
+                <option value="">Weitere (keine Gruppe)</option>
+                {fixedCostGroups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Kategorie-Auswahl: HierarchicalCategoryPicker statt Dropdown */}
           {draft.kind === "expense" && (
             <HierarchicalCategoryPicker
               label="Kategorie"
@@ -406,13 +611,10 @@ export default function FixedCostsView({
                   onChange={(e) => setDraft((d) => ({ ...d, transferCategory: e.target.value }))}
                 >
                   {transferCategories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
+                    <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
               </div>
-
               <div className="hb-field">
                 <div className="hb-label">In Topf</div>
                 <select
@@ -421,27 +623,11 @@ export default function FixedCostsView({
                   onChange={(e) => setDraft((d) => ({ ...d, potId: e.target.value }))}
                 >
                   {pots.map((pot) => (
-                    <option key={pot.id} value={pot.id}>
-                      {pot.name}
-                    </option>
+                    <option key={pot.id} value={pot.id}>{pot.name}</option>
                   ))}
                 </select>
               </div>
             </>
-          )}
-
-          {editingItem && (
-            <div className="hb-field">
-              <div className="hb-label">Status</div>
-              <select
-                className="hb-input"
-                value={draft.active ? "active" : "inactive"}
-                onChange={(e) => setDraft((d) => ({ ...d, active: e.target.value === "active" }))}
-              >
-                <option value="active">Aktiv</option>
-                <option value="inactive">Inaktiv</option>
-              </select>
-            </div>
           )}
 
           <label className="hb-fct-annual-toggle">

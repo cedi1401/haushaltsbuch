@@ -1,7 +1,7 @@
 {
   "name": "haushaltsbuch",
   "private": true,
-  "version": "3.1.0",
+  "version": "3.2.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -58,7 +58,7 @@
           ]
         }
       ],
-      "icon": "public/icon.png",
+      "icon": "public/icon.ico",
       "signAndEditExecutable": false,
       "verifyUpdateCodeSignature": false
     },

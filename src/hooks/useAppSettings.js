@@ -3,17 +3,20 @@ import { getSetting, setSetting } from "../dal/storage.js";
 
 export function useAppSettings({ isInitialLoad }) {
   const [darkMode, setDarkMode] = useState(false);
+  const [fontFamily, setFontFamily] = useState("Inter");
   const [monthFilter, setMonthFilter] = useState("");
   const [updateReady, setUpdateReady] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const [savedMonth, savedDark] = await Promise.all([
+      const [savedMonth, savedDark, savedFont] = await Promise.all([
         getSetting("month"),
         getSetting("darkMode"),
+        getSetting("fontFamily"),
       ]);
       if (typeof savedMonth === "string") setMonthFilter(savedMonth);
       if (savedDark === "true") setDarkMode(true);
+      if (typeof savedFont === "string" && savedFont) setFontFamily(savedFont);
     }
     load();
   }, []);
@@ -30,6 +33,19 @@ export function useAppSettings({ isInitialLoad }) {
   }, [darkMode, isInitialLoad]);
 
   useEffect(() => {
+    const fontMap = {
+      "Inter":       "'Inter', sans-serif",
+      "Bitter":      "'Bitter', serif",
+      "Nunito Sans": "'Nunito Sans', sans-serif",
+    };
+    const value = fontMap[fontFamily] ?? "'Inter', sans-serif";
+    document.documentElement.style.setProperty("--app-font-family", value);
+    if (!isInitialLoad.current) {
+      setSetting("fontFamily", fontFamily);
+    }
+  }, [fontFamily, isInitialLoad]);
+
+  useEffect(() => {
     if (isInitialLoad.current) return;
     setSetting("month", monthFilter);
   }, [monthFilter, isInitialLoad]);
@@ -41,6 +57,7 @@ export function useAppSettings({ isInitialLoad }) {
 
   return {
     darkMode, setDarkMode,
+    fontFamily, setFontFamily,
     monthFilter, setMonthFilter,
     updateReady, setUpdateReady,
   };

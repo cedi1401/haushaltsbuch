@@ -14,29 +14,58 @@ export function toCHF(n) {
   }
 }
 
-// Currencies where de-CH returns the ISO code instead of a symbol.
-// Map them to their proper symbols for display.
-const CURRENCY_SYMBOLS = { EUR: "€", USD: "$", GBP: "£", JPY: "¥" };
-
-/**
- * Formats an amount in any ISO-4217 currency using Swiss number formatting.
- * de-CH returns "EUR" instead of "€" for foreign currencies; we post-process
- * known codes to their symbols. CHF has no distinct symbol and stays as "CHF".
- * Falls back to toCHF if currency is invalid.
- */
 export function formatCurrency(n, currency = "CHF", fractionDigits = 2) {
   const cur = String(currency).toUpperCase();
+  const amount = Number(n || 0);
   try {
-    const formatted = new Intl.NumberFormat("de-CH", {
+    if (cur === "CHF") {
+      // style:"currency" erzwingt U+0027 als Tausendertrennzeichen (schmales Apostroph)
+      // Plain-Number-Format nutzt in Chromium U+2019 (breiter)
+      return new Intl.NumberFormat("de-CH", {
+        style: "currency",
+        currency: "CHF",
+        currencyDisplay: "code",
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+      }).format(amount);
+    }
+    if (cur === "EUR") {
+      // 1.250,50 € (deutsches Format, Symbol nach Betrag)
+      const formatted = new Intl.NumberFormat("de-DE", {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+      }).format(amount);
+      return `${formatted} €`;
+    }
+    if (cur === "USD") {
+      // $1,250.50 (US-Format, Symbol vor Betrag)
+      const formatted = new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+      }).format(amount);
+      return `$${formatted}`;
+    }
+    if (cur === "GBP") {
+      const formatted = new Intl.NumberFormat("en-GB", {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+      }).format(amount);
+      return `£${formatted}`;
+    }
+    if (cur === "JPY") {
+      const formatted = new Intl.NumberFormat("ja-JP", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount);
+      return `¥${formatted}`;
+    }
+    // Fallback für andere Währungen
+    return new Intl.NumberFormat("de-CH", {
       style: "currency",
       currency: cur,
-      currencyDisplay: "narrowSymbol",
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
-    }).format(Number(n || 0));
-    // Replace ISO code with symbol where applicable (e.g. "EUR" → "€").
-    const symbol = CURRENCY_SYMBOLS[cur];
-    return symbol ? formatted.replace(cur, symbol) : formatted;
+    }).format(amount);
   } catch {
     return toCHF(n);
   }
@@ -617,6 +646,7 @@ export function makeDefaultBook(name = "Mein Haushaltsbuch") {
     pots: [],
     goals: [],
     recurringExpenses: [],
+    fixedCostGroups: [],
     baseCurrency: "CHF",
     monthStartDay: 1,
   };
@@ -829,6 +859,15 @@ export function normalizeBook(book) {
   // Fixkosten hinzufügen, falls nicht vorhanden
   if (!Array.isArray(normalized.recurringExpenses)) {
     normalized.recurringExpenses = [];
+  } else {
+    normalized.recurringExpenses = normalized.recurringExpenses.map((r) =>
+      r.groupId === undefined ? { ...r, groupId: null } : r
+    );
+  }
+
+  // Fixkosten-Gruppen hinzufügen, falls nicht vorhanden
+  if (!Array.isArray(normalized.fixedCostGroups)) {
+    normalized.fixedCostGroups = [];
   }
 
   // Basiswährung: Standard CHF (bisherige implizite Währung)

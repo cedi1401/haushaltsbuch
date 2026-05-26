@@ -53,7 +53,6 @@ export function buildItemTrends(entries, recurringExpenses, monthlyAggregates, m
 
   return (recurringExpenses || []).map((r) => ({
     name: r.name,
-    active: r.active !== false,
     categoryId: r.categoryId,
     configuredAmount: Number(r.amount || 0),
     data: months.map((ym) => ({
@@ -87,7 +86,7 @@ export function detectFixedCostChanges(itemTrends, monthlyAggregates) {
       newItems.push({ name: item.name, firstMonth: firstActive });
     }
 
-    if (lastActive < lastMonth && !item.active) {
+    if (lastActive < lastMonth) {
       droppedItems.push({ name: item.name, lastMonth: lastActive });
     }
   }

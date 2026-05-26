@@ -99,7 +99,7 @@ export default function CategoryManagerDialog({
     }
   }, [budgetTarget]);
 
-  // Reset beim Schliessen
+  // Reset on close
   useEffect(() => {
     if (!open) {
       setSearch("");

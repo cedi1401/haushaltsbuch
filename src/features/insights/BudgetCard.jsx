@@ -1,5 +1,6 @@
 import React, { memo } from "react";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
+import { getFinancialMonthRange, getFinancialMonth } from "../../utils/financialMonthUtils.js";
 
 // --- Pacing-bewusste Status-Berechnung ---
 // Gibt "ok" | "warn" | "risk" | "over" zurück.
@@ -31,17 +32,29 @@ const STATUS_LABEL = {
   over: "Überschritten",
 };
 
-// Gibt null zurück wenn monthFilter kein aktueller Monat ist,
+// Gibt null zurück wenn monthFilter kein aktueller finanzieller Monat ist,
 // sonst ein Objekt mit allen Zeitinfos für Pacing/Forecast.
-function getMonthTimeInfo(monthFilter) {
+function getMonthTimeInfo(monthFilter, monthStartDay) {
   if (!monthFilter) return null;
+  const startDay = monthStartDay ?? 1;
+  const range = getFinancialMonthRange(monthFilter, startDay);
+  if (!range) return null;
+
   const today = new Date();
-  const [y, m] = monthFilter.split("-").map(Number);
-  if (y !== today.getFullYear() || m !== today.getMonth() + 1) return null;
-  const daysInMonth = new Date(y, m, 0).getDate();
-  const dayOfMonth = today.getDate();
+  const todayStr = today.toISOString().slice(0, 10);
+  const isCurrentMonth = getFinancialMonth(todayStr, startDay)?.yyyymm === monthFilter;
+  if (!isCurrentMonth) return null;
+
+  const msPerDay = 86400000;
+  const startDate = new Date(range.startDate + "T00:00:00");
+  const endDate = new Date(range.endDate + "T00:00:00");
+  const daysInMonth = Math.round((endDate - startDate) / msPerDay) + 1;
+  const dayOfMonth = Math.min(
+    Math.round((today - startDate) / msPerDay) + 1,
+    daysInMonth
+  );
   return {
-    dayOfMonth,           // vergangene Tage (inklusive heute)
+    dayOfMonth,
     daysInMonth,
     remaining: daysInMonth - dayOfMonth,
     expectedPct: dayOfMonth / daysInMonth,
@@ -70,11 +83,11 @@ function calcItemMetrics(spent, budget, timeInfo) {
   };
 }
 
-const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter }) {
+const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthStartDay }) {
   const fmt = useFmt();
   if (!budgetItems || budgetItems.length === 0) {
     return (
-      <div className="hb-insights-pane hb-budget-empty">
+      <div className="hb-insights-pane hb-budget-empty" style={{ justifyContent: "center" }}>
         <div className="hb-insight-label">Kein Budget gesetzt</div>
         <div className="hb-muted" style={{ fontSize: 13, marginTop: 6, textAlign: "center", lineHeight: 1.5 }}>
           Öffne den Kategorien-Dialog und setze ein Monatsbudget für eine Ausgaben-Kategorie.
@@ -87,7 +100,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter }) {
   const totalSpent   = budgetItems.reduce((s, i) => s + i.spent,  0);
   const totalPct     = totalBudget > 0 ? totalSpent / totalBudget : 0;
   const overCount    = budgetItems.filter((i) => i.spent > i.budget).length;
-  const timeInfo     = getMonthTimeInfo(monthFilter);
+  const timeInfo     = getMonthTimeInfo(monthFilter, monthStartDay);
 
   // Forecast + Pacing für Gesamtbudget
   const totalMetrics  = calcItemMetrics(totalSpent, totalBudget, timeInfo);
@@ -95,7 +108,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter }) {
   const totalStatus   = getBudgetStatus(totalPct, totalPacing);
 
   return (
-    <div className="hb-insights-pane">
+    <div className="hb-insights-pane" style={{ justifyContent: "center" }}>
       {/* Gesamt-Header */}
       <div className="hb-budget-summary">
         <div>

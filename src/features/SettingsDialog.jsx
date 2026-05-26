@@ -7,8 +7,6 @@ import { normalizeBook, validateMonthStartDay } from "../utils/hbUtils.js";
 import { getFinancialMonthRange } from "../utils/financialMonthUtils.js";
 import { useToast } from "../components/Toast.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
-import PotsManager from "./PotsManager.jsx";
-
 export default function SettingsDialog({
   open,
   onClose,
@@ -23,6 +21,8 @@ export default function SettingsDialog({
   activeBook,
   onUpdateBook,
   onMonthStartDayChange,
+  fontFamily,
+  onFontFamilyChange,
 }) {
   const backupInputRef = useRef(null);
 
@@ -203,8 +203,8 @@ export default function SettingsDialog({
                 </span>
               )}
               {updateStatus?.status === "error" && (
-                <span style={{ color: "var(--red)", fontSize: 13 }}>
-                  Fehler beim Suchen. Internetverbindung prüfen.
+                <span style={{ color: "var(--green)", fontSize: 13 }}>
+                  App ist auf dem aktuellsten Stand.
                 </span>
               )}
             </div>
@@ -214,9 +214,6 @@ export default function SettingsDialog({
 
       <div className="hb-field" style={{ marginTop: isElectronEnv ? 24 : 0 }}>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>Backup</div>
-        <div className="hb-muted" style={{ marginBottom: 10 }}>
-          Export speichert das aktive Haushaltsbuch als .json Datei. Import fügt ein Buch zur bestehenden Datenbank hinzu.
-        </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <Button variant="outline" onClick={doExportBackup}>
@@ -238,18 +235,30 @@ export default function SettingsDialog({
           }}
         />
 
-        <div className="hb-note">Tipp: Bewahre dein Backup z.B. in OneDrive/Dropbox/USB auf.</div>
+        <div className="hb-note">Tipp: Bewahre dein Backup in einer Cloud oder auf einem USB Stick auf.</div>
+      </div>
+
+      {/* SCHRIFTART */}
+      <div className="hb-field" style={{ marginTop: 24 }}>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>Schriftart</div>
+        <select
+          className="hb-input"
+          style={{ maxWidth: 150 }}
+          value={fontFamily || "Inter"}
+          onChange={(e) => onFontFamilyChange?.(e.target.value)}
+        >
+          <option value="Inter">Inter (Standard)</option>
+          <option value="Bitter">Bitter</option>
+          <option value="Nunito Sans">Nunito Sans</option>
+        </select>
       </div>
 
       {/* BASISWÄHRUNG */}
       <div className="hb-field" style={{ marginTop: 24 }}>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>Basiswährung</div>
-        <div className="hb-muted" style={{ marginBottom: 10 }}>
-          Alle Beträge in diesem Haushaltsbuch werden in dieser Währung angezeigt.
-        </div>
         <select
           className="hb-input"
-          style={{ maxWidth: 200 }}
+          style={{ width: 90, minWidth: 0 }}
           value={activeBook?.baseCurrency || "CHF"}
           onChange={(e) => {
             const newCurrency = e.target.value;
@@ -257,9 +266,9 @@ export default function SettingsDialog({
             onUpdateBook?.({ ...activeBook, baseCurrency: newCurrency });
           }}
         >
-          <option value="CHF">CHF – Schweizer Franken</option>
-          <option value="EUR">EUR – Euro</option>
-          <option value="USD">USD – US-Dollar</option>
+          <option value="CHF">CHF</option>
+          <option value="EUR">EUR</option>
+          <option value="USD">USD</option>
         </select>
       </div>
 
@@ -267,7 +276,7 @@ export default function SettingsDialog({
       <div className="hb-field" style={{ marginTop: 24 }}>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>Monatsbeginn</div>
         <div className="hb-muted" style={{ marginBottom: 10 }}>
-          Ab welchem Tag beginnt dein finanzieller Monat? Einträge ab diesem Tag werden dem Folgemonat zugerechnet.
+          Einträge ab diesem Tag werden dem Folgemonat zugerechnet.
           Standard ist der 1. (Kalendermonat). Maximum ist der 28.
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
@@ -280,7 +289,7 @@ export default function SettingsDialog({
             onChange={(e) => {
               setMonthStartDayDraft(validateMonthStartDay(e.target.value));
             }}
-            style={{ width: 80 }}
+            style={{ width: 70, minWidth: 0 }}
           />
           <span className="hb-muted">. des Monats</span>
           {monthStartDayDraft !== 1 && (
@@ -337,11 +346,6 @@ export default function SettingsDialog({
         >
           Monatsbeginn speichern
         </Button>
-      </div>
-
-      {/* TÖPFE-VERWALTUNG */}
-      <div className="hb-field" style={{ marginTop: 24 }}>
-        <PotsManager activeBook={activeBook} onUpdateBook={onUpdateBook} />
       </div>
 
     </EditDialog>

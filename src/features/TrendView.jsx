@@ -134,7 +134,6 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
     monthStartDay,
   });
   const configuredTotal = (recurringExpenses || [])
-    .filter((r) => r.active !== false)
     .reduce((s, r) => s + Number(r.amount || 0), 0);
 
   const savingsRate = useMemo(() => {
@@ -190,7 +189,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
             <span className="hb-stat-pill-label">Ø Ausgaben / Monat</span>
             <span className="hb-stat-pill-value">{fmt(avg.expense)}</span>
           </div>
-          <div className={`hb-stat-pill hb-stat-pill--primary ${savingsRate >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
+          <div className={`hb-stat-pill ${savingsRate >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
             <span className="hb-stat-pill-label">Sparquote (Ø)</span>
             <span className="hb-stat-pill-value">{savingsRate.toFixed(1)} %</span>
             <div className="hb-stat-pill-gauge-track">
@@ -259,6 +258,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
                       <YAxis tick={{ fontSize: 11 }} />
                       <Tooltip
+                        wrapperStyle={{ zIndex: 10 }}
                         content={({ active, payload, label }) => {
                           if (!active || !payload?.length) return null;
                           const labelMap = { balance: "Saldo", avg3: "3M Ø", avg6: "6M Ø" };
@@ -299,7 +299,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                     <BarChart data={chartData} barCategoryGap={12}>
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
                       <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(v) => fmt(v)} />
+                      <Tooltip wrapperStyle={{ zIndex: 10 }} formatter={(v) => fmt(v)} />
                       <Bar dataKey="income" barSize={12} fill={themeColors.green} />
                       <Bar dataKey="expense" barSize={12} fill={themeColors.red} />
                     </BarChart>

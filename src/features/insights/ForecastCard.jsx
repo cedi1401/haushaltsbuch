@@ -28,7 +28,7 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
 
   if (!hasMonth) {
     return (
-      <div className="hb-insights-pane hb-insights-pane--active hb-insight-placeholder">
+      <div className="hb-insights-pane hb-insights-pane--active hb-insight-placeholder" style={{ justifyContent: "center" }}>
         <span>Wähle einen Monat für die Prognose</span>
       </div>
     );
@@ -46,7 +46,7 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
     ?? forecastData.filter((d) => d.actual !== null).slice(-1)[0]?.day;
 
   return (
-    <div className="hb-insights-pane hb-insights-pane--active">
+    <div className="hb-insights-pane hb-insights-pane--active" style={{ justifyContent: "center" }}>
       {/* Hero: Monatsprognose */}
       <div className="hb-insight-section">
         <div className="hb-insight-label">
@@ -68,6 +68,7 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={forecastData} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
               <Tooltip
+                wrapperStyle={{ zIndex: 10 }}
                 cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;

@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useState } from "react";
+import React, { memo, useMemo } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -54,16 +54,14 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
 }) {
   const fmt = useFmt();
   const themeColors = useThemeColors();
-  const [showInactive, setShowInactive] = useState(false);
-
   const momLabel =
     kpis.momDelta == null ? null
     : `${kpis.momDelta > 0 ? "+" : ""}${kpis.momDelta.toFixed(1)}% ggü. Vormonat`;
 
-  // Aktive Items nach Betrag sortiert — nur Hauptkategorie, kein Subpfad
+  // Items nach Betrag sortiert — nur mit showInOverview, nur Hauptkategorie
   const activeItems = useMemo(() => {
     const items = (recurringExpenses || [])
-      .filter((r) => r.active !== false && r.showInOverview !== false)
+      .filter((r) => r.showInOverview !== false)
       .map((r) => {
         const cat = (expenseCategories || []).find((c) => c.id === r.categoryId);
         return {
@@ -78,11 +76,6 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
     const base = avgMonthlyExpense > 0 ? avgMonthlyExpense : (items.reduce((s, r) => s + r.amount, 0) || 1);
     return items.map((r) => ({ ...r, pct: (r.amount / base) * 100 }));
   }, [recurringExpenses, expenseCategories, avgMonthlyExpense]);
-
-  const inactiveItems = useMemo(
-    () => (recurringExpenses || []).filter((r) => r.active === false),
-    [recurringExpenses]
-  );
 
   // Jahresbetrag-Summe aller sichtbaren Positionen
   const annualTotal = useMemo(
@@ -106,7 +99,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
         <KpiCard
           label="Konfiguriert / Monat"
           value={fmt(kpis.configuredTotal)}
-          sub={`${kpis.activeCount} aktive Position${kpis.activeCount !== 1 ? "en" : ""}`}
+          sub={`${kpis.activeCount} Position${kpis.activeCount !== 1 ? "en" : ""}`}
           accent="var(--accent)"
         />
         <KpiCard
@@ -155,6 +148,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
               <YAxis yAxisId="chf" tick={{ fontSize: 11 }} tickFormatter={(v) => fmt(v)} width={70} />
               <YAxis yAxisId="pct" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `${v.toFixed(0)}%`} width={40} domain={[0, 100]} />
               <Tooltip
+                wrapperStyle={{ zIndex: 10 }}
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
                   return (
@@ -256,38 +250,6 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
               )}
             </div>
 
-            {/* Inaktive Positionen (separat, ausserhalb des Grids) */}
-            {inactiveItems.length > 0 && (
-              <div style={{ marginTop: 12, borderTop: "1px solid var(--border-light)", paddingTop: 10 }}>
-                <button
-                  className="hb-fct-show-more"
-                  onClick={() => setShowInactive((v) => !v)}
-                >
-                  {showInactive
-                    ? "Inaktive ausblenden"
-                    : `${inactiveItems.length} inaktive Position${inactiveItems.length !== 1 ? "en" : ""} einblenden`}
-                </button>
-                {showInactive && (
-                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2 }}>
-                    {inactiveItems.map((item) => (
-                      <div key={item.id} className="hb-fct-name-cell" style={{ opacity: 0.45 }}>
-                        <span className="hb-fct-item-dot" style={{ background: themeColors.muted, flexShrink: 0 }} />
-                        <div className="hb-fct-name-block">
-                          <span className="hb-fct-overview-name">{item.name}</span>
-                          <span className="hb-fct-overview-cat">
-                            {getCategoryLabel(expenseCategories || [], [], item.categoryId, item.subcategoryId)}
-                            <span className="hb-fct-item-badge" style={{ marginLeft: 6 }}>inaktiv</span>
-                          </span>
-                        </div>
-                        <span style={{ marginLeft: "auto", fontSize: 13, fontVariantNumeric: "tabular-nums", color: "var(--muted)" }}>
-                          {fmt(Number(item.amount || 0))}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </CardContent>
         </Card>
       )}

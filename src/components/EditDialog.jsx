@@ -36,6 +36,13 @@ export default function EditDialog({
 
   useEffect(() => {
     if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     const onKey = (e) => {
       if (e.key === "Escape") onClose();
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
@@ -67,7 +74,6 @@ export default function EditDialog({
         <div className="hb-modal-head">
           <div>
             <div className="hb-modal-title">{title}</div>
-            <div className="hb-muted">ESC schließt, Ctrl/Cmd+Enter speichert.</div>
           </div>
           <button
             className="hb-icon-btn"

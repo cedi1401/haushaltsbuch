@@ -207,34 +207,30 @@ export default function GoalsView({
           </CardContent>
         </Card>
       ) : (
-        <div className="hb-stack hb-stack--lg">
+        <div className="hb-two">
           {goalsWithProgress.map((goal) => (
             <Card key={goal.id}>
               <CardContent>
-                <div
-                  className="hb-row"
-                  style={{ marginBottom: 12, alignItems: "flex-start" }}
-                >
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: 16 }}>{goal.name}</h3>
-                    <div className="hb-muted" style={{ marginTop: 4 }}>
-                      Topf: <strong>{getPotName(goal)}</strong>
+
+                {/* Header: Name + Badges + Actions */}
+                <div className="hb-goal-header">
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <h3 className="hb-goal-title">{goal.name}</h3>
+                    <div className="hb-goal-badges">
+                      <span className="hb-goal-badge">Topf: {getPotName(goal)}</span>
                       {goal.transferCategory && (
-                        <>
-                          {" "} | Zweck: <strong>{goal.transferCategory}</strong>
-                        </>
+                        <span className="hb-goal-badge hb-goal-badge--accent">
+                          Zweck: {goal.transferCategory}
+                        </span>
                       )}
                       {goal.deadline && (
-                        <>
-                          {" "} | Deadline: <strong>{formatDate(goal.deadline)}</strong>
-                        </>
+                        <span className="hb-goal-badge hb-goal-badge--deadline">
+                          Bis {formatDate(goal.deadline)}
+                        </span>
                       )}
-                    </div>
-                    <div className="hb-muted" style={{ fontSize: 12, marginTop: 2 }}>
-                      {getStartModeLabel(goal)}
+                      <span className="hb-goal-badge">{getStartModeLabel(goal)}</span>
                     </div>
                   </div>
-
                   <div className="hb-actions">
                     <button
                       type="button"
@@ -258,112 +254,83 @@ export default function GoalsView({
                 </div>
 
                 {/* Fortschritt */}
-                <div style={{ marginBottom: 12 }}>
-                  <div
-                    className="hb-row"
-                    style={{ marginBottom: 6, fontSize: 14 }}
-                  >
-                    <span>
-                      <strong>{fmt(goal.progress.current)}</strong> von{" "}
-                      <strong>{fmt(goal.progress.target)}</strong>
-                    </span>
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        color:
-                          goal.progress.percent >= 100
-                            ? "var(--green)"
-                            : "var(--text)",
-                      }}
-                    >
-                      {goal.progress.percent}%
-                    </span>
+                <div className="hb-goal-progress-header">
+                  <div className="hb-goal-amounts">
+                    <div className="hb-goal-amount-current">{fmt(goal.progress.current)}</div>
+                    <div className="hb-goal-amount-target">von {fmt(goal.progress.target)}</div>
                   </div>
-
-                  <div className="hb-goal-progress-bg">
-                    <div
-                      className="hb-goal-progress-bar"
-                      style={{ width: `${Math.min(goal.progress.percent, 100)}%` }}
-                    />
+                  <div className={goal.progress.percent >= 100
+                    ? "hb-goal-percent hb-goal-percent--done"
+                    : "hb-goal-percent"}>
+                    {goal.progress.percent}%
                   </div>
-
-                  {goal.progress.remaining > 0 && (
-                    <div className="hb-muted" style={{ marginTop: 6, fontSize: 12 }}>
-                      Noch {fmt(goal.progress.remaining)} bis zum Ziel
-                    </div>
-                  )}
                 </div>
+
+                <div className="hb-goal-progress-bg">
+                  <div
+                    className="hb-goal-progress-bar"
+                    style={{ width: `${Math.min(goal.progress.percent, 100)}%` }}
+                  />
+                </div>
+
+                {goal.progress.remaining > 0 && (
+                  <div className="hb-muted" style={{ marginTop: 6, fontSize: 12 }}>
+                    Noch {fmt(goal.progress.remaining)} bis zum Ziel
+                  </div>
+                )}
 
                 {/* Prognose */}
                 {goal.progress.percent < 100 && (
-                  <div
-                    className="hb-note"
-                    style={{
-                      padding: "10px 12px",
-                      background: "var(--hover-bg)",
-                      borderRadius: "var(--radius-md)",
-                      marginTop: 8,
-                    }}
-                  >
-                    <strong>Prognose:</strong>{" "}
+                  <div className="hb-goal-prognosis">
                     {goal.prognosis.avgMonthly > 0 ? (
                       <>
-                        Bei durchschnittlich{" "}
-                        <strong>{fmt(goal.prognosis.avgMonthly)}</strong> pro Monat
-                        erreichst du dein Ziel in ca.{" "}
-                        <strong>
-                          {goal.prognosis.monthsRemaining === Infinity
-                            ? "unbekannt"
-                            : `${goal.prognosis.monthsRemaining} Monat${
-                                goal.prognosis.monthsRemaining !== 1 ? "en" : ""
-                              }`}
-                        </strong>
-                        {goal.prognosis.estimatedDate && (
-                          <>
-                            {" "}
-                            (ca. <strong>{formatDate(goal.prognosis.estimatedDate)}</strong>)
-                          </>
-                        )}
-                        .
-                        {goal.deadline && (
-                          <span
-                            style={{
-                              marginLeft: 8,
-                              color: goal.prognosis.isAchievable
-                                ? "var(--green)"
-                                : "var(--red)",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {goal.prognosis.isAchievable
-                              ? "Deadline erreichbar!"
-                              : "Deadline wird voraussichtlich nicht erreicht."}
+                        <div className="hb-goal-prognosis-row">
+                          <span className="hb-goal-prognosis-label">Ø pro Monat</span>
+                          <span className="hb-goal-prognosis-value">
+                            {fmt(goal.prognosis.avgMonthly)}
                           </span>
+                        </div>
+                        <div className="hb-goal-prognosis-row">
+                          <span className="hb-goal-prognosis-label">Fertig in ca.</span>
+                          <span className="hb-goal-prognosis-value">
+                            {goal.prognosis.monthsRemaining === Infinity
+                              ? "unbekannt"
+                              : `${goal.prognosis.monthsRemaining} Monat${
+                                  goal.prognosis.monthsRemaining !== 1 ? "en" : ""
+                                }`}
+                            {goal.prognosis.estimatedDate && (
+                              <> ({formatDate(goal.prognosis.estimatedDate)})</>
+                            )}
+                          </span>
+                        </div>
+                        {goal.deadline && (
+                          <div className="hb-goal-prognosis-row">
+                            <span className="hb-goal-prognosis-label">Deadline</span>
+                            <span className={goal.prognosis.isAchievable
+                              ? "hb-goal-prognosis-value hb-goal-prognosis-value--ok"
+                              : "hb-goal-prognosis-value hb-goal-prognosis-value--bad"}>
+                              {goal.prognosis.isAchievable ? "Erreichbar" : "Nicht erreichbar"}
+                            </span>
+                          </div>
                         )}
                       </>
                     ) : (
-                      <span className="hb-muted">
-                        Noch keine Daten für Prognose vorhanden. Buche Transfers, um eine
-                        Prognose zu erhalten.
-                      </span>
+                      <div className="hb-goal-prognosis-row">
+                        <span className="hb-muted" style={{ fontSize: 12 }}>
+                          Noch keine Daten für Prognose. Buche Transfers, um eine Prognose zu erhalten.
+                        </span>
+                      </div>
                     )}
                   </div>
                 )}
 
+                {/* Ziel erreicht */}
                 {goal.progress.percent >= 100 && (
-                  <div
-                    style={{
-                      padding: "10px 12px",
-                      background: "var(--green-soft)",
-                      borderRadius: "var(--radius-md)",
-                      marginTop: 8,
-                      color: "var(--green)",
-                      fontWeight: 600,
-                    }}
-                  >
+                  <div className="hb-goal-success">
                     Ziel erreicht! Herzlichen Glückwunsch!
                   </div>
                 )}
+
               </CardContent>
             </Card>
           ))}

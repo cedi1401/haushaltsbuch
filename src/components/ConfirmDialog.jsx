@@ -62,6 +62,12 @@ function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, onCon
   const panelRef = useRef(null);
 
   useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  useEffect(() => {
     const timer = setTimeout(() => confirmBtnRef.current?.focus(), 50);
     return () => clearTimeout(timer);
   }, []);

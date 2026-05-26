@@ -70,7 +70,6 @@ export function calcDueSoonCount(expenses, todayISO, threshold = RECURRING_DUE_T
   if (!Array.isArray(expenses)) return 0;
 
   return expenses.filter((item) => {
-    if (!item.active) return false;
     const nextDue = calcNextDueDate(item.dayOfMonth, todayISO);
     const daysUntil = calcDaysUntilDue(nextDue, todayISO);
     return daysUntil >= 0 && daysUntil <= threshold;

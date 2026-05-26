@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getEntryFinancialMonth } from "../utils/financialMonthUtils.js";
+import { getEntryFinancialMonth, getFinancialMonthRange, getFinancialMonth } from "../utils/financialMonthUtils.js";
 import { BURNRATE_DELTA_THRESHOLD_PCT } from "../utils/constants.js";
 
 const DAY_NAMES_MON_FIRST = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -13,6 +13,42 @@ function getPrevMonthKey(monthFilter) {
   const prevY = m === 1 ? y - 1 : y;
   const prevM = m === 1 ? 12 : m - 1;
   return `${prevY}-${String(prevM).padStart(2, "0")}`;
+}
+
+// Liefert Länge und Verlaufsstatus eines finanziellen Monats unter Berücksichtigung
+// des konfigurierten Monatsbeginns.
+function getFinancialMonthInfo(monthFilter, monthStartDay) {
+  if (!monthFilter) return null;
+  const startDay = monthStartDay ?? 1;
+  const range = getFinancialMonthRange(monthFilter, startDay);
+  if (!range) return null;
+
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const isCurrentMonth = getFinancialMonth(todayStr, startDay)?.yyyymm === monthFilter;
+
+  const msPerDay = 86400000;
+  const startDate = new Date(range.startDate + "T00:00:00");
+  const endDate = new Date(range.endDate + "T00:00:00");
+  const daysInMonth = Math.round((endDate - startDate) / msPerDay) + 1;
+
+  let daysElapsed;
+  if (isCurrentMonth) {
+    daysElapsed = Math.min(
+      Math.round((today - startDate) / msPerDay) + 1,
+      daysInMonth
+    );
+  } else {
+    daysElapsed = daysInMonth;
+  }
+
+  return {
+    startDate: range.startDate,
+    daysInMonth,
+    daysElapsed,
+    daysRemaining: Math.max(0, daysInMonth - daysElapsed),
+    isCurrentMonth,
+  };
 }
 
 export function useFinanceAnalytics({
@@ -78,13 +114,8 @@ export function useFinanceAnalytics({
     );
     const expenseTotal = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
 
-    let daysElapsed = 30;
-    if (monthFilter) {
-      const [y, m] = monthFilter.split("-").map(Number);
-      const today = new Date();
-      const isCurrentMonth = today.getFullYear() === y && today.getMonth() + 1 === m;
-      daysElapsed = isCurrentMonth ? today.getDate() : new Date(y, m, 0).getDate();
-    }
+    const monthInfo = monthFilter ? getFinancialMonthInfo(monthFilter, monthStartDay) : null;
+    const daysElapsed = monthInfo?.daysElapsed ?? 30;
 
     const avgDailyExpense = daysElapsed > 0 ? expenseTotal / daysElapsed : 0;
 
@@ -113,7 +144,7 @@ export function useFinanceAnalytics({
       )[0] ?? null;
 
     return { top5, avgDailyExpense, biggestMomChange, daysElapsed };
-  }, [filteredEntries, expenseByHierarchy, monthFilter, prevMonthCatMap]);
+  }, [filteredEntries, expenseByHierarchy, monthFilter, monthStartDay, prevMonthCatMap]);
 
   const behavior = useMemo(() => {
     const expenses = (filteredEntries || []).filter(
@@ -208,12 +239,9 @@ export function useFinanceAnalytics({
 
     if (!monthFilter) return noData;
 
-    const [y, m] = monthFilter.split("-").map(Number);
-    const today = new Date();
-    const isCurrentMonth = today.getFullYear() === y && today.getMonth() + 1 === m;
-    const daysInMonth = new Date(y, m, 0).getDate();
-    const daysElapsed = isCurrentMonth ? today.getDate() : daysInMonth;
-    const daysRemaining = Math.max(0, daysInMonth - daysElapsed);
+    const monthInfo = getFinancialMonthInfo(monthFilter, monthStartDay);
+    if (!monthInfo) return noData;
+    const { startDate, daysInMonth, daysElapsed, daysRemaining, isCurrentMonth } = monthInfo;
 
     const expense = totalExpense ?? 0;
     const income = totalIncome ?? 0;
@@ -226,12 +254,16 @@ export function useFinanceAnalytics({
         ? Math.max(0, income - expense) / daysRemaining
         : null;
 
-    // Tagesgenaue Kumulation für Sparkline
+    // Tagesgenaue Kumulation für Sparkline (Tag 1 = erster Tag des Finanzmonats)
+    const msPerDay = 86400000;
+    const financialMonthStart = new Date(startDate + "T00:00:00");
     const dailyMap = new Map();
     for (const e of (filteredEntries || [])) {
       if (e.kind !== "expense" || e.source !== "month" || !e.date) continue;
-      const day = Number(e.date.split("-")[2] || 0);
-      dailyMap.set(day, (dailyMap.get(day) || 0) + Number(e.amount || 0));
+      const entryDate = new Date(e.date + "T00:00:00");
+      const dayIndex = Math.round((entryDate - financialMonthStart) / msPerDay) + 1;
+      if (dayIndex < 1 || dayIndex > daysInMonth) continue;
+      dailyMap.set(dayIndex, (dailyMap.get(dayIndex) || 0) + Number(e.amount || 0));
     }
 
     let running = 0;
@@ -250,9 +282,8 @@ export function useFinanceAnalytics({
 
     // Vormonats-Vergleich
     const prevKey = getPrevMonthKey(monthFilter);
-    const prevM = m === 1 ? 12 : m - 1;
-    const prevY = m === 1 ? y - 1 : y;
-    const daysInPrevMonth = new Date(prevY, prevM, 0).getDate();
+    const prevMonthInfo = prevKey ? getFinancialMonthInfo(prevKey, monthStartDay) : null;
+    const daysInPrevMonth = prevMonthInfo?.daysInMonth ?? 30;
 
     const prevMonthExpense = (entries || [])
       .filter(

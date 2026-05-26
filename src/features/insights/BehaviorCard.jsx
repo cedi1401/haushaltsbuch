@@ -55,7 +55,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
   const avgAmount = thirtyDayData.reduce((s, d) => s + d.amount, 0) / 30;
 
   return (
-    <div className="hb-insights-pane hb-insights-pane--active">
+    <div className="hb-insights-pane hb-insights-pane--active" style={{ justifyContent: "center" }}>
       <div className="hb-behavior-split">
         {/* Linke Seite: Horizontale Balken Mo→So */}
         <div className="hb-behavior-bars">
@@ -78,6 +78,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
               />
               <XAxis type="number" hide />
               <Tooltip
+                wrapperStyle={{ zIndex: 10 }}
                 cursor={false}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
@@ -164,6 +165,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
             <ResponsiveContainer width="100%" height={70}>
               <AreaChart data={thirtyDayData} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
                 <Tooltip
+                  wrapperStyle={{ zIndex: 10 }}
                   cursor={{ stroke: themeColors.accent, strokeWidth: 1, strokeDasharray: "3 3" }}
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;

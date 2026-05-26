@@ -71,7 +71,7 @@ export default function HaushaltsbuchApp() {
   } = bookManager;
 
   const appSettings = useAppSettings({ isInitialLoad });
-  const { darkMode, setDarkMode, monthFilter, setMonthFilter, updateReady, setUpdateReady } = appSettings;
+  const { darkMode, setDarkMode, fontFamily, setFontFamily, monthFilter, setMonthFilter, updateReady, setUpdateReady } = appSettings;
 
   const entries = activeBook?.entries || EMPTY_ARRAY;
   const indicateTransferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
@@ -351,6 +351,7 @@ export default function HaushaltsbuchApp() {
             entries={entries}
             baseCurrency={baseCurrency}
             onAddTransferEntry={entryActions.addTransferEntry}
+            onUpdateBook={updateBook}
             transferCategories={indicateTransferCategories}
             todayISO={todayISO}
             onEditEntry={entryActions.startEdit}
@@ -539,6 +540,8 @@ export default function HaushaltsbuchApp() {
           onMonthStartDayChange={(newStartDay) =>
             handleMonthStartDayChange(newStartDay, setMonthFilter)
           }
+          fontFamily={fontFamily}
+          onFontFamilyChange={setFontFamily}
         />
 
         <CategoryManagerDialog

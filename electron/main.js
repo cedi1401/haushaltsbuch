@@ -29,7 +29,7 @@ function createWindow() {
       nodeIntegration: false,
     },
     title: 'Haushaltsbuch',
-    icon: path.join(__dirname, '../public/icon.png'),
+    icon: path.join(__dirname, process.platform === 'win32' ? '../public/icon.ico' : '../public/icon.png'),
   });
 
   // Dev or production

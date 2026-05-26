@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
+import PotsManager from "./PotsManager.jsx";
 import {
   ResponsiveContainer,
   LineChart,
@@ -31,12 +32,13 @@ import {
 
 const monthLabel = formatYearMonth;
 
-export default function PotsView({ activeBook, entries, baseCurrency = "CHF", onAddTransferEntry, transferCategories, todayISO, onEditEntry, onRemoveEntry, monthStartDay = 1 }) {
+export default function PotsView({ activeBook, entries, baseCurrency = "CHF", onAddTransferEntry, onUpdateBook, transferCategories, todayISO, onEditEntry, onRemoveEntry, monthStartDay = 1 }) {
   const fmt = useFmt();
   const pots = useMemo(() => activeBook?.pots || [], [activeBook?.pots]);
   const [selectedPotId, setSelectedPotId] = useState(pots[0]?.id || "");
   const themeColors = useThemeColors();
   const [addEntryOpen, setAddEntryOpen] = useState(false);
+  const [managePotsOpen, setManagePotsOpen] = useState(false);
   const [showAllEntries, setShowAllEntries] = useState(false);
   const [newEntryDraft, setNewEntryDraft] = useState({
     date: "",
@@ -155,18 +157,33 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
 
   if (!selectedPot) {
     return (
-      <Card>
-        <CardContent>
-          <div className="hb-empty">
-            <div className="hb-empty-icon"><IconPots /></div>
-            <div className="hb-empty-title">Noch keine Töpfe</div>
-            <div className="hb-empty-text">
-              Töpfe sind Sparbehälter für Rücklagen oder bestimmte Sparziele.
-              Lege in den Einstellungen deinen ersten Topf an.
+      <>
+        <Card>
+          <CardContent>
+            <div className="hb-empty">
+              <div className="hb-empty-icon"><IconPots /></div>
+              <div className="hb-empty-title">Noch keine Töpfe</div>
+              <div className="hb-empty-text">
+                Töpfe sind Sparbehälter für Rücklagen oder bestimmte Sparziele.
+                Lege deinen ersten Topf an.
+              </div>
+              <Button onClick={() => setManagePotsOpen(true)}>
+                <IconPots /> Töpfe verwalten
+              </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        <EditDialog
+          open={managePotsOpen}
+          title="Töpfe verwalten"
+          onClose={() => setManagePotsOpen(false)}
+          onSave={() => setManagePotsOpen(false)}
+          canSave={true}
+          saveLabel="Schließen"
+        >
+          <PotsManager activeBook={activeBook} onUpdateBook={onUpdateBook} />
+        </EditDialog>
+      </>
     );
   }
 
@@ -177,19 +194,24 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
           <div style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Entwicklung & Zusammensetzung deiner Transfers</div>
         </div>
 
-        <Button
-          onClick={() => {
-            setNewEntryDraft({
-              date: todayISO(),
-              amount: "",
-              category: transferCategories[0] || "",
-              note: "",
-            });
-            setAddEntryOpen(true);
-          }}
-        >
-          <IconPlus /> Buchung hinzufügen
-        </Button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button variant="outline" onClick={() => setManagePotsOpen(true)}>
+            <IconPots /> Töpfe verwalten
+          </Button>
+          <Button
+            onClick={() => {
+              setNewEntryDraft({
+                date: todayISO(),
+                amount: "",
+                category: transferCategories[0] || "",
+                note: "",
+              });
+              setAddEntryOpen(true);
+            }}
+          >
+            <IconPlus /> Buchung hinzufügen
+          </Button>
+        </div>
       </div>
 
       {/* Pot-Auswahl als Tab-Gruppe statt Dropdown */}
@@ -299,7 +321,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                         height={60}
                       />
                       <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(v) => fmt(v)} />
+                      <Tooltip wrapperStyle={{ zIndex: 10 }} formatter={(v) => fmt(v)} />
                       <Line
                         type="monotone"
                         dataKey="balance"
@@ -337,7 +359,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                         height={60}
                       />
                       <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(v) => fmt(v)} />
+                      <Tooltip wrapperStyle={{ zIndex: 10 }} formatter={(v) => fmt(v)} />
                       <Bar dataKey="transfersIn" barSize={12} fill={themeColors.green} />
                       <Bar dataKey="expensesOut" barSize={12} fill={themeColors.red} />
                     </BarChart>
@@ -371,12 +393,15 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                           outerRadius={95}
                           paddingAngle={2}
                           stroke="none"
+                          startAngle={90}
+                          endAngle={-270}
                         >
                           {transfersByCategory.map((d) => (
                             <Cell key={d.name} fill={transferCatColor.get(d.name)} />
                           ))}
                         </Pie>
                         <Tooltip
+                          wrapperStyle={{ zIndex: 10 }}
                           formatter={(val) => fmt(val)}
                           labelFormatter={(label) => `Zweck: ${label}`}
                         />
@@ -497,6 +522,17 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
           )}
         </CardContent>
       </Card>
+
+      <EditDialog
+        open={managePotsOpen}
+        title="Töpfe verwalten"
+        onClose={() => setManagePotsOpen(false)}
+        onSave={() => setManagePotsOpen(false)}
+        canSave={true}
+        saveLabel="Schließen"
+      >
+        <PotsManager activeBook={activeBook} onUpdateBook={onUpdateBook} />
+      </EditDialog>
 
       <EditDialog
         open={addEntryOpen}

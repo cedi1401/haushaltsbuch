@@ -36,14 +36,14 @@ export default function InsightsPanel({
 
   return (
     <Card style={{ width: "100%", display: "flex", flexDirection: "column" }}>
-      <CardContent style={{ display: "flex", flexDirection: "column", padding: "16px 20px 24px" }}>
+      <CardContent style={{ display: "flex", flexDirection: "column", padding: "16px 20px 24px", flex: 1 }}>
         <InsightTabs activeCard={activeCard} onTabChange={setActiveCard} />
         <div className="hb-insights-body">
           {activeCard === "overview" && (
             <OverviewCard analytics={analytics.overview} />
           )}
           {activeCard === "budget" && (
-            <BudgetCard budgetItems={budgetItems} monthFilter={monthFilter} />
+            <BudgetCard budgetItems={budgetItems} monthFilter={monthFilter} monthStartDay={monthStartDay} />
           )}
           {activeCard === "behavior" && (
             <BehaviorCard analytics={analytics.behavior} />

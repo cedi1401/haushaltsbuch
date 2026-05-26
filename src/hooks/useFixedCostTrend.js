@@ -22,8 +22,8 @@ export function useFixedCostTrend({ entries, recurringExpenses, monthly, monthSt
   );
 
   const kpis = useMemo(() => {
-    const active = (recurringExpenses || []).filter((r) => r.active !== false);
-    const configuredTotal = active.reduce((s, r) => s + Number(r.amount || 0), 0);
+    const all = [...(recurringExpenses || [])];
+    const configuredTotal = all.reduce((s, r) => s + Number(r.amount || 0), 0);
 
     const lastMonth = fixedMonthly[fixedMonthly.length - 1] ?? null;
     const prevMonth = fixedMonthly.length > 1 ? fixedMonthly[fixedMonthly.length - 2] : null;
@@ -39,9 +39,9 @@ export function useFixedCostTrend({ entries, recurringExpenses, monthly, monthSt
         ? filteredShares.reduce((s, m) => s + m.share, 0) / filteredShares.length
         : null;
 
-    const mostExpensive = active.sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0))[0] ?? null;
+    const mostExpensive = [...all].sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0))[0] ?? null;
 
-    return { configuredTotal, bookedLast, momDelta, avgShare, activeCount: active.length, mostExpensive };
+    return { configuredTotal, bookedLast, momDelta, avgShare, activeCount: all.length, mostExpensive };
   }, [fixedMonthly, recurringExpenses]);
 
   return { fixedMonthly, itemTrends, changes, kpis };
