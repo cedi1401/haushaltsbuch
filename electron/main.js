@@ -3,6 +3,7 @@ import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDatabase, getDb, closeDatabase } from './database/db.js';
+import { validateBook, isValidSetting } from './ipcValidation.js';
 
 process.on('uncaughtException', (err) => {
   console.error('[main] uncaughtException:', err);
@@ -108,7 +109,7 @@ function registerIpcHandlers() {
   });
 
   ipcMain.handle('db:saveBooks', (_event, books) => {
-    if (!Array.isArray(books)) return false;
+    if (!Array.isArray(books) || !books.every(validateBook)) return false;
     try {
       db.saveBooks(books);
       return true;
@@ -119,10 +120,6 @@ function registerIpcHandlers() {
   });
 
   // --- Settings ---
-  const ALLOWED_SETTING_KEYS = new Set([
-    'activeBookId', 'theme', 'darkMode', 'month', 'monthStartDay',
-  ]);
-
   ipcMain.handle('db:getSetting', (_event, key) => {
     if (typeof key !== 'string') return null;
     try {
@@ -134,7 +131,7 @@ function registerIpcHandlers() {
   });
 
   ipcMain.handle('db:setSetting', (_event, key, value) => {
-    if (typeof key !== 'string' || !ALLOWED_SETTING_KEYS.has(key)) return false;
+    if (!isValidSetting(key, value)) return false;
     try {
       db.setSetting(key, value);
       return true;
@@ -145,6 +142,20 @@ function registerIpcHandlers() {
   });
 
   // --- Backup ---
+  ipcMain.handle('backup:autoBackup', async (_event, booksJson) => {
+    try {
+      const fs = await import('fs/promises');
+      const backupsDir = path.join(app.getPath('userData'), 'backups');
+      await fs.mkdir(backupsDir, { recursive: true });
+      const filePath = path.join(backupsDir, `auto-migration-${formatDate()}.json`);
+      await fs.writeFile(filePath, booksJson, 'utf-8');
+      return { ok: true, filePath };
+    } catch (err) {
+      console.error('[ipc] backup:autoBackup failed:', err);
+      return { ok: false, error: err.message };
+    }
+  });
+
   ipcMain.handle('backup:export', async (_event, data) => {
     const result = await dialog.showSaveDialog(mainWindow, {
       title: 'Backup exportieren',

@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import { IconEdit, IconDelete, IconInbox, IconPlus } from "../components/icons.jsx";
 import { formatDateDE } from "../utils/hbUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
+
+const CHUNK_SIZE = 100;
 
 export default function EntriesTable({
   entriesSorted,
@@ -13,10 +15,32 @@ export default function EntriesTable({
   onAddEntry,
 }) {
   const fmt = useFmt();
-  const [showAll, setShowAll] = useState(false);
-  const PREVIEW_COUNT = 5;
-  const hasMore = entriesSorted.length > PREVIEW_COUNT;
-  const displayedEntries = showAll ? entriesSorted : entriesSorted.slice(0, PREVIEW_COUNT);
+  const [visibleCount, setVisibleCount] = useState(CHUNK_SIZE);
+  const sentinelRef = useRef(null);
+
+  // Reset when the entries list changes (month or filter change)
+  useEffect(() => {
+    setVisibleCount(CHUNK_SIZE);
+  }, [entriesSorted]);
+
+  // Auto-load next chunk when sentinel scrolls into view
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || visibleCount >= entriesSorted.length) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount((c) => Math.min(c + CHUNK_SIZE, entriesSorted.length));
+        }
+      },
+      { threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [visibleCount, entriesSorted.length]);
+
+  const displayedEntries = entriesSorted.slice(0, visibleCount);
+  const hasMore = visibleCount < entriesSorted.length;
 
   return (
     <Card style={{ marginTop: 16 }}>
@@ -118,16 +142,10 @@ export default function EntriesTable({
             </table>
 
             {hasMore && (
-              <div style={{ marginTop: 12, textAlign: "center" }}>
-                <button
-                  type="button"
-                  className="hb-btn-ghost"
-                  onClick={() => setShowAll((v) => !v)}
-                >
-                  {showAll
-                    ? "Weniger anzeigen"
-                    : `Weitere ${entriesSorted.length - PREVIEW_COUNT} anzeigen`}
-                </button>
+              <div ref={sentinelRef} style={{ marginTop: 12, textAlign: "center" }}>
+                <span className="hb-muted">
+                  {visibleCount} von {entriesSorted.length} Einträgen geladen…
+                </span>
               </div>
             )}
 
