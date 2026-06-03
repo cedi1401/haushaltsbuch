@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Backup (native file dialogs)
   exportBackup: (data) => ipcRenderer.invoke('backup:export', data),
   importBackup: () => ipcRenderer.invoke('backup:import'),
+  createAutoBackup: (booksJson) => ipcRenderer.invoke('backup:autoBackup', booksJson),
 
   // App info
   getAppVersion: () => ipcRenderer.invoke('app:version'),

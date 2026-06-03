@@ -12,8 +12,12 @@ export async function loadBooks() {
     return window.electronAPI.getBooks();
   }
   const raw = localStorage.getItem('hb_books');
-  const parsed = JSON.parse(raw || 'null');
-  return Array.isArray(parsed) ? parsed : null;
+  try {
+    const parsed = JSON.parse(raw || 'null');
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function saveBooks(books) {
@@ -40,6 +44,16 @@ export async function setSetting(key, value) {
 }
 
 // --- Backup ---
+
+/**
+ * Creates an automatic pre-migration backup of raw books data.
+ * Only functional in Electron; silently skipped in browser (no filesystem access).
+ */
+export async function createAutoBackup(books) {
+  if (!isElectron) return;
+  const booksJson = JSON.stringify(books, null, 2);
+  return window.electronAPI.createAutoBackup(booksJson);
+}
 
 export async function exportBackupFile({ book, monthFilter }) {
   const payload = {

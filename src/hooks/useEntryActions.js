@@ -119,7 +119,7 @@ export function useEntryActions({
 
   function closeAddEntry() {
     setAddEntryOpen(false);
-    setAddDraft({ ...INITIAL_ADD_DRAFT, date: todayISO() });
+    setAddDraft((prev) => ({ ...INITIAL_ADD_DRAFT, date: todayISO(), potId: prev.potId }));
   }
 
   function buildEntry(draft, book) {
@@ -288,7 +288,7 @@ export function useEntryActions({
     if (!date) return false;
     const n = parseAmount(amount);
     if (!Number.isFinite(n) || n <= 0) return false;
-    if (kind === "transfer" && !category) return false;
+    if (kind === "transfer" && (!potId || !category)) return false;
     if (kind === "withdrawal" && (!potId || !category)) return false;
     return true;
   }, [addDraft]);

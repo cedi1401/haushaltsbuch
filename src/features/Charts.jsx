@@ -3,6 +3,7 @@ import React, { useState, useMemo } from "react";
 const EMPTY_ARRAY = [];
 import { Card, CardContent } from "../components/ui.jsx";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
+import { useCardBg } from "../hooks/useCardBg.js";
 import {
   PieChart,
   Pie,
@@ -14,6 +15,7 @@ import { makeSubcategoryColorShades, CHART_COLORS } from "../utils/hbPalette.js"
 
 export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurrency = "CHF" }) {
   const fmt = useFmt();
+  const cardBg = useCardBg();
   const [activeTab, setActiveTab] = useState("expense"); // "expense" | "income"
   const [drilldownId, setDrilldownId] = useState(null);  // null = overview, else categoryId
   const [displayMode, setDisplayMode] = useState("chf"); // "chf" | "percent"
@@ -140,7 +142,7 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurr
                   className="hb-legend-back-btn"
                   onClick={handleBack}
                 >
-                  ← Zurück
+                  Zurück
                 </button>
               )}
 
@@ -209,10 +211,13 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurr
                     data={pieData}
                     dataKey="value"
                     nameKey="name"
-                    innerRadius={90}
-                    outerRadius={150}
-                    paddingAngle={2}
-                    stroke="none"
+                    innerRadius={87}
+                    outerRadius={153}
+                    paddingAngle={0}
+                    cornerRadius={4}
+                    stroke={cardBg}
+                    strokeWidth={3}
+                    strokeLinejoin="round"
                     startAngle={90}
                     endAngle={-270}
                   >
@@ -222,12 +227,19 @@ export default function Charts({ expenseByHierarchy, incomeByHierarchy, baseCurr
                   </Pie>
                   <Tooltip
                     wrapperStyle={{ zIndex: 10 }}
-                    formatter={(val) =>
-                      displayMode === "percent"
-                        ? `${((val / totalValue) * 100).toFixed(1)}%`
-                        : fmt(val)
-                    }
-                    labelFormatter={(label) => label}
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const p = payload[0];
+                      const valStr = displayMode === "percent"
+                        ? `${((p.value / totalValue) * 100).toFixed(1)}%`
+                        : fmt(p.value);
+                      return (
+                        <div className="hb-chart-tooltip">
+                          <span className="hb-chart-tooltip-label" style={{ color: p.fill }}>{p.name}</span>
+                          <span>{valStr}</span>
+                        </div>
+                      );
+                    }}
                   />
                 </PieChart>
               </ResponsiveContainer>

@@ -30,7 +30,7 @@ function createWindow() {
       nodeIntegration: false,
     },
     title: 'Haushaltsbuch',
-    icon: path.join(__dirname, process.platform === 'win32' ? '../public/icon.ico' : '../public/icon.png'),
+    icon: path.join(__dirname, process.platform === 'win32' ? '../dist/icon.ico' : '../dist/icon.png'),
   });
 
   // Dev or production
@@ -164,9 +164,13 @@ function registerIpcHandlers() {
     });
     if (result.canceled || !result.filePath) return { canceled: true };
 
-    const fs = await import('fs/promises');
-    await fs.writeFile(result.filePath, JSON.stringify(data, null, 2), 'utf-8');
-    return { canceled: false, filePath: result.filePath };
+    try {
+      const fs = await import('fs/promises');
+      await fs.writeFile(result.filePath, JSON.stringify(data, null, 2), 'utf-8');
+      return { canceled: false, filePath: result.filePath };
+    } catch (err) {
+      return { canceled: false, error: `Backup konnte nicht gespeichert werden: ${err.message}` };
+    }
   });
 
   ipcMain.handle('backup:import', async () => {
@@ -177,15 +181,19 @@ function registerIpcHandlers() {
     });
     if (result.canceled || !result.filePaths.length) return { canceled: true };
 
-    const fs = await import('fs/promises');
-    const text = await fs.readFile(result.filePaths[0], 'utf-8');
-    let parsed;
     try {
-      parsed = JSON.parse(text);
-    } catch {
-      return { canceled: false, error: 'Backup-Datei enthält ungültiges JSON.' };
+      const fs = await import('fs/promises');
+      const text = await fs.readFile(result.filePaths[0], 'utf-8');
+      let parsed;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        return { canceled: false, error: 'Backup-Datei enthält ungültiges JSON.' };
+      }
+      return { canceled: false, data: parsed };
+    } catch (err) {
+      return { canceled: false, error: `Backup-Datei konnte nicht gelesen werden: ${err.message}` };
     }
-    return { canceled: false, data: parsed };
   });
 
   // --- App info ---

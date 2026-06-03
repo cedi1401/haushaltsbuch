@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import PotsManager from "./PotsManager.jsx";
+import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import {
   ResponsiveContainer,
   LineChart,
@@ -21,6 +22,7 @@ import { formatDateDE, parseAmount } from "../utils/hbUtils.js";
 import { formatYearMonth } from "../utils/financialMonthUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useThemeColors } from "../hooks/useThemeColors.jsx";
+import { useCardBg } from "../hooks/useCardBg.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import {
   IconEdit,
@@ -37,9 +39,14 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
   const pots = useMemo(() => activeBook?.pots || [], [activeBook?.pots]);
   const [selectedPotId, setSelectedPotId] = useState(pots[0]?.id || "");
   const themeColors = useThemeColors();
+  const cardBg = useCardBg();
   const [addEntryOpen, setAddEntryOpen] = useState(false);
   const [managePotsOpen, setManagePotsOpen] = useState(false);
   const [showAllEntries, setShowAllEntries] = useState(false);
+  const [lineRangeOption, setLineRangeOption] = useState("12");
+  const [lineScrollOffset, setLineScrollOffset] = useState(0);
+  const [barRangeOption, setBarRangeOption] = useState("12");
+  const [barScrollOffset, setBarScrollOffset] = useState(0);
   const [newEntryDraft, setNewEntryDraft] = useState({
     date: "",
     amount: "",
@@ -76,22 +83,47 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
     );
   }, [potSeries]);
 
-  // Chart-Daten für LineChart (kumulierte Balance)
-  const lineChartData = useMemo(() => {
-    return potSeries.map((d) => ({
-      name: d.label,
-      balance: d.balance,
-    }));
-  }, [potSeries]);
+  const lineRangePool = useMemo(() => {
+    if (lineRangeOption === "12") return potSeries.slice(-12);
+    if (lineRangeOption === "24") return potSeries.slice(-24);
+    return potSeries;
+  }, [potSeries, lineRangeOption]);
+  const lineMaxOffset = Math.max(0, lineRangePool.length - 12);
+  const lineWindowData = useMemo(() => {
+    const start = Math.max(0, lineRangePool.length - 12 - lineScrollOffset);
+    return lineRangePool.slice(start, start + 12);
+  }, [lineRangePool, lineScrollOffset]);
+  const lineWindowLabel = useMemo(() => {
+    if (!lineWindowData.length) return "";
+    const first = lineWindowData[0].label;
+    const last = lineWindowData[lineWindowData.length - 1].label;
+    return first === last ? first : `${first} – ${last}`;
+  }, [lineWindowData]);
 
-  // Chart-Daten für BarChart (Ein-/Auszahlungen pro Monat)
-  const barChartData = useMemo(() => {
-    return potSeries.map((d) => ({
-      name: d.label,
-      transfersIn: d.transfersIn,
-      expensesOut: d.expensesOut,
-    }));
-  }, [potSeries]);
+  const barRangePool = useMemo(() => {
+    if (barRangeOption === "12") return potSeries.slice(-12);
+    if (barRangeOption === "24") return potSeries.slice(-24);
+    return potSeries;
+  }, [potSeries, barRangeOption]);
+  const barMaxOffset = Math.max(0, barRangePool.length - 12);
+  const barWindowData = useMemo(() => {
+    const start = Math.max(0, barRangePool.length - 12 - barScrollOffset);
+    return barRangePool.slice(start, start + 12);
+  }, [barRangePool, barScrollOffset]);
+  const barWindowLabel = useMemo(() => {
+    if (!barWindowData.length) return "";
+    const first = barWindowData[0].label;
+    const last = barWindowData[barWindowData.length - 1].label;
+    return first === last ? first : `${first} – ${last}`;
+  }, [barWindowData]);
+
+  const lineChartData = useMemo(() => lineWindowData.map((d) => ({
+    name: d.label, balance: d.balance,
+  })), [lineWindowData]);
+
+  const barChartData = useMemo(() => barWindowData.map((d) => ({
+    name: d.label, transfersIn: d.transfersIn, expensesOut: d.expensesOut,
+  })), [barWindowData]);
 
   // Transfer-Kategorien Auswertung (Pie Chart) — Netto: Einzahlungen minus Entnahmen je Zweck
   const transfersByCategory = useMemo(() => {
@@ -155,6 +187,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
     return { topTransfer, topExpense };
   }, [potSeries]);
 
+
   if (!selectedPot) {
     return (
       <>
@@ -191,7 +224,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
     <div>
       <div className="hb-row" style={{ marginBottom: 12, alignItems: "flex-start" }}>
         <div>
-          <div style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Entwicklung & Zusammensetzung deiner Transfers</div>
+          <div className="hb-section-title">Entwicklung & Zusammensetzung deiner Transfers</div>
         </div>
 
         <div style={{ display: "flex", gap: 8 }}>
@@ -214,26 +247,28 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
         </div>
       </div>
 
-      {/* Pot-Auswahl als Tab-Gruppe statt Dropdown */}
-      {pots.length > 1 && (
-        <div className="hb-pill-tabs" role="tablist" aria-label="Topf wählen" style={{ marginBottom: 16 }}>
-          {pots.map((pot) => (
-            <button
-              key={pot.id}
-              type="button"
-              role="tab"
-              aria-selected={selectedPotId === pot.id}
-              className={`hb-pill-tab ${selectedPotId === pot.id ? "hb-pill-tab-active" : ""}`}
-              onClick={() => { setSelectedPotId(pot.id); setShowAllEntries(false); }}
-            >
-              {pot.name}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Pot-Auswahl als Tab-Gruppe */}
+      <div className="hb-pill-tabs" role="tablist" aria-label="Topf wählen" style={{ marginBottom: 16 }}>
+        {pots.map((pot) => (
+          <button
+            key={pot.id}
+            type="button"
+            role="tab"
+            aria-selected={selectedPotId === pot.id}
+            className={`hb-pill-tab ${selectedPotId === pot.id ? "hb-pill-tab-active" : ""}`}
+            onClick={() => { setSelectedPotId(pot.id); setShowAllEntries(false); setLineScrollOffset(0); setBarScrollOffset(0); }}
+          >
+            {pot.name}
+          </button>
+        ))}
+      </div>
 
-      {/* Top-Stat-Tiles: Aktueller Stand + Einzahlungen + Entnahmen */}
-      <div className="hb-stat-tiles" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+      {/*
+        Kopf-Block: KPIs (5 Spalten) — 3 Kennzahlen + 2 Highlights in EINER Zeile.
+        Statt zweier getrennter Voll-Breiten-Streifen ergibt das eine ruhige,
+        zusammenhängende Übersicht. Bricht über die hb-stat-tiles-Breakpoints um.
+      */}
+      <div className="hb-stat-tiles" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
         <div className="hb-stat-tile">
           <div className="hb-stat-tile-label">Aktueller Stand</div>
           <div
@@ -253,23 +288,30 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
           <div className="hb-stat-tile-label">Summe Entnahmen</div>
           <div className="hb-stat-tile-value hb-bad">-{fmt(totals.expensesOut)}</div>
         </div>
-      </div>
 
-      {/* Highlights als Stat-Pills */}
-      {highlights && potSeries.length > 0 ? (
-        <div className="hb-stat-pills">
-          <div className="hb-stat-pill">
-            <span className="hb-stat-pill-label">Höchste Einzahlung</span>
-            <span className="hb-stat-pill-value hb-ok">+{fmt(highlights.topTransfer.transfersIn)}</span>
-            <span className="hb-muted">· {highlights.topTransfer.label}</span>
-          </div>
-          <div className="hb-stat-pill">
-            <span className="hb-stat-pill-label">Höchste Entnahme</span>
-            <span className="hb-stat-pill-value hb-bad">-{fmt(highlights.topExpense.expensesOut)}</span>
-            <span className="hb-muted">· {highlights.topExpense.label}</span>
-          </div>
-        </div>
-      ) : null}
+        {highlights && potSeries.length > 0 ? (
+          <>
+            <div className="hb-stat-tile">
+              <div className="hb-stat-tile-label">Höchste Einzahlung</div>
+              <div className="hb-stat-tile-value hb-ok" style={{ fontSize: 18 }}>
+                +{fmt(highlights.topTransfer.transfersIn)}
+              </div>
+              <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
+                {highlights.topTransfer.label}
+              </div>
+            </div>
+            <div className="hb-stat-tile">
+              <div className="hb-stat-tile-label">Höchste Entnahme</div>
+              <div className="hb-stat-tile-value hb-bad" style={{ fontSize: 18 }}>
+                -{fmt(highlights.topExpense.expensesOut)}
+              </div>
+              <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
+                {highlights.topExpense.label}
+              </div>
+            </div>
+          </>
+        ) : null}
+      </div>
 
       {potSeries.length === 0 ? (
         <Card>
@@ -299,91 +341,161 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
         </Card>
       ) : (
         <>
-          {/* Charts */}
-          <div className="hb-two">
-            {/* LineChart: Stand über Zeit */}
-            <Card>
-              <CardContent>
-                <div className="hb-row" style={{ alignItems: "baseline", marginBottom: 8 }}>
-                  <h3 style={{ margin: 0, fontSize: 16 }}>Entwicklung</h3>
-                  <div className="hb-muted">Topf-Stand über Monate</div>
-                </div>
+          {/*
+            Analyse-Layout: 2-Spalten (Charts links 2fr · Zusammensetzung rechts 1fr).
+            Bricht unter 900px (hb-two-Breakpoint) auf eine Spalte um.
+            Der Donut nimmt damit nie mehr die volle Seitenbreite ein.
+          */}
+          <div
+            className="hb-two"
+            style={{ gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)", alignItems: "stretch" }}
+          >
+            {/* Linke Spalte: LineChart (Hero) über BarChart */}
+            <div className="hb-stack hb-stack--lg" style={{ minWidth: 0 }}>
+              {/* LineChart: Stand über Zeit */}
+              <Card>
+                <CardContent>
+                  <div className="hb-row" style={{ alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <h3 style={{ margin: 0, fontSize: 16 }}>Entwicklung</h3>
+                      <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
+                        <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
+                          <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.green} strokeWidth="2.5" />
+                        </svg>
+                        Stand
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: lineMaxOffset > 0 ? "visible" : "hidden" }}>
+                        <button type="button" className="hb-icon-btn" onClick={() => setLineScrollOffset((o) => Math.min(o + 1, lineMaxOffset))} disabled={lineScrollOffset >= lineMaxOffset} title="Älteren Bereich anzeigen">‹</button>
+                        <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{lineWindowLabel}</span>
+                        <button type="button" className="hb-icon-btn" onClick={() => setLineScrollOffset((o) => Math.max(o - 1, 0))} disabled={lineScrollOffset === 0} title="Neueren Bereich anzeigen">›</button>
+                      </div>
+                      {potSeries.length > 12 && (
+                        <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
+                          {[["12", "12 M"], ["24", "24 M"], ["all", "Gesamt"]].map(([val, lbl]) => (
+                            <button key={val} type="button" className={`hb-pill-tab ${lineRangeOption === val ? "hb-pill-tab-active" : ""}`} onClick={() => { setLineRangeOption(val); setLineScrollOffset(0); }}>{lbl}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-                <div style={{ width: "100%", height: 280, marginTop: 8 }}>
-                  <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={lineChartData}>
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fontSize: 11 }}
-                        interval={0}
-                        angle={-20}
-                        textAnchor="end"
-                        height={60}
-                      />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip wrapperStyle={{ zIndex: 10 }} formatter={(v) => fmt(v)} />
-                      <Line
-                        type="monotone"
-                        dataKey="balance"
-                        stroke={themeColors.green}
-                        strokeWidth={3}
-                        dot={{ r: 4 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="hb-note">
-                  Zeigt den kumulierten Stand des Topfes. Steigt = mehr Transfers, fällt = Entnahmen.
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* BarChart: Ein-/Auszahlungen */}
-            <Card>
-              <CardContent>
-                <div className="hb-row" style={{ alignItems: "baseline", marginBottom: 8 }}>
-                  <h3 style={{ margin: 0, fontSize: 16 }}>Ein-/Auszahlungen</h3>
-                  <div className="hb-muted">Pro Monat</div>
-                </div>
-
-                <div style={{ width: "100%", height: 280, marginTop: 8 }}>
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={barChartData} barCategoryGap={12}>
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fontSize: 11 }}
-                        interval={0}
-                        angle={-20}
-                        textAnchor="end"
-                        height={60}
-                      />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip wrapperStyle={{ zIndex: 10 }} formatter={(v) => fmt(v)} />
-                      <Bar dataKey="transfersIn" barSize={12} fill={themeColors.green} />
-                      <Bar dataKey="expensesOut" barSize={12} fill={themeColors.red} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="hb-note">
-                  Grün = Einzahlungen (Transfers), Rot = Entnahmen.
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Pie Chart: Transfer-Kategorien */}
-          {transfersByCategory.length > 0 && (
-            <Card style={{ marginTop: 16 }}>
-              <CardContent>
-                <h3 style={{ margin: 0, marginBottom: 12, fontSize: 16 }}>
-                  Zusammensetzung nach Zweck
-                </h3>
-
-                <div className="hb-two" style={{ gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                  <div style={{ minHeight: 260 }}>
+                  <div style={{ width: "100%", height: 260, marginTop: 16 }}>
                     <ResponsiveContainer width="100%" height={260}>
+                      <LineChart data={lineChartData}>
+                        <XAxis
+                          dataKey="name"
+                          tick={{ fontSize: 11 }}
+                          interval={0}
+                          angle={-20}
+                          textAnchor="end"
+                          height={60}
+                        />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <Tooltip
+                          wrapperStyle={{ zIndex: 10 }}
+                          content={({ active, payload, label }) => {
+                            if (!active || !payload?.length) return null;
+                            return (
+                              <div className="hb-chart-tooltip">
+                                <span className="hb-chart-tooltip-label">{label}</span>
+                                {payload.filter((p) => p.value != null).map((p) => (
+                                  <div key={p.dataKey} style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
+                                    <span style={{ color: themeColors.green }}>Stand</span>
+                                    <span>{fmt(p.value)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="balance"
+                          stroke={themeColors.green}
+                          strokeWidth={3}
+                          dot={{ r: 4 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                </CardContent>
+              </Card>
+
+              {/* BarChart: Ein-/Auszahlungen */}
+              <Card>
+                <CardContent>
+                  <div className="hb-row" style={{ alignItems: "center", marginBottom: 8 }}>
+                    <h3 style={{ margin: 0, fontSize: 16 }}>Ein-/Auszahlungen</h3>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: barMaxOffset > 0 ? "visible" : "hidden" }}>
+                        <button type="button" className="hb-icon-btn" onClick={() => setBarScrollOffset((o) => Math.min(o + 1, barMaxOffset))} disabled={barScrollOffset >= barMaxOffset} title="Älteren Bereich anzeigen">‹</button>
+                        <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{barWindowLabel}</span>
+                        <button type="button" className="hb-icon-btn" onClick={() => setBarScrollOffset((o) => Math.max(o - 1, 0))} disabled={barScrollOffset === 0} title="Neueren Bereich anzeigen">›</button>
+                      </div>
+                      {potSeries.length > 12 && (
+                        <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
+                          {[["12", "12 M"], ["24", "24 M"], ["all", "Gesamt"]].map(([val, lbl]) => (
+                            <button key={val} type="button" className={`hb-pill-tab ${barRangeOption === val ? "hb-pill-tab-active" : ""}`} onClick={() => { setBarRangeOption(val); setBarScrollOffset(0); }}>{lbl}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ width: "100%", height: 220, marginTop: 16 }}>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={barChartData} barCategoryGap={12}>
+                        <XAxis
+                          dataKey="name"
+                          tick={{ fontSize: 11 }}
+                          interval={0}
+                          angle={-20}
+                          textAnchor="end"
+                          height={60}
+                        />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <Tooltip
+                          wrapperStyle={{ zIndex: 10 }}
+                          content={({ active, payload, label }) => {
+                            if (!active || !payload?.length) return null;
+                            const nameMap = { transfersIn: "Einzahlungen", expensesOut: "Entnahmen" };
+                            const colorMap = { transfersIn: themeColors.green, expensesOut: themeColors.red };
+                            return (
+                              <div className="hb-chart-tooltip">
+                                <span className="hb-chart-tooltip-label">{label}</span>
+                                {payload.filter((p) => p.value != null).map((p) => (
+                                  <div key={p.dataKey} style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
+                                    <span style={{ color: colorMap[p.dataKey] || p.fill }}>{nameMap[p.dataKey] || p.dataKey}</span>
+                                    <span>{fmt(p.value)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }}
+                          cursor={false}
+                        />
+                        <Bar dataKey="transfersIn" barSize={12} fill={themeColors.green} />
+                        <Bar dataKey="expensesOut" barSize={12} fill={themeColors.red} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Rechte Spalte: Zusammensetzung nach Zweck (Donut + Legende, schmal) */}
+            {transfersByCategory.length > 0 ? (
+              <Card style={{ display: "flex", flexDirection: "column" }}>
+                <CardContent style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                  <h3 style={{ margin: "0 0 8px", fontSize: 16 }}>Zusammensetzung</h3>
+
+                  {/* Donut mit fixer Maximalbreite, zentriert — geht nicht auf volle Breite auf */}
+                  <div style={{ width: "100%", maxWidth: 280, height: 240, margin: "8px auto 0" }}>
+                    <ResponsiveContainer width="100%" height={240}>
                       <PieChart>
                         <Pie
                           data={transfersByCategory}
@@ -391,8 +503,11 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                           nameKey="name"
                           innerRadius={55}
                           outerRadius={95}
-                          paddingAngle={2}
-                          stroke="none"
+                          paddingAngle={0}
+                          cornerRadius={4}
+                          stroke={cardBg}
+                          strokeWidth={3}
+                          strokeLinejoin="round"
                           startAngle={90}
                           endAngle={-270}
                         >
@@ -402,14 +517,22 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                         </Pie>
                         <Tooltip
                           wrapperStyle={{ zIndex: 10 }}
-                          formatter={(val) => fmt(val)}
-                          labelFormatter={(label) => `Zweck: ${label}`}
+                          content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null;
+                            const p = payload[0];
+                            return (
+                              <div className="hb-chart-tooltip">
+                                <span className="hb-chart-tooltip-label" style={{ color: p.fill }}>{p.name}</span>
+                                <span>{fmt(p.value)}</span>
+                              </div>
+                            );
+                          }}
                         />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
 
-                  <div className="hb-legend">
+                  <div className="hb-legend" style={{ marginTop: 12 }}>
                     <div className="hb-legend-title">Legende</div>
                     {transfersByCategory.map((d) => (
                       <div key={d.name} className="hb-legend-row">
@@ -424,14 +547,20 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                       </div>
                     ))}
                   </div>
-                </div>
 
-                <div className="hb-note">
-                  Aktueller Netto-Stand pro Transferzweck (Einzahlungen minus Entnahmen).
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            ) : (
+              <Card style={{ display: "flex", flexDirection: "column" }}>
+                <CardContent style={{ display: "flex", flexDirection: "column", justifyContent: "center", height: "100%" }}>
+                  <h3 style={{ margin: "0 0 8px", fontSize: 16 }}>Zusammensetzung</h3>
+                  <div className="hb-muted" style={{ textAlign: "center", padding: "32px 8px" }}>
+                    Noch keine positiven Netto-Beträge je Zweck vorhanden.
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </>
       )}
 
@@ -507,15 +636,14 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
               </div>
               {potEntries.length > 5 && (
                 <div style={{ marginTop: 12, textAlign: "center" }}>
-                  <button
-                    type="button"
-                    className="hb-btn-ghost"
+                  <Button
+                    variant="outline"
                     onClick={() => setShowAllEntries((v) => !v)}
                   >
                     {showAllEntries
                       ? "Weniger anzeigen"
                       : `Weitere ${potEntries.length - 5} anzeigen`}
-                  </button>
+                  </Button>
                 </div>
               )}
             </>
@@ -563,34 +691,43 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
           Boolean(newEntryDraft.category)
         }
         saveLabel="Hinzufügen"
+        size="medium"
+        bodyScroll={false}
       >
-        <div className="hb-form">
-          <div className="hb-field">
-            <div className="hb-label">Datum</div>
-            <input
-              className="hb-input"
-              type="date"
-              value={newEntryDraft.date}
-              onChange={(e) => setNewEntryDraft((d) => ({ ...d, date: e.target.value }))}
-            />
+        <div className="hb-form" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
+          <div className="hb-muted" style={{ fontSize: 12, marginBottom: 4 }}>
+            Topf: {selectedPot?.name}
           </div>
 
-          <div className="hb-field">
-            <div className="hb-label">Betrag ({baseCurrency})</div>
-            <input
-              className="hb-input"
-              type="text"
-              inputMode="decimal"
-              placeholder="z.B. 100.50"
-              value={newEntryDraft.amount}
-              onChange={(e) => setNewEntryDraft((d) => ({ ...d, amount: e.target.value }))}
-            />
+          <div className="hb-two hb-two--dialog" style={{ gap: 16 }}>
+            <div className="hb-field" style={{ minWidth: 0 }}>
+              <div className="hb-label">Datum</div>
+              <HbDatePicker
+                value={newEntryDraft.date}
+                onChange={(v) => setNewEntryDraft((d) => ({ ...d, date: v }))}
+                style={{ minWidth: 0, width: "100%" }}
+              />
+            </div>
+
+            <div className="hb-field" style={{ minWidth: 0 }}>
+              <div className="hb-label">Betrag ({baseCurrency})</div>
+              <input
+                className="hb-input"
+                style={{ minWidth: 0, width: "100%" }}
+                type="text"
+                inputMode="decimal"
+                placeholder="z.B. 100.50"
+                value={newEntryDraft.amount}
+                onChange={(e) => setNewEntryDraft((d) => ({ ...d, amount: e.target.value }))}
+              />
+            </div>
           </div>
 
-          <div className="hb-field">
+          <div className="hb-field" style={{ minWidth: 0 }}>
             <div className="hb-label">Transfer-Zweck</div>
             <select
               className="hb-input"
+              style={{ minWidth: 0, width: "100%" }}
               value={newEntryDraft.category}
               onChange={(e) => setNewEntryDraft((d) => ({ ...d, category: e.target.value }))}
             >
@@ -602,25 +739,15 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
             </select>
           </div>
 
-          <div className="hb-field">
+          <div className="hb-field" style={{ minWidth: 0 }}>
             <div className="hb-label">Notiz (optional)</div>
             <input
               className="hb-input"
+              style={{ minWidth: 0, width: "100%" }}
               type="text"
               placeholder="z.B. Anfangsbestand, Übertrag..."
               value={newEntryDraft.note}
               onChange={(e) => setNewEntryDraft((d) => ({ ...d, note: e.target.value }))}
-            />
-          </div>
-
-          <div className="hb-field">
-            <div className="hb-label">In Topf</div>
-            <input
-              className="hb-input"
-              type="text"
-              value={selectedPot?.name || ""}
-              disabled
-              style={{ background: "var(--hover-bg)", color: "var(--muted)" }}
             />
           </div>
         </div>

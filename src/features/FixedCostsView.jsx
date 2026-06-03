@@ -31,6 +31,7 @@ export default function FixedCostsView({
   // Dialog-State
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [tagInput, setTagInput] = useState("");
   const [draft, setDraft] = useState({
     name: "",
     amount: "",
@@ -41,6 +42,7 @@ export default function FixedCostsView({
     potId: pots[0]?.id || "",
     groupId: null,
     showInOverview: true,
+    tags: [],
   });
 
   // Gruppen-Verwaltung
@@ -72,6 +74,20 @@ export default function FixedCostsView({
     }
     return { groupedItems: byGroup, ungroupedItems: ungrouped, totalAmount: total, groupTotals: totals };
   }, [recurringExpenses, fixedCostGroups]);
+
+  const allBookTags = useMemo(() => {
+    const set = new Set();
+    recurringExpenses.forEach((r) => (r.tags || []).forEach((t) => set.add(t)));
+    return [...set].sort();
+  }, [recurringExpenses]);
+
+  const availableTagSuggestions = useMemo(() => {
+    const existing = new Set(draft.tags);
+    const base = tagInput.trim()
+      ? allBookTags.filter((t) => t.toLowerCase().includes(tagInput.toLowerCase()) && !existing.has(t))
+      : allBookTags.filter((t) => !existing.has(t));
+    return base.slice(0, 8);
+  }, [allBookTags, draft.tags, tagInput]);
 
   // Gruppen-CRUD
   function createGroup() {
@@ -124,7 +140,9 @@ export default function FixedCostsView({
       potId: pots[0]?.id || "",
       groupId: presetGroupId,
       showInOverview: false,
+      tags: [],
     });
+    setTagInput("");
     setDialogOpen(true);
   }
 
@@ -140,13 +158,26 @@ export default function FixedCostsView({
       potId: item.potId || pots[0]?.id || "",
       groupId: item.groupId || null,
       showInOverview: item.showInOverview !== false,
+      tags: item.tags || [],
     });
+    setTagInput("");
     setDialogOpen(true);
   }
 
   function closeDialog() {
     setDialogOpen(false);
     setEditingItem(null);
+  }
+
+  function handleTagAdd(tagText) {
+    const tag = tagText.trim().slice(0, 30);
+    if (!tag || draft.tags.includes(tag)) return;
+    setDraft((d) => ({ ...d, tags: [...d.tags, tag] }));
+    setTagInput("");
+  }
+
+  function handleTagRemove(tag) {
+    setDraft((d) => ({ ...d, tags: d.tags.filter((t) => t !== tag) }));
   }
 
   function saveItem() {
@@ -169,6 +200,7 @@ export default function FixedCostsView({
               potId: draft.kind === "transfer" ? draft.potId : undefined,
               groupId: draft.groupId || null,
               showInOverview: draft.showInOverview === true,
+              tags: draft.tags || [],
             }
           : item
       );
@@ -181,6 +213,7 @@ export default function FixedCostsView({
         kind: draft.kind,
         groupId: draft.groupId || null,
         showInOverview: draft.showInOverview === true,
+        tags: draft.tags || [],
       };
       if (draft.kind === "expense") {
         newItem.categoryId = draft.categoryId;
@@ -313,9 +346,23 @@ export default function FixedCostsView({
           {cat.color && <span className="hb-fixed-cat-dot" style={{ background: cat.color }} />}
           {cat.name}
         </span>
-        {sub && <span className="hb-fixed-cat-pill">{sub.name}</span>}
+        {sub && (
+          <span className="hb-fixed-cat-pill">
+            {cat.color && (
+              <span className="hb-fixed-cat-dot" style={{ background: cat.color }} />
+            )}
+            {sub.name}
+          </span>
+        )}
       </>
     );
+  }
+
+  function renderTagPills(item) {
+    if (!item.tags || item.tags.length === 0) return null;
+    return item.tags.map((tag) => (
+      <span key={tag} className="hb-tag-pill">#{tag}</span>
+    ));
   }
 
   function renderItemCard(item, groupIdOfSection) {
@@ -355,14 +402,15 @@ export default function FixedCostsView({
                         {item.kind === "expense" ? "Ausgabe" : "Transfer"}
                       </span>
                       {renderCatPills(item)}
+                      {renderTagPills(item)}
                     </div>
                   </div>
                   <div className="hb-fixed-amount hb-bad">-{fmt(item.amount)}</div>
                 </div>
                 <div className="hb-fixed-actions">
-                  <Button onClick={() => bookNow(item)}>Jetzt buchen</Button>
-                  <Button variant="outline" onClick={() => openEditDialog(item)}>Bearbeiten</Button>
-                  <Button variant="outline" onClick={() => deleteItem(item)}>Löschen</Button>
+                  <Button size="sm" onClick={() => bookNow(item)}>Jetzt buchen</Button>
+                  <Button size="sm" variant="outline" onClick={() => openEditDialog(item)}>Bearbeiten</Button>
+                  <Button size="sm" variant="outline" onClick={() => deleteItem(item)}>Löschen</Button>
                 </div>
               </div>
             </div>
@@ -380,8 +428,9 @@ export default function FixedCostsView({
     <div>
       {/* Toolbar */}
       <div className="hb-fixed-toolbar">
-        <div style={{ fontSize: 18, fontWeight: 600 }}>
-          Monatliche Summe: <strong>{fmt(totalAmount)}</strong>
+        <div className="hb-fixed-hero">
+          <span className="hb-fixed-hero-label">Monatliche Summe</span>
+          <span className="hb-fixed-hero-value">{fmt(totalAmount)}</span>
         </div>
         <div className="hb-fixed-toolbar-actions">
           <Button
@@ -587,6 +636,57 @@ export default function FixedCostsView({
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Tags */}
+          <div className="hb-field" style={{ width: "100%" }}>
+            <div className="hb-label">Tags</div>
+            <div className="hb-tag-input-field">
+              {draft.tags.map((tag) => (
+                <span key={tag} className="hb-tag-chip">
+                  #{tag}
+                  <button
+                    type="button"
+                    className="hb-tag-chip-remove"
+                    onClick={() => handleTagRemove(tag)}
+                    aria-label={`Tag ${tag} entfernen`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              <input
+                type="text"
+                placeholder={draft.tags.length === 0 ? "Tag eingeben und Enter drücken…" : ""}
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleTagAdd(tagInput);
+                  } else if (e.key === "Backspace" && !tagInput && draft.tags.length > 0) {
+                    handleTagRemove(draft.tags[draft.tags.length - 1]);
+                  } else if (e.key === ",") {
+                    e.preventDefault();
+                    handleTagAdd(tagInput);
+                  }
+                }}
+              />
+            </div>
+            {availableTagSuggestions.length > 0 && (
+              <div className="hb-tag-suggestions">
+                {availableTagSuggestions.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    className="hb-tag-suggestion-pill"
+                    onClick={() => handleTagAdd(tag)}
+                  >
+                    + #{tag}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {draft.kind === "expense" && (

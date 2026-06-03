@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { getSetting, setSetting } from "../dal/storage.js";
+import makeLogger from "../utils/logger.js";
+
+const log = makeLogger("useAppSettings");
 
 export function useAppSettings({ isInitialLoad }) {
   const [darkMode, setDarkMode] = useState(false);
@@ -9,14 +12,18 @@ export function useAppSettings({ isInitialLoad }) {
 
   useEffect(() => {
     async function load() {
-      const [savedMonth, savedDark, savedFont] = await Promise.all([
-        getSetting("month"),
-        getSetting("darkMode"),
-        getSetting("fontFamily"),
-      ]);
-      if (typeof savedMonth === "string") setMonthFilter(savedMonth);
-      if (savedDark === "true") setDarkMode(true);
-      if (typeof savedFont === "string" && savedFont) setFontFamily(savedFont);
+      try {
+        const [savedMonth, savedDark, savedFont] = await Promise.all([
+          getSetting("month"),
+          getSetting("darkMode"),
+          getSetting("fontFamily"),
+        ]);
+        if (typeof savedMonth === "string") setMonthFilter(savedMonth);
+        if (savedDark === "true") setDarkMode(true);
+        if (typeof savedFont === "string" && savedFont) setFontFamily(savedFont);
+      } catch (err) {
+        log.warn("Einstellungen konnten nicht geladen werden — Standardwerte werden verwendet", err);
+      }
     }
     load();
   }, []);

@@ -1,6 +1,13 @@
 // src/utils/hbUtils.js
 import { CUSTOM_CATEGORY_PALETTE } from "./hbPalette.js";
 
+export const CURRENT_SCHEMA_VERSION = 2;
+
+/** Returns true if the book has not yet been migrated to the current schema. */
+export function bookNeedsMigration(book) {
+  return !book || typeof book.schemaVersion !== "number" || book.schemaVersion < CURRENT_SCHEMA_VERSION;
+}
+
 export function toCHF(n) {
   try {
     return new Intl.NumberFormat("de-CH", {
@@ -641,7 +648,7 @@ export function makeDefaultBook(name = "Mein Haushaltsbuch") {
       ...c,
       subcategories: c.subcategories.map((s) => ({ ...s })),
     })),
-    transferCategories: [...DEFAULT_TRANSFER_CATEGORIES],
+    transferCategories: [],
     entries: [],
     pots: [],
     goals: [],
@@ -752,15 +759,12 @@ export function normalizeBook(book) {
 
   // Transfer-Kategorien hinzufügen, falls nicht vorhanden
   if (!Array.isArray(normalized.transferCategories)) {
-    normalized.transferCategories = [...DEFAULT_TRANSFER_CATEGORIES];
+    normalized.transferCategories = [];
   } else {
     // Bereinigung: "Allgemein" sollte NICHT in transferCategories sein
     normalized.transferCategories = normalized.transferCategories.filter(
       (cat) => cat !== "Allgemein"
     );
-    if (normalized.transferCategories.length === 0) {
-      normalized.transferCategories = [...DEFAULT_TRANSFER_CATEGORIES];
-    }
   }
 
   // Alle Einträge mit kind/source migrieren
@@ -860,9 +864,10 @@ export function normalizeBook(book) {
   if (!Array.isArray(normalized.recurringExpenses)) {
     normalized.recurringExpenses = [];
   } else {
-    normalized.recurringExpenses = normalized.recurringExpenses.map((r) =>
-      r.groupId === undefined ? { ...r, groupId: null } : r
-    );
+    normalized.recurringExpenses = normalized.recurringExpenses.map((r) => {
+      const withGroup = r.groupId === undefined ? { ...r, groupId: null } : r;
+      return Array.isArray(withGroup.tags) ? withGroup : { ...withGroup, tags: [] };
+    });
   }
 
   // Fixkosten-Gruppen hinzufügen, falls nicht vorhanden
@@ -877,6 +882,8 @@ export function normalizeBook(book) {
 
   // Finanzieller Monatsbeginn: Standard 1 = Kalendermonat
   normalized.monthStartDay = validateMonthStartDay(normalized.monthStartDay);
+
+  normalized.schemaVersion = CURRENT_SCHEMA_VERSION;
 
   return normalized;
 }

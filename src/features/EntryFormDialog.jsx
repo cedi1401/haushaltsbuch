@@ -1,6 +1,7 @@
 import React from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
+import { HbDatePicker } from "../components/HbDatePicker.jsx";
 
 export default function EntryFormDialog({
   open,
@@ -26,9 +27,10 @@ export default function EntryFormDialog({
       onSave={onSave}
       canSave={canSave}
       saveLabel="Hinzufügen"
-      size="wide"
+      size="medium"
+      bodyScroll={false}
     >
-      <div className="hb-two" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="hb-two hb-two--dialog" style={{ gap: 16 }}>
         <div className="hb-field" style={{ gridColumn: "1 / -1" }}>
           <div className="hb-label">Art</div>
           <select className="hb-input" value={kind} onChange={(e) => setField("kind", e.target.value)}>
@@ -41,7 +43,7 @@ export default function EntryFormDialog({
 
         <div className="hb-field">
           <div className="hb-label">Datum</div>
-          <input className="hb-input" type="date" value={date} onChange={(e) => setField("date", e.target.value)} />
+          <HbDatePicker value={date} onChange={(v) => setField("date", v)} />
         </div>
 
         <div className="hb-field">

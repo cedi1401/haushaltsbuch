@@ -42,16 +42,17 @@ export function calcPotSeries(entries, potId, monthStartDay = 1) {
   const map = new Map();
 
   for (const e of entries || []) {
+    if (e.potId !== potId) continue;
+    if (e.kind !== "transfer" && e.kind !== "withdrawal") continue;
+
     const ym = getEntryFinancialMonth(e, monthStartDay);
     if (!ym) continue;
 
     const prev = map.get(ym) || { month: ym, transfersIn: 0, expensesOut: 0 };
 
-    if (e.kind === "transfer" && e.potId === potId) {
+    if (e.kind === "transfer") {
       prev.transfersIn += Number(e.amount || 0);
-    }
-
-    if (e.kind === "withdrawal" && e.potId === potId) {
+    } else {
       prev.expensesOut += Number(e.amount || 0);
     }
 
@@ -98,7 +99,7 @@ export function getWithdrawalCategoriesForPot(entries, potId, allCategories) {
   if (!potId || !allCategories.length) return allCategories;
   const used = new Set();
   for (const e of entries) {
-    if (e.kind === "transfer" && e.potId === potId && e.category) used.add(e.category);
+    if (e.kind === "withdrawal" && e.potId === potId && e.category) used.add(e.category);
   }
   const filtered = allCategories.filter((cat) => used.has(cat));
   return filtered.length > 0 ? filtered : allCategories;

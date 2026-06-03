@@ -12,6 +12,10 @@ export default function EditDialog({
   saveLabel,
   size = "default",
   hideFooter = false,
+  // Bei Formular-Dialogen den Body NICHT scrollbar machen, damit
+  // Popovers (z.B. HbDatePicker) sauber über den Body hinausragen
+  // können statt eine Scrollbar zu erzeugen.
+  bodyScroll = true,
 }) {
   const panelRef = useRef(null);
 
@@ -66,7 +70,7 @@ export default function EditDialog({
     >
       <div className="hb-modal-overlay" />
       <div
-        className={`hb-modal-panel${size === "medium" ? " hb-modal-panel-medium" : size === "wide" ? " hb-modal-panel-wide" : size === "full" ? " hb-modal-panel-full" : ""}`}
+        className={`hb-modal-panel${size === "medium" ? " hb-modal-panel-medium" : size === "wide" ? " hb-modal-panel-wide" : size === "full" ? " hb-modal-panel-full" : ""}${!bodyScroll ? " hb-modal-panel--form" : ""}`}
         ref={panelRef}
         tabIndex={-1}
         style={{ outline: "none" }}

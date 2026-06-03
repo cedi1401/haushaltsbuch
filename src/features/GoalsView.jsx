@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 
 const EMPTY_ARRAY = [];
 import { Card, CardContent, Button } from "../components/ui.jsx";
+import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import { calcGoalProgress, calcGoalPrognosis } from "../utils/goalUtils.js";
 import { parseAmount } from "../utils/hbUtils.js";
@@ -184,7 +185,7 @@ export default function GoalsView({
     <div>
       <div className="hb-row" style={{ marginBottom: 12, alignItems: "flex-start" }}>
         <div>
-          <div style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Definiere Ziele und verfolge deinen Fortschritt</div>
+          <div className="hb-section-title">Definiere Ziele und verfolge deinen Fortschritt</div>
         </div>
 
         <Button onClick={openCreateDialog}><IconPlus /> Neues Sparziel</Button>
@@ -346,116 +347,151 @@ export default function GoalsView({
         canSave={canSave}
         saveLabel={editingGoal ? "Speichern" : "Erstellen"}
       >
-        <div className="hb-form" style={{ flexDirection: "column", gap: 14 }}>
-          <div className="hb-field">
-            <div className="hb-label">Name</div>
-            <input
-              className="hb-input"
-              type="text"
-              placeholder="z.B. Urlaub 2026"
-              value={draft.name}
-              onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-            />
-          </div>
-
-          <div className="hb-field">
-            <div className="hb-label">Zielbetrag ({baseCurrency})</div>
-            <input
-              className="hb-input"
-              type="text"
-              inputMode="decimal"
-              placeholder="z.B. 10000"
-              value={draft.targetAmount}
-              onChange={(e) => setDraft((d) => ({ ...d, targetAmount: e.target.value }))}
-            />
-          </div>
-
-          <div className="hb-field">
-            <div className="hb-label">Deadline (optional)</div>
-            <input
-              className="hb-input"
-              type="date"
-              value={draft.deadline}
-              onChange={(e) => setDraft((d) => ({ ...d, deadline: e.target.value }))}
-            />
-          </div>
-
-          <div className="hb-field">
-            <div className="hb-label">Spartopf</div>
-            <select
-              className="hb-input"
-              value={draft.potId}
-              onChange={(e) => setDraft((d) => ({ ...d, potId: e.target.value }))}
-            >
-              {pots.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="hb-field">
-            <div className="hb-label">Transfer-Zweck (optional)</div>
-            <select
-              className="hb-input"
-              value={draft.transferCategory}
-              onChange={(e) => setDraft((d) => ({ ...d, transferCategory: e.target.value }))}
-            >
-              <option value="">Alle (Topf-Gesamtstand)</option>
-              {transferCategories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-            <div className="hb-muted" style={{ marginTop: 4 }}>
-              {draft.transferCategory
-                ? "Nur Transfers mit diesem Zweck werden gezählt"
-                : "Der gesamte Topf-Stand wird gemessen (Einzahlungen - Entnahmen)"}
-            </div>
-          </div>
-
-          <div className="hb-field">
-            <div className="hb-label">Startpunkt</div>
-            <select
-              className="hb-input"
-              value={draft.startMode}
-              onChange={(e) => setDraft((d) => ({ ...d, startMode: e.target.value }))}
-            >
-              <option value="zero">Ab Null (alle Buchungen zählen)</option>
-              <option value="date">Ab bestimmtem Datum</option>
-              <option value="custom">Manueller Anfangsbetrag</option>
-            </select>
-          </div>
-
-          {draft.startMode === "date" && (
-            <div className="hb-field">
-              <div className="hb-label">Startdatum</div>
+        <div
+          className="hb-form"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            gap: 20,
+            alignItems: "stretch",
+          }}
+        >
+          {/* Bereich: Grunddaten */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+            <div className="hb-field" style={{ minWidth: 0 }}>
+              <div className="hb-label">Name</div>
               <input
                 className="hb-input"
-                type="date"
-                value={draft.startDate}
-                onChange={(e) => setDraft((d) => ({ ...d, startDate: e.target.value }))}
-              />
-              <div className="hb-muted" style={{ marginTop: 4 }}>
-                Nur Buchungen ab diesem Datum werden berücksichtigt
-              </div>
-            </div>
-          )}
-
-          {draft.startMode === "custom" && (
-            <div className="hb-field">
-              <div className="hb-label">Anfangsbetrag ({baseCurrency})</div>
-              <input
-                className="hb-input"
+                style={{ minWidth: 0, width: "100%" }}
                 type="text"
-                inputMode="decimal"
-                placeholder="z.B. 500"
-                value={draft.startAmount}
-                onChange={(e) => setDraft((d) => ({ ...d, startAmount: e.target.value }))}
+                placeholder="z.B. Urlaub 2026"
+                value={draft.name}
+                onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
               />
-              <div className="hb-muted" style={{ marginTop: 4 }}>
-                Dieser Betrag wird als Startbasis zum berechneten Fortschritt addiert
+            </div>
+
+            {/* Zielbetrag + Deadline gehören logisch zusammen (Ziel + Zeitrahmen) */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 14,
+              }}
+            >
+              <div className="hb-field" style={{ minWidth: 0 }}>
+                <div className="hb-label">Zielbetrag ({baseCurrency})</div>
+                <input
+                  className="hb-input"
+                  style={{ minWidth: 0, width: "100%" }}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="z.B. 10000"
+                  value={draft.targetAmount}
+                  onChange={(e) => setDraft((d) => ({ ...d, targetAmount: e.target.value }))}
+                />
+              </div>
+
+              <div className="hb-field" style={{ minWidth: 0 }}>
+                <div className="hb-label">Deadline (optional)</div>
+                <HbDatePicker
+                  value={draft.deadline}
+                  onChange={(v) => setDraft((d) => ({ ...d, deadline: v }))}
+                  style={{ minWidth: 0, width: "100%" }}
+                  placeholder="Kein Enddatum"
+                />
               </div>
             </div>
-          )}
+          </div>
+
+          <div style={{ height: 1, background: "var(--border)" }} />
+
+          {/* Bereich: Topf-Zuordnung (was und wie gemessen wird) */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+            <div className="hb-field" style={{ minWidth: 0 }}>
+              <div className="hb-label">Spartopf</div>
+              <select
+                className="hb-input"
+                style={{ minWidth: 0, width: "100%" }}
+                value={draft.potId}
+                onChange={(e) => setDraft((d) => ({ ...d, potId: e.target.value }))}
+              >
+                {pots.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="hb-field" style={{ minWidth: 0 }}>
+              <div className="hb-label">Transfer-Zweck (optional)</div>
+              <select
+                className="hb-input"
+                style={{ minWidth: 0, width: "100%" }}
+                value={draft.transferCategory}
+                onChange={(e) => setDraft((d) => ({ ...d, transferCategory: e.target.value }))}
+              >
+                <option value="">Alle (Topf-Gesamtstand)</option>
+                {transferCategories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              {draft.transferCategory && (
+                <div className="hb-muted" style={{ marginTop: 4 }}>
+                  Nur Transfers mit diesem Zweck werden gezählt
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ height: 1, background: "var(--border)" }} />
+
+          {/* Bereich: Startpunkt */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+            <div className="hb-field" style={{ minWidth: 0 }}>
+              <div className="hb-label">Startpunkt</div>
+              <select
+                className="hb-input"
+                style={{ minWidth: 0, width: "100%" }}
+                value={draft.startMode}
+                onChange={(e) => setDraft((d) => ({ ...d, startMode: e.target.value }))}
+              >
+                <option value="zero">Ab Null (alle Buchungen zählen)</option>
+                <option value="date">Ab bestimmtem Datum</option>
+                <option value="custom">Manueller Anfangsbetrag</option>
+              </select>
+            </div>
+
+            {draft.startMode === "date" && (
+              <div className="hb-field" style={{ minWidth: 0 }}>
+                <div className="hb-label">Startdatum</div>
+                <HbDatePicker
+                  value={draft.startDate}
+                  onChange={(v) => setDraft((d) => ({ ...d, startDate: v }))}
+                  style={{ minWidth: 0, width: "100%" }}
+                />
+                <div className="hb-muted" style={{ marginTop: 4 }}>
+                  Nur Buchungen ab diesem Datum werden berücksichtigt
+                </div>
+              </div>
+            )}
+
+            {draft.startMode === "custom" && (
+              <div className="hb-field" style={{ minWidth: 0 }}>
+                <div className="hb-label">Anfangsbetrag ({baseCurrency})</div>
+                <input
+                  className="hb-input"
+                  style={{ minWidth: 0, width: "100%" }}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="z.B. 500"
+                  value={draft.startAmount}
+                  onChange={(e) => setDraft((d) => ({ ...d, startAmount: e.target.value }))}
+                />
+                <div className="hb-muted" style={{ marginTop: 4 }}>
+                  Dieser Betrag wird als Startbasis zum berechneten Fortschritt addiert
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </EditDialog>
     </div>

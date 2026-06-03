@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from "react";
+import React, { memo, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -54,13 +54,50 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
 }) {
   const fmt = useFmt();
   const themeColors = useThemeColors();
+  const [fctRangeOption, setFctRangeOption] = useState("12");
+  const [fctScrollOffset, setFctScrollOffset] = useState(0);
+  const [selectedTags, setSelectedTags] = useState(new Set());
+
+  const fctRangePool = useMemo(() => {
+    if (fctRangeOption === "12") return fixedMonthly.slice(-12);
+    if (fctRangeOption === "24") return fixedMonthly.slice(-24);
+    return fixedMonthly;
+  }, [fixedMonthly, fctRangeOption]);
+
+  const fctMaxOffset = Math.max(0, fctRangePool.length - 12);
+
+  const fctWindowData = useMemo(() => {
+    const start = Math.max(0, fctRangePool.length - 12 - fctScrollOffset);
+    return fctRangePool.slice(start, start + 12);
+  }, [fctRangePool, fctScrollOffset]);
+
+  const fctWindowLabel = useMemo(() => {
+    if (!fctWindowData.length) return "";
+    const first = fctWindowData[0].label;
+    const last = fctWindowData[fctWindowData.length - 1].label;
+    return first === last ? first : `${first} – ${last}`;
+  }, [fctWindowData]);
+
   const momLabel =
     kpis.momDelta == null ? null
     : `${kpis.momDelta > 0 ? "+" : ""}${kpis.momDelta.toFixed(1)}% ggü. Vormonat`;
 
+  const availableTags = useMemo(() => {
+    const set = new Set();
+    (recurringExpenses || [])
+      .filter((r) => r.showInOverview !== false)
+      .forEach((r) => (r.tags || []).forEach((t) => set.add(t)));
+    return [...set].sort();
+  }, [recurringExpenses]);
+
+  const totalOverviewCount = useMemo(
+    () => (recurringExpenses || []).filter((r) => r.showInOverview !== false).length,
+    [recurringExpenses]
+  );
+
   // Items nach Betrag sortiert — nur mit showInOverview, nur Hauptkategorie
   const activeItems = useMemo(() => {
-    const items = (recurringExpenses || [])
+    const allOverviewItems = (recurringExpenses || [])
       .filter((r) => r.showInOverview !== false)
       .map((r) => {
         const cat = (expenseCategories || []).find((c) => c.id === r.categoryId);
@@ -73,9 +110,13 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
       })
       .sort((a, b) => b.amount - a.amount);
 
+    const items = selectedTags.size === 0
+      ? allOverviewItems
+      : allOverviewItems.filter((r) => (r.tags || []).some((t) => selectedTags.has(t)));
+
     const base = avgMonthlyExpense > 0 ? avgMonthlyExpense : (items.reduce((s, r) => s + r.amount, 0) || 1);
     return items.map((r) => ({ ...r, pct: (r.amount / base) * 100 }));
-  }, [recurringExpenses, expenseCategories, avgMonthlyExpense]);
+  }, [recurringExpenses, expenseCategories, avgMonthlyExpense, selectedTags]);
 
   // Jahresbetrag-Summe aller sichtbaren Positionen
   const annualTotal = useMemo(
@@ -124,8 +165,8 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
       <Card>
         <CardContent>
           <div className="hb-row" style={{ alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-            <h4 style={{ margin: 0, fontSize: 15 }}>Verlauf über Zeit</h4>
-            <div style={{ display: "flex", gap: 14, marginLeft: "auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <h4 style={{ margin: 0, fontSize: 15 }}>Verlauf über Zeit</h4>
               <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
                 <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.accent} strokeWidth="2" /></svg>
                 Gebucht
@@ -139,10 +180,24 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 Anteil %
               </span>
             </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: fctMaxOffset > 0 ? "visible" : "hidden" }}>
+                <button type="button" className="hb-icon-btn" onClick={() => setFctScrollOffset((o) => Math.min(o + 1, fctMaxOffset))} disabled={fctScrollOffset >= fctMaxOffset} title="Älteren Bereich anzeigen">‹</button>
+                <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{fctWindowLabel}</span>
+                <button type="button" className="hb-icon-btn" onClick={() => setFctScrollOffset((o) => Math.max(o - 1, 0))} disabled={fctScrollOffset === 0} title="Neueren Bereich anzeigen">›</button>
+              </div>
+              {fixedMonthly.length > 12 && (
+                <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
+                  {[["12", "12 M"], ["24", "24 M"], ["all", "Gesamt"]].map(([val, lbl]) => (
+                    <button key={val} type="button" className={`hb-pill-tab ${fctRangeOption === val ? "hb-pill-tab-active" : ""}`} onClick={() => { setFctRangeOption(val); setFctScrollOffset(0); }}>{lbl}</button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={fixedMonthly} margin={{ top: 4, right: 48, bottom: 0, left: 0 }}>
+            <LineChart data={fctWindowData} margin={{ top: 4, right: 48, bottom: 0, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={themeColors.muted} strokeOpacity={0.15} />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
               <YAxis yAxisId="chf" tick={{ fontSize: 11 }} tickFormatter={(v) => fmt(v)} width={70} />
@@ -181,13 +236,45 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
         </CardContent>
       </Card>
 
-      {/* Positionen-Übersicht: 3 gleiche Spalten */}
+      {/* Fixkosten-Übersicht: 3 gleiche Spalten */}
       {activeItems.length > 0 && (
         <Card>
           <CardContent>
-            <div className="hb-row" style={{ alignItems: "center", marginBottom: 16 }}>
-              <h4 style={{ margin: 0, fontSize: 15 }}>Positionen-Übersicht</h4>
-              <span className="hb-muted" style={{ fontSize: 12, marginLeft: "auto" }}>
+            <div style={{ marginBottom: 16, display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 8, justifyContent: "space-between" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <h4 style={{ margin: 0, fontSize: 15 }}>Übersicht</h4>
+                  {selectedTags.size > 0 && (
+                    <span className="hb-fct-filter-hint">{activeItems.length} von {totalOverviewCount}</span>
+                  )}
+                </div>
+                {availableTags.length > 0 && (
+                  <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
+                    <button
+                      type="button"
+                      className={`hb-pill-tab${selectedTags.size === 0 ? " hb-pill-tab-active" : ""}`}
+                      onClick={() => setSelectedTags(new Set())}
+                    >
+                      Alle
+                    </button>
+                    {availableTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={`hb-pill-tab${selectedTags.has(tag) ? " hb-pill-tab-active" : ""}`}
+                        onClick={() => setSelectedTags((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(tag)) next.delete(tag); else next.add(tag);
+                          return next;
+                        })}
+                      >
+                        #{tag}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <span className="hb-muted" style={{ fontSize: 12, alignSelf: "flex-start", paddingTop: 2 }}>
                 Total: {fmt(configuredTotal)} / Monat
               </span>
             </div>

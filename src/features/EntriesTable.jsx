@@ -15,11 +15,13 @@ export default function EntriesTable({
   onAddEntry,
 }) {
   const fmt = useFmt();
+  const [collapsed, setCollapsed] = useState(true);
   const [visibleCount, setVisibleCount] = useState(CHUNK_SIZE);
   const sentinelRef = useRef(null);
 
   // Reset when the entries list changes (month or filter change)
   useEffect(() => {
+    setCollapsed(true);
     setVisibleCount(CHUNK_SIZE);
   }, [entriesSorted]);
 
@@ -39,8 +41,10 @@ export default function EntriesTable({
     return () => observer.disconnect();
   }, [visibleCount, entriesSorted.length]);
 
-  const displayedEntries = entriesSorted.slice(0, visibleCount);
-  const hasMore = visibleCount < entriesSorted.length;
+  const displayedEntries = collapsed
+    ? entriesSorted.slice(0, 5)
+    : entriesSorted.slice(0, visibleCount);
+  const hasMore = !collapsed && visibleCount < entriesSorted.length;
 
   return (
     <Card style={{ marginTop: 16 }}>
@@ -95,7 +99,7 @@ export default function EntriesTable({
                     colorClass = "hb-ok";
                   } else if (isTransfer) {
                     typeLabel = "Transfer";
-                    sign = "→";
+                    sign = "↓";
                     colorClass = "hb-transfer";
                   } else if (isWithdrawal) {
                     typeLabel = "Entnahme";
@@ -110,7 +114,7 @@ export default function EntriesTable({
                       <td className="hb-col-category">{e.category}</td>
                       <td className="hb-col-note">{e.note || "—"}</td>
                       <td className={`hb-col-amount hb-right ${colorClass}`}>
-                        <span className="hb-sign">{sign}</span>
+                        <span className={`hb-sign${isTransfer ? " hb-sign-right" : ""}`}>{sign}</span>
                         <span className="hb-amount-value">{fmt(Number(e.amount || 0))}</span>
                       </td>
                       <td className="hb-col-actions">
@@ -141,12 +145,29 @@ export default function EntriesTable({
               </tbody>
             </table>
 
-            {hasMore && (
-              <div ref={sentinelRef} style={{ marginTop: 12, textAlign: "center" }}>
-                <span className="hb-muted">
-                  {visibleCount} von {entriesSorted.length} Einträgen geladen…
-                </span>
+            {collapsed && entriesSorted.length > 5 && (
+              <div style={{ marginTop: 12, textAlign: "center" }}>
+                <Button variant="outline" onClick={() => setCollapsed(false)}>
+                  Weitere {entriesSorted.length - 5} anzeigen
+                </Button>
               </div>
+            )}
+
+            {!collapsed && (
+              <>
+                {hasMore && (
+                  <div ref={sentinelRef} style={{ marginTop: 12, textAlign: "center" }}>
+                    <span className="hb-muted">
+                      {visibleCount} von {entriesSorted.length} Einträgen geladen…
+                    </span>
+                  </div>
+                )}
+                <div style={{ marginTop: 12, textAlign: "center" }}>
+                  <Button variant="outline" onClick={() => setCollapsed(true)}>
+                    Weniger anzeigen
+                  </Button>
+                </div>
+              </>
             )}
 
             {monthFilter && (

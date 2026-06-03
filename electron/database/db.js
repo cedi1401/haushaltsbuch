@@ -47,14 +47,20 @@ export function getDb() {
       if (!row || !row.data) return [];
       try {
         return JSON.parse(row.data);
-      } catch {
+      } catch (err) {
+        console.error('[db] getBooks: JSON-Parsing fehlgeschlagen — Datenbank-Inhalt ist beschädigt:', err.message);
         return [];
       }
     },
 
     saveBooks(books) {
-      const json = JSON.stringify(books);
-      db.prepare('UPDATE books_store SET data = ? WHERE id = 1').run(json);
+      try {
+        const json = JSON.stringify(books);
+        db.prepare('UPDATE books_store SET data = ? WHERE id = 1').run(json);
+      } catch (err) {
+        console.error('[db] saveBooks fehlgeschlagen:', err.message);
+        throw err;
+      }
     },
 
     getSetting(key) {

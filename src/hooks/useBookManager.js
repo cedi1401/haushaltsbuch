@@ -2,12 +2,16 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import {
   makeDefaultBook,
   normalizeBooks,
+  bookNeedsMigration,
   formatCurrency,
   todayISO,
 } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { getFinancialMonth } from "../utils/financialMonthUtils.js";
-import { loadBooks, saveBooks, getSetting, setSetting } from "../dal/storage.js";
+import { loadBooks, saveBooks, getSetting, setSetting, createAutoBackup } from "../dal/storage.js";
+import makeLogger from "../utils/logger.js";
+
+const log = makeLogger("useBookManager");
 
 export function useBookManager({ toast, confirm }) {
   const [books, setBooks] = useState([]);
@@ -21,8 +25,30 @@ export function useBookManager({ toast, confirm }) {
         getSetting("activeBookId"),
       ]);
       if (Array.isArray(savedBooks) && savedBooks.length) {
-        const normalized = normalizeBooks(savedBooks);
-        setBooks(normalized);
+        const needsMigration = savedBooks.some(bookNeedsMigration);
+        if (needsMigration) {
+          try {
+            await createAutoBackup(savedBooks);
+            log.info('Auto-Backup vor Migration angelegt');
+          } catch (err) {
+            log.warn('Auto-Backup fehlgeschlagen — Migration wird trotzdem fortgesetzt', err);
+          }
+        }
+
+        let normalized;
+        try {
+          normalized = normalizeBooks(savedBooks);
+          if (needsMigration) log.info(`${savedBooks.length} Buch/Bücher erfolgreich migriert`);
+        } catch (err) {
+          log.error('Datenmigration fehlgeschlagen', err);
+          toast.error(
+            `Datenmigration fehlgeschlagen: ${err.message}\n` +
+            `Ein Backup wurde unter userData/backups/ gespeichert.`
+          );
+          normalized = [];
+        }
+
+        setBooks(normalized.length ? normalized : [makeDefaultBook()]);
         setActiveBookId(savedActive || normalized[0]?.id || null);
       } else {
         const b = makeDefaultBook();
