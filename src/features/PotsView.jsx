@@ -274,6 +274,14 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
         zusammenhängende Übersicht. Bricht über die hb-stat-tiles-Breakpoints um.
       */}
       <div className="hb-stat-pills" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+        <div className="hb-stat-pill hb-stat-pill--ok">
+          <div className="hb-stat-pill-label">Summe Einzahlungen</div>
+          <div className="hb-stat-pill-value hb-ok" style={{ marginTop: 14 }}>+{fmt(totals.transfersIn)}</div>
+        </div>
+        <div className="hb-stat-pill hb-stat-pill--bad">
+          <div className="hb-stat-pill-label">Summe Entnahmen</div>
+          <div className="hb-stat-pill-value hb-bad" style={{ marginTop: 14 }}>-{fmt(totals.expensesOut)}</div>
+        </div>
         <div className={`hb-stat-pill ${currentBalance >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
           <div className="hb-stat-pill-label">Aktueller Stand</div>
           <div className={`hb-stat-pill-value ${currentBalance >= 0 ? "hb-ok" : "hb-bad"}`}>
@@ -282,14 +290,6 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
           <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
             {selectedPot.name}
           </div>
-        </div>
-        <div className="hb-stat-pill hb-stat-pill--ok">
-          <div className="hb-stat-pill-label">Summe Einzahlungen</div>
-          <div className="hb-stat-pill-value hb-ok" style={{ marginTop: 14 }}>+{fmt(totals.transfersIn)}</div>
-        </div>
-        <div className="hb-stat-pill hb-stat-pill--bad">
-          <div className="hb-stat-pill-label">Summe Entnahmen</div>
-          <div className="hb-stat-pill-value hb-bad" style={{ marginTop: 14 }}>-{fmt(totals.expensesOut)}</div>
         </div>
 
         {highlights && potSeries.length > 0 ? (

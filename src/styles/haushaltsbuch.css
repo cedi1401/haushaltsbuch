@@ -77,21 +77,21 @@
 
 :root.dark {
   color-scheme: dark;
-  /* Dark Mode - Immersive deep blue-grays, not pure black */
-  --bg: #202020;
-  --bg-subtle: #1c1c1c;
-  --card: #2d2d2d;
-  --text: #ffffff;
-  --text-secondary: #d4d4d4;
-  --muted: #9e9e9e;
-  --border: #404040;
-  --border-light: #353535;
+  /* Dark Mode - Very subtle cool-gray tint (barely perceptible blue) */
+  --bg: #1e2026;
+  --bg-subtle: #191c22;
+  --card: #272b35;
+  --text: #f2f4f8;
+  --text-secondary: #cdd0d8;
+  --muted: #929aa8;
+  --border: #333844;
+  --border-light: #2b2f3a;
 
   /* Dark mode shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.28);
-  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.32);
-  --shadow-dialog: 0 8px 32px rgba(0, 0, 0, 0.42);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.36);
+  --shadow-dialog: 0 8px 32px rgba(0, 0, 0, 0.48);
 
   /* Dark mode accent */
   --accent: #60cdff;
@@ -115,15 +115,15 @@
   --orange: #f7630c;
 
   /* Interactive states */
-  --input-bg: #1e1e1e;
+  --input-bg: #1c1f28;
   --hover-bg: rgba(255, 255, 255, 0.05);
   --active-bg: rgba(255, 255, 255, 0.08);
   --focus-ring: rgba(96, 205, 255, 0.3);
-  --overlay-bg: rgba(0, 0, 0, 0.5);
+  --overlay-bg: rgba(0, 0, 0, 0.55);
   --reveal-border: rgba(96, 205, 255, 0.25);
 
   /* Dark mode semantic UI colors */
-  --selection-bg: rgba(96, 205, 255, 0.3);
+  --selection-bg: rgba(96, 205, 255, 0.28);
   --app-font-family: 'Inter Variable', sans-serif;
 }
 

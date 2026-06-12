@@ -164,8 +164,8 @@ export default function Charts({
           allocationData.totalValue <= 0 ? (
             <div className="hb-empty hb-empty--sm">
               <div className="hb-empty-icon"><IconInbox /></div>
-              <div className="hb-empty-title">Keine Einnahmen</div>
-              <div className="hb-empty-text">Für diesen Monat wurden keine Einnahmen erfasst.</div>
+              <div className="hb-empty-title">Keine Buchungen</div>
+              <div className="hb-empty-text">Für diesen Monat wurden keine Buchungen erfasst.</div>
             </div>
           ) : (
             <div className="hb-chart-body">
