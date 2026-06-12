@@ -3,6 +3,7 @@ import { Card, CardContent, Button } from "../components/ui.jsx";
 import { IconEdit, IconDelete, IconInbox, IconPlus } from "../components/icons.jsx";
 import { formatDateDE } from "../utils/hbUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
+import HbTooltip from "../components/HbTooltip.jsx";
 
 const CHUNK_SIZE = 100;
 
@@ -50,9 +51,15 @@ export default function EntriesTable({
     <Card style={{ marginTop: 16 }}>
       <CardContent>
         <div className="hb-row" style={{ alignItems: "baseline" }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Buchungen</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <h2 style={{ margin: 0, fontSize: 18 }}>Buchungen</h2>
+            <HbTooltip
+              text="Wenn du im Monatsfilter editierst und das Datum in einen anderen Monat änderst, verschwindet der Eintrag aus der aktuellen Ansicht."
+              placement="right"
+            />
+          </div>
           <div className="hb-muted">
-            {entriesSorted.length} Einträge {monthLabel}
+            {entriesSorted.length} Einträge · {monthLabel}
           </div>
         </div>
 
@@ -170,12 +177,7 @@ export default function EntriesTable({
               </>
             )}
 
-            {monthFilter && (
-              <div className="hb-note">
-                Hinweis: Wenn du im Monatsfilter editierst und das Datum in einen anderen Monat änderst,
-                verschwindet der Eintrag aus der aktuellen Ansicht.
-              </div>
-            )}
+
           </div>
         )}
       </CardContent>

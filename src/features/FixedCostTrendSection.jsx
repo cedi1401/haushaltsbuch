@@ -10,6 +10,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { Card, CardContent } from "../components/ui.jsx";
+import HbTooltip from "../components/HbTooltip.jsx";
 import { useThemeColors } from "../hooks/useThemeColors.jsx";
 import { getCategoryLabel } from "../utils/hbUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
@@ -127,11 +128,9 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
   return (
     <div className="hb-fct-section">
       <div className="hb-fct-header">
-        <div>
+        <div className="hb-title-with-help">
           <h3 className="hb-fct-title">Fixkosten-Entwicklung</h3>
-          <p className="hb-muted" style={{ margin: 0, fontSize: 13 }}>
-            Gebuchte Fixkosten über den gewählten Zeitraum (via „Jetzt buchen") &amp; Übersicht aller konfigurierten Positionen
-          </p>
+          <HbTooltip text='Gebuchte Fixkosten über den gewählten Zeitraum (via „Jetzt buchen") und Übersicht aller konfigurierten Positionen.' />
         </div>
       </div>
 
@@ -180,7 +179,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 Anteil %
               </span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: fctMaxOffset > 0 ? "visible" : "hidden" }}>
                 <button type="button" className="hb-icon-btn" onClick={() => setFctScrollOffset((o) => Math.min(o + 1, fctMaxOffset))} disabled={fctScrollOffset >= fctMaxOffset} title="Älteren Bereich anzeigen">‹</button>
                 <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{fctWindowLabel}</span>

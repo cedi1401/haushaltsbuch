@@ -3,6 +3,7 @@ import { Button, Card, CardContent } from "../components/ui.jsx";
 import CategoryManagerDialog from "../components/CategoryManagerDialog.jsx";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../utils/hbUtils.js";
+import { IconPots } from "../components/icons.jsx";
 
 import EntryFormDialog from "./EntryFormDialog.jsx";
 import Charts from "./Charts.jsx";
@@ -15,6 +16,8 @@ export default function DashboardView({
   totalIncome,
   totalExpense,
   totalTransfers,
+  totalSavingsTransfers,
+  totalReserveTransfers,
   balance,
   potBalances,
   expenseByHierarchy,
@@ -63,24 +66,26 @@ export default function DashboardView({
         }}
       />
 
-      <div className="hb-stat-tiles">
-        <div className="hb-stat-tile">
-          <div className="hb-stat-tile-label">Einnahmen</div>
-          <div className="hb-stat-tile-value hb-ok">+{fmt(totalIncome)}</div>
+      <div className="hb-stat-pills" style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" }}>
+        <div className="hb-stat-pill hb-stat-pill--ok">
+          <span className="hb-stat-pill-label">Einnahmen</span>
+          <span className="hb-stat-pill-value hb-ok">+{fmt(totalIncome)}</span>
         </div>
-        <div className="hb-stat-tile">
-          <div className="hb-stat-tile-label">Ausgaben</div>
-          <div className="hb-stat-tile-value hb-bad">-{fmt(totalExpense)}</div>
+        <div className="hb-stat-pill hb-stat-pill--bad">
+          <span className="hb-stat-pill-label">Ausgaben</span>
+          <span className="hb-stat-pill-value hb-bad">-{fmt(totalExpense)}</span>
         </div>
-        <div className="hb-stat-tile">
-          <div className="hb-stat-tile-label">Transfers</div>
-          <div className="hb-stat-tile-value hb-transfer"><span className="hb-sign hb-sign-right">↓</span>{" "}{fmt(totalTransfers)}</div>
+        <div className="hb-stat-pill hb-stat-pill--transfer">
+          <span className="hb-stat-pill-label">Rücklagen</span>
+          <span className="hb-stat-pill-value hb-transfer">{fmt(totalReserveTransfers ?? totalTransfers)}</span>
         </div>
-        <div className="hb-stat-tile">
-          <div className="hb-stat-tile-label">Saldo</div>
-          <div className={`hb-stat-tile-value ${balance >= 0 ? "hb-ok" : "hb-bad"}`}>
-            {fmt(balance)}
-          </div>
+        <div className="hb-stat-pill hb-stat-pill--ok">
+          <span className="hb-stat-pill-label">Gespart</span>
+          <span className="hb-stat-pill-value hb-ok">{fmt(totalSavingsTransfers ?? 0)}</span>
+        </div>
+        <div className={`hb-stat-pill ${balance >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
+          <span className="hb-stat-pill-label">Frei</span>
+          <span className={`hb-stat-pill-value ${balance >= 0 ? "hb-ok" : "hb-bad"}`}>{fmt(balance)}</span>
         </div>
       </div>
 
@@ -98,16 +103,24 @@ export default function DashboardView({
               </button>
             )}
           </div>
-          <div className="hb-pot-tiles">
-            {(showAllPots ? potBalances : potBalances.slice(0, 8)).map((pot) => (
-              <div key={pot.id} className="hb-pot-tile">
-                <div className="hb-stat-title">{pot.name}</div>
-                <div className={`hb-stat-val ${pot.balance >= 0 ? "hb-ok" : "hb-bad"}`}>
-                  {fmt(pot.balance)}
+          {potBalances.length === 0 ? (
+            <div className="hb-empty hb-empty--sm">
+              <div className="hb-empty-icon"><IconPots /></div>
+              <div className="hb-empty-title">Noch keine Töpfe</div>
+              <div className="hb-empty-text">Lege Töpfe an, um Geld für bestimmte Zwecke zurückzulegen.</div>
+            </div>
+          ) : (
+            <div className="hb-pot-tiles">
+              {(showAllPots ? potBalances : potBalances.slice(0, 8)).map((pot) => (
+                <div key={pot.id} className="hb-pot-tile">
+                  <div className="hb-stat-title">{pot.name}</div>
+                  <div className={`hb-stat-val ${pot.balance >= 0 ? "hb-ok" : "hb-bad"}`}>
+                    {fmt(pot.balance)}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -116,6 +129,11 @@ export default function DashboardView({
           expenseByHierarchy={expenseByHierarchy}
           incomeByHierarchy={incomeByHierarchy}
           baseCurrency={baseCurrency}
+          totalIncome={totalIncome}
+          totalExpense={totalExpense}
+          totalReserveTransfers={totalReserveTransfers ?? 0}
+          totalSavingsTransfers={totalSavingsTransfers ?? 0}
+          balance={balance}
         />
         <InsightsPanel
           expenseByHierarchy={expenseByHierarchy}
@@ -125,6 +143,8 @@ export default function DashboardView({
           monthStartDay={monthStartDay}
           totalIncome={totalIncome}
           totalExpense={totalExpense}
+          totalSavingsTransfers={totalSavingsTransfers ?? 0}
+          totalReserveTransfers={totalReserveTransfers ?? 0}
           expenseCategories={expenseCategories}
         />
       </div>

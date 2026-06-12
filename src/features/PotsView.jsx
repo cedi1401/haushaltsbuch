@@ -32,9 +32,9 @@ import {
   IconInbox,
 } from "../components/icons.jsx";
 
-const monthLabel = formatYearMonth;
+const fmtYearMonth = formatYearMonth;
 
-export default function PotsView({ activeBook, entries, baseCurrency = "CHF", onAddTransferEntry, onUpdateBook, transferCategories, todayISO, onEditEntry, onRemoveEntry, monthStartDay = 1 }) {
+export default function PotsView({ activeBook, entries, baseCurrency = "CHF", onAddTransferEntry, onUpdateBook, transferCategories, todayISO, onEditEntry, onRemoveEntry, monthStartDay = 1, monthFilter, monthLabel }) {
   const fmt = useFmt();
   const pots = useMemo(() => activeBook?.pots || [], [activeBook?.pots]);
   const [selectedPotId, setSelectedPotId] = useState(pots[0]?.id || "");
@@ -62,7 +62,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
   const potSeries = useMemo(() => {
     if (!selectedPot) return [];
     const series = calcPotSeries(entries, selectedPot.id, monthStartDay);
-    return series.map((d) => ({ ...d, label: monthLabel(d.month) }));
+    return series.map((d) => ({ ...d, label: fmtYearMonth(d.month) }));
   }, [entries, selectedPot, monthStartDay]);
 
   // Aktueller Stand
@@ -157,18 +157,23 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
     return map;
   }, [transfersByCategory]);
 
-  // Alle Einzelbuchungen (Transfers + Entnahmen) für den gewählten Topf
+  // Alle Einzelbuchungen (Transfers + Entnahmen) für den gewählten Topf, optional nach Monat gefiltert
   const potEntries = useMemo(() => {
     if (!selectedPot) return [];
     return (entries || [])
-      .filter((e) => e.potId === selectedPot.id && (e.kind === "transfer" || e.kind === "withdrawal"))
+      .filter((e) => {
+        if (e.potId !== selectedPot.id) return false;
+        if (e.kind !== "transfer" && e.kind !== "withdrawal") return false;
+        if (monthFilter && e.date && !String(e.date).startsWith(monthFilter)) return false;
+        return true;
+      })
       .toSorted((a, b) => {
         const da = String(a.date || "");
         const db = String(b.date || "");
         if (da !== db) return db.localeCompare(da);
         return Number(b.id) - Number(a.id);
       });
-  }, [entries, selectedPot]);
+  }, [entries, selectedPot, monthFilter]);
 
   // Highlights
   const highlights = useMemo(() => {
@@ -268,41 +273,39 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
         Statt zweier getrennter Voll-Breiten-Streifen ergibt das eine ruhige,
         zusammenhängende Übersicht. Bricht über die hb-stat-tiles-Breakpoints um.
       */}
-      <div className="hb-stat-tiles" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
-        <div className="hb-stat-tile">
-          <div className="hb-stat-tile-label">Aktueller Stand</div>
-          <div
-            className={`hb-stat-tile-value ${currentBalance >= 0 ? "hb-ok" : "hb-bad"}`}
-          >
+      <div className="hb-stat-pills" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+        <div className={`hb-stat-pill ${currentBalance >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
+          <div className="hb-stat-pill-label">Aktueller Stand</div>
+          <div className={`hb-stat-pill-value ${currentBalance >= 0 ? "hb-ok" : "hb-bad"}`}>
             {fmt(currentBalance)}
           </div>
           <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
             {selectedPot.name}
           </div>
         </div>
-        <div className="hb-stat-tile">
-          <div className="hb-stat-tile-label">Summe Einzahlungen</div>
-          <div className="hb-stat-tile-value hb-ok">+{fmt(totals.transfersIn)}</div>
+        <div className="hb-stat-pill hb-stat-pill--ok">
+          <div className="hb-stat-pill-label">Summe Einzahlungen</div>
+          <div className="hb-stat-pill-value hb-ok" style={{ marginTop: 14 }}>+{fmt(totals.transfersIn)}</div>
         </div>
-        <div className="hb-stat-tile">
-          <div className="hb-stat-tile-label">Summe Entnahmen</div>
-          <div className="hb-stat-tile-value hb-bad">-{fmt(totals.expensesOut)}</div>
+        <div className="hb-stat-pill hb-stat-pill--bad">
+          <div className="hb-stat-pill-label">Summe Entnahmen</div>
+          <div className="hb-stat-pill-value hb-bad" style={{ marginTop: 14 }}>-{fmt(totals.expensesOut)}</div>
         </div>
 
         {highlights && potSeries.length > 0 ? (
           <>
-            <div className="hb-stat-tile">
-              <div className="hb-stat-tile-label">Höchste Einzahlung</div>
-              <div className="hb-stat-tile-value hb-ok" style={{ fontSize: 18 }}>
+            <div className="hb-stat-pill hb-stat-pill--ok">
+              <div className="hb-stat-pill-label">Höchste Einzahlung</div>
+              <div className="hb-stat-pill-value hb-ok">
                 +{fmt(highlights.topTransfer.transfersIn)}
               </div>
               <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
                 {highlights.topTransfer.label}
               </div>
             </div>
-            <div className="hb-stat-tile">
-              <div className="hb-stat-tile-label">Höchste Entnahme</div>
-              <div className="hb-stat-tile-value hb-bad" style={{ fontSize: 18 }}>
+            <div className="hb-stat-pill hb-stat-pill--bad">
+              <div className="hb-stat-pill-label">Höchste Entnahme</div>
+              <div className="hb-stat-pill-value hb-bad">
                 -{fmt(highlights.topExpense.expensesOut)}
               </div>
               <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
@@ -365,7 +368,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                         Stand
                       </span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: lineMaxOffset > 0 ? "visible" : "hidden" }}>
                         <button type="button" className="hb-icon-btn" onClick={() => setLineScrollOffset((o) => Math.min(o + 1, lineMaxOffset))} disabled={lineScrollOffset >= lineMaxOffset} title="Älteren Bereich anzeigen">‹</button>
                         <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{lineWindowLabel}</span>
@@ -429,7 +432,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                 <CardContent>
                   <div className="hb-row" style={{ alignItems: "center", marginBottom: 8 }}>
                     <h3 style={{ margin: 0, fontSize: 16 }}>Ein-/Auszahlungen</h3>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: barMaxOffset > 0 ? "visible" : "hidden" }}>
                         <button type="button" className="hb-icon-btn" onClick={() => setBarScrollOffset((o) => Math.min(o + 1, barMaxOffset))} disabled={barScrollOffset >= barMaxOffset} title="Älteren Bereich anzeigen">‹</button>
                         <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{barWindowLabel}</span>
@@ -569,7 +572,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
         <CardContent>
           <div className="hb-row" style={{ alignItems: "baseline", marginBottom: 10 }}>
             <h3 style={{ margin: 0, fontSize: 16 }}>Buchungen: {selectedPot.name}</h3>
-            <div className="hb-muted">{potEntries.length} Einträge</div>
+            <div className="hb-muted">{potEntries.length} Einträge{monthLabel ? ` · ${monthLabel}` : ""}</div>
           </div>
 
           {potEntries.length === 0 ? (

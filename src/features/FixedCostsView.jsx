@@ -428,9 +428,9 @@ export default function FixedCostsView({
     <div>
       {/* Toolbar */}
       <div className="hb-fixed-toolbar">
-        <div className="hb-fixed-hero">
-          <span className="hb-fixed-hero-label">Monatliche Summe</span>
-          <span className="hb-fixed-hero-value">{fmt(totalAmount)}</span>
+        <div className="hb-stat-pill hb-stat-pill--accent">
+          <span className="hb-stat-pill-label">Monatliche Summe</span>
+          <span className="hb-stat-pill-value">{fmt(totalAmount)}</span>
         </div>
         <div className="hb-fixed-toolbar-actions">
           <Button

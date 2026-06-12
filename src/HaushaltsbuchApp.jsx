@@ -59,7 +59,8 @@ export default function HaushaltsbuchApp() {
   } = bookManager;
 
   const appSettings = useAppSettings({ isInitialLoad });
-  const { darkMode, setDarkMode, fontFamily, setFontFamily, monthFilter, setMonthFilter, updateReady, setUpdateReady } = appSettings;
+  const { darkMode, setDarkMode, fontFamily, setFontFamily, monthFilter, setMonthFilter, updateReady, setUpdateReady, updateAvailable, setUpdateAvailable } = appSettings;
+  const [downloadingUpdate, setDownloadingUpdate] = useState(false);
 
   const entries = activeBook?.entries || EMPTY_ARRAY;
   const indicateTransferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
@@ -122,6 +123,19 @@ export default function HaushaltsbuchApp() {
   );
   const balance = totalIncome - totalExpense - totalTransfers;
 
+  const savingsPotIds = useMemo(
+    () => new Set((activeBook?.pots || []).filter((p) => p.isSavings).map((p) => p.id)),
+    [activeBook?.pots]
+  );
+  const totalSavingsTransfers = useMemo(
+    () => sumAmounts(filteredEntries, (e) => e.kind === "transfer" && savingsPotIds.has(e.potId)),
+    [filteredEntries, savingsPotIds]
+  );
+  const totalReserveTransfers = useMemo(
+    () => sumAmounts(filteredEntries, (e) => e.kind === "transfer" && !savingsPotIds.has(e.potId)),
+    [filteredEntries, savingsPotIds]
+  );
+
   const { expenseByHierarchy, incomeByHierarchy } = useCategoryStats(
     filteredEntries,
     activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES,
@@ -149,17 +163,20 @@ export default function HaushaltsbuchApp() {
   );
 
   const monthLabel = useMemo(() => {
-    if (!monthFilter) return "(Alle Monate)";
-    if (monthStartDay === 1) return `(${monthFilter})`;
+    if (!monthFilter) return "Alle Monate";
+    const MONTHS_LONG = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+    const [yyyy, mm] = monthFilter.split("-");
+    const monthName = MONTHS_LONG[Number(mm) - 1];
+    if (monthStartDay === 1) return `${monthName} ${yyyy}`;
     const range = getFinancialMonthRange(monthFilter, monthStartDay);
-    if (!range) return `(${monthFilter})`;
-    const months = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+    if (!range) return `${monthName} ${yyyy}`;
+    const MONTHS_SHORT = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
     const fmtDate = (iso) => {
       if (!iso) return "";
-      const [, mm, dd] = iso.split("-");
-      return `${Number(dd)}. ${months[Number(mm) - 1]}`;
+      const [, m, dd] = iso.split("-");
+      return `${Number(dd)}. ${MONTHS_SHORT[Number(m) - 1]}`;
     };
-    return `(${monthFilter} · ${fmtDate(range.startDate)} – ${fmtDate(range.endDate)})`;
+    return `${monthName} ${yyyy} · ${fmtDate(range.startDate)} – ${fmtDate(range.endDate)}`;
   }, [monthFilter, monthStartDay]);
 
   const allEntries = useMemo(
@@ -176,6 +193,37 @@ export default function HaushaltsbuchApp() {
     <CurrencyContext.Provider value={fmt}>
       <div className="hb-page">
         <div className="hb-page-container">
+          {updateAvailable && !updateReady && (
+            <div className="hb-infobar" role="status">
+              <div className="hb-infobar-icon"><IconInfo /></div>
+              <div className="hb-infobar-content">
+                <div className="hb-infobar-title">Update verfügbar</div>
+                <div className="hb-infobar-message">
+                  Version <strong>v{updateAvailable.version}</strong> ist verfügbar.
+                </div>
+              </div>
+              <div className="hb-infobar-actions">
+                <Button
+                  onClick={async () => {
+                    setDownloadingUpdate(true);
+                    await window.electronAPI.downloadUpdate();
+                  }}
+                  disabled={downloadingUpdate}
+                >
+                  {downloadingUpdate ? "Wird heruntergeladen…" : "Herunterladen"}
+                </Button>
+                <button
+                  type="button"
+                  className="hb-icon-btn"
+                  onClick={() => setUpdateAvailable(null)}
+                  aria-label="Schließen"
+                  title="Schließen"
+                >
+                  <IconClose />
+                </button>
+              </div>
+            </div>
+          )}
           {updateReady && (
             <div className="hb-infobar" role="status">
               <div className="hb-infobar-icon"><IconInfo /></div>
@@ -235,6 +283,7 @@ export default function HaushaltsbuchApp() {
                 recurringExpenses={activeBook?.recurringExpenses || []}
                 expenseCategories={activeBook?.expenseCategories || []}
                 monthStartDay={monthStartDay}
+                pots={activeBook?.pots || []}
               />
             ) : view === "pots" ? (
               <PotsView
@@ -248,6 +297,8 @@ export default function HaushaltsbuchApp() {
                 onEditEntry={entryActions.startEdit}
                 onRemoveEntry={entryActions.removeEntry}
                 monthStartDay={monthStartDay}
+                monthFilter={monthFilter}
+                monthLabel={monthLabel}
               />
             ) : view === "goals" ? (
               <GoalsView
@@ -274,6 +325,8 @@ export default function HaushaltsbuchApp() {
                 totalIncome={totalIncome}
                 totalExpense={totalExpense}
                 totalTransfers={totalTransfers}
+                totalSavingsTransfers={totalSavingsTransfers}
+                totalReserveTransfers={totalReserveTransfers}
                 balance={balance}
                 potBalances={potBalances}
                 expenseByHierarchy={expenseByHierarchy}

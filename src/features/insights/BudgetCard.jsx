@@ -1,27 +1,18 @@
-import React, { memo } from "react";
+import React, { memo, useState, useEffect } from "react";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
+import { IconInbox } from "../../components/icons.jsx";
 import { getFinancialMonthRange, getFinancialMonth } from "../../utils/financialMonthUtils.js";
 
-// --- Pacing-bewusste Status-Berechnung ---
-// Gibt "ok" | "warn" | "risk" | "over" zurück.
-// Wenn wir im aktuellen Monat sind und mind. 5 Tage vergangen sind,
-// wird das Verbrauchstempo gegen den Monatsverlauf geprüft.
-function getBudgetStatus(pct, pacingInfo) {
+function getBudgetStatus(pct) {
   if (pct >= 1.0) return "over";
-  if (pacingInfo) {
-    const { paceRatio } = pacingInfo;
-    if (paceRatio > 1.3) return "risk";
-    if (paceRatio > 1.1) return "warn";
-  }
-  if (pct >= 0.9) return "risk";
-  if (pct >= 0.7) return "warn";
+  if (pct >= 0.95) return "risk";
   return "ok";
 }
 
 const STATUS_COLOR = {
   ok:   "var(--green)",
   warn: "var(--yellow)",
-  risk: "var(--red)",
+  risk: "var(--yellow)",
   over: "var(--red)",
 };
 
@@ -32,8 +23,6 @@ const STATUS_LABEL = {
   over: "Überschritten",
 };
 
-// Gibt null zurück wenn monthFilter kein aktueller finanzieller Monat ist,
-// sonst ein Objekt mit allen Zeitinfos für Pacing/Forecast.
 function getMonthTimeInfo(monthFilter, monthStartDay) {
   if (!monthFilter) return null;
   const startDay = monthStartDay ?? 1;
@@ -61,37 +50,65 @@ function getMonthTimeInfo(monthFilter, monthStartDay) {
   };
 }
 
-// Berechnet Forecast und Pacing für eine einzelne Kategorie.
-// Gibt null zurück wenn zu wenig Datenbasis.
 function calcItemMetrics(spent, budget, timeInfo) {
   if (!timeInfo || timeInfo.dayOfMonth < 3) return null;
 
-  const rate = spent / timeInfo.dayOfMonth;         // CHF/Tag bisher
+  const rate = spent / timeInfo.dayOfMonth;
   const forecastMonthEnd = rate * timeInfo.daysInMonth;
-
-  const pacing = timeInfo.dayOfMonth >= 5 && budget > 0
-    ? {
-        paceRatio: (spent / budget) / timeInfo.expectedPct,
-      }
-    : null;
 
   return {
     rate,
     forecastMonthEnd,
-    forecastDelta: forecastMonthEnd - budget,       // positiv = Überschreitung
-    pacing,
+    forecastDelta: forecastMonthEnd - budget,
   };
 }
 
+const PAGE_SIZE = 4;
+
 const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthStartDay }) {
   const fmt = useFmt();
-  if (!budgetItems || budgetItems.length === 0) {
+  const [page, setPage] = useState(0);
+
+  useEffect(() => { setPage(0); }, [budgetItems]);
+
+  const isEmpty = !budgetItems || budgetItems.length === 0;
+  const totalPages = isEmpty ? 1 : Math.ceil(budgetItems.length / PAGE_SIZE);
+
+  const pagination = (
+    <div className="hb-budget-pagination" style={{ marginTop: "auto" }}>
+      <button
+        className="hb-budget-pag-btn"
+        disabled={isEmpty || page === 0}
+        onClick={() => setPage((p) => p - 1)}
+        aria-label="Vorherige Seite"
+      >
+        ‹
+      </button>
+      <span className="hb-budget-pag-info">
+        {isEmpty ? "–" : `${page + 1} / ${totalPages}`}
+      </span>
+      <button
+        className="hb-budget-pag-btn"
+        disabled={isEmpty || page >= totalPages - 1}
+        onClick={() => setPage((p) => p + 1)}
+        aria-label="Nächste Seite"
+      >
+        ›
+      </button>
+    </div>
+  );
+
+  if (isEmpty) {
     return (
-      <div className="hb-insights-pane hb-budget-empty" style={{ justifyContent: "center" }}>
-        <div className="hb-insight-label">Kein Budget gesetzt</div>
-        <div className="hb-muted" style={{ fontSize: 13, marginTop: 6, textAlign: "center", lineHeight: 1.5 }}>
-          Öffne den Kategorien-Dialog und setze ein Monatsbudget für eine Ausgaben-Kategorie.
+      <div className="hb-insights-pane">
+        <div className="hb-empty hb-empty--sm" style={{ flex: 1 }}>
+          <div className="hb-empty-icon"><IconInbox /></div>
+          <div className="hb-empty-title">Kein Budget gesetzt</div>
+          <div className="hb-empty-text">
+            Öffne den Kategorien-Dialog und setze ein Monatsbudget für eine Ausgaben-Kategorie.
+          </div>
         </div>
+        {pagination}
       </div>
     );
   }
@@ -102,25 +119,25 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
   const overCount    = budgetItems.filter((i) => i.spent > i.budget).length;
   const timeInfo     = getMonthTimeInfo(monthFilter, monthStartDay);
 
-  // Forecast + Pacing für Gesamtbudget
-  const totalMetrics  = calcItemMetrics(totalSpent, totalBudget, timeInfo);
-  const totalPacing   = totalMetrics?.pacing || null;
-  const totalStatus   = getBudgetStatus(totalPct, totalPacing);
+  const totalMetrics = calcItemMetrics(totalSpent, totalBudget, timeInfo);
+  const totalStatus  = getBudgetStatus(totalPct);
+
+  const pagedItems = budgetItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
-    <div className="hb-insights-pane" style={{ justifyContent: "center" }}>
+    <div className="hb-insights-pane">
       {/* Gesamt-Header */}
       <div className="hb-budget-summary">
         <div>
           <div className="hb-insight-label">Gesamt</div>
-          <div className={`hb-insight-kpi hb-insight-kpi--${totalStatus === "ok" ? "good" : totalStatus === "warn" ? "warn" : "bad"}`}>
-            {fmt(totalSpent, 0)}
-          </div>
-          <div className="hb-insight-sub">
-            von {fmt(totalBudget, 0)}
-            {" · "}
-            <span style={{ fontVariantNumeric: "tabular-nums" }}>
-              {Math.min(Math.round(totalPct * 100), 150)}% verbraucht
+          <div className="hb-budget-total-inline">
+            <span className="hb-insight-kpi">{fmt(totalSpent, 0)}</span>
+            <span className="hb-budget-total-sub">
+              / {fmt(totalBudget, 0)}
+              {" · "}
+              <span style={{ fontVariantNumeric: "tabular-nums" }}>
+                {Math.min(Math.round(totalPct * 100), 150)}% verbraucht
+              </span>
             </span>
           </div>
         </div>
@@ -128,20 +145,22 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
         {timeInfo && (
           <div style={{ textAlign: "right" }}>
             <div className="hb-insight-label">Restmonat</div>
-            <div className="hb-insight-kpi">{timeInfo.remaining}</div>
-            <div className="hb-insight-sub">von {timeInfo.daysInMonth} Tagen</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 5, justifyContent: "flex-end" }}>
+              <span className="hb-insight-kpi">{timeInfo.remaining}</span>
+              <span className="hb-budget-total-sub">von {timeInfo.daysInMonth} Tagen</span>
+            </div>
           </div>
         )}
 
         {overCount > 0 && (
           <div style={{ textAlign: "right" }}>
             <div className="hb-insight-label">Überschritten</div>
-            <div className="hb-insight-kpi hb-insight-kpi--bad">{overCount}</div>
+            <div className="hb-insight-kpi">{overCount}</div>
           </div>
         )}
       </div>
 
-      {/* Gesamtbalken + optionaler Forecast */}
+      {/* Gesamtbalken */}
       <div className="hb-budget-total-bar">
         <div
           className="hb-budget-bar-fill"
@@ -149,33 +168,16 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
         />
       </div>
 
-      {/* Forecast-Zeile für Gesamtbudget */}
-      {totalMetrics && totalBudget > 0 && (
-        <div className="hb-budget-total-forecast">
-          Prognose Monatsende:{" "}
-          <span style={{ color: totalMetrics.forecastMonthEnd > totalBudget ? "var(--red)" : "var(--green)", fontWeight: 600 }}>
-            {fmt(totalMetrics.forecastMonthEnd, 0)}
-          </span>
-          {totalMetrics.forecastDelta > 0 && (
-            <span style={{ color: "var(--red)" }}>
-              {" "}(+{fmt(totalMetrics.forecastDelta, 0)} über Budget)
-            </span>
-          )}
-        </div>
-      )}
-
       {/* Kategorie-Liste */}
       <div className="hb-budget-list">
-        {budgetItems.map((item) => {
+        {pagedItems.map((item) => {
           const pct      = item.budget > 0 ? item.spent / item.budget : 0;
           const metrics  = calcItemMetrics(item.spent, item.budget, timeInfo);
-          const pacing   = metrics?.pacing || null;
-          const status   = getBudgetStatus(pct, pacing);
+          const status   = getBudgetStatus(pct);
           const color    = STATUS_COLOR[status];
           const remaining = item.budget - item.spent;
           const isOver   = remaining < 0;
 
-          // Pill-Text: über 150% → nur Label, darunter Prozentzahl
           const pctDisplay = Math.round(pct * 100);
           const pillText   = pctDisplay > 150 ? STATUS_LABEL[status] : `${pctDisplay}%`;
 
@@ -197,7 +199,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
 
               <div className="hb-insight-bar-track">
                 <div
-                  className={`hb-budget-bar-fill${status === "over" ? " hb-budget-bar-fill--over" : ""}`}
+                  className="hb-budget-bar-fill"
                   style={{ "--w": `${Math.min(pct * 100, 100)}%`, "--c": color }}
                 />
               </div>
@@ -211,14 +213,12 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
                   `${fmt(remaining, 0)} verbleibend`
                 )}
 
-                {/* Burn-Rate: ø CHF X/Tag */}
                 {metrics && metrics.rate > 0 && (
                   <span className="hb-budget-row-meta-sep">
                     · ø {fmt(metrics.rate, 1)}/Tag
                   </span>
                 )}
 
-                {/* Forecast Monatsende */}
                 {metrics && item.budget > 0 && (
                   <span className="hb-budget-row-meta-sep">
                     · Prognose:{" "}
@@ -231,7 +231,21 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
             </div>
           );
         })}
+        {Array.from({ length: PAGE_SIZE - pagedItems.length }).map((_, i) => (
+          <div key={`ph-${i}`} className="hb-budget-row hb-budget-row--placeholder" aria-hidden="true">
+            <div className="hb-budget-row-head">
+              <span className="hb-dot" />
+              <span className="hb-budget-row-name">&nbsp;</span>
+              <span className="hb-budget-row-amounts">&nbsp;</span>
+              <span className="hb-budget-status-pill">&nbsp;</span>
+            </div>
+            <div className="hb-insight-bar-track" />
+            <div className="hb-budget-row-meta">&nbsp;</div>
+          </div>
+        ))}
       </div>
+
+      {pagination}
     </div>
   );
 });

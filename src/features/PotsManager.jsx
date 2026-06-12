@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { Button } from "../components/ui.jsx";
+import HbTooltip from "../components/HbTooltip.jsx";
 import { generateId } from "../utils/idUtils.js";
 import { useToast } from "../components/Toast.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
-import { IconPlus } from "../components/icons.jsx";
+import { IconPlus, IconPots } from "../components/icons.jsx";
 
 function buildPotDrafts(pots) {
   const drafts = {};
-  (pots || []).forEach((pot) => { drafts[pot.id] = { name: pot.name }; });
+  (pots || []).forEach((pot) => { drafts[pot.id] = { name: pot.name, isSavings: pot.isSavings ?? false }; });
   return drafts;
 }
 
@@ -55,7 +56,7 @@ export default function PotsManager({ activeBook, onUpdateBook }) {
     }
 
     const updatedPots = activeBook.pots.map((pot) =>
-      pot.id === potId ? { ...pot, name: trimmedName } : pot
+      pot.id === potId ? { ...pot, name: trimmedName, isSavings: draft.isSavings ?? false } : pot
     );
     onUpdateBook?.({ ...activeBook, pots: updatedPots });
     toast.success("Topf gespeichert.");
@@ -77,7 +78,7 @@ export default function PotsManager({ activeBook, onUpdateBook }) {
       return;
     }
 
-    const newPot = { id: generateId("pot"), name: trimmedName };
+    const newPot = { id: generateId("pot"), name: trimmedName, isSavings: false };
     onUpdateBook?.({ ...activeBook, pots: [...activeBook.pots, newPot] });
     setNewPotName("");
     setIsAddingPot(false);
@@ -121,11 +122,6 @@ export default function PotsManager({ activeBook, onUpdateBook }) {
 
   return (
     <div>
-      <div style={{ fontWeight: 600, marginBottom: 6 }}>Töpfe verwalten</div>
-      <div className="hb-muted" style={{ marginBottom: 12 }}>
-        Bearbeite die Namen deiner Töpfe.
-      </div>
-
       {activeBook?.pots?.length > 0 ? (
         <div className="hb-stack hb-stack--lg">
           {activeBook.pots.map((pot) => {
@@ -152,6 +148,20 @@ export default function PotsManager({ activeBook, onUpdateBook }) {
                       placeholder="z.B. Rücklagen, Urlaub"
                     />
                   </div>
+                  <label
+                    style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={draft.isSavings ?? false}
+                      onChange={(e) => updatePotDraft(pot.id, "isSavings", e.target.checked)}
+                    />
+                    <span style={{ fontSize: 13 }}>Spar-Topf</span>
+                    <HbTooltip
+                      text="Einzahlungen in diesen Topf werden als Sparbetrag gezählt und fließen in die Berechnung der Sparquote ein."
+                      placement="right"
+                    />
+                  </label>
                   <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
                     <Button variant="solid" onClick={() => savePot(pot.id)}>
                       Speichern
@@ -170,7 +180,11 @@ export default function PotsManager({ activeBook, onUpdateBook }) {
           })}
         </div>
       ) : (
-        <div className="hb-muted">Keine Töpfe vorhanden.</div>
+        <div className="hb-empty hb-empty--sm">
+          <div className="hb-empty-icon"><IconPots /></div>
+          <div className="hb-empty-title">Noch keine Töpfe</div>
+          <div className="hb-empty-text">Erstelle deinen ersten Topf mit dem Button unten.</div>
+        </div>
       )}
 
       <div style={{ marginTop: 16 }}>

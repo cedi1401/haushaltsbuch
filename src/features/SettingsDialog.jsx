@@ -4,9 +4,9 @@ import { Button } from "../components/ui.jsx";
 import { exportBackupFile, importBackupFile as importBackupNative } from "../dal/storage.js";
 import { exportBackup, validateBackupObject } from "../backup.js";
 import { normalizeBook, validateMonthStartDay } from "../utils/hbUtils.js";
-import { getFinancialMonthRange } from "../utils/financialMonthUtils.js";
 import { useToast } from "../components/Toast.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
+import HbTooltip from "../components/HbTooltip.jsx";
 export default function SettingsDialog({
   open,
   onClose,
@@ -41,6 +41,7 @@ export default function SettingsDialog({
 
   // Update-Check: null | "checking" | { status: "available"|"up-to-date"|"error", version? }
   const [updateStatus, setUpdateStatus] = useState(null);
+  const [downloadingUpdate, setDownloadingUpdate] = useState(false);
   // null | { version } — heruntergeladenes Update wartet auf Installation
   const [downloadedUpdate, setDownloadedUpdate] = useState(null);
 
@@ -51,6 +52,7 @@ export default function SettingsDialog({
       setUpdateStatus({ status: "available", version: info.version });
     });
     const removeDownloaded = window.electronAPI?.onUpdateDownloaded?.((info) => {
+      setDownloadingUpdate(false);
       setDownloadedUpdate({ version: info.version });
     });
     return () => { removeAvailable?.(); removeDownloaded?.(); };
@@ -65,6 +67,11 @@ export default function SettingsDialog({
     } catch {
       setUpdateStatus({ status: "error" });
     }
+  }
+
+  async function downloadUpdate() {
+    setDownloadingUpdate(true);
+    await window.electronAPI?.downloadUpdate?.();
   }
 
   async function installUpdate() {
@@ -192,9 +199,19 @@ export default function SettingsDialog({
               >
                 {updateStatus === "checking" ? "Suche läuft…" : "Nach Update suchen"}
               </Button>
-              {updateStatus?.status === "available" && (
-                <span style={{ color: "var(--green)", fontSize: 13 }}>
-                  Update <strong>v{updateStatus.version}</strong> gefunden — wird heruntergeladen…
+              {updateStatus?.status === "available" && !downloadingUpdate && (
+                <>
+                  <span style={{ color: "var(--accent)", fontSize: 13 }}>
+                    Version <strong>v{updateStatus.version}</strong> verfügbar
+                  </span>
+                  <Button variant="outline" onClick={downloadUpdate}>
+                    Herunterladen
+                  </Button>
+                </>
+              )}
+              {updateStatus?.status === "available" && downloadingUpdate && (
+                <span className="hb-muted" style={{ fontSize: 13 }}>
+                  Wird heruntergeladen…
                 </span>
               )}
               {updateStatus?.status === "up-to-date" && (
@@ -274,10 +291,9 @@ export default function SettingsDialog({
 
       {/* MONATSBEGINN */}
       <div className="hb-field" style={{ marginTop: 24 }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>Monatsbeginn</div>
-        <div className="hb-muted" style={{ marginBottom: 10 }}>
-          Einträge ab diesem Tag werden dem Folgemonat zugerechnet.
-          Standard ist der 1. (Kalendermonat). Maximum ist der 28.
+        <div className="hb-title-with-help" style={{ marginBottom: 10 }}>
+          <div style={{ fontWeight: 600 }}>Monatsbeginn</div>
+          <HbTooltip text="Einträge ab diesem Tag werden dem Folgemonat zugerechnet. Standard ist der 1. (Kalendermonat). Maximum ist der 28." placement="right" />
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <input
@@ -293,59 +309,22 @@ export default function SettingsDialog({
           />
           <span className="hb-muted">. des Monats</span>
           {monthStartDayDraft !== 1 && (
-            <button
-              className="hb-muted"
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 13, textDecoration: "underline" }}
-              onClick={() => setMonthStartDayDraft(1)}
-            >
-              Auf 1. zurücksetzen
-            </button>
+            <Button variant="outline" onClick={() => setMonthStartDayDraft(1)}>
+              Zurücksetzen
+            </Button>
           )}
+          <Button
+            variant="solid"
+            onClick={() => {
+              if (!activeBook) return;
+              onUpdateBook?.({ ...activeBook, monthStartDay: monthStartDayDraft });
+              onMonthStartDayChange?.(monthStartDayDraft);
+              toast.success("Monatsbeginn gespeichert.");
+            }}
+          >
+            Speichern
+          </Button>
         </div>
-        {(() => {
-          const d = monthStartDayDraft;
-          if (d === 1) {
-            return (
-              <div className="hb-note" style={{ marginTop: 8 }}>
-                Einträge vom 1. bis letzten Tag des Monats zählen als Kalendermonat.
-              </div>
-            );
-          }
-          const today = new Date();
-          const m = today.getMonth() + 1;
-          const y = today.getFullYear();
-          const yyyymm = `${y}-${String(m).padStart(2, "0")}`;
-          const range = getFinancialMonthRange(yyyymm, d);
-          const nextM = m === 12 ? 1 : m + 1;
-          const nextY = m === 12 ? y + 1 : y;
-          const nextYYYYMM = `${nextY}-${String(nextM).padStart(2, "0")}`;
-          const nextRange = getFinancialMonthRange(nextYYYYMM, d);
-          const months = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
-          const fmtDate = (iso) => {
-            if (!iso) return "";
-            const [, mm, dd] = iso.split("-");
-            return `${Number(dd)}. ${months[Number(mm) - 1]}`;
-          };
-          return (
-            <div className="hb-note" style={{ marginTop: 8 }}>
-              Beispiel: {fmtDate(range?.startDate)} – {fmtDate(range?.endDate)} zählen als „{months[m - 1]}"
-              <br />
-              {fmtDate(nextRange?.startDate)} – {fmtDate(nextRange?.endDate)} zählen als „{months[nextM - 1]}"
-            </div>
-          );
-        })()}
-        <Button
-          variant="solid"
-          style={{ marginTop: 12 }}
-          onClick={() => {
-            if (!activeBook) return;
-            onUpdateBook?.({ ...activeBook, monthStartDay: monthStartDayDraft });
-            onMonthStartDayChange?.(monthStartDayDraft);
-            toast.success("Monatsbeginn gespeichert.");
-          }}
-        >
-          Monatsbeginn speichern
-        </Button>
       </div>
 
     </EditDialog>

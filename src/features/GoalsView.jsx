@@ -346,6 +346,7 @@ export default function GoalsView({
         onSave={saveGoal}
         canSave={canSave}
         saveLabel={editingGoal ? "Speichern" : "Erstellen"}
+        bodyScroll={false}
       >
         <div
           className="hb-form"

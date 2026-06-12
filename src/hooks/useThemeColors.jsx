@@ -4,6 +4,7 @@ const DEFAULT_COLORS = {
   green: "#0f7b0f",
   red: "#c42b1c",
   blue: "#0078d4",
+  teal: "#038387",
   accent: "#0078d4",
   muted: "#636363",
 };
@@ -19,6 +20,7 @@ function readColors() {
     green: get("--green", DEFAULT_COLORS.green),
     red: get("--red", DEFAULT_COLORS.red),
     blue: get("--blue", DEFAULT_COLORS.blue),
+    teal: get("--teal", DEFAULT_COLORS.teal),
     accent: get("--accent", DEFAULT_COLORS.accent),
     muted: get("--muted", DEFAULT_COLORS.muted),
   };

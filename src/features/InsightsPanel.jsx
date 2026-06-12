@@ -16,6 +16,8 @@ export default function InsightsPanel({
   monthStartDay,
   totalIncome,
   totalExpense,
+  totalSavingsTransfers,
+  totalReserveTransfers,
   expenseCategories,
 }) {
   const [activeCard, setActiveCard] = useState("overview");
@@ -27,6 +29,8 @@ export default function InsightsPanel({
     monthStartDay,
     totalIncome,
     totalExpense,
+    totalSavingsTransfers,
+    totalReserveTransfers,
   });
 
   const budgetItems = useMemo(
@@ -35,7 +39,7 @@ export default function InsightsPanel({
   );
 
   return (
-    <Card style={{ width: "100%", display: "flex", flexDirection: "column" }}>
+    <Card style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
       <CardContent style={{ display: "flex", flexDirection: "column", padding: "16px 20px 24px", flex: 1 }}>
         <InsightTabs activeCard={activeCard} onTabChange={setActiveCard} />
         <div className="hb-insights-body">

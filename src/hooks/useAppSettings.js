@@ -9,6 +9,7 @@ export function useAppSettings({ isInitialLoad }) {
   const [fontFamily, setFontFamily] = useState("Inter");
   const [monthFilter, setMonthFilter] = useState("");
   const [updateReady, setUpdateReady] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -58,8 +59,18 @@ export function useAppSettings({ isInitialLoad }) {
   }, [monthFilter, isInitialLoad]);
 
   useEffect(() => {
+    if (!window.electronAPI?.onUpdateAvailable) return;
+    return window.electronAPI.onUpdateAvailable((info) => {
+      setUpdateAvailable({ version: info.version });
+    });
+  }, []);
+
+  useEffect(() => {
     if (!window.electronAPI?.onUpdateDownloaded) return;
-    window.electronAPI.onUpdateDownloaded(() => setUpdateReady(true));
+    return window.electronAPI.onUpdateDownloaded((info) => {
+      setUpdateAvailable(null);
+      setUpdateReady({ version: info.version });
+    });
   }, []);
 
   return {
@@ -67,5 +78,6 @@ export function useAppSettings({ isInitialLoad }) {
     fontFamily, setFontFamily,
     monthFilter, setMonthFilter,
     updateReady, setUpdateReady,
+    updateAvailable, setUpdateAvailable,
   };
 }

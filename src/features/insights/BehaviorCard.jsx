@@ -6,6 +6,7 @@ import {
   Cell,
   YAxis,
   XAxis,
+  CartesianGrid,
   AreaChart,
   Area,
   Tooltip,
@@ -15,9 +16,9 @@ import { useThemeColors } from "../../hooks/useThemeColors.jsx";
 import { formatDateDELong } from "../../utils/hbUtils.js";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 
-function KpiRow({ label, value, sub }) {
+function Kpi({ label, value, sub }) {
   return (
-    <div className="hb-behavior-kpi-row">
+    <div className="hb-behavior-kpi">
       <div className="hb-insight-label">{label}</div>
       <div className="hb-behavior-kpi-val">{value}</div>
       {sub && <div className="hb-behavior-kpi-sub">{sub}</div>}
@@ -25,13 +26,6 @@ function KpiRow({ label, value, sub }) {
   );
 }
 
-function LeftAlignedTick({ x: _x, y, payload, fill }) {
-  return (
-    <text x={4} y={y} dy={4} fill={fill} fontSize={12} textAnchor="start">
-      {payload.value}
-    </text>
-  );
-}
 
 const BehaviorCard = memo(function BehaviorCard({ analytics }) {
   const fmt = useFmt();
@@ -45,7 +39,6 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
     prevAvgBookingsPerDay,
     prevTotalBookings,
     thirtyDayData,
-    weeklyInsight,
     dailyTrendPct,
   } = analytics;
 
@@ -53,77 +46,83 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
   const themeColors = useThemeColors();
   const maxCount = Math.max(...dailySpendData.map((d) => d.count), 1);
   const avgAmount = thirtyDayData.reduce((s, d) => s + d.amount, 0) / 30;
+  const maxAmount = Math.max(...thirtyDayData.map((d) => d.amount), 10);
+  const areaStep = Math.max(10, Math.ceil(maxAmount / 4 / 10) * 10);
+  const areaYMax = Math.ceil(maxAmount / areaStep) * areaStep;
+  const areaTicks = Array.from({ length: Math.floor(areaYMax / areaStep) + 1 }, (_, i) => i * areaStep);
 
   return (
-    <div className="hb-insights-pane hb-insights-pane--active" style={{ justifyContent: "center" }}>
-      <div className="hb-behavior-split">
-        {/* Linke Seite: Horizontale Balken Mo→So */}
-        <div className="hb-behavior-bars">
-          <div className="hb-insight-label" style={{ marginBottom: 10 }}>Wochentage</div>
-          <div style={{ flex: 1, minHeight: 140 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              layout="vertical"
-              data={dailySpendData}
-              barSize={18}
-              margin={{ top: 0, right: 8, bottom: 0, left: 0 }}
-            >
-              <YAxis
-                dataKey="day"
-                type="category"
-                axisLine={false}
-                tickLine={false}
-                tick={<LeftAlignedTick fill={themeColors.muted} />}
-                width={52}
-              />
-              <XAxis type="number" hide />
-              <Tooltip
-                wrapperStyle={{ zIndex: 10 }}
-                cursor={false}
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0].payload;
-                  if (!d.count) return null;
-                  return (
-                    <div className="hb-chart-tooltip">
-                      <span className="hb-chart-tooltip-label">{d.day}</span>
-                      <span>{d.count} Buchung{d.count !== 1 ? "en" : ""}</span>
-                    </div>
-                  );
-                }}
-              />
-              <Bar dataKey="count" radius={[0, 2, 2, 0]}>
-                {dailySpendData.map((entry, i) => (
-                  <Cell
-                    key={i}
-                    fill={themeColors.accent}
-                    opacity={entry.count > 0 ? 0.35 + 0.65 * (entry.count / maxCount) : 0.12}
+    <div className="hb-insights-pane hb-insights-pane--active">
+      <div className="hb-behavior-layout">
+        {/* Obere Hälfte: zwei Charts nebeneinander */}
+        <div className="hb-behavior-charts">
+          {/* Links: Vertikale Balken Mo→So */}
+          <div className="hb-behavior-bars">
+            <div className="hb-insight-label" style={{ marginBottom: 6 }}>Buchungsverteilung</div>
+            <div style={{ flex: 1, minHeight: 120 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={dailySpendData}
+                  barSize={18}
+                  margin={{ top: 2, right: 4, bottom: 0, left: -8 }}
+                >
+                  <CartesianGrid
+                    vertical={false}
+                    stroke="var(--border-light)"
+                    strokeDasharray="3 3"
                   />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+                  <XAxis
+                    dataKey="day"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: themeColors.muted }}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tickCount={4}
+                    axisLine={false}
+                    tickLine={false}
+                    width={24}
+                    tick={{ fontSize: 10, fill: themeColors.muted }}
+                  />
+                  <Tooltip
+                    wrapperStyle={{ zIndex: 10 }}
+                    cursor={false}
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0].payload;
+                      if (!d.count) return null;
+                      return (
+                        <div className="hb-chart-tooltip">
+                          <span className="hb-chart-tooltip-label">{d.day}</span>
+                          <span>{d.count} Buchung{d.count !== 1 ? "en" : ""}</span>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Bar dataKey="count" radius={[2, 2, 0, 0]}>
+                    {dailySpendData.map((entry, i) => (
+                      <Cell
+                        key={i}
+                        fill={themeColors.accent}
+                        opacity={entry.count > 0 ? 0.35 + 0.65 * (entry.count / maxCount) : 0.12}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
-          {weeklyInsight && (
-            <div className="hb-behavior-bars-insight">
-              <span className="hb-behavior-bars-insight-dot" />
-              {weeklyInsight}
-            </div>
-          )}
-        </div>
+          <div className="hb-behavior-divider" />
 
-        <div className="hb-behavior-divider" />
-
-        {/* Rechte Seite: Sparkline + KPIs */}
-        <div className="hb-behavior-right">
-          {/* 30-Tage Area Sparkline */}
+          {/* Rechts: 30-Tage Area Sparkline */}
           <div className="hb-behavior-sparkline">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
-              <span className="hb-insight-label">30 Tage</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+              <span className="hb-insight-label">Letzte 30 Tage</span>
               <span style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                 <span className="hb-insight-label" style={{ fontSize: 11 }}>
-                  Ø {fmt ? fmt(Math.round(avgAmount), 0) : Math.round(avgAmount)} / Tag
+                 --- Ø {fmt ? fmt(Math.round(avgAmount), 0) : Math.round(avgAmount)} / Tag
                 </span>
                 {dailyTrendPct !== null && (
                   <span
@@ -162,73 +161,87 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                 )}
               </span>
             </div>
-            <ResponsiveContainer width="100%" height={70}>
-              <AreaChart data={thirtyDayData} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-                <Tooltip
-                  wrapperStyle={{ zIndex: 10 }}
-                  cursor={{ stroke: themeColors.accent, strokeWidth: 1, strokeDasharray: "3 3" }}
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const d = payload[0].payload;
-                    return (
-                      <div className="hb-chart-tooltip">
-                        <span className="hb-chart-tooltip-label">{formatDateDELong(d.date)}</span>
-                        <span>{fmt ? fmt(d.amount) : d.amount.toFixed(2)}</span>
-                      </div>
-                    );
-                  }}
-                />
-                <ReferenceLine
-                  y={avgAmount}
-                  stroke={themeColors.muted}
-                  strokeDasharray="4 3"
-                  strokeWidth={1}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="amount"
-                  stroke={themeColors.accent}
-                  fill={themeColors.accent}
-                  fillOpacity={0.12}
-                  strokeWidth={1.5}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div style={{ flex: 1, minHeight: 70 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={thirtyDayData} margin={{ top: 4, right: 0, bottom: 0, left: -8 }}>
+                  <CartesianGrid
+                    horizontal={true}
+                    vertical={false}
+                    stroke="var(--border-light)"
+                    strokeDasharray="3 3"
+                  />
+                  <YAxis
+                    ticks={areaTicks}
+                    domain={[0, areaYMax]}
+                    allowDecimals={false}
+                    axisLine={false}
+                    tickLine={false}
+                    width={28}
+                    tick={{ fontSize: 10, fill: themeColors.muted }}
+                  />
+                  <Tooltip
+                    wrapperStyle={{ zIndex: 10 }}
+                    cursor={{ stroke: themeColors.accent, strokeWidth: 1, strokeDasharray: "3 3" }}
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0].payload;
+                      return (
+                        <div className="hb-chart-tooltip">
+                          <span className="hb-chart-tooltip-label">{formatDateDELong(d.date)}</span>
+                          <span>{fmt ? fmt(d.amount) : d.amount.toFixed(2)}</span>
+                        </div>
+                      );
+                    }}
+                  />
+                  <ReferenceLine
+                    y={avgAmount}
+                    stroke={themeColors.muted}
+                    strokeDasharray="4 3"
+                    strokeWidth={1}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="amount"
+                    stroke={themeColors.accent}
+                    fill={themeColors.accent}
+                    fillOpacity={0.12}
+                    strokeWidth={1.5}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
               <span className="hb-insight-label" style={{ fontSize: 10 }}>vor 30 Tagen</span>
               <span className="hb-insight-label" style={{ fontSize: 10 }}>Ausgaben / Tag</span>
               <span className="hb-insight-label" style={{ fontSize: 10 }}>heute</span>
             </div>
           </div>
+        </div>
 
-          {/* Trennlinie Sparkline → KPIs */}
-          <div className="hb-behavior-kpi-separator" />
-
-          {/* KPIs als 2×2-Raster */}
-          <div className="hb-behavior-kpis hb-behavior-kpis--grid">
-            <KpiRow label="Aktivster Tag" value={mostActiveDay} />
-            <KpiRow
-              label="Buchungen"
-              value={totalBookings}
-              sub={prevTotalBookings > 0 ? `${prevTotalBookings} letzter Monat` : null}
+        {/* Unteres 1/3: KPIs auf voller Breite */}
+        <div className="hb-behavior-kpis">
+          <Kpi label="Aktivster Tag" value={mostActiveDay} />
+          <Kpi
+            label="Buchungen"
+            value={totalBookings}
+            sub={prevTotalBookings > 0 ? `${prevTotalBookings} letzter Monat` : null}
+          />
+          <Kpi
+            label="Ø / Tag"
+            value={avgBookingsPerDay.toFixed(1)}
+            sub={prevAvgBookingsPerDay != null
+              ? `${prevAvgBookingsPerDay.toFixed(1)} letzter Monat`
+              : null}
+          />
+          {topCategory && (
+            <Kpi
+              label="Häufigste"
+              value={topCategory}
+              sub={topCategoryPct != null ? `${topCategoryPct}% aller Buchungen` : null}
             />
-            <KpiRow
-              label="Ø / Tag"
-              value={avgBookingsPerDay.toFixed(1)}
-              sub={prevAvgBookingsPerDay != null
-                ? `${prevAvgBookingsPerDay.toFixed(1)} letzter Monat`
-                : null}
-            />
-            {topCategory && (
-              <KpiRow
-                label="Häufigste"
-                value={topCategory}
-                sub={topCategoryPct != null ? `${topCategoryPct}% aller Buchungen` : null}
-              />
-            )}
-          </div>
+          )}
         </div>
       </div>
     </div>

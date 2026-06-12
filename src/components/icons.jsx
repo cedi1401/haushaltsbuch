@@ -122,6 +122,16 @@ export function IconInfo(props) {
   );
 }
 
+export function IconHelp(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.3 9.3a2.7 2.7 0 1 1 3.9 2.5c-.8.4-1.2 1-1.2 1.9" />
+      <line x1="12" y1="16.5" x2="12" y2="16.8" />
+    </svg>
+  );
+}
+
 export function IconWarning(props) {
   return (
     <svg {...baseProps} {...props}>

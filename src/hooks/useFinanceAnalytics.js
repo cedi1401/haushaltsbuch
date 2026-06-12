@@ -32,12 +32,16 @@ function getFinancialMonthInfo(monthFilter, monthStartDay) {
   const endDate = new Date(range.endDate + "T00:00:00");
   const daysInMonth = Math.round((endDate - startDate) / msPerDay) + 1;
 
+  const isFutureMonth = !isCurrentMonth && startDate > today;
+
   let daysElapsed;
   if (isCurrentMonth) {
     daysElapsed = Math.min(
       Math.round((today - startDate) / msPerDay) + 1,
       daysInMonth
     );
+  } else if (isFutureMonth) {
+    daysElapsed = 0;
   } else {
     daysElapsed = daysInMonth;
   }
@@ -48,6 +52,7 @@ function getFinancialMonthInfo(monthFilter, monthStartDay) {
     daysElapsed,
     daysRemaining: Math.max(0, daysInMonth - daysElapsed),
     isCurrentMonth,
+    isFutureMonth,
   };
 }
 
@@ -59,6 +64,8 @@ export function useFinanceAnalytics({
   monthStartDay,
   totalIncome,
   totalExpense,
+  totalSavingsTransfers,
+  totalReserveTransfers,
 }) {
   // Vormonat-Ausgaben pro Kategorie (für Overview MoM)
   const prevMonthCatMap = useMemo(() => {
@@ -183,27 +190,6 @@ export function useFinanceAnalytics({
         ? Math.round((topCatEntry[1] / expenses.length) * 100)
         : null;
 
-    // Wochenvergleich: letzte 7 Kalendertage vs. davor 7 Tage (aus allen Einträgen)
-    const today = new Date();
-    const toStr = (d) => d.toISOString().slice(0, 10);
-    const todayStr = toStr(today);
-    const d6 = new Date(today); d6.setDate(today.getDate() - 6);
-    const d7 = new Date(today); d7.setDate(today.getDate() - 7);
-    const d13 = new Date(today); d13.setDate(today.getDate() - 13);
-    const last7Count = (entries || []).filter(
-      (e) => e.kind === "expense" && e.source === "month" && e.date >= toStr(d6) && e.date <= todayStr
-    ).length;
-    const prev7Count = (entries || []).filter(
-      (e) => e.kind === "expense" && e.source === "month" && e.date >= toStr(d13) && e.date <= toStr(d7)
-    ).length;
-    let weeklyInsight = null;
-    if (prev7Count > 0) {
-      const diff = last7Count - prev7Count;
-      if (diff > 0) weeklyInsight = `${diff} mehr als letzte Woche`;
-      else if (diff < 0) weeklyInsight = `${Math.abs(diff)} weniger als letzte Woche`;
-      else weeklyInsight = "Gleich viele wie letzte Woche";
-    }
-
     const first15Avg = thirtyDayData.slice(0, 15).reduce((s, d) => s + d.amount, 0) / 15;
     const last15Avg = thirtyDayData.slice(15).reduce((s, d) => s + d.amount, 0) / 15;
     const dailyTrendPct = first15Avg > 0 ? ((last15Avg - first15Avg) / first15Avg) * 100 : null;
@@ -218,16 +204,16 @@ export function useFinanceAnalytics({
       prevAvgBookingsPerDay: prevMonthBehavior.avgBookingsPerDay,
       prevTotalBookings: prevMonthBehavior.totalBookings,
       thirtyDayData,
-      weeklyInsight,
       dailyTrendPct,
     };
-  }, [filteredEntries, prevMonthBehavior, thirtyDayData, entries]);
+  }, [filteredEntries, prevMonthBehavior, thirtyDayData]);
 
   const forecast = useMemo(() => {
     const noData = {
       projectedTotal: 0,
       projectedBalance: 0,
       daysRemaining: 0,
+      daysInMonth: 0,
       burnRate: 0,
       forecastData: [],
       trendVsPrevMonth: null,
@@ -235,23 +221,28 @@ export function useFinanceAnalytics({
       safeToSpendPerDay: null,
       contextMessage: null,
       hasMonth: false,
+      isCurrentMonth: false,
+      isFutureMonth: false,
+      savingsRate: null,
+      trendVsPrevMonthPct: null,
     };
 
     if (!monthFilter) return noData;
 
     const monthInfo = getFinancialMonthInfo(monthFilter, monthStartDay);
     if (!monthInfo) return noData;
-    const { startDate, daysInMonth, daysElapsed, daysRemaining, isCurrentMonth } = monthInfo;
+    const { startDate, daysInMonth, daysElapsed, daysRemaining, isCurrentMonth, isFutureMonth } = monthInfo;
 
     const expense = totalExpense ?? 0;
     const income = totalIncome ?? 0;
+    const totalTransfers = (totalReserveTransfers ?? 0) + (totalSavingsTransfers ?? 0);
     const burnRate = daysElapsed > 0 ? expense / daysElapsed : 0;
     const projectedTotal = isCurrentMonth ? expense + burnRate * daysRemaining : expense;
-    const projectedBalance = income - projectedTotal;
+    const projectedBalance = income - projectedTotal - totalTransfers;
 
     const safeToSpendPerDay =
       isCurrentMonth && daysRemaining > 0
-        ? Math.max(0, income - expense) / daysRemaining
+        ? Math.max(0, income - expense - totalTransfers) / daysRemaining
         : null;
 
     // Tagesgenaue Kumulation für Sparkline (Tag 1 = erster Tag des Finanzmonats)
@@ -316,10 +307,23 @@ export function useFinanceAnalytics({
       }
     }
 
+    // Sparquote: Realisiert = Transfers auf Spar-Töpfe / Einnahmen (nur vergangene Monate)
+    const savingsRate =
+      !isCurrentMonth && !isFutureMonth && income > 0
+        ? Math.round(((totalSavingsTransfers ?? 0) / income) * 100)
+        : null;
+
+    // Vormonat-Vergleich in % (nur wenn Vormonatsdaten vorhanden und kein Zukunftsmonat)
+    const trendVsPrevMonthPct =
+      prevMonthExpense > 0 && !isFutureMonth
+        ? Math.round(((projectedTotal - prevMonthExpense) / prevMonthExpense) * 100)
+        : null;
+
     return {
       projectedTotal,
       projectedBalance,
       daysRemaining,
+      daysInMonth,
       burnRate,
       forecastData,
       trendVsPrevMonth,
@@ -328,8 +332,11 @@ export function useFinanceAnalytics({
       contextMessage,
       hasMonth: true,
       isCurrentMonth,
+      isFutureMonth,
+      savingsRate,
+      trendVsPrevMonthPct,
     };
-  }, [filteredEntries, entries, monthFilter, monthStartDay, totalIncome, totalExpense]);
+  }, [filteredEntries, entries, monthFilter, monthStartDay, totalIncome, totalExpense, totalReserveTransfers, totalSavingsTransfers]);
 
   return { overview, behavior, forecast };
 }

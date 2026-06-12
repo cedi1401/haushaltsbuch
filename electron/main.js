@@ -69,12 +69,11 @@ app.whenReady().then(async () => {
 
   createWindow();
 
-  // Auto-updates (only in production)
+  // Auto-updates (only in production) — check only, no auto-download
   if (!process.env.VITE_DEV_SERVER_URL) {
-    autoUpdater.autoDownload = true;
-    autoUpdater.autoInstallOnAppQuit = true;
-    autoUpdater.checkForUpdatesAndNotify().catch((err) => {
-      console.error('[updater] checkForUpdatesAndNotify failed:', err);
+    autoUpdater.autoDownload = false;
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.error('[updater] checkForUpdates failed:', err);
     });
   }
 });
@@ -239,6 +238,10 @@ function registerIpcHandlers() {
 
   ipcMain.handle('updates:getDownloaded', () => {
     return downloadedUpdateInfo ? { version: downloadedUpdateInfo.version } : null;
+  });
+
+  ipcMain.handle('updates:download', () => {
+    return autoUpdater.downloadUpdate();
   });
 
   ipcMain.handle('updates:install', () => {
