@@ -1,10 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import { MONTHS_LONG as MONTH_NAMES, MONTHS_SHORT as SHORT_MONTHS } from "../utils/constants.js";
 
-const MONTH_NAMES = [
-  "Januar","Februar","März","April","Mai","Juni",
-  "Juli","August","September","Oktober","November","Dezember",
-];
-const SHORT_MONTHS = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 const DAY_NAMES = ["Mo","Di","Mi","Do","Fr","Sa","So"];
 
 function parseISODate(value) {

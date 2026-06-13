@@ -18,9 +18,6 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
-    "@fontsource-variable/bitter": "^5.2.10",
-    "@fontsource-variable/inter": "^5.2.8",
-    "@fontsource-variable/nunito-sans": "^5.2.7",
     "better-sqlite3": "^12.6.2",
     "electron-updater": "^6.7.3",
     "react": "^19.2.0",
@@ -29,6 +26,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@fontsource-variable/bitter": "^5.2.10",
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/nunito-sans": "^5.2.7",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",

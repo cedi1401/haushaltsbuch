@@ -20,12 +20,12 @@ import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { useFixedCostTrend } from "../hooks/useFixedCostTrend.js";
 import FixedCostTrendSection from "./FixedCostTrendSection.jsx";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
+import { MONTHS_SHORT } from "../utils/constants.js";
 
 const monthLabel = formatYearMonth;
 
 // oldest → lightest, newest → darkest
 const YOY_YEAR_COLORS = [TRANSFER_PALETTE[7], TRANSFER_PALETTE[3], TRANSFER_PALETTE[0]];
-const MONTHS_SHORT = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 
 const BAR_RADIUS = 2;
 
@@ -414,7 +414,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
               <CardContent>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                    <h3 style={{ margin: 0, fontSize: 16 }}>Sparquote / Monat</h3>
+                    <h3 className="hb-card-title">Sparquote / Monat</h3>
                     <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: saldoMaxOffset > 0 ? "visible" : "hidden" }}>
                         <button type="button" className="hb-icon-btn" onClick={() => setSaldoScrollOffset((o) => Math.min(o + 1, saldoMaxOffset))} disabled={saldoScrollOffset >= saldoMaxOffset} title="Älteren Bereich anzeigen">‹</button>
@@ -439,13 +439,13 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
                       <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
-                        <line x1="0" y1="5" x2="20" y2="5" stroke="#f7630c" strokeWidth="1.5" strokeDasharray="5 3" />
+                        <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.orange} strokeWidth="1.5" strokeDasharray="5 3" />
                       </svg>
                       3M Ø
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
                       <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
-                        <line x1="0" y1="5" x2="20" y2="5" stroke="#7160e8" strokeWidth="1.5" strokeDasharray="3 3" />
+                        <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.purple} strokeWidth="1.5" strokeDasharray="3 3" />
                       </svg>
                       6M Ø
                     </span>
@@ -462,7 +462,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                         content={({ active, payload, label }) => {
                           if (!active || !payload?.length) return null;
                           const labelMap = { savingsRate: "Sparquote", avg3: "3M Ø", avg6: "6M Ø" };
-                          const colorMap = { savingsRate: themeColors.blue, avg3: "#f7630c", avg6: "#7160e8" };
+                          const colorMap = { savingsRate: themeColors.blue, avg3: themeColors.orange, avg6: themeColors.purple };
                           return (
                             <div className="hb-chart-tooltip">
                               <span className="hb-chart-tooltip-label">{label}</span>
@@ -477,8 +477,8 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                         }}
                       />
                       <Line type="monotone" dataKey="savingsRate" dot={false} strokeWidth={2.5} stroke={themeColors.blue} />
-                      <Line type="monotone" dataKey="avg3" dot={false} strokeWidth={1.5} stroke="#f7630c" strokeDasharray="5 3" />
-                      <Line type="monotone" dataKey="avg6" dot={false} strokeWidth={1.5} stroke="#7160e8" strokeDasharray="3 3" />
+                      <Line type="monotone" dataKey="avg3" dot={false} strokeWidth={1.5} stroke={themeColors.orange} strokeDasharray="5 3" />
+                      <Line type="monotone" dataKey="avg6" dot={false} strokeWidth={1.5} stroke={themeColors.purple} strokeDasharray="3 3" />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -490,7 +490,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
               <CardContent>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                    <h3 style={{ margin: 0, fontSize: 16 }}>Cashflow</h3>
+                    <h3 className="hb-card-title">Cashflow</h3>
                     <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: evaMaxOffset > 0 ? "visible" : "hidden" }}>
                         <button type="button" className="hb-icon-btn" onClick={() => setEvaScrollOffset((o) => Math.min(o + 1, evaMaxOffset))} disabled={evaScrollOffset >= evaMaxOffset} title="Älteren Bereich anzeigen">‹</button>
@@ -554,7 +554,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
             <Card>
               <CardContent>
                 <div className="hb-row" style={{ alignItems: "center", marginBottom: 8 }}>
-                  <h3 style={{ margin: 0, fontSize: 16 }}>Jahresvergleich</h3>
+                  <h3 className="hb-card-title">Jahresvergleich</h3>
                   <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
                     {[["expense", "Ausgaben"], ["transfer", "Rücklagen"], ["savings", "Sparen"]].map(([val, lbl]) => (
                       <button key={val} type="button" className={`hb-pill-tab ${yoyMode === val ? "hb-pill-tab-active" : ""}`} onClick={() => setYoyMode(val)}>{lbl}</button>

@@ -14,12 +14,12 @@ import HbTooltip from "../components/HbTooltip.jsx";
 import { useThemeColors } from "../hooks/useThemeColors.jsx";
 import { getCategoryLabel } from "../utils/hbUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
+import { MONTHS_SHORT } from "../utils/constants.js";
 
-const MONTHS_DE = ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez."];
 function fmtMonthDE(ym) {
   if (!ym) return "";
   const [, m] = ym.split("-").map(Number);
-  return MONTHS_DE[m - 1] ?? ym;
+  return MONTHS_SHORT[m - 1] ?? ym;
 }
 
 function KpiCard({ label, value, sub, accent }) {
@@ -171,11 +171,11 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 Gebucht
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="#f7630c" strokeWidth="1.5" strokeDasharray="5 3" /></svg>
+                <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.orange} strokeWidth="1.5" strokeDasharray="5 3" /></svg>
                 Konfiguriert
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="#7160e8" strokeWidth="1.5" strokeDasharray="3 3" /></svg>
+                <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.purple} strokeWidth="1.5" strokeDasharray="3 3" /></svg>
                 Anteil %
               </span>
             </div>
@@ -223,13 +223,13 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
               <ReferenceLine
                 yAxisId="chf"
                 y={configuredTotal}
-                stroke="#f7630c"
+                stroke={themeColors.orange}
                 strokeDasharray="5 3"
                 strokeWidth={1.5}
-                label={{ value: "Soll", position: "insideTopRight", fill: "#f7630c", fontSize: 11 }}
+                label={{ value: "Soll", position: "insideTopRight", fill: themeColors.orange, fontSize: 11 }}
               />
               <Line yAxisId="chf" type="monotone" dataKey="fixedTotal" stroke={themeColors.accent} strokeWidth={2.5} dot={false} connectNulls={false} />
-              <Line yAxisId="pct" type="monotone" dataKey="share" stroke="#7160e8" strokeWidth={1.5} strokeDasharray="3 3" dot={false} connectNulls={false} />
+              <Line yAxisId="pct" type="monotone" dataKey="share" stroke={themeColors.purple} strokeWidth={1.5} strokeDasharray="3 3" dot={false} connectNulls={false} />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>

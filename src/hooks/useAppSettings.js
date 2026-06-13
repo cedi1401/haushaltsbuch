@@ -1,15 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getSetting, setSetting } from "../dal/storage.js";
 import makeLogger from "../utils/logger.js";
 
 const log = makeLogger("useAppSettings");
 
-export function useAppSettings({ isInitialLoad }) {
+export function useAppSettings() {
   const [darkMode, setDarkMode] = useState(false);
   const [fontFamily, setFontFamily] = useState("Inter");
   const [monthFilter, setMonthFilter] = useState("");
-  const [updateReady, setUpdateReady] = useState(false);
-  const [updateAvailable, setUpdateAvailable] = useState(null);
+
+  // Gate persistence until the initial hydration from storage has finished, so
+  // the load-induced setState calls don't immediately write the values back.
+  // Owned here — no longer coupled to useBookManager's load flag.
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
     async function load() {
@@ -24,6 +27,8 @@ export function useAppSettings({ isInitialLoad }) {
         if (typeof savedFont === "string" && savedFont) setFontFamily(savedFont);
       } catch (err) {
         log.warn("Einstellungen konnten nicht geladen werden — Standardwerte werden verwendet", err);
+      } finally {
+        hasLoaded.current = true;
       }
     }
     load();
@@ -35,10 +40,10 @@ export function useAppSettings({ isInitialLoad }) {
     } else {
       document.documentElement.classList.remove("dark");
     }
-    if (!isInitialLoad.current) {
+    if (hasLoaded.current) {
       setSetting("darkMode", String(darkMode));
     }
-  }, [darkMode, isInitialLoad]);
+  }, [darkMode]);
 
   useEffect(() => {
     const fontMap = {
@@ -48,36 +53,19 @@ export function useAppSettings({ isInitialLoad }) {
     };
     const value = fontMap[fontFamily] ?? "'Inter Variable', sans-serif";
     document.documentElement.style.setProperty("--app-font-family", value);
-    if (!isInitialLoad.current) {
+    if (hasLoaded.current) {
       setSetting("fontFamily", fontFamily);
     }
-  }, [fontFamily, isInitialLoad]);
+  }, [fontFamily]);
 
   useEffect(() => {
-    if (isInitialLoad.current) return;
+    if (!hasLoaded.current) return;
     setSetting("month", monthFilter);
-  }, [monthFilter, isInitialLoad]);
-
-  useEffect(() => {
-    if (!window.electronAPI?.onUpdateAvailable) return;
-    return window.electronAPI.onUpdateAvailable((info) => {
-      setUpdateAvailable({ version: info.version });
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!window.electronAPI?.onUpdateDownloaded) return;
-    return window.electronAPI.onUpdateDownloaded((info) => {
-      setUpdateAvailable(null);
-      setUpdateReady({ version: info.version });
-    });
-  }, []);
+  }, [monthFilter]);
 
   return {
     darkMode, setDarkMode,
     fontFamily, setFontFamily,
     monthFilter, setMonthFilter,
-    updateReady, setUpdateReady,
-    updateAvailable, setUpdateAvailable,
   };
 }

@@ -1,8 +1,5 @@
 import React, { useState, useMemo } from "react";
 
-const EMPTY_ARRAY = [];
-const DEFAULT_CATEGORIES = [{ name: "Allgemein", budget: null }];
-
 import "./styles/haushaltsbuch.css";
 
 import { Button } from "./components/ui.jsx";
@@ -23,19 +20,20 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 import {
   getCategoryNames,
-  todayISO,
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
   sumAmounts,
 } from "./utils/hbUtils.js";
+import { calcExpenseByHierarchy, calcIncomeByHierarchy } from "./utils/budgetUtils.js";
+import { EMPTY_ARRAY, MONTHS_LONG, MONTHS_SHORT } from "./utils/constants.js";
 import CurrencyContext from "./contexts/CurrencyContext.jsx";
 import { getEntryFinancialMonth, getFinancialMonthRange } from "./utils/financialMonthUtils.js";
 import { calcPotBalance } from "./utils/potUtils.js";
 
 import { useBookManager } from "./hooks/useBookManager.js";
 import { useAppSettings } from "./hooks/useAppSettings.js";
+import { useUpdateManager } from "./hooks/useUpdateManager.js";
 import { useEntryActions } from "./hooks/useEntryActions.js";
-import { useCategoryStats } from "./hooks/useCategoryStats.js";
 
 const VIEW_LABELS = { trend: "Trend", pots: "Töpfe", goals: "Sparziele", fixed: "Fixkosten" };
 
@@ -55,17 +53,14 @@ export default function HaushaltsbuchApp() {
     patchActiveBook, updateBook,
     createBook, applyRenameActiveBook, deleteActiveBook,
     importBook, handleMonthStartDayChange,
-    isInitialLoad,
   } = bookManager;
 
-  const appSettings = useAppSettings({ isInitialLoad });
-  const { darkMode, setDarkMode, fontFamily, setFontFamily, monthFilter, setMonthFilter, updateReady, setUpdateReady, updateAvailable, setUpdateAvailable } = appSettings;
-  const [downloadingUpdate, setDownloadingUpdate] = useState(false);
+  const appSettings = useAppSettings();
+  const { darkMode, setDarkMode, fontFamily, setFontFamily, monthFilter, setMonthFilter } = appSettings;
+  const update = useUpdateManager();
 
   const entries = activeBook?.entries || EMPTY_ARRAY;
   const indicateTransferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
-  const indicateCategories = activeBook?.categories || DEFAULT_CATEGORIES;
-  const indicateCategoryNames = useMemo(() => getCategoryNames(indicateCategories), [indicateCategories]);
 
   const entryActions = useEntryActions({
     activeBook,
@@ -73,7 +68,6 @@ export default function HaushaltsbuchApp() {
     fmt,
     confirm,
     indicateTransferCategories,
-    indicateCategoryNames,
   });
 
   function openNav(e) {
@@ -136,21 +130,25 @@ export default function HaushaltsbuchApp() {
     [filteredEntries, savingsPotIds]
   );
 
-  const { expenseByHierarchy, incomeByHierarchy } = useCategoryStats(
-    filteredEntries,
-    activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES,
-    activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES,
-    monthFilter,
-    monthStartDay
+  const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
+  const incomeCategories = activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES;
+  const expenseByHierarchy = useMemo(
+    () => calcExpenseByHierarchy(filteredEntries, expenseCategories, monthFilter, monthStartDay),
+    [filteredEntries, expenseCategories, monthFilter, monthStartDay]
+  );
+  const incomeByHierarchy = useMemo(
+    () => calcIncomeByHierarchy(filteredEntries, incomeCategories, monthFilter, monthStartDay),
+    [filteredEntries, incomeCategories, monthFilter, monthStartDay]
   );
 
-  const potBalances = useMemo(() => {
-    if (!activeBook?.pots) return [];
-    return activeBook.pots.map((pot) => ({
-      ...pot,
-      balance: calcPotBalance(entries, pot.id),
-    }));
-  }, [activeBook, entries]);
+  const potBalances = useMemo(
+    () =>
+      (activeBook?.pots || []).map((pot) => ({
+        ...pot,
+        balance: calcPotBalance(entries, pot.id),
+      })),
+    [activeBook?.pots, entries]
+  );
 
   const entriesSorted = useMemo(
     () =>
@@ -164,13 +162,11 @@ export default function HaushaltsbuchApp() {
 
   const monthLabel = useMemo(() => {
     if (!monthFilter) return "Alle Monate";
-    const MONTHS_LONG = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const [yyyy, mm] = monthFilter.split("-");
     const monthName = MONTHS_LONG[Number(mm) - 1];
     if (monthStartDay === 1) return `${monthName} ${yyyy}`;
     const range = getFinancialMonthRange(monthFilter, monthStartDay);
     if (!range) return `${monthName} ${yyyy}`;
-    const MONTHS_SHORT = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
     const fmtDate = (iso) => {
       if (!iso) return "";
       const [, m, dd] = iso.split("-");
@@ -189,33 +185,29 @@ export default function HaushaltsbuchApp() {
 
   const isViewWithoutMonth = view in VIEW_LABELS;
 
+  const currencyContextValue = useMemo(() => ({ fmt, baseCurrency }), [fmt, baseCurrency]);
+
   return (
-    <CurrencyContext.Provider value={fmt}>
+    <CurrencyContext.Provider value={currencyContextValue}>
       <div className="hb-page">
         <div className="hb-page-container">
-          {updateAvailable && !updateReady && (
+          {update.available && !update.ready && (
             <div className="hb-infobar" role="status">
               <div className="hb-infobar-icon"><IconInfo /></div>
               <div className="hb-infobar-content">
                 <div className="hb-infobar-title">Update verfügbar</div>
                 <div className="hb-infobar-message">
-                  Version <strong>v{updateAvailable.version}</strong> ist verfügbar.
+                  Version <strong>v{update.available.version}</strong> ist verfügbar.
                 </div>
               </div>
               <div className="hb-infobar-actions">
-                <Button
-                  onClick={async () => {
-                    setDownloadingUpdate(true);
-                    await window.electronAPI.downloadUpdate();
-                  }}
-                  disabled={downloadingUpdate}
-                >
-                  {downloadingUpdate ? "Wird heruntergeladen…" : "Herunterladen"}
+                <Button onClick={update.download} disabled={update.downloading}>
+                  {update.downloading ? "Wird heruntergeladen…" : "Herunterladen"}
                 </Button>
                 <button
                   type="button"
                   className="hb-icon-btn"
-                  onClick={() => setUpdateAvailable(null)}
+                  onClick={update.dismissAvailable}
                   aria-label="Schließen"
                   title="Schließen"
                 >
@@ -224,7 +216,7 @@ export default function HaushaltsbuchApp() {
               </div>
             </div>
           )}
-          {updateReady && (
+          {update.ready && (
             <div className="hb-infobar" role="status">
               <div className="hb-infobar-icon"><IconInfo /></div>
               <div className="hb-infobar-content">
@@ -234,11 +226,11 @@ export default function HaushaltsbuchApp() {
                 </div>
               </div>
               <div className="hb-infobar-actions">
-                <Button onClick={() => window.electronAPI.installUpdate()}>Jetzt neu starten</Button>
+                <Button onClick={update.install}>Jetzt neu starten</Button>
                 <button
                   type="button"
                   className="hb-icon-btn"
-                  onClick={() => setUpdateReady(false)}
+                  onClick={update.dismissReady}
                   aria-label="Schließen"
                   title="Schließen"
                 >
@@ -289,11 +281,9 @@ export default function HaushaltsbuchApp() {
               <PotsView
                 activeBook={activeBook}
                 entries={entries}
-                baseCurrency={baseCurrency}
                 onAddTransferEntry={entryActions.addTransferEntry}
                 onUpdateBook={updateBook}
                 transferCategories={indicateTransferCategories}
-                todayISO={todayISO}
                 onEditEntry={entryActions.startEdit}
                 onRemoveEntry={entryActions.removeEntry}
                 monthStartDay={monthStartDay}
@@ -304,19 +294,15 @@ export default function HaushaltsbuchApp() {
               <GoalsView
                 activeBook={activeBook}
                 entries={entries}
-                baseCurrency={baseCurrency}
                 onUpdateBook={updateBook}
-                todayISO={todayISO}
                 monthStartDay={monthStartDay}
               />
             ) : view === "fixed" ? (
               <FixedCostsView
                 activeBook={activeBook}
                 entries={entries}
-                baseCurrency={baseCurrency}
                 onUpdateBook={updateBook}
                 onAddEntry={entryActions.addTransferEntry}
-                todayISO={todayISO}
               />
             ) : (
               <DashboardView
@@ -331,7 +317,6 @@ export default function HaushaltsbuchApp() {
                 potBalances={potBalances}
                 expenseByHierarchy={expenseByHierarchy}
                 incomeByHierarchy={incomeByHierarchy}
-                baseCurrency={baseCurrency}
                 monthFilter={monthFilter}
                 monthLabel={monthLabel}
                 monthStartDay={monthStartDay}
@@ -372,6 +357,7 @@ export default function HaushaltsbuchApp() {
             }
             fontFamily={fontFamily}
             onFontFamilyChange={setFontFamily}
+            update={update}
           />
         </div>
       </div>

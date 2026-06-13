@@ -2,7 +2,7 @@
 // Simple JSON backup/restore for the Haushaltsbuch app.
 // Import behavior is designed for FULL RESTORE (overwrite), no merging.
 
-import { normalizeBook, formatFileStamp } from "./utils/hbUtils.js";
+import { formatFileStamp } from "./utils/hbUtils.js";
 
 function downloadJson(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -14,15 +14,6 @@ function downloadJson(filename, data) {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-}
-
-function readFileAsText(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(reader.error || new Error("Datei konnte nicht gelesen werden."));
-    reader.readAsText(file);
-  });
 }
 
 function isPlainObject(v) {
@@ -55,34 +46,4 @@ export function exportBackup({ book, monthFilter }) {
   };
 
   downloadJson(`haushaltsbuch-backup-${formatFileStamp()}.json`, payload);
-}
-
-/**
- * Reads a backup JSON file and returns normalized data for FULL RESTORE.
- *
- * @param {File} file
- * @returns {Promise<{books:Array, activeBookId:string|null, monthFilter:string}>}
- */
-export async function importBackupFile(file) {
-  const text = await readFileAsText(file);
-  let obj;
-  try {
-    obj = JSON.parse(text);
-  } catch {
-    throw new Error("Backup-Datei enthält ungültiges JSON.");
-  }
-
-  if (!validateBackupObject(obj)) {
-    throw new Error("Ungültiges Backup-Format.");
-  }
-
-  const books = obj.books.map(normalizeBook);
-  const activeBookId =
-    typeof obj.activeBookId === "string" && books.some((b) => b.id === obj.activeBookId)
-      ? obj.activeBookId
-      : books[0]?.id || null;
-
-  const monthFilter = typeof obj.monthFilter === "string" ? obj.monthFilter : "";
-
-  return { books, activeBookId, monthFilter };
 }

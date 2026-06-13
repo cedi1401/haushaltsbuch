@@ -20,6 +20,7 @@ export const SETTING_SCHEMA = new Map([
   ['darkMode',      (v) => typeof v === 'string' || typeof v === 'boolean'],
   ['month',         (v) => typeof v === 'string'],
   ['monthStartDay', (v) => typeof v === 'string' || typeof v === 'number'],
+  ['fontFamily',    (v) => typeof v === 'string'],
 ]);
 
 export function isValidSetting(key, value) {

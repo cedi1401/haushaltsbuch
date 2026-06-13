@@ -55,8 +55,6 @@ export function useBookManager({ toast, confirm }) {
         setBooks([b]);
         setActiveBookId(b.id);
       }
-      // Clear flag after React has processed the state updates and run effects
-      setTimeout(() => { isInitialLoad.current = false; }, 0);
     }
     load();
   }, []);
@@ -64,7 +62,33 @@ export function useBookManager({ toast, confirm }) {
   useEffect(() => {
     if (isInitialLoad.current) return;
     if (!books.length) return;
-    saveBooks(books);
+    let cancelled = false;
+    (async () => {
+      try {
+        const ok = await saveBooks(books);
+        if (!cancelled && ok === false) {
+          log.error("Bücher konnten nicht gespeichert werden (Validierung oder DB-Fehler)");
+          toast.error("Speichern fehlgeschlagen — die letzten Änderungen wurden nicht gesichert.");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          log.error("Speichern fehlgeschlagen", err);
+          toast.error("Speichern fehlgeschlagen — die letzten Änderungen wurden nicht gesichert.");
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [books]);
+
+  // Clear the initial-load flag once the first real books commit has been
+  // processed. Declared after the save effect, so within the same commit the
+  // save effect runs first (effects fire in declaration order) and skips the
+  // freshly loaded books, then this flips the flag — every later edit saves.
+  // Timing-independent: replaces the former setTimeout(0) race.
+  useEffect(() => {
+    if (isInitialLoad.current && books.length) {
+      isInitialLoad.current = false;
+    }
   }, [books]);
 
   useEffect(() => {

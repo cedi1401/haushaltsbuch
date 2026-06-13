@@ -1,6 +1,6 @@
-// WinUI 3 / Fluent-inspired color palette for fixed costs trend section
-// (Fixkosten-Linienpositionen, nicht Kategorien)
-export const PIE_PALETTE = [
+// WinUI 3 / Fluent-inspired base palette — used internally as the fallback
+// shade source for makeSubcategoryColorShades.
+const PIE_PALETTE = [
   "#0078d4", "#0f7b0f", "#c42b1c", "#9d5d00", "#7160e8",
   "#038387", "#ca5010", "#4f6bed", "#8e562e", "#10893e",
   "#e3008c", "#498205", "#5c2d91", "#b4a00e", "#c239b3",
@@ -55,30 +55,6 @@ export const CHART_COLORS = {
   transfer: "#636363",    // Neutral gray
   balance: "#0078d4",     // Fluent blue
 };
-
-/**
- * Creates a stable category->color mapping based on ordering.
- * Tip: pass your category list (book) and append any "orphan" categories after.
- */
-export function makeCategoryColorMap(categoryNames, palette = PIE_PALETTE, startIndex = 0) {
-  const colors = Array.isArray(palette) && palette.length ? palette : ["#0078d4"];
-  const map = new Map();
-  let i = startIndex;
-
-  for (const raw of categoryNames || []) {
-    // Support both string arrays and object arrays
-    const name = typeof raw === "string"
-      ? raw.trim()
-      : String(raw?.name || "").trim();
-
-    if (!name) continue;
-    if (map.has(name)) continue;
-    map.set(name, colors[i % colors.length]);
-    i++;
-  }
-
-  return map;
-}
 
 /**
  * Generates count color shades (lighter/darker tones) of a base color.

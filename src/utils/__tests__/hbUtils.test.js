@@ -8,7 +8,6 @@ import {
   normalizeBooks,
   makeDefaultBook,
   DEFAULT_POTS,
-  DEFAULT_TRANSFER_CATEGORIES,
 } from '../hbUtils.js';
 
 // ─── bookNeedsMigration ────────────────────────────────────────────────────
@@ -148,9 +147,9 @@ describe('normalizeBook', () => {
     expect(result.pots[0].id).toBe('reserve');
   });
 
-  it('adds DEFAULT_TRANSFER_CATEGORIES when missing', () => {
+  it('initializes transferCategories as an empty array when missing', () => {
     const result = normalizeBook({ id: 'b1' });
-    expect(result.transferCategories).toEqual(DEFAULT_TRANSFER_CATEGORIES);
+    expect(result.transferCategories).toEqual([]);
   });
 
   it('removes "Allgemein" from transferCategories', () => {
@@ -159,9 +158,9 @@ describe('normalizeBook', () => {
     expect(result.transferCategories).toContain('Steuern');
   });
 
-  it('resets to DEFAULT_TRANSFER_CATEGORIES if filtered list is empty', () => {
+  it('leaves transferCategories empty when filtering removes all entries', () => {
     const result = normalizeBook({ id: 'b1', transferCategories: ['Allgemein'] });
-    expect(result.transferCategories).toEqual(DEFAULT_TRANSFER_CATEGORIES);
+    expect(result.transferCategories).toEqual([]);
   });
 
   it('adds goals array when missing', () => {

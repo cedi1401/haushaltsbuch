@@ -8,8 +8,7 @@ import {
 } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { getWithdrawalCategoriesForPot } from "../utils/potUtils.js";
-
-const EMPTY_ARRAY = [];
+import { EMPTY_ARRAY } from "../utils/constants.js";
 
 const INITIAL_ADD_DRAFT = {
   amount: "",
@@ -35,13 +34,37 @@ const INITIAL_EDIT_DRAFT = {
   amount: "",
 };
 
+// Computes all draft fields that depend on the entry `kind`. Done in the event
+// path (see setAddField) rather than via cascading effects, so switching kind
+// updates categoryId, subcategoryId and the legacy `category` string in a single
+// state update — no Effect → setState → Effect chain.
+function applyKindToDraft(draft, kind, transferCategories) {
+  const next = { ...draft, kind };
+  if (kind === "expense") {
+    next.categoryId = "cat_unkategorisiert";
+    next.subcategoryId = null;
+    // legacy `category` is derived from categoryId in buildEntry — no sync needed
+  } else if (kind === "income") {
+    next.categoryId = "cat_einnahmen";
+    next.subcategoryId = null;
+    if (next.category !== "Allgemein") next.category = "Allgemein";
+  } else {
+    // transfer | withdrawal — legacy `category` must be a valid transfer category
+    next.categoryId = null;
+    next.subcategoryId = null;
+    if (!transferCategories.includes(next.category)) {
+      next.category = transferCategories[0] || "";
+    }
+  }
+  return next;
+}
+
 export function useEntryActions({
   activeBook,
   patchActiveBook,
   fmt,
   confirm,
   indicateTransferCategories,
-  indicateCategoryNames,
 }) {
   const [addEntryOpen, setAddEntryOpen] = useState(false);
   const [addDraft, setAddDraft] = useState(() => ({
@@ -59,6 +82,10 @@ export function useEntryActions({
   const entries = activeBook?.entries || EMPTY_ARRAY;
 
   function setAddField(field, value) {
+    if (field === "kind") {
+      setAddDraft((d) => applyKindToDraft(d, value, indicateTransferCategories));
+      return;
+    }
     setAddDraft((d) => ({ ...d, [field]: value }));
   }
 
@@ -75,7 +102,9 @@ export function useEntryActions({
     });
   }, [activeBook?.pots]);
 
-  // Category fallback when book or kind changes — uses functional update to avoid stale closure
+  // Re-validate the legacy `category` when the active book or its transfer
+  // categories change. The kind-change path is handled synchronously in
+  // setAddField (applyKindToDraft) — this effect only reacts to external data.
   useEffect(() => {
     if (!activeBook) return;
     setAddDraft((d) => {
@@ -84,28 +113,14 @@ export function useEntryActions({
         if (!indicateTransferCategories.includes(category)) {
           return { ...d, category: indicateTransferCategories[0] || "" };
         }
-      } else if (kind === "expense") {
-        if (!indicateCategoryNames.includes(category)) {
-          const fallback = indicateCategoryNames.includes("Allgemein")
-            ? "Allgemein"
-            : indicateCategoryNames[0];
-          return { ...d, category: fallback || "Allgemein" };
-        }
       } else if (kind === "income") {
         if (category !== "Allgemein") return { ...d, category: "Allgemein" };
       }
+      // expense: legacy `category` is derived from categoryId in buildEntry,
+      // so the draft string needs no sync here.
       return d;
     });
-  }, [activeBook?.id, indicateCategoryNames, indicateTransferCategories, addDraft.kind]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Reset categoryId when kind changes — functional update reads latest kind from state
-  useEffect(() => {
-    setAddDraft((d) => {
-      if (d.kind === "expense") return { ...d, categoryId: "cat_unkategorisiert", subcategoryId: null };
-      if (d.kind === "income") return { ...d, categoryId: "cat_einnahmen", subcategoryId: null };
-      return { ...d, categoryId: null, subcategoryId: null };
-    });
-  }, [addDraft.kind]);
+  }, [activeBook?.id, indicateTransferCategories]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const availableWithdrawalCategories = useMemo(
     () => getWithdrawalCategoriesForPot(entries, addDraft.potId, indicateTransferCategories),

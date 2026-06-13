@@ -7,6 +7,9 @@ import { normalizeBook, validateMonthStartDay } from "../utils/hbUtils.js";
 import { useToast } from "../components/Toast.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
+import makeLogger from "../utils/logger.js";
+
+const log = makeLogger("SettingsDialog");
 export default function SettingsDialog({
   open,
   onClose,
@@ -23,6 +26,7 @@ export default function SettingsDialog({
   onMonthStartDayChange,
   fontFamily,
   onFontFamilyChange,
+  update,
 }) {
   const backupInputRef = useRef(null);
 
@@ -39,44 +43,8 @@ export default function SettingsDialog({
     }
   }, [open, isElectronEnv]);
 
-  // Update-Check: null | "checking" | { status: "available"|"up-to-date"|"error", version? }
-  const [updateStatus, setUpdateStatus] = useState(null);
-  const [downloadingUpdate, setDownloadingUpdate] = useState(false);
-  // null | { version } — heruntergeladenes Update wartet auf Installation
-  const [downloadedUpdate, setDownloadedUpdate] = useState(null);
-
-  // Push-Events vom Main-Prozess
-  useEffect(() => {
-    if (!isElectronEnv) return;
-    const removeAvailable = window.electronAPI?.onUpdateAvailable?.((info) => {
-      setUpdateStatus({ status: "available", version: info.version });
-    });
-    const removeDownloaded = window.electronAPI?.onUpdateDownloaded?.((info) => {
-      setDownloadingUpdate(false);
-      setDownloadedUpdate({ version: info.version });
-    });
-    return () => { removeAvailable?.(); removeDownloaded?.(); };
-  }, [isElectronEnv]);
-
-  async function checkForUpdates() {
-    if (!window.electronAPI?.checkForUpdates) return;
-    setUpdateStatus("checking");
-    try {
-      const result = await window.electronAPI.checkForUpdates();
-      setUpdateStatus(result);
-    } catch {
-      setUpdateStatus({ status: "error" });
-    }
-  }
-
-  async function downloadUpdate() {
-    setDownloadingUpdate(true);
-    await window.electronAPI?.downloadUpdate?.();
-  }
-
-  async function installUpdate() {
-    await window.electronAPI?.installUpdate?.();
-  }
+  // Update-Lifecycle wird zentral von useUpdateManager (in HaushaltsbuchApp) verwaltet
+  // und via `update`-Prop geteilt — keine eigenen Listener/IPC-Aufrufe hier.
 
   // State für Monatsbeginn-Input
   const [monthStartDayDraft, setMonthStartDayDraft] = useState(1);
@@ -97,32 +65,36 @@ export default function SettingsDialog({
     }
   }
 
+  // Shared core for both import paths (Electron native dialog & browser file input):
+  // validate → normalize → confirm → import → toast. Only how `obj` is obtained differs.
+  async function processBackupObject(obj) {
+    if (!validateBackupObject(obj) || obj.books.length === 0) {
+      toast.error("Ungültiges Backup-Format. Ist es wirklich ein gültiges Haushaltsbuch-Backup (.json)?");
+      return;
+    }
+
+    const bookToImport = normalizeBook(obj.books[0]);
+    const ok = await confirm({
+      title: "Backup importieren",
+      message: `Haushaltsbuch „${bookToImport.name}“ importieren?\n\nEs wird zur bestehenden Datenbank hinzugefügt.`,
+      confirmLabel: "Importieren",
+    });
+    if (!ok) return;
+
+    onImportBook?.(bookToImport);
+    toast.success(`„${bookToImport.name}“ importiert.`);
+    onClose?.();
+  }
+
   async function triggerImportBackup() {
     if (isElectronEnv) {
       // Electron: native file dialog via IPC
       try {
         const result = await importBackupNative();
         if (result.canceled) return;
-
-        const obj = result.data;
-        if (!validateBackupObject(obj) || obj.books.length === 0) {
-          toast.error("Ungültiges Backup-Format.");
-          return;
-        }
-
-        const bookToImport = normalizeBook(obj.books[0]);
-        const ok = await confirm({
-          title: "Backup importieren",
-          message: `Haushaltsbuch „${bookToImport.name}“ importieren?\n\nEs wird zur bestehenden Datenbank hinzugefügt.`,
-          confirmLabel: "Importieren",
-        });
-        if (!ok) return;
-
-        onImportBook?.(bookToImport);
-        toast.success(`„${bookToImport.name}“ importiert.`);
-        onClose?.();
+        await processBackupObject(result.data);
       } catch (e) {
-        console.error(e);
+        log.error("Backup-Import (Electron) fehlgeschlagen", e);
         toast.error("Import fehlgeschlagen.");
       }
     } else {
@@ -136,26 +108,9 @@ export default function SettingsDialog({
 
     try {
       const text = await file.text();
-      const obj = JSON.parse(text);
-
-      if (!validateBackupObject(obj) || obj.books.length === 0) {
-        toast.error("Ungültiges Backup-Format. Ist es wirklich ein gültiges Haushaltsbuch-Backup (.json)?");
-        return;
-      }
-
-      const bookToImport = normalizeBook(obj.books[0]);
-      const ok = await confirm({
-        title: "Backup importieren",
-        message: `Haushaltsbuch „${bookToImport.name}“ importieren?\n\nEs wird zur bestehenden Datenbank hinzugefügt.`,
-        confirmLabel: "Importieren",
-      });
-      if (!ok) return;
-
-      onImportBook?.(bookToImport);
-      toast.success(`„${bookToImport.name}“ importiert.`);
-      onClose?.();
+      await processBackupObject(JSON.parse(text));
     } catch (e) {
-      console.error(e);
+      log.error("Backup-Import (Browser) fehlgeschlagen", e);
       toast.error("Import fehlgeschlagen. Ist es wirklich ein gültiges Haushaltsbuch-Backup (.json)?");
     } finally {
       if (backupInputRef.current) backupInputRef.current.value = "";
@@ -181,12 +136,12 @@ export default function SettingsDialog({
             </div>
           )}
 
-          {downloadedUpdate ? (
+          {update.ready ? (
             <div>
               <div style={{ color: "var(--green)", fontSize: 13, marginBottom: 10 }}>
-                Update <strong>v{downloadedUpdate.version}</strong> wurde heruntergeladen und ist bereit.
+                Update <strong>v{update.ready.version}</strong> wurde heruntergeladen und ist bereit.
               </div>
-              <Button variant="solid" onClick={installUpdate}>
+              <Button variant="solid" onClick={update.install}>
                 Jetzt installieren &amp; neu starten
               </Button>
             </div>
@@ -194,32 +149,32 @@ export default function SettingsDialog({
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               <Button
                 variant="outline"
-                onClick={checkForUpdates}
-                disabled={updateStatus === "checking"}
+                onClick={update.checkForUpdates}
+                disabled={update.checkStatus === "checking"}
               >
-                {updateStatus === "checking" ? "Suche läuft…" : "Nach Update suchen"}
+                {update.checkStatus === "checking" ? "Suche läuft…" : "Nach Update suchen"}
               </Button>
-              {updateStatus?.status === "available" && !downloadingUpdate && (
+              {update.available && !update.downloading && (
                 <>
                   <span style={{ color: "var(--accent)", fontSize: 13 }}>
-                    Version <strong>v{updateStatus.version}</strong> verfügbar
+                    Version <strong>v{update.available.version}</strong> verfügbar
                   </span>
-                  <Button variant="outline" onClick={downloadUpdate}>
+                  <Button variant="outline" onClick={update.download}>
                     Herunterladen
                   </Button>
                 </>
               )}
-              {updateStatus?.status === "available" && downloadingUpdate && (
+              {update.available && update.downloading && (
                 <span className="hb-muted" style={{ fontSize: 13 }}>
                   Wird heruntergeladen…
                 </span>
               )}
-              {updateStatus?.status === "up-to-date" && (
+              {update.checkStatus === "up-to-date" && (
                 <span className="hb-muted" style={{ fontSize: 13 }}>
                   Bereits auf dem neuesten Stand.
                 </span>
               )}
-              {updateStatus?.status === "error" && (
+              {update.checkStatus === "error" && (
                 <span style={{ color: "var(--green)", fontSize: 13 }}>
                   App ist auf dem aktuellsten Stand.
                 </span>

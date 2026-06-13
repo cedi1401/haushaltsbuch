@@ -3,23 +3,21 @@ import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
 import { generateId } from "../utils/idUtils.js";
-import { DEFAULT_EXPENSE_CATEGORIES, parseAmount } from "../utils/hbUtils.js";
+import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, todayISO } from "../utils/hbUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { IconFixed, IconPlus, IconDelete, IconDrag } from "../components/icons.jsx";
-import { useFmt } from "../contexts/CurrencyContext.jsx";
-
-const EMPTY_ARRAY = [];
+import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
+import { EMPTY_ARRAY } from "../utils/constants.js";
 
 export default function FixedCostsView({
   activeBook,
   entries: _entries,
-  baseCurrency = "CHF",
   onUpdateBook,
   onAddEntry,
-  todayISO,
 }) {
   const fmt = useFmt();
+  const baseCurrency = useBaseCurrency();
   const recurringExpenses = activeBook?.recurringExpenses || EMPTY_ARRAY;
   const fixedCostGroups = activeBook?.fixedCostGroups || EMPTY_ARRAY;
   const pots = activeBook?.pots || EMPTY_ARRAY;

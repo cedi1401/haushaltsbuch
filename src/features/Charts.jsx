@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from "react";
-
-const EMPTY_ARRAY = [];
+import { EMPTY_ARRAY } from "../utils/constants.js";
 import { Card, CardContent } from "../components/ui.jsx";
 import { IconInbox } from "../components/icons.jsx";
-import { useFmt } from "../contexts/CurrencyContext.jsx";
+import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { useCardBg } from "../hooks/useCardBg.js";
 import { useThemeColors } from "../hooks/useThemeColors.jsx";
 import {
@@ -18,7 +17,6 @@ import { makeSubcategoryColorShades, CHART_COLORS } from "../utils/hbPalette.js"
 export default function Charts({
   expenseByHierarchy,
   incomeByHierarchy,
-  baseCurrency = "CHF",
   totalIncome,
   totalExpense,
   totalReserveTransfers,
@@ -26,6 +24,7 @@ export default function Charts({
   balance,
 }) {
   const fmt = useFmt();
+  const baseCurrency = useBaseCurrency();
   const cardBg = useCardBg();
   const themeColors = useThemeColors();
   const [activeTab, setActiveTab] = useState("expense"); // "expense" | "income" | "allocation"

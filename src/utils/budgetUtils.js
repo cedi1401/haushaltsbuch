@@ -70,22 +70,30 @@ export function calcBudgetStatus(filteredEntries, expenseCategories) {
 }
 
 /**
+ * Aggregiert Einträge in eine 2-stufige Kategorie-Hierarchie (Top-Kategorie →
+ * Unterkategorien), inkl. Unkategorisiert-Split. Gemeinsame Basis für Ausgaben-
+ * und Einkommens-Auswertung — siehe die beiden Wrapper unten.
+ *
  * @param {Array} entries
- * @param {Array} expenseCategories
+ * @param {Array} categories
  * @param {string} month - Format "YYYY-MM" oder "" für alle Monate
  * @param {number} monthStartDay
+ * @param {object} opts
+ * @param {(e: object) => boolean} opts.entryFilter - true = Eintrag einbeziehen
+ * @param {string} opts.fallbackCategoryId - Ziel-Kategorie für fehlende/ungültige categoryId
+ * @param {boolean} [opts.includeBudget] - wenn true, wird `budget` ins Result übernommen
  * @returns {Array}
  */
-export function calcExpenseByHierarchy(entries, expenseCategories, month = "", monthStartDay = 1) {
+function calcByHierarchy(entries, categories, month, monthStartDay, { entryFilter, fallbackCategoryId, includeBudget = false }) {
   const topMap = new Map();
-  const validCategoryIds = new Set((expenseCategories || []).map((c) => c.id));
+  const validCategoryIds = new Set((categories || []).map((c) => c.id));
 
   for (const e of entries || []) {
-    if (e.kind !== "expense" || e.source !== "month") continue;
+    if (!entryFilter(e)) continue;
     if (month && getEntryFinancialMonth(e, monthStartDay) !== month) continue;
 
-    const rawCatId = e.categoryId || "cat_unkategorisiert";
-    const catId = validCategoryIds.has(rawCatId) ? rawCatId : "cat_unkategorisiert";
+    const rawCatId = e.categoryId || fallbackCategoryId;
+    const catId = validCategoryIds.has(rawCatId) ? rawCatId : fallbackCategoryId;
     const subId = e.subcategoryId || null;
     const amount = Number(e.amount || 0);
 
@@ -108,7 +116,7 @@ export function calcExpenseByHierarchy(entries, expenseCategories, month = "", m
 
   const result = [];
 
-  for (const cat of expenseCategories || []) {
+  for (const cat of categories || []) {
     const catData = topMap.get(cat.id);
     if (!catData || catData.value <= 0) continue;
 
@@ -138,18 +146,34 @@ export function calcExpenseByHierarchy(entries, expenseCategories, month = "", m
       });
     }
 
-    result.push({
+    const item = {
       id: cat.id,
       name: cat.name,
       color: cat.color,
-      budget: cat.budget || null,
       value: catData.value,
       entryCount: catData.entryCount,
       subcategories,
-    });
+    };
+    if (includeBudget) item.budget = cat.budget || null;
+    result.push(item);
   }
 
   return result.sort((a, b) => b.value - a.value);
+}
+
+/**
+ * @param {Array} entries
+ * @param {Array} expenseCategories
+ * @param {string} month - Format "YYYY-MM" oder "" für alle Monate
+ * @param {number} monthStartDay
+ * @returns {Array}
+ */
+export function calcExpenseByHierarchy(entries, expenseCategories, month = "", monthStartDay = 1) {
+  return calcByHierarchy(entries, expenseCategories, month, monthStartDay, {
+    entryFilter: (e) => e.kind === "expense" && e.source === "month",
+    fallbackCategoryId: "cat_unkategorisiert",
+    includeBudget: true,
+  });
 }
 
 /**
@@ -160,76 +184,8 @@ export function calcExpenseByHierarchy(entries, expenseCategories, month = "", m
  * @returns {Array}
  */
 export function calcIncomeByHierarchy(entries, incomeCategories, month = "", monthStartDay = 1) {
-  const topMap = new Map();
-  const validCategoryIds = new Set((incomeCategories || []).map((c) => c.id));
-
-  for (const e of entries || []) {
-    if (e.kind !== "income") continue;
-    if (month && getEntryFinancialMonth(e, monthStartDay) !== month) continue;
-
-    const rawCatId = e.categoryId || "cat_einnahmen";
-    const catId = validCategoryIds.has(rawCatId) ? rawCatId : "cat_einnahmen";
-    const subId = e.subcategoryId || null;
-    const amount = Number(e.amount || 0);
-
-    if (!topMap.has(catId)) {
-      topMap.set(catId, { value: 0, entryCount: 0, subMap: new Map() });
-    }
-    const catData = topMap.get(catId);
-    catData.value += amount;
-    catData.entryCount += 1;
-
-    if (subId) {
-      if (!catData.subMap.has(subId)) {
-        catData.subMap.set(subId, { value: 0, entryCount: 0 });
-      }
-      const subData = catData.subMap.get(subId);
-      subData.value += amount;
-      subData.entryCount += 1;
-    }
-  }
-
-  const result = [];
-
-  for (const cat of incomeCategories || []) {
-    const catData = topMap.get(cat.id);
-    if (!catData || catData.value <= 0) continue;
-
-    const subcategories = [];
-    for (const sub of cat.subcategories || []) {
-      const subData = catData.subMap.get(sub.id);
-      if (subData && subData.value > 0) {
-        subcategories.push({
-          id: sub.id,
-          name: sub.name,
-          value: subData.value,
-          entryCount: subData.entryCount,
-        });
-      }
-    }
-
-    const subcatTotal = subcategories.reduce((sum, s) => sum + s.value, 0);
-    const uncategorizedValue = catData.value - subcatTotal;
-    const uncategorizedCount = catData.entryCount - subcategories.reduce((sum, s) => sum + s.entryCount, 0);
-
-    if (uncategorizedValue > 0.001 && cat.subcategories && cat.subcategories.length > 0) {
-      subcategories.unshift({
-        id: null,
-        name: `${cat.name} (allgemein)`,
-        value: uncategorizedValue,
-        entryCount: uncategorizedCount,
-      });
-    }
-
-    result.push({
-      id: cat.id,
-      name: cat.name,
-      color: cat.color,
-      value: catData.value,
-      entryCount: catData.entryCount,
-      subcategories,
-    });
-  }
-
-  return result.sort((a, b) => b.value - a.value);
+  return calcByHierarchy(entries, incomeCategories, month, monthStartDay, {
+    entryFilter: (e) => e.kind === "income",
+    fallbackCategoryId: "cat_einnahmen",
+  });
 }

@@ -143,7 +143,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                         right: 0,
                         top: "calc(100% + 6px)",
                         width: 220,
-                        background: "var(--card-bg, #fff)",
+                        background: "var(--card)",
                         border: "1px solid var(--border, #e0e0e0)",
                         borderRadius: 6,
                         padding: "8px 10px",

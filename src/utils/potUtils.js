@@ -3,26 +3,6 @@ import { getEntryFinancialMonth } from "./financialMonthUtils.js";
 import { sumAmounts } from "./hbUtils.js";
 
 /**
- * Berechnet Monats-Zusammenfassung (für Dashboard)
- * Berücksichtigt: income, expense (month), transfer
- */
-export function calcMonthlySummary(entries) {
-  const income = sumAmounts(entries, (e) => e.kind === "income");
-  const expenseMonth = sumAmounts(entries, (e) => e.kind === "expense" && e.source === "month");
-  const transfers = sumAmounts(entries, (e) => e.kind === "transfer");
-
-  // Saldo = Einnahmen - (Ausgaben aus Monat) - (Transfers)
-  const balance = income - expenseMonth - transfers;
-
-  return {
-    income,
-    expenseMonth,
-    transfers,
-    balance,
-  };
-}
-
-/**
  * Berechnet Topf-Stand (aktuell)
  * @param {Array} entries - alle Einträge
  * @param {string} potId - z.B. "reserve" oder "surplus"
@@ -66,32 +46,6 @@ export function calcPotSeries(entries, potId, monthStartDay = 1) {
   return arr.map((d) => {
     cumulative += d.transfersIn - d.expensesOut;
     return { ...d, balance: cumulative };
-  });
-}
-
-/**
- * Berechnet Monats-Rest (für "Monat abschließen")
- * = Einnahmen - Ausgaben(month) - Transfers
- */
-export function calcMonthRest(entries, ym, monthStartDay = 1) {
-  const filtered = entries.filter((e) => getEntryFinancialMonth(e, monthStartDay) === ym);
-
-  const summary = calcMonthlySummary(filtered);
-  return summary.balance;
-}
-
-/**
- * Prüft, ob für einen Monat bereits ein Abschluss-Transfer existiert
- * (optional: mit bestimmter Kategorie oder Note)
- */
-export function hasMonthCloseTransfer(entries, ym, potId = "surplus", monthStartDay = 1) {
-  return entries.some((e) => {
-    return (
-      getEntryFinancialMonth(e, monthStartDay) === ym &&
-      e.kind === "transfer" &&
-      e.potId === potId &&
-      (e.category === "Monatsabschluss" || e.note?.includes("Monatsabschluss"))
-    );
   });
 }
 

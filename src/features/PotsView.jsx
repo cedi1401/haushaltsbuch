@@ -18,12 +18,12 @@ import {
 } from "recharts";
 import { calcPotSeries } from "../utils/potUtils.js";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
-import { formatDateDE, parseAmount } from "../utils/hbUtils.js";
+import { formatDateDE, parseAmount, todayISO } from "../utils/hbUtils.js";
 import { formatYearMonth } from "../utils/financialMonthUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useThemeColors } from "../hooks/useThemeColors.jsx";
 import { useCardBg } from "../hooks/useCardBg.js";
-import { useFmt } from "../contexts/CurrencyContext.jsx";
+import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import {
   IconEdit,
   IconDelete,
@@ -34,8 +34,9 @@ import {
 
 const fmtYearMonth = formatYearMonth;
 
-export default function PotsView({ activeBook, entries, baseCurrency = "CHF", onAddTransferEntry, onUpdateBook, transferCategories, todayISO, onEditEntry, onRemoveEntry, monthStartDay = 1, monthFilter, monthLabel }) {
+export default function PotsView({ activeBook, entries, onAddTransferEntry, onUpdateBook, transferCategories, onEditEntry, onRemoveEntry, monthStartDay = 1, monthFilter, monthLabel }) {
   const fmt = useFmt();
+  const baseCurrency = useBaseCurrency();
   const pots = useMemo(() => activeBook?.pots || [], [activeBook?.pots]);
   const [selectedPotId, setSelectedPotId] = useState(pots[0]?.id || "");
   const themeColors = useThemeColors();
@@ -271,7 +272,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
       {/*
         Kopf-Block: KPIs (5 Spalten) — 3 Kennzahlen + 2 Highlights in EINER Zeile.
         Statt zweier getrennter Voll-Breiten-Streifen ergibt das eine ruhige,
-        zusammenhängende Übersicht. Bricht über die hb-stat-tiles-Breakpoints um.
+        zusammenhängende Übersicht. Bricht via auto-fit/minmax responsiv um.
       */}
       <div className="hb-stat-pills" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
         <div className="hb-stat-pill hb-stat-pill--ok">
@@ -360,7 +361,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                 <CardContent>
                   <div className="hb-row" style={{ alignItems: "center", marginBottom: 8 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                      <h3 style={{ margin: 0, fontSize: 16 }}>Entwicklung</h3>
+                      <h3 className="hb-card-title">Entwicklung</h3>
                       <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
                         <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
                           <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.green} strokeWidth="2.5" />
@@ -370,9 +371,9 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
                     </div>
                     <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: lineMaxOffset > 0 ? "visible" : "hidden" }}>
-                        <button type="button" className="hb-icon-btn" onClick={() => setLineScrollOffset((o) => Math.min(o + 1, lineMaxOffset))} disabled={lineScrollOffset >= lineMaxOffset} title="Älteren Bereich anzeigen">‹</button>
+                        <button type="button" className="hb-icon-btn" onClick={() => setLineScrollOffset((o) => Math.min(o + 1, lineMaxOffset))} disabled={lineScrollOffset >= lineMaxOffset} title="Älteren Bereich anzeigen" aria-label="Älteren Bereich anzeigen">‹</button>
                         <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{lineWindowLabel}</span>
-                        <button type="button" className="hb-icon-btn" onClick={() => setLineScrollOffset((o) => Math.max(o - 1, 0))} disabled={lineScrollOffset === 0} title="Neueren Bereich anzeigen">›</button>
+                        <button type="button" className="hb-icon-btn" onClick={() => setLineScrollOffset((o) => Math.max(o - 1, 0))} disabled={lineScrollOffset === 0} title="Neueren Bereich anzeigen" aria-label="Neueren Bereich anzeigen">›</button>
                       </div>
                       {potSeries.length > 12 && (
                         <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
@@ -431,12 +432,12 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
               <Card>
                 <CardContent>
                   <div className="hb-row" style={{ alignItems: "center", marginBottom: 8 }}>
-                    <h3 style={{ margin: 0, fontSize: 16 }}>Ein-/Auszahlungen</h3>
+                    <h3 className="hb-card-title">Ein-/Auszahlungen</h3>
                     <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: barMaxOffset > 0 ? "visible" : "hidden" }}>
-                        <button type="button" className="hb-icon-btn" onClick={() => setBarScrollOffset((o) => Math.min(o + 1, barMaxOffset))} disabled={barScrollOffset >= barMaxOffset} title="Älteren Bereich anzeigen">‹</button>
+                        <button type="button" className="hb-icon-btn" onClick={() => setBarScrollOffset((o) => Math.min(o + 1, barMaxOffset))} disabled={barScrollOffset >= barMaxOffset} title="Älteren Bereich anzeigen" aria-label="Älteren Bereich anzeigen">‹</button>
                         <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{barWindowLabel}</span>
-                        <button type="button" className="hb-icon-btn" onClick={() => setBarScrollOffset((o) => Math.max(o - 1, 0))} disabled={barScrollOffset === 0} title="Neueren Bereich anzeigen">›</button>
+                        <button type="button" className="hb-icon-btn" onClick={() => setBarScrollOffset((o) => Math.max(o - 1, 0))} disabled={barScrollOffset === 0} title="Neueren Bereich anzeigen" aria-label="Neueren Bereich anzeigen">›</button>
                       </div>
                       {potSeries.length > 12 && (
                         <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
@@ -494,7 +495,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
             {transfersByCategory.length > 0 ? (
               <Card style={{ display: "flex", flexDirection: "column" }}>
                 <CardContent style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-                  <h3 style={{ margin: "0 0 8px", fontSize: 16 }}>Zusammensetzung</h3>
+                  <h3 className="hb-card-title" style={{ marginBottom: 8 }}>Zusammensetzung</h3>
 
                   {/* Donut mit fixer Maximalbreite, zentriert — geht nicht auf volle Breite auf */}
                   <div style={{ width: "100%", maxWidth: 280, height: 240, margin: "8px auto 0" }}>
@@ -556,7 +557,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
             ) : (
               <Card style={{ display: "flex", flexDirection: "column" }}>
                 <CardContent style={{ display: "flex", flexDirection: "column", justifyContent: "center", height: "100%" }}>
-                  <h3 style={{ margin: "0 0 8px", fontSize: 16 }}>Zusammensetzung</h3>
+                  <h3 className="hb-card-title" style={{ marginBottom: 8 }}>Zusammensetzung</h3>
                   <div className="hb-muted" style={{ textAlign: "center", padding: "32px 8px" }}>
                     Noch keine positiven Netto-Beträge je Zweck vorhanden.
                   </div>
@@ -571,7 +572,7 @@ export default function PotsView({ activeBook, entries, baseCurrency = "CHF", on
       <Card style={{ marginTop: 16 }}>
         <CardContent>
           <div className="hb-row" style={{ alignItems: "baseline", marginBottom: 10 }}>
-            <h3 style={{ margin: 0, fontSize: 16 }}>Buchungen: {selectedPot.name}</h3>
+            <h3 className="hb-card-title">Buchungen: {selectedPot.name}</h3>
             <div className="hb-muted">{potEntries.length} Einträge{monthLabel ? ` · ${monthLabel}` : ""}</div>
           </div>
 

@@ -25,6 +25,7 @@ export async function saveBooks(books) {
     return window.electronAPI.saveBooks(books);
   }
   localStorage.setItem('hb_books', JSON.stringify(books));
+  return true;
 }
 
 // --- Settings (key-value) ---
@@ -105,5 +106,3 @@ export async function importBackupFile() {
     input.click();
   });
 }
-
-export { isElectron };

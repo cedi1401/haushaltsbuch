@@ -1,5 +1,6 @@
 // src/utils/hbUtils.js
 import { CUSTOM_CATEGORY_PALETTE } from "./hbPalette.js";
+import { MONTHS_LONG } from "./constants.js";
 
 export const CURRENT_SCHEMA_VERSION = 2;
 
@@ -8,7 +9,8 @@ export function bookNeedsMigration(book) {
   return !book || typeof book.schemaVersion !== "number" || book.schemaVersion < CURRENT_SCHEMA_VERSION;
 }
 
-export function toCHF(n) {
+// Internal legacy CHF formatter — used as fallback by formatCurrency below.
+function toCHF(n) {
   try {
     return new Intl.NumberFormat("de-CH", {
       style: "currency",
@@ -101,16 +103,11 @@ export function formatDateDE(isoDate) {
   return `${dd}.${mm}.${yyyy}`;
 }
 
-const MONTHS_DE_LONG = [
-  "Januar", "Februar", "März", "April", "Mai", "Juni",
-  "Juli", "August", "September", "Oktober", "November", "Dezember",
-];
-
 export function formatDateDELong(isoDate) {
   if (!isoDate) return "";
   const m = String(isoDate).match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!m) return isoDate;
-  return `${Number(m[3])}. ${MONTHS_DE_LONG[Number(m[2]) - 1]} ${m[1]}`;
+  return `${Number(m[3])}. ${MONTHS_LONG[Number(m[2]) - 1]} ${m[1]}`;
 }
 
 export function validateMonthStartDay(day) {
@@ -136,7 +133,8 @@ export function sumAmounts(entries, predicate = () => true) {
   return (entries || []).filter(predicate).reduce((s, e) => s + Number(e.amount || 0), 0);
 }
 
-export function hashStringFNV1a(str) {
+// Internal — used by the deterministic category color hashing below.
+function hashStringFNV1a(str) {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
     h ^= str.charCodeAt(i);
@@ -153,14 +151,6 @@ export function hashStringFNV1a(str) {
 export const DEFAULT_POTS = [
   { id: "reserve", name: "Rücklagen" },
   { id: "surplus", name: "Überschuss" },
-];
-
-// Standard-Kategorien für Transfers
-export const DEFAULT_TRANSFER_CATEGORIES = [
-  "Steuern",
-  "KFZ-Versicherung",
-  "Jahresrechnungen",
-  "Notgroschen",
 ];
 
 // ============================================
@@ -394,20 +384,6 @@ export function findCategoryById(expenseCategories, incomeCategories, categoryId
 }
 
 /**
- * Findet eine Unterkategorie anhand ihrer ID.
- * @returns {{ parent: object, sub: object }|null}
- */
-export function findSubcategoryById(expenseCategories, incomeCategories, subcategoryId) {
-  if (!subcategoryId) return null;
-  const all = [...(expenseCategories || []), ...(incomeCategories || [])];
-  for (const parent of all) {
-    const sub = (parent.subcategories || []).find((s) => s.id === subcategoryId);
-    if (sub) return { parent, sub };
-  }
-  return null;
-}
-
-/**
  * Gibt einen lesbaren Kategorie-Label zurück.
  * Beispiel: "Wohnen > Miete / Wohngeld" oder "Unkategorisiert"
  */
@@ -418,20 +394,6 @@ export function getCategoryLabel(expenseCategories, incomeCategories, categoryId
   if (subcategoryId) {
     const sub = (parent.subcategories || []).find((s) => s.id === subcategoryId);
     if (sub) return `${parent.name} > ${sub.name}`;
-  }
-  return parent.name;
-}
-
-/**
- * Gibt den Kurznamen zurück (nur Unterkategorie, oder Oberkategorie falls keine Unterkategorie).
- */
-export function getCategoryShortName(expenseCategories, incomeCategories, categoryId, subcategoryId) {
-  if (!categoryId) return "Unkategorisiert";
-  const parent = findCategoryById(expenseCategories, incomeCategories, categoryId);
-  if (!parent) return "Unkategorisiert";
-  if (subcategoryId) {
-    const sub = (parent.subcategories || []).find((s) => s.id === subcategoryId);
-    if (sub) return sub.name;
   }
   return parent.name;
 }

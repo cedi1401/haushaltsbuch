@@ -29,6 +29,7 @@
   --accent-hover: #106ebe;
   --accent-active: #005a9e;
   --accent-soft: rgba(0, 120, 212, 0.08);
+  --text-on-accent: #ffffff;
 
   /* Semantic colors - vivid but tasteful */
   --green: #0f7b0f;
@@ -44,6 +45,7 @@
   --purple: #7160e8;
   --purple-soft: rgba(113, 96, 232, 0.08);
   --orange: #ca5010;
+  --orange-soft: rgba(202, 80, 16, 0.08);
 
   /* Interactive states */
   --input-bg: #ffffff;
@@ -98,6 +100,7 @@
   --accent-hover: #4cc2ff;
   --accent-active: #38b8ff;
   --accent-soft: rgba(96, 205, 255, 0.1);
+  --text-on-accent: #000000;
 
   /* Dark mode semantics */
   --green: #6ccb5f;
@@ -113,6 +116,7 @@
   --purple: #b4a0ff;
   --purple-soft: rgba(180, 160, 255, 0.12);
   --orange: #f7630c;
+  --orange-soft: rgba(247, 99, 12, 0.12);
 
   /* Interactive states */
   --input-bg: #1c1f28;
@@ -261,7 +265,6 @@ button, input, select, textarea {
 
 /* Flex column utility — replaces style={{ display:"flex", flexDirection:"column", gap:X }} */
 .hb-stack { display: flex; flex-direction: column; gap: 12px; }
-.hb-stack--sm { gap: 8px; }
 .hb-stack--lg { gap: 16px; }
 
 .hb-title-row {
@@ -285,11 +288,12 @@ button, input, select, textarea {
   color: var(--text);
 }
 
-.hb-sub {
-  color: var(--muted);
-  margin: 4px 0 0 0;
-  font-size: 13px;
-  font-weight: 400;
+/* Card/sub-section heading (16px) — replaces ad-hoc inline `fontSize:16` on <h3>. */
+.hb-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
 }
 
 .hb-group {
@@ -573,7 +577,7 @@ select.hb-input option {
 
 .hb-datepicker-day--selected {
   background: var(--accent) !important;
-  color: #ffffff !important;
+  color: var(--text-on-accent) !important;
   font-weight: 600;
 }
 
@@ -636,7 +640,7 @@ select.hb-input option {
 
 .hb-monthpicker-month.hb-datepicker-day--selected {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--text-on-accent);
   font-weight: 600;
   border-radius: var(--radius-sm);
 }
@@ -654,7 +658,7 @@ select.hb-input option {
 .hb-btn {
   border: none;
   background: var(--accent);
-  color: #ffffff;
+  color: var(--text-on-accent);
   border-radius: var(--radius-sm);
   padding: 8px 16px;
   cursor: pointer;
@@ -768,8 +772,7 @@ select.hb-input option {
     min-height: 44px;
   }
 
-  .hb-icon-btn,
-  .hb-x {
+  .hb-icon-btn {
     width: 44px;
     height: 44px;
   }
@@ -836,8 +839,7 @@ select.hb-input option {
 }
 
 /* Inline-SVG icons (currentColor based) — adopt parent text color */
-.hb-icon-btn svg,
-.hb-x svg {
+.hb-icon-btn svg {
   width: 18px;
   height: 18px;
   display: block;
@@ -1028,56 +1030,19 @@ select.hb-input option {
   margin-bottom: 4px;
 }
 
+/* Shared numeric-KPI typography kernel — single source for the three KPI value
+   variants below (stat-val, stat-pill-value, fct-kpi-value). Size, colour and
+   spacing deltas stay on the individual classes. */
+.hb-stat-val,
+.hb-stat-pill-value,
+.hb-fct-kpi-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 .hb-stat-val {
   font-size: 22px;
-  font-weight: 700;
   letter-spacing: -0.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Stat tiles - 4-up grid of compact card-like surfaces */
-.hb-stat-tiles {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-@media (max-width: 900px) {
-  .hb-stat-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (max-width: 480px) {
-  .hb-stat-tiles { grid-template-columns: 1fr; }
-}
-
-.hb-stat-tile {
-  background: var(--card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: 16px 18px;
-  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
-}
-
-.hb-stat-tile:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--reveal-border);
-}
-
-.hb-stat-tile-label {
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  margin-bottom: 6px;
-}
-
-.hb-stat-tile-value {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Stat pills (used e.g. in Pots highlights) */
@@ -1131,8 +1096,6 @@ select.hb-input option {
 
 .hb-stat-pill-value {
   font-size: 26px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
   letter-spacing: -0.3px;
   color: var(--text);
   line-height: 1.15;
@@ -1227,8 +1190,6 @@ select.hb-input option {
 
 .hb-fct-kpi-value {
   font-size: 24px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
   letter-spacing: -0.3px;
   color: var(--text);
   line-height: 1.2;
@@ -1242,83 +1203,12 @@ select.hb-input option {
   margin-top: 1px;
 }
 
-/* Items Table */
-.hb-fct-items-table {
-  display: flex;
-  flex-direction: column;
-}
-
-.hb-fct-items-head {
-  display: grid;
-  grid-template-columns: 1fr 120px 140px 90px;
-  gap: 8px;
-  padding: 0 0 8px 0;
-  border-bottom: 1px solid var(--border-light);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--muted);
-}
-
-.hb-fct-item-row {
-  display: grid;
-  grid-template-columns: 1fr 120px 140px 90px;
-  gap: 8px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border-light);
-  align-items: center;
-}
-
-.hb-fct-item-row:last-of-type { border-bottom: none; }
-
-.hb-fct-item-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  min-width: 0;
-}
-
+/* Color dot for fixed-cost items (used in FixedCostTrendSection legend) */
 .hb-fct-item-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
-}
-
-.hb-fct-item-badge {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 3px;
-  background: var(--bg-subtle);
-  color: var(--muted);
-  border: 1px solid var(--border-light);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  flex-shrink: 0;
-}
-
-.hb-fct-item-amt {
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  color: var(--text);
-}
-
-.hb-fct-item-spark {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.hb-fct-spark-empty {
-  color: var(--muted);
-  font-size: 13px;
-  display: block;
-  text-align: center;
-  width: 80px;
 }
 
 /* Positionen-Übersicht: 3-Spalten-Grid */
@@ -1812,53 +1702,6 @@ select.hb-input option {
   font-weight: 600;
 }
 
-.hb-badge-warn {
-  background: var(--yellow-soft);
-  color: var(--yellow);
-  border-color: var(--yellow);
-}
-
-:root.dark .hb-badge-warn {
-  background: var(--yellow-soft);
-  color: var(--yellow);
-}
-
-/* =====================================================
-   CLOSE/DELETE BUTTON (X)
-   ===================================================== */
-.hb-x {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--card);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  line-height: 1;
-  font-size: 16px;
-  color: var(--muted);
-  transition: all var(--transition-fast);
-}
-
-.hb-x:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--focus-ring);
-}
-
-.hb-x:hover {
-  background: var(--red-soft);
-  border-color: var(--red);
-  color: var(--red);
-}
-
-.hb-x-disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 /* =====================================================
    MODAL/DIALOG - FLUENT OVERLAY
    ===================================================== */
@@ -2134,16 +1977,6 @@ select.hb-input option {
   width: 100%;
 }
 
-.hb-topline {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border-light);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-
 .hb-note {
   font-size: 13px;
   color: var(--muted);
@@ -2388,7 +2221,7 @@ select.hb-input option {
   color: var(--text);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
-  transition: background 120ms;
+  transition: background var(--transition-fast);
   line-height: 1.4;
 }
 
@@ -2429,7 +2262,7 @@ select.hb-input option {
   gap: 10px;
   border-radius: var(--radius-md);
   padding: 3px;
-  transition: background 120ms, outline 120ms;
+  transition: background var(--transition-fast), outline var(--transition-fast);
   min-height: 10px;
 }
 
@@ -2457,7 +2290,7 @@ select.hb-input option {
 /* Drag & Drop */
 .hb-fixed-card-wrap {
   cursor: grab;
-  transition: opacity 150ms, box-shadow 150ms;
+  transition: opacity var(--transition-fast), box-shadow var(--transition-fast);
   border-radius: var(--radius-md);
 }
 
@@ -2476,7 +2309,7 @@ select.hb-input option {
   align-self: center;
   color: var(--border);
   flex-shrink: 0;
-  transition: color 120ms;
+  transition: color var(--transition-fast);
   cursor: grab;
 }
 
@@ -3153,7 +2986,7 @@ select.hb-input option {
 }
 
 .hb-cat-budget-remove-btn:hover {
-  background: rgba(196, 43, 28, 0.08);
+  background: var(--red-soft);
   color: var(--red);
 }
 
@@ -3815,7 +3648,7 @@ select.hb-input option {
 
 .hb-legend-back-btn:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 /* Pie-Chart Container */
@@ -4303,25 +4136,6 @@ select.hb-input option {
   justify-content: space-between;
   gap: 12px;
 }
-
-/* Budget-Risiko-Balken */
-.hb-risk-bar {
-  height: 6px;
-  background: var(--bg-subtle);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.hb-risk-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 360ms var(--ease-decelerate),
-              background var(--transition-normal);
-}
-
-.hb-risk-bar--low  .hb-risk-bar-fill { background: var(--green); }
-.hb-risk-bar--mid  .hb-risk-bar-fill { background: var(--yellow); }
-.hb-risk-bar--high .hb-risk-bar-fill { background: var(--red); }
 
 /* Placeholder for upcoming cards */
 .hb-insight-placeholder {

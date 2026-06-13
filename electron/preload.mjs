@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App info
   getAppVersion: () => ipcRenderer.invoke('app:version'),
 
+  // Logging (fire-and-forget: renderer errors forwarded to a file for diagnostics)
+  logError: (entry) => ipcRenderer.send('log:error', entry),
+
   // Updates
   checkForUpdates: () => ipcRenderer.invoke('updates:check'),
   downloadUpdate: () => ipcRenderer.invoke('updates:download'),

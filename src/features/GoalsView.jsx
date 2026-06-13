@@ -1,26 +1,24 @@
 import React, { useMemo, useState } from "react";
-
-const EMPTY_ARRAY = [];
+import { EMPTY_ARRAY } from "../utils/constants.js";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import { calcGoalProgress, calcGoalPrognosis } from "../utils/goalUtils.js";
-import { parseAmount } from "../utils/hbUtils.js";
+import { parseAmount, todayISO } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { IconEdit, IconDelete, IconGoals, IconPlus } from "../components/icons.jsx";
-import { useFmt } from "../contexts/CurrencyContext.jsx";
+import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 
 export default function GoalsView({
   activeBook,
   entries,
-  baseCurrency = "CHF",
   onUpdateBook,
-  todayISO,
   monthStartDay = 1,
 }) {
   const fmt = useFmt();
+  const baseCurrency = useBaseCurrency();
   const goals = activeBook?.goals || EMPTY_ARRAY;
   const pots = activeBook?.pots || EMPTY_ARRAY;
   const transferCategories = activeBook?.transferCategories || [];
@@ -48,7 +46,8 @@ export default function GoalsView({
       progress: calcGoalProgress(goal, entries, pots),
       prognosis: calcGoalPrognosis(goal, entries, todayISO(), monthStartDay),
     }));
-  }, [goals, entries, pots, todayISO, monthStartDay]);
+    // todayISO is a stable module import → intentionally not a dependency
+  }, [goals, entries, pots, monthStartDay]);
 
   function openCreateDialog() {
     setEditingGoal(null);

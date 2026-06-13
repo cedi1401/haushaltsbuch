@@ -20,8 +20,8 @@ let downloadedUpdateInfo = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1700,
+    height: 1000,
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
@@ -32,6 +32,8 @@ function createWindow() {
     title: 'Haushaltsbuch',
     icon: path.join(__dirname, process.platform === 'win32' ? '../dist/icon.ico' : '../dist/icon.png'),
   });
+
+  mainWindow.maximize();
 
   // Dev or production
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -197,6 +199,23 @@ function registerIpcHandlers() {
 
   // --- App info ---
   ipcMain.handle('app:version', () => app.getVersion());
+
+  // --- Logging ---
+  // Renderer errors are forwarded here (fire-and-forget) and appended to a log
+  // file under userData/logs, so issues in the packaged app remain diagnosable
+  // without an open DevTools console. Never throws — logging must not crash anything.
+  ipcMain.on('log:error', async (_event, entry) => {
+    try {
+      const { context = '', msg = '', extra = '' } = entry || {};
+      const fs = await import('fs/promises');
+      const logsDir = path.join(app.getPath('userData'), 'logs');
+      await fs.mkdir(logsDir, { recursive: true });
+      const line = `${new Date().toISOString()} [${context}] ${String(msg)}${extra ? ` ${extra}` : ''}\n`;
+      await fs.appendFile(path.join(logsDir, 'renderer-errors.log'), line, 'utf-8');
+    } catch (err) {
+      console.error('[ipc] log:error failed:', err);
+    }
+  });
 
   // --- Updates ---
   ipcMain.handle('updates:check', () => {

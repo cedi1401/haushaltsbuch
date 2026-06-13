@@ -22,7 +22,6 @@ export default function DashboardView({
   potBalances,
   expenseByHierarchy,
   incomeByHierarchy,
-  baseCurrency,
   monthFilter,
   monthLabel,
   monthStartDay,
@@ -92,7 +91,7 @@ export default function DashboardView({
       <Card style={{ marginBottom: 16 }}>
         <CardContent>
           <div className="hb-row" style={{ marginBottom: 10 }}>
-            <h3 style={{ margin: 0, fontSize: 16 }}>Topf-Stände</h3>
+            <h3 className="hb-card-title">Topf-Stände</h3>
             {potBalances.length > 8 && (
               <button
                 type="button"
@@ -128,7 +127,6 @@ export default function DashboardView({
         <Charts
           expenseByHierarchy={expenseByHierarchy}
           incomeByHierarchy={incomeByHierarchy}
-          baseCurrency={baseCurrency}
           totalIncome={totalIncome}
           totalExpense={totalExpense}
           totalReserveTransfers={totalReserveTransfers ?? 0}

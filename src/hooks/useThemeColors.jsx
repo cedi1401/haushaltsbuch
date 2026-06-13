@@ -5,6 +5,8 @@ const DEFAULT_COLORS = {
   red: "#c42b1c",
   blue: "#0078d4",
   teal: "#038387",
+  orange: "#ca5010",
+  purple: "#7160e8",
   accent: "#0078d4",
   muted: "#636363",
 };
@@ -21,6 +23,8 @@ function readColors() {
     red: get("--red", DEFAULT_COLORS.red),
     blue: get("--blue", DEFAULT_COLORS.blue),
     teal: get("--teal", DEFAULT_COLORS.teal),
+    orange: get("--orange", DEFAULT_COLORS.orange),
+    purple: get("--purple", DEFAULT_COLORS.purple),
     accent: get("--accent", DEFAULT_COLORS.accent),
     muted: get("--muted", DEFAULT_COLORS.muted),
   };

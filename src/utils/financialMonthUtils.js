@@ -2,6 +2,7 @@
 // Berechnet den "finanziellen Monat" basierend auf einem konfigurierbaren Monatsbeginn-Tag.
 // Beispiel: monthStartDay=24 → Einträge ab dem 24. Mai zählen zum finanziellen Juni (24. Mai – 23. Jun = "Juni").
 import { validateMonthStartDay } from "./hbUtils.js";
+import { MONTHS_SHORT } from "./constants.js";
 
 /**
  * Berechnet den finanziellen Monat für ein gegebenes Datum.
@@ -86,13 +87,8 @@ export function getFinancialMonthRange(yyyymm, monthStartDay = 1) {
   return { startDate, endDate };
 }
 
-const MONTHS_DE = [
-  "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
-  "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
-];
-
 export function formatYearMonth(yyyymm) {
   const [y, m] = String(yyyymm).split("-");
   if (!y || !m) return yyyymm;
-  return `${MONTHS_DE[Number(m) - 1] || m} ${y}`;
+  return `${MONTHS_SHORT[Number(m) - 1] || m} ${y}`;
 }

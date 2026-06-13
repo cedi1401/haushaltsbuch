@@ -79,6 +79,7 @@ export default function HbTooltip({
         onMouseEnter={open}
         onFocus={open}
         onBlur={close}
+        onClick={open}
         onKeyDown={(e) => e.key === "Escape" && close()}
       >
         <IconHelp width={size} height={size} />
