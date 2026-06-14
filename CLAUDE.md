@@ -1,46 +1,19 @@
 # Haushaltsbuch - Project Instructions
 
-## UI Design System: WinUI 3 Modern
+## Hard Constraints
 
-The design language for this project is **WinUI 3 / Fluent Design** — not Claymorphism. All UI work (including the ui-expert agent) must follow these guidelines:
+These rules must never be broken, regardless of what seems convenient:
 
-### Design Philosophy
-- **Modern-futuristic, clean, and minimalist** — inspired by WinUI 3 and Microsoft Fluent Design System
-- No Claymorphism (no clay/soft-shadow dual-shadow aesthetic, no desaturated "muddy" palettes)
-- Crisp, precise, and polished — like native Windows 11 apps
-- Subtle depth through layering (Mica/Acrylic-style backgrounds), not puffy shadows
-- Generous whitespace, clear visual hierarchy
+- **Dev-Server nie starten**: `npm run dev` läuft nur im Windows-Terminal (Rollup-Binary-Problem in WSL). Nie automatisch via Bash starten — nach UI-Änderungen den Nutzer bitten, es selbst zu starten.
+- **Kein TypeScript**: Das Projekt ist und bleibt JSX/JS. Keine `.ts`/`.tsx`-Dateien, keine TS-Typen einführen.
+- **Kein CSS-Framework**: Styling ausschließlich via CSS (eigene Klassen/Variablen). Kein Tailwind, kein Bootstrap, keine Utility-Klassen.
+- **Kein automatisiertes Browser-Testing**: Kein Python, kein Playwright, kein webapp-testing-Skill. Der Nutzer testet selbst manuell über den Dev-Server.
+- **Keine hardcodierten Währungen**: Immer `fmt`/`baseCurrency` aus dem aktiven Buch verwenden — nie `CHF` oder ein Symbol fest im Code hinterlegen.
+- **DAL-Pattern einhalten**: Jeder Datenzugriff läuft über `src/dal/storage.js` — nie direkt `localStorage` oder SQLite ansprechen.
+- **Nie automatisch committen**: Commits werden ausschließlich über den `git-expert`-Subagenten gemacht. Nie selbst `git commit` ausführen — auch nicht nach abgeschlossenen Änderungen.
 
-### Color Guidance
-- Colors should be **vivid but tasteful** — not desaturated/muted, but also not neon or garish
-- Use a clear, modern accent color system (like WinUI 3's accent color approach)
-- Backgrounds: clean neutrals with subtle transparency/layering effects
-- Dark mode should feel rich and immersive (deep blue-grays, not pure black)
-- Semantic colors (success, danger, warning, info) should be clearly distinguishable and modern
+## Quick Reference
 
-### Visual Elements
-- **Shadows**: Single-direction, subtle drop shadows (no dual inner/outer clay shadows)
-- **Border radius**: Moderate (4-8px), consistent — like WinUI 3 controls
-- **Borders**: Subtle, 1px, used sparingly for structure
-- **Typography**: Clean hierarchy, good contrast ratios
-- **Spacing**: Consistent 4px/8px grid system
-- **Animations**: Smooth, purposeful micro-interactions (not bouncy/elastic)
-- **Cards/Surfaces**: Layered surfaces with slight elevation, not puffy/inflated
-
-### Component Style Reference (WinUI 3)
-- Buttons: Flat with subtle hover states, accent-colored primary actions
-- Inputs: Clean borders, clear focus indicators (bottom-border accent or outline)
-- Dialogs: Overlay with backdrop blur, clean card surface
-- Navigation: Sidebar or tab-based, with clear active states
-- Lists/Tables: Clean rows with hover highlights, no heavy dividers
-
-### What to Avoid
-- Dual-direction shadows (inner + outer "clay" effect)
-- Overly desaturated/washed-out color palettes
-- Overly rounded, "bubbly" shapes (border-radius > 12px on standard elements)
-- Neon colors or excessive gradients
-- Heavy visual noise or decoration without purpose
-
-### Language
-- All UI text is in German (Swiss context, currency CHF)
-- Code comments and variable names remain in English
+- **Design System**: WinUI 3 / Fluent Design — Details sind in der ui-expert-Agent-Definition. Für UI-Änderungen immer den ui-expert konsultieren.
+- **Sprache UI**: Deutsch (korrekte deutsche Grammatik und Rechtschreibung)
+- **Währung**: Konfigurierbar pro Buch (mehrere Formate verfügbar); kein einzelnes Format annehmen
