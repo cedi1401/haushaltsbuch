@@ -50,7 +50,7 @@ export default function EntriesTable({
   return (
     <Card style={{ marginTop: 16 }}>
       <CardContent>
-        <div className="hb-row" style={{ alignItems: "baseline" }}>
+        <div className="hb-row" style={{ alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>Buchungen</h2>
             <HbTooltip
@@ -58,8 +58,13 @@ export default function EntriesTable({
               placement="right"
             />
           </div>
-          <div className="hb-muted">
-            {entriesSorted.length} Einträge · {monthLabel}
+          <div className="hb-info-pills">
+            <span className="hb-info-pill">{entriesSorted.length} Einträge</span>
+            {monthLabel
+              ? monthLabel.split(" · ").map((part, i) => (
+                  <span key={i} className="hb-info-pill">{part}</span>
+                ))
+              : null}
           </div>
         </div>
 

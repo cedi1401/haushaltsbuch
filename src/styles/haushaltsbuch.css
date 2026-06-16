@@ -1755,6 +1755,31 @@ select.hb-input option {
 }
 
 /*
+  Kategorien-Dialog: feste Fenstergröße, damit es beim Tab-Wechsel oder
+  Auf-/Zuklappen der Oberkategorien nicht springt. Der Body füllt die
+  Resthöhe; lange Listen scrollen intern. Auf kleinen Viewports greift
+  der max-height-Fallback.
+*/
+.hb-modal-panel-wide:has(.hb-cat-manager) {
+  width: 720px;
+  max-width: 720px;
+  height: 920px;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+}
+
+.hb-modal-panel-wide:has(.hb-cat-manager) .hb-modal-head {
+  flex-shrink: 0;
+}
+
+.hb-modal-panel-wide:has(.hb-cat-manager) .hb-modal-body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+/*
   Form-Dialoge (Buchung hinzufügen/bearbeiten): Der Body darf NICHT scrollen,
   sonst wird das HbDatePicker-Popover (position: absolute) abgeschnitten und
   erzeugt eine Scrollbar. overflow: visible lässt das Popover sauber über den
@@ -1934,6 +1959,41 @@ select.hb-input option {
 .hb-muted {
   color: var(--muted);
   font-size: 13px;
+}
+
+/* Dezente Info-Pills (z.B. Buchungs-Header: Anzahl, Monat, Zeitraum) */
+.hb-info-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.hb-info-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.hb-title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hb-info-pill--title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: transparent;
 }
 
 .hb-orphan {
@@ -2173,6 +2233,12 @@ select.hb-input option {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+}
+
+/* KPI-Pill in der Toolbar wie die Grid-Pills der anderen Views darstellen */
+.hb-fixed-toolbar-pill {
+  align-self: stretch;
+  min-width: 220px;
 }
 
 
@@ -2733,10 +2799,12 @@ select.hb-input option {
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--muted);
   pointer-events: none;
-  line-height: 1;
+  line-height: 0;
 }
 
 .hb-search-field .hb-input {
@@ -2745,10 +2813,45 @@ select.hb-input option {
   min-width: 0;
 }
 
+/* Primäre Tab-Leiste (Kategorien / Transfer-Zwecke): linksbündig, nicht gestreckt */
+.hb-cat-tabs {
+  align-self: flex-start;
+}
+
+/* Sekundärer Filter (Alle / Eigene): linksbündig unter dem Kategorien-Header */
 .hb-cat-filter-row {
+  align-self: flex-start;
+}
+
+/* Transfer-Zwecke-Tab */
+.hb-cat-transfer-panel {
   display: flex;
-  gap: 20px;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.hb-cat-transfer-add {
+  display: flex;
+  gap: 8px;
   align-items: center;
+}
+
+.hb-cat-transfer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  transition: border-color var(--transition-fast);
+}
+
+.hb-cat-transfer-item:hover {
+  border-color: var(--border);
 }
 
 .hb-radio-label {
@@ -3972,6 +4075,23 @@ select.hb-input option {
   color: var(--muted);
 }
 
+/* Mehrzeiliger Tooltip (Burn-Down: Frei / Soll / Delta) */
+.hb-chart-tooltip--col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  min-width: 140px;
+}
+.hb-chart-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.hb-chart-tooltip-key {
+  color: var(--muted);
+  font-weight: 600;
+}
+
 /* =====================================================
    HB TOOLTIP - Hover-Hilfe hinter ?-Icon (WinUI 3)
    ===================================================== */
@@ -4114,6 +4234,10 @@ select.hb-input option {
 .hb-trend-pill--down { background: var(--green-soft); color: var(--green); }
 .hb-trend-pill--flat { background: var(--bg-subtle);  color: var(--muted); }
 
+/* Burn-Down-Status (Forecast-Hero) */
+.hb-trend-pill--good { background: var(--green-soft); color: var(--green); }
+.hb-trend-pill--over { background: var(--red-soft);   color: var(--red); }
+
 /* Größere Variante (z.B. neben dem Forecast-Hero-Betrag) */
 .hb-trend-pill--lg {
   padding: 4px 12px;
@@ -4127,7 +4251,12 @@ select.hb-input option {
   letter-spacing: -0.5px;
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
+  color: var(--text);
 }
+
+/* Ampel-Färbung des Frei-Werts (Ziel ≈ 0) */
+.hb-insight-hero--good  { color: var(--green); }
+.hb-insight-hero--over  { color: var(--red); }
 
 /* Hero-Betrag + Trend-Pill nebeneinander */
 .hb-insight-hero-row {
@@ -4172,10 +4301,37 @@ select.hb-input option {
 /* Obere Hälfte: zwei Charts nebeneinander */
 .hb-behavior-charts {
   display: grid;
-  grid-template-columns: 1fr 1px 1fr;
+  grid-template-columns: 0.85fr 1px 1.15fr;
   gap: 0 18px;
   flex: 1;
   min-height: 0;
+}
+
+/* Empty-State innerhalb der Verhaltens-Charts */
+.hb-behavior-chart-empty {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.hb-behavior-chart-empty .hb-empty-icon {
+  width: 34px;
+  height: 34px;
+}
+
+.hb-behavior-chart-empty .hb-empty-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.hb-behavior-chart-empty .hb-empty-text {
+  font-size: 12px;
+  max-width: 170px;
 }
 
 /* Vertikale Trennlinie zwischen den Charts */

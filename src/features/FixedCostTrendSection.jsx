@@ -137,7 +137,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
       {/* KPI Strip */}
       <div className="hb-fct-kpis">
         <KpiCard
-          label="Konfiguriert / Monat"
+          label="Konfiguriert pro Monat"
           value={fmt(kpis.configuredTotal)}
           sub={`${kpis.activeCount} Position${kpis.activeCount !== 1 ? "en" : ""}`}
           accent="var(--accent)"
@@ -274,7 +274,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 )}
               </div>
               <span className="hb-muted" style={{ fontSize: 12, alignSelf: "flex-start", paddingTop: 2 }}>
-                Total: {fmt(configuredTotal)} / Monat
+                Total: {fmt(configuredTotal)} pro Monat
               </span>
             </div>
 
@@ -323,7 +323,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                   style={{ gridColumn: 3, gridRow: i + 2 }}
                 >
                   <span className="hb-fct-annual-amount">{fmt(item.amount * 12)}</span>
-                  <span className="hb-fct-annual-label">/ Jahr</span>
+                  <span className="hb-fct-annual-label">pro Jahr</span>
                 </div>
               ))}
 
@@ -331,7 +331,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
               {annualTotal > 0 && (
                 <div className="hb-fct-annual-total" style={{ gridColumn: 3, gridRow: activeItems.length + 2 }}>
                   <span className="hb-fct-annual-total-label">Total</span>
-                  <span className="hb-fct-annual-total-value">{fmt(annualTotal)} / Jahr</span>
+                  <span className="hb-fct-annual-total-value">{fmt(annualTotal)} pro Jahr</span>
                 </div>
               )}
             </div>

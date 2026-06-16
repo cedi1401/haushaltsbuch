@@ -27,7 +27,7 @@ const monthLabel = formatYearMonth;
 // oldest → lightest, newest → darkest
 const YOY_YEAR_COLORS = [TRANSFER_PALETTE[7], TRANSFER_PALETTE[3], TRANSFER_PALETTE[0]];
 
-const BAR_RADIUS = 2;
+const BAR_RADIUS = 0;
 
 function roundedBarPath(x, y, width, height, { topRounded, bottomRounded }) {
   const left = Math.min(x, x + width);
@@ -66,7 +66,8 @@ function CashflowTooltip({ active, payload, label, fmt }) {
   const expense = payload.find((p) => p.dataKey === "expense");
   const transfer = payload.find((p) => p.dataKey === "transfer");
   const savings = payload.find((p) => p.dataKey === "savings");
-  const frei = (income?.value ?? 0) + (expense?.value ?? 0) + (transfer?.value ?? 0) + (savings?.value ?? 0);
+  // expense/transfer sind im chartData negativ, savings positiv → Sparen subtrahieren.
+  const frei = (income?.value ?? 0) + (expense?.value ?? 0) + (transfer?.value ?? 0) - (savings?.value ?? 0);
   return (
     <div className="hb-chart-tooltip">
       <span className="hb-chart-tooltip-label">{label}</span>
@@ -156,7 +157,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
     for (const e of sourceEntries || []) {
       const ym = getEntryFinancialMonth(e, monthStartDay);
       if (!ym) continue;
-      const prev = map.get(ym) || { month: ym, income: 0, expense: 0, transfer: 0, savings: 0, balance: 0 };
+      const prev = map.get(ym) || { month: ym, income: 0, expense: 0, transfer: 0, savings: 0, sweep: 0, balance: 0 };
       const amt = Number(e.amount || 0);
 
       if (e.kind === "income") {
@@ -166,6 +167,9 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
       } else if (e.kind === "transfer") {
         if (savingsPotIds.has(e.potId)) {
           prev.savings += amt;
+          // Überschuss-Sweep: gesparter Frei-Rest. Wird für den „Höchster
+          // Überschuss"-KPI zurückgerechnet, damit gesweepte Monate nicht 0 zeigen.
+          if (e.isSurplusSweep) prev.sweep += amt;
         } else {
           prev.transfer += amt;
         }
@@ -267,19 +271,21 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
     income: m.income,
     expense: -m.expense,
     transfer: -m.transfer,
-    savings: -m.savings,
+    savings: m.savings, // positiv: eigener Slot oben neben den Einnahmen
   })), [evaWindowData]);
 
   const stackShapes = useMemo(() => ({
     expense: makeStackBarShape(themeColors.red),
     transfer: makeStackBarShape(themeColors.blue),
-    savings: makeStackBarShape(themeColors.teal),
   }), [themeColors]);
 
   const highlights = useMemo(() => {
     if (!monthly.length) return null;
-    const bestBalance = monthly.reduce((best, cur) => (cur.balance > best.balance ? cur : best), monthly[0]);
-    return { bestBalance };
+    // Überschuss = Frei-Rest vor dem Sweep: gesweepte Beträge zurückrechnen,
+    // damit gesparte Überschüsse weiterhin als Überschuss des Monats zählen.
+    const withSurplus = monthly.map((m) => ({ ...m, surplus: m.balance + (m.sweep || 0) }));
+    const bestSurplus = withSurplus.reduce((best, cur) => (cur.surplus > best.surplus ? cur : best), withSurplus[0]);
+    return { bestSurplus };
   }, [monthly]);
 
   const { fixedMonthly, changes, kpis } = useFixedCostTrend({
@@ -365,11 +371,11 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
       {highlights ? (
         <div className="hb-stat-pills">
           <div className="hb-stat-pill hb-stat-pill--ok">
-            <span className="hb-stat-pill-label">Ø Einnahmen / Monat</span>
+            <span className="hb-stat-pill-label">Ø Einnahmen pro Monat</span>
             <span className="hb-stat-pill-value hb-ok" style={{ marginTop: 14 }}>{fmt(avg.income)}</span>
           </div>
           <div className="hb-stat-pill hb-stat-pill--bad">
-            <span className="hb-stat-pill-label">Ø Ausgaben / Monat</span>
+            <span className="hb-stat-pill-label">Ø Ausgaben pro Monat</span>
             <span className="hb-stat-pill-value hb-bad" style={{ marginTop: 14 }}>{fmt(avg.expense)}</span>
           </div>
           <div className={`hb-stat-pill ${savingsRate >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
@@ -386,13 +392,13 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
             </div>
           </div>
           <div className="hb-stat-pill hb-stat-pill--transfer">
-            <span className="hb-stat-pill-label">Ø Rücklagen / Monat</span>
+            <span className="hb-stat-pill-label">Ø Rücklagen pro Monat</span>
             <span className="hb-stat-pill-value hb-transfer" style={{ marginTop: 14 }}>{fmt(avg.transfer)}</span>
           </div>
           <div className="hb-stat-pill hb-stat-pill--ok">
             <span className="hb-stat-pill-label">Höchster Überschuss</span>
-            <span className="hb-stat-pill-value hb-ok">{fmt(highlights.bestBalance.balance)}</span>
-            <span className="hb-stat-pill-sub">{highlights.bestBalance.label}</span>
+            <span className="hb-stat-pill-value hb-ok">{fmt(highlights.bestSurplus.surplus)}</span>
+            <span className="hb-stat-pill-sub">{highlights.bestSurplus.label}</span>
           </div>
         </div>
       ) : null}
@@ -414,7 +420,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
               <CardContent>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                    <h3 className="hb-card-title">Sparquote / Monat</h3>
+                    <h3 className="hb-card-title">Sparquote pro Monat</h3>
                     <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: saldoMaxOffset > 0 ? "visible" : "hidden" }}>
                         <button type="button" className="hb-icon-btn" onClick={() => setSaldoScrollOffset((o) => Math.min(o + 1, saldoMaxOffset))} disabled={saldoScrollOffset >= saldoMaxOffset} title="Älteren Bereich anzeigen">‹</button>
@@ -528,7 +534,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
 
                 <div style={{ width: "100%", height: 280, marginTop: 16 }}>
                   <ResponsiveContainer width="100%" height={280}>
-                    <ComposedChart data={cashflowChartData} barCategoryGap="30%" barGap={-30}>
+                    <ComposedChart data={cashflowChartData} barCategoryGap="28%" barGap={0} stackOffset="sign">
                       <CartesianGrid strokeDasharray="3 3" stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
                       <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => fmt(v)} />
@@ -538,10 +544,12 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                         content={(props) => <CashflowTooltip {...props} fmt={fmt} />}
                         cursor={{ fill: themeColors.blue, fillOpacity: 0.06 }}
                       />
-                      <Bar dataKey="income" stackId="income" barSize={30} fill={themeColors.green} radius={[BAR_RADIUS, BAR_RADIUS, BAR_RADIUS, BAR_RADIUS]} isAnimationActive={false} />
-                      <Bar dataKey="transfer" stackId="expense" barSize={30} isAnimationActive={false} shape={stackShapes.transfer} />
-                      <Bar dataKey="expense" stackId="expense" barSize={30} isAnimationActive={false} shape={stackShapes.expense} />
-                      <Bar dataKey="savings" stackId="expense" barSize={30} isAnimationActive={false} shape={stackShapes.savings} />
+                      {/* Linke Säule: Einnahmen (oben) */}
+                      <Bar dataKey="income" stackId="left" barSize={20} fill={themeColors.green} radius={[BAR_RADIUS, BAR_RADIUS, BAR_RADIUS, BAR_RADIUS]} isAnimationActive={false} />
+                      {/* Rechte Säule: Sparen (oben) / Ausgaben + Rücklagen gestapelt (unten) */}
+                      <Bar dataKey="savings" stackId="right" barSize={20} fill={themeColors.teal} radius={[BAR_RADIUS, BAR_RADIUS, BAR_RADIUS, BAR_RADIUS]} isAnimationActive={false} />
+                      <Bar dataKey="expense" stackId="right" barSize={20} isAnimationActive={false} shape={stackShapes.expense} />
+                      <Bar dataKey="transfer" stackId="right" barSize={20} isAnimationActive={false} shape={stackShapes.transfer} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>

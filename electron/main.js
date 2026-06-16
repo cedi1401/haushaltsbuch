@@ -20,9 +20,9 @@ let downloadedUpdateInfo = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1700,
-    height: 1000,
-    minWidth: 800,
+    width: 1800,
+    height: 1200,
+    minWidth: 1600,
     minHeight: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),

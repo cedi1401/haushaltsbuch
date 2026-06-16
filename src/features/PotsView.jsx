@@ -571,9 +571,19 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
       {/* Buchungsliste für diesen Topf */}
       <Card style={{ marginTop: 16 }}>
         <CardContent>
-          <div className="hb-row" style={{ alignItems: "baseline", marginBottom: 10 }}>
-            <h3 className="hb-card-title">Buchungen: {selectedPot.name}</h3>
-            <div className="hb-muted">{potEntries.length} Einträge{monthLabel ? ` · ${monthLabel}` : ""}</div>
+          <div className="hb-row" style={{ alignItems: "center", marginBottom: 10 }}>
+            <div className="hb-title-group">
+              <h3 className="hb-card-title">Buchungen</h3>
+              <span className="hb-info-pill hb-info-pill--title">{selectedPot.name}</span>
+            </div>
+            <div className="hb-info-pills">
+              <span className="hb-info-pill">{potEntries.length} Einträge</span>
+              {monthLabel
+                ? monthLabel.split(" · ").map((part, i) => (
+                    <span key={i} className="hb-info-pill">{part}</span>
+                  ))
+                : null}
+            </div>
           </div>
 
           {potEntries.length === 0 ? (
