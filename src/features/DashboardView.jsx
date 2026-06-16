@@ -1,9 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { Button, Card, CardContent } from "../components/ui.jsx";
 import CategoryManagerDialog from "../components/CategoryManagerDialog.jsx";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../utils/hbUtils.js";
 import { IconPots } from "../components/icons.jsx";
+import { generateId } from "../utils/idUtils.js";
+import { getFinancialMonthRange } from "../utils/financialMonthUtils.js";
+import SurplusSweepDialog, { SWEEP_FALLBACK_POT } from "./insights/SurplusSweepDialog.jsx";
 
 import EntryFormDialog from "./EntryFormDialog.jsx";
 import Charts from "./Charts.jsx";
@@ -34,9 +37,77 @@ export default function DashboardView({
   const fmt = useFmt();
   const [showAllPots, setShowAllPots] = useState(false);
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+  const [sweepOpen, setSweepOpen] = useState(false);
 
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
   const incomeCategories = activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES;
+
+  // Aus potBalances (enthält bereits `balance`), damit der Dialog den Topf-Stand
+  // nach dem Sweep anzeigen kann.
+  const savingsPots = useMemo(
+    () => (potBalances || []).filter((p) => p.isSavings),
+    [potBalances]
+  );
+
+  // Übrigen Frei-Betrag als Sparen-Transfer auf den letzten Tag des Finanzmonats
+  // verbuchen. Ohne eigenen Spar-Topf wird ein „Überschuss"-Topf (isSavings) angelegt.
+  const handleSweepSurplus = useCallback(
+    ({ potId, amount }) => {
+      const numericAmount = Number(amount);
+      if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
+      const range = getFinancialMonthRange(monthFilter, monthStartDay);
+      if (!range) return;
+      const date = range.endDate;
+
+      patchActiveBook((b) => {
+        const pots = b.pots || [];
+        let targetId = potId;
+        let nextPots = pots;
+
+        if (!potId || potId === SWEEP_FALLBACK_POT) {
+          const existing = pots.find((p) => p.id === "surplus" && p.isSavings);
+          if (existing) {
+            targetId = existing.id;
+          } else {
+            // id-Kollision mit Legacy-Nicht-Spar-Topf vermeiden
+            const collision = pots.some((p) => p.id === "surplus");
+            const newId = collision ? generateId("pot") : "surplus";
+            nextPots = [...pots, { id: newId, name: "Überschuss", isSavings: true }];
+            targetId = newId;
+          }
+        }
+
+        const entry = {
+          id: generateId("entry"),
+          date,
+          amount: numericAmount,
+          category: "",
+          kind: "transfer",
+          potId: targetId,
+          note: `Monatsüberschuss ${monthFilter}`,
+          isSurplusSweep: true,
+        };
+
+        return { ...b, pots: nextPots, entries: [...(b.entries || []), entry] };
+      });
+    },
+    [monthFilter, monthStartDay, patchActiveBook]
+  );
+
+  // Sweep nur bei abgeschlossenem Monat mit positivem Frei-Rest, der noch nicht
+  // gefegt wurde. Für einen abgeschlossenen Monat entspricht `balance` dem Frei-Rest.
+  const canSweepSurplus = useMemo(() => {
+    if (!monthFilter) return false;
+    const range = getFinancialMonthRange(monthFilter, monthStartDay);
+    if (!range) return false;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const isCompleted = range.endDate < todayStr;
+    if (!isCompleted || !(balance > 0)) return false;
+    const alreadySwept = (filteredEntries || []).some(
+      (e) => e.kind === "transfer" && e.isSurplusSweep
+    );
+    return !alreadySwept;
+  }, [monthFilter, monthStartDay, balance, filteredEntries]);
 
   return (
     <>
@@ -45,7 +116,26 @@ export default function DashboardView({
         <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
           Kategorien bearbeiten
         </Button>
+        {canSweepSurplus && (
+          <Button style={{ marginLeft: "auto" }} onClick={() => setSweepOpen(true)}>
+            <IconPots width={16} height={16} />
+            Überschuss sparen
+          </Button>
+        )}
       </div>
+
+      {sweepOpen && (
+        <SurplusSweepDialog
+          open
+          defaultAmount={balance}
+          savingsPots={savingsPots}
+          onClose={() => setSweepOpen(false)}
+          onConfirm={({ potId, amount }) => {
+            handleSweepSurplus({ potId, amount });
+            setSweepOpen(false);
+          }}
+        />
+      )}
 
       <EntryFormDialog
         open={entryActions.addEntryOpen}
@@ -144,6 +234,8 @@ export default function DashboardView({
           totalSavingsTransfers={totalSavingsTransfers ?? 0}
           totalReserveTransfers={totalReserveTransfers ?? 0}
           expenseCategories={expenseCategories}
+          savingsPots={savingsPots}
+          onSweepSurplus={handleSweepSurplus}
         />
       </div>
 
