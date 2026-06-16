@@ -15,13 +15,14 @@ import {
 import { useThemeColors } from "../../hooks/useThemeColors.jsx";
 import { formatDateDELong } from "../../utils/hbUtils.js";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
+import { IconInbox } from "../../components/icons.jsx";
 
 function Kpi({ label, value, sub }) {
   return (
     <div className="hb-behavior-kpi">
       <div className="hb-insight-label">{label}</div>
       <div className="hb-behavior-kpi-val">{value}</div>
-      {sub && <div className="hb-behavior-kpi-sub">{sub}</div>}
+      <div className="hb-behavior-kpi-sub">{sub || " "}</div>
     </div>
   );
 }
@@ -44,6 +45,8 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
 
   const [trendTooltipVisible, setTrendTooltipVisible] = useState(false);
   const themeColors = useThemeColors();
+  const hasBarData = dailySpendData.some((d) => d.count > 0);
+  const hasAreaData = thirtyDayData.some((d) => d.amount > 0);
   const maxCount = Math.max(...dailySpendData.map((d) => d.count), 1);
   const avgAmount = thirtyDayData.reduce((s, d) => s + d.amount, 0) / 30;
   const maxAmount = Math.max(...thirtyDayData.map((d) => d.amount), 10);
@@ -59,7 +62,13 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
           {/* Links: Vertikale Balken Mo→So */}
           <div className="hb-behavior-bars">
             <div className="hb-insight-label" style={{ marginBottom: 6 }}>Buchungsverteilung</div>
-            <div style={{ flex: 1, minHeight: 120 }}>
+            <div style={{ flex: 1, minHeight: 120, display: "flex" }}>
+              {!hasBarData ? (
+                <div className="hb-behavior-chart-empty">
+                  <div className="hb-empty-icon"><IconInbox /></div>
+                  <div className="hb-empty-text">Keine Buchungen erfasst</div>
+                </div>
+              ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={dailySpendData}
@@ -111,6 +120,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+              )}
             </div>
           </div>
 
@@ -121,9 +131,11 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
               <span className="hb-insight-label">Letzte 30 Tage</span>
               <span style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                <span className="hb-insight-label" style={{ fontSize: 11 }}>
-                 --- Ø {fmt ? fmt(Math.round(avgAmount), 0) : Math.round(avgAmount)} / Tag
-                </span>
+                {hasAreaData && (
+                  <span className="hb-insight-label" style={{ fontSize: 11 }}>
+                   --- Ø {fmt ? fmt(Math.round(avgAmount), 0) : Math.round(avgAmount)} pro Tag
+                  </span>
+                )}
                 {dailyTrendPct !== null && (
                   <span
                     style={{ position: "relative", cursor: "default" }}
@@ -161,9 +173,15 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                 )}
               </span>
             </div>
-            <div style={{ flex: 1, minHeight: 70 }}>
+            <div style={{ flex: 1, minHeight: 70, display: "flex" }}>
+              {!hasAreaData ? (
+                <div className="hb-behavior-chart-empty">
+                  <div className="hb-empty-icon"><IconInbox /></div>
+                  <div className="hb-empty-text">Keine Ausgaben in den letzten 30 Tagen</div>
+                </div>
+              ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={thirtyDayData} margin={{ top: 4, right: 0, bottom: 0, left: -8 }}>
+                <AreaChart data={thirtyDayData} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
                   <CartesianGrid
                     horizontal={true}
                     vertical={false}
@@ -176,7 +194,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                     allowDecimals={false}
                     axisLine={false}
                     tickLine={false}
-                    width={28}
+                    width={38}
                     tick={{ fontSize: 10, fill: themeColors.muted }}
                   />
                   <Tooltip
@@ -211,12 +229,15 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                   />
                 </AreaChart>
               </ResponsiveContainer>
+              )}
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
-              <span className="hb-insight-label" style={{ fontSize: 10 }}>vor 30 Tagen</span>
-              <span className="hb-insight-label" style={{ fontSize: 10 }}>Ausgaben / Tag</span>
-              <span className="hb-insight-label" style={{ fontSize: 10 }}>heute</span>
-            </div>
+            {hasAreaData && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
+                <span className="hb-insight-label" style={{ fontSize: 10 }}>vor 30 Tagen</span>
+                <span className="hb-insight-label" style={{ fontSize: 10 }}>Ausgaben pro Tag</span>
+                <span className="hb-insight-label" style={{ fontSize: 10 }}>heute</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -229,19 +250,17 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
             sub={prevTotalBookings > 0 ? `${prevTotalBookings} letzter Monat` : null}
           />
           <Kpi
-            label="Ø / Tag"
+            label="Ø pro Tag"
             value={avgBookingsPerDay.toFixed(1)}
             sub={prevAvgBookingsPerDay != null
               ? `${prevAvgBookingsPerDay.toFixed(1)} letzter Monat`
               : null}
           />
-          {topCategory && (
-            <Kpi
-              label="Häufigste"
-              value={topCategory}
-              sub={topCategoryPct != null ? `${topCategoryPct}% aller Buchungen` : null}
-            />
-          )}
+          <Kpi
+            label="Häufigste"
+            value={topCategory || "–"}
+            sub={topCategory && topCategoryPct != null ? `${topCategoryPct}% aller Buchungen` : null}
+          />
         </div>
       </div>
     </div>

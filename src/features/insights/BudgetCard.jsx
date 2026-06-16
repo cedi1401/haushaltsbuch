@@ -215,7 +215,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
 
                 {metrics && metrics.rate > 0 && (
                   <span className="hb-budget-row-meta-sep">
-                    · ø {fmt(metrics.rate, 1)}/Tag
+                    · ø {fmt(metrics.rate, 1)} pro Tag
                   </span>
                 )}
 

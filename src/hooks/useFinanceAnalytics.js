@@ -212,6 +212,8 @@ export function useFinanceAnalytics({
     const noData = {
       projectedTotal: 0,
       projectedBalance: 0,
+      freiBudget: 0,
+      sollPerDay: 0,
       daysRemaining: 0,
       daysInMonth: 0,
       burnRate: 0,
@@ -240,6 +242,11 @@ export function useFinanceAnalytics({
     const projectedTotal = isCurrentMonth ? expense + burnRate * daysRemaining : expense;
     const projectedBalance = income - projectedTotal - totalTransfers;
 
+    // Frei-Budget = was nach Rücklagen/Sparen für den Monat übrig bleibt.
+    // Der Burn-Down läuft von diesem Startwert idealerweise auf 0.
+    const freiBudget = income - totalTransfers;
+    const sollPerDay = daysInMonth > 0 ? freiBudget / daysInMonth : 0;
+
     const safeToSpendPerDay =
       isCurrentMonth && daysRemaining > 0
         ? Math.max(0, income - expense - totalTransfers) / daysRemaining
@@ -257,17 +264,23 @@ export function useFinanceAnalytics({
       dailyMap.set(dayIndex, (dailyMap.get(dayIndex) || 0) + Number(e.amount || 0));
     }
 
+    // Burn-Down: verbleibendes Frei-Budget pro Tag (Frei-Budget − kumulierte Ausgaben).
+    // Prognose ab dem letzten Ist-Tag bei aktueller Burnrate; Soll-Pace linear auf 0.
     let running = 0;
     const forecastData = Array.from({ length: daysInMonth }, (_, i) => {
       const day = i + 1;
       running += dailyMap.get(day) || 0;
+      // Prognose beginnt am letzten Ist-Tag (day === daysElapsed), damit Ist- und
+      // Prognose-Linie nahtlos aneinander anschliessen.
+      const projected =
+        isCurrentMonth && day >= daysElapsed
+          ? freiBudget - (expense + burnRate * (day - daysElapsed))
+          : null;
       return {
         day,
-        actual: day <= daysElapsed ? running : null,
-        projected:
-          isCurrentMonth && day > daysElapsed
-            ? expense + burnRate * (day - daysElapsed)
-            : null,
+        actual: day <= daysElapsed ? freiBudget - running : null,
+        projected,
+        soll: freiBudget - sollPerDay * day,
       };
     });
 
@@ -322,6 +335,8 @@ export function useFinanceAnalytics({
     return {
       projectedTotal,
       projectedBalance,
+      freiBudget,
+      sollPerDay,
       daysRemaining,
       daysInMonth,
       burnRate,
