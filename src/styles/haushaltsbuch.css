@@ -103,12 +103,12 @@
   --text-on-accent: #000000;
 
   /* Dark mode semantics */
-  --green: #6ccb5f;
-  --green-soft: rgba(108, 203, 95, 0.12);
-  --red: #ff99a4;
-  --red-soft: rgba(255, 153, 164, 0.12);
-  --blue: #60cdff;
-  --blue-soft: rgba(96, 205, 255, 0.1);
+  --green: #58cf49;
+  --green-soft: rgba(88, 207, 73, 0.12);
+  --red: #ff7280;
+  --red-soft: rgba(255, 114, 128, 0.12);
+  --blue: #45c5ff;
+  --blue-soft: rgba(69, 197, 255, 0.1);
   --teal: #2dd4bf;
   --teal-soft: rgba(45, 212, 191, 0.12);
   --yellow: #fce100;
