@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import EditDialog from "./EditDialog.jsx";
 import CategoryCreateDialog from "./CategoryCreateDialog.jsx";
 import CategoryEditDialog from "./CategoryEditDialog.jsx";
-import { IconEdit, IconPlus, IconDelete, IconWallet, IconLock } from "./icons.jsx";
+import { IconEdit, IconPlus, IconDelete, IconWallet, IconLock, IconTransfer, IconSearch } from "./icons.jsx";
+import HbTooltip from "./HbTooltip.jsx";
 import { CHART_COLORS } from "../utils/hbPalette.js";
 import { Button } from "./ui.jsx";
 import { useToast } from "./Toast.jsx";
@@ -78,6 +79,7 @@ export default function CategoryManagerDialog({
   const { confirm } = useConfirm();
   const [newTransferName, setNewTransferName] = useState("");
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("categories"); // "categories" | "transfer"
   const [filter, setFilter] = useState("all"); // "all" | "custom"
   const [openAccordions, setOpenAccordions] = useState(new Set());
 
@@ -103,6 +105,7 @@ export default function CategoryManagerDialog({
   useEffect(() => {
     if (!open) {
       setSearch("");
+      setActiveTab("categories");
       setFilter("all");
       setOpenAccordions(new Set());
       setCreateOpen(false);
@@ -543,7 +546,15 @@ export default function CategoryManagerDialog({
     <>
       <EditDialog
         open={open}
-        title="Kategorien bearbeiten"
+        title={
+          <span className="hb-title-with-help">
+            Kategorien bearbeiten
+            <HbTooltip
+              placement="bottom"
+              text="Um einer Ober- oder Unterkategorie ein Monatsbudget zu setzen, fahre mit der Maus über die jeweilige Zeile und klicke auf das Geldbörsen-Symbol rechts. Ein Budget lässt sich entweder für die Oberkategorie oder für ihre Unterkategorien festlegen – nicht für beide gleichzeitig."
+            />
+          </span>
+        }
         onClose={onClose}
         onSave={null}
         canSave={false}
@@ -552,99 +563,143 @@ export default function CategoryManagerDialog({
         hideFooter
       >
         <div className="hb-cat-manager">
-          {/* Header: Suchfeld + Button */}
-          <div className="hb-cat-manager-header">
-            <div className="hb-search-field">
-              <span className="hb-search-icon">&#128269;</span>
-              <input
-                className="hb-input"
-                type="text"
-                placeholder="Kategorie suchen..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                autoComplete="off"
-              />
-            </div>
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
-              + Neue Kategorie
-            </Button>
+          {/* Primäre Tab-Leiste: Kategorien / Transfer-Zwecke */}
+          <div
+            className="hb-segmented hb-segmented--md hb-cat-tabs"
+            role="tablist"
+            aria-label="Kategorie-Bereiche"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "categories"}
+              className={`hb-segmented__item${activeTab === "categories" ? " hb-segmented__item--active" : ""}`}
+              onClick={() => setActiveTab("categories")}
+            >
+              Kategorien
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "transfer"}
+              className={`hb-segmented__item${activeTab === "transfer" ? " hb-segmented__item--active" : ""}`}
+              onClick={() => setActiveTab("transfer")}
+            >
+              Transfer-Zwecke
+            </button>
           </div>
 
-          {/* Filter-Radio */}
-          <div className="hb-cat-filter-row">
-            <label className="hb-radio-label">
-              <input
-                type="radio"
-                name="cat-filter"
-                value="all"
-                checked={filter === "all"}
-                onChange={() => setFilter("all")}
-              />
-              Alle Kategorien
-            </label>
-            <label className="hb-radio-label">
-              <input
-                type="radio"
-                name="cat-filter"
-                value="custom"
-                checked={filter === "custom"}
-                onChange={() => setFilter("custom")}
-              />
-              Eigene Kategorien
-            </label>
-          </div>
-
-          {/* Kategorie-Liste */}
-          <div className="hb-cat-list">
-            {allExpense.length === 0 && allIncome.length === 0 && (
-              <div className="hb-muted" style={{ padding: "16px 0", textAlign: "center" }}>
-                Keine Kategorien gefunden.
+          {activeTab === "categories" ? (
+            <>
+              {/* Header: Suchfeld + Button */}
+              <div className="hb-cat-manager-header">
+                <div className="hb-search-field">
+                  <span className="hb-search-icon"><IconSearch width={16} height={16} /></span>
+                  <input
+                    className="hb-input"
+                    type="text"
+                    placeholder="Kategorie suchen..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+                <Button size="sm" onClick={() => setCreateOpen(true)}>
+                  + Neue Kategorie
+                </Button>
               </div>
-            )}
 
-            {allExpense.length > 0 && (
-              <>
-                {hasIncome && (
-                  <div className="hb-label" style={{ padding: "6px 0 4px" }}>
-                    Ausgaben
+              {/* Sekundärer Filter: Alle / Eigene */}
+              <div className="hb-segmented hb-segmented--sm hb-cat-filter-row">
+                <button
+                  type="button"
+                  aria-pressed={filter === "all"}
+                  className={`hb-segmented__item${filter === "all" ? " hb-segmented__item--active" : ""}`}
+                  onClick={() => setFilter("all")}
+                >
+                  Alle Kategorien
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={filter === "custom"}
+                  className={`hb-segmented__item${filter === "custom" ? " hb-segmented__item--active" : ""}`}
+                  onClick={() => setFilter("custom")}
+                >
+                  Eigene Kategorien
+                </button>
+              </div>
+
+              {/* Kategorie-Liste */}
+              <div className="hb-cat-list">
+                {allExpense.length === 0 && allIncome.length === 0 && (
+                  <div className="hb-muted" style={{ padding: "16px 0", textAlign: "center" }}>
+                    Keine Kategorien gefunden.
                   </div>
                 )}
-                {renderCategoryList(allExpense, true)}
-              </>
-            )}
 
-            {hasIncome && (
-              <>
-                <div className="hb-label" style={{ padding: "12px 0 4px" }}>
-                  Einnahmen
-                </div>
-                {renderCategoryList(allIncome, false)}
-              </>
-            )}
+                {allExpense.length > 0 && (
+                  <>
+                    {hasIncome && (
+                      <div className="hb-label" style={{ padding: "6px 0 4px" }}>
+                        Ausgaben
+                      </div>
+                    )}
+                    {renderCategoryList(allExpense, true)}
+                  </>
+                )}
 
-            {/* Transfer-Zwecke */}
-            <div className="hb-label" style={{ padding: "12px 0 4px" }}>
-              Transfer-Zwecke
-            </div>
-            <div className="hb-cat-accordion-item">
-              <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
+                {hasIncome && (
+                  <>
+                    <div className="hb-label" style={{ padding: "12px 0 4px" }}>
+                      Einnahmen
+                    </div>
+                    {renderCategoryList(allIncome, false)}
+                  </>
+                )}
+              </div>
+            </>
+          ) : (
+            /* Tab: Transfer-Zwecke */
+            <div className="hb-cat-transfer-panel">
+              {/* Hinzufügen-Input oben */}
+              <div className="hb-cat-transfer-add">
+                <input
+                  className="hb-input"
+                  type="text"
+                  value={newTransferName}
+                  onChange={(e) => setNewTransferName(e.target.value)}
+                  placeholder="Neuer Transfer-Zweck..."
+                  style={{ flex: 1 }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addTransferCategory();
+                    }
+                  }}
+                />
+                <Button
+                  size="sm"
+                  onClick={addTransferCategory}
+                  disabled={!newTransferName.trim()}
+                >
+                  <IconPlus /> Hinzufügen
+                </Button>
+              </div>
+
+              {/* Liste der Transfer-Zwecke */}
+              <div className="hb-cat-list">
                 {transferCategories.length === 0 ? (
-                  <div className="hb-muted" style={{ fontSize: 13, padding: "4px 0" }}>
-                    Noch keine Transfer-Zwecke.
+                  <div className="hb-empty hb-empty--sm">
+                    <div className="hb-empty-icon"><IconTransfer /></div>
+                    <div className="hb-empty-title">Noch keine Transfer-Zwecke</div>
+                    <div className="hb-empty-text">
+                      Lege einen Transfer-Zweck an, um Umbuchungen zwischen Töpfen zu kategorisieren.
+                    </div>
                   </div>
                 ) : (
                   transferCategories.map((cat) => (
-                    <div
-                      key={cat}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 10,
-                        padding: "6px 0",
-                      }}
-                    >
-                      <span style={{ fontSize: 14, color: "var(--text)" }}>{cat}</span>
+                    <div key={cat} className="hb-cat-transfer-item">
+                      <span className="hb-cat-name">{cat}</span>
                       <button
                         type="button"
                         className="hb-icon-btn"
@@ -659,33 +714,9 @@ export default function CategoryManagerDialog({
                     </div>
                   ))
                 )}
-
-                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  <input
-                    className="hb-input"
-                    type="text"
-                    value={newTransferName}
-                    onChange={(e) => setNewTransferName(e.target.value)}
-                    placeholder="Neuer Transfer-Zweck..."
-                    style={{ flex: 1 }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addTransferCategory();
-                      }
-                    }}
-                  />
-                  <Button
-                    size="sm"
-                    onClick={addTransferCategory}
-                    disabled={!newTransferName.trim()}
-                  >
-                    <IconPlus /> Hinzufügen
-                  </Button>
-                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </EditDialog>
 

@@ -200,6 +200,17 @@ export function IconWallet(props) {
   );
 }
 
+export function IconTransfer(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path d="M3 8h13" />
+      <path d="M13 5l3 3-3 3" />
+      <path d="M21 16H8" />
+      <path d="M11 13l-3 3 3 3" />
+    </svg>
+  );
+}
+
 export function IconLock(props) {
   return (
     <svg {...baseProps} {...props}>
@@ -252,6 +263,15 @@ export function IconDrag(props) {
       <circle cx="15" cy="12" r="1.3" fill="currentColor" />
       <circle cx="9" cy="18" r="1.3" fill="currentColor" />
       <circle cx="15" cy="18" r="1.3" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconSearch(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <line x1="16" y1="16" x2="21" y2="21" />
     </svg>
   );
 }
