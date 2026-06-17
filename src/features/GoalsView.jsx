@@ -209,8 +209,8 @@ export default function GoalsView({
       ) : (
         <div className="hb-two">
           {goalsWithProgress.map((goal) => (
-            <Card key={goal.id}>
-              <CardContent>
+            <Card key={goal.id} style={{ display: "flex", flexDirection: "column" }}>
+              <CardContent style={{ flex: 1, display: "flex", flexDirection: "column" }}>
 
                 {/* Header: Name + Badges + Actions */}
                 <div className="hb-goal-header">
@@ -326,8 +326,10 @@ export default function GoalsView({
 
                 {/* Ziel erreicht */}
                 {goal.progress.percent >= 100 && (
-                  <div className="hb-goal-success">
-                    Ziel erreicht! Herzlichen Glückwunsch!
+                  <div className="hb-goal-success-wrap">
+                    <div className="hb-goal-success">
+                      Ziel erreicht! Herzlichen Glückwunsch!
+                    </div>
                   </div>
                 )}
 

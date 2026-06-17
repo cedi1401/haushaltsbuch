@@ -2201,14 +2201,23 @@ select.hb-input option {
 }
 .hb-goal-prognosis-value--ok { color: var(--green); }
 .hb-goal-prognosis-value--bad { color: var(--red); }
-.hb-goal-success {
+/* Füllt den verbleibenden Leerraum der im Grid gestreckten Card und
+   zentriert die Pill darin vertikal — bleibt bei fehlendem Leerraum
+   einfach ein 12px-Abstand unter dem Fortschritt. */
+.hb-goal-success-wrap {
+  flex: 1;
   display: flex;
+  align-items: flex-end;
+  margin-top: 12px;
+}
+
+.hb-goal-success {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
   background: var(--green-soft);
   border-radius: var(--radius-md);
-  margin-top: 12px;
   color: var(--green);
   font-weight: 600;
   font-size: 13px;
