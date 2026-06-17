@@ -20,6 +20,7 @@ release
 # Debug / temp
 nul
 debugging/
+start-dev.command
 .claude/
 .agents/
 skills-lock.json
