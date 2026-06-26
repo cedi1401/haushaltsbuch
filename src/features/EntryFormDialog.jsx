@@ -30,6 +30,7 @@ export default function EntryFormDialog({
       size="medium"
       bodyScroll={false}
     >
+      <div className="hb-entry-form">
       <div className="hb-two hb-two--dialog" style={{ gap: 16 }}>
         <div className="hb-field" style={{ gridColumn: "1 / -1" }}>
           <div className="hb-label">Art</div>
@@ -117,7 +118,7 @@ export default function EntryFormDialog({
       </div>
 
       {kind === "expense" ? (
-        <div style={{ marginTop: 16 }}>
+        <div className="hb-entry-form__tail" style={{ marginTop: 16 }}>
           <HierarchicalCategoryPicker
             label="Kategorie"
             value={{ categoryId, subcategoryId }}
@@ -129,7 +130,7 @@ export default function EntryFormDialog({
           />
         </div>
       ) : kind === "income" ? (
-        <div style={{ marginTop: 16 }}>
+        <div className="hb-entry-form__tail" style={{ marginTop: 16 }}>
           <HierarchicalCategoryPicker
             label="Kategorie"
             value={{ categoryId, subcategoryId }}
@@ -141,7 +142,7 @@ export default function EntryFormDialog({
           />
         </div>
       ) : kind === "transfer" ? (
-        <div style={{ marginTop: 16 }}>
+        <div className="hb-entry-form__tail" style={{ marginTop: 16 }}>
           <div className="hb-field">
             <div className="hb-label">Transfer-Zweck</div>
             <select className="hb-input" value={category} onChange={(e) => setField("category", e.target.value)}>
@@ -168,6 +169,7 @@ export default function EntryFormDialog({
           Bitte Datum & einen gültigen Betrag (&gt; 0) setzen.
         </div>
       ) : null}
+      </div>
     </EditDialog>
   );
 }
