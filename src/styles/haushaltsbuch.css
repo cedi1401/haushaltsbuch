@@ -34,6 +34,7 @@
   /* Semantic colors - vivid but tasteful */
   --green: #0f7b0f;
   --green-soft: rgba(15, 123, 15, 0.08);
+  --green-border: rgba(15, 123, 15, 0.3);
   --red: #c42b1c;
   --red-soft: rgba(196, 43, 28, 0.08);
   --blue: #0078d4;
@@ -105,6 +106,7 @@
   /* Dark mode semantics */
   --green: #58cf49;
   --green-soft: rgba(88, 207, 73, 0.12);
+  --green-border: rgba(88, 207, 73, 0.32);
   --red: #ff7280;
   --red-soft: rgba(255, 114, 128, 0.12);
   --blue: #45c5ff;
@@ -1111,10 +1113,14 @@ select.hb-input option {
 }
 
 .hb-stat-pill-gauge-track {
-  height: 2px;
+  height: 3px;
   background: var(--border-light);
   border-radius: var(--radius-xs);
-  margin-top: 8px;
+  /* Anchor the gauge to the bottom of the pill. In a stat-pills row that
+     mixes gauge pills with sub-only pills, this keeps every gauge on one
+     shared baseline. (.hb-stat-pill is a column flex container; the value
+     and optional sub line above already provide the visual gap.) */
+  margin-top: auto;
   overflow: hidden;
 }
 
@@ -1563,7 +1569,7 @@ select.hb-input option {
 }
 
 .hb-entries-table .hb-col-amount {
-  width: 14%;
+  width: auto;
   white-space: nowrap;
   overflow: hidden;
   font-variant-numeric: tabular-nums;
@@ -1576,7 +1582,7 @@ select.hb-input option {
 }
 
 .hb-entries-table .hb-col-actions {
-  width: 16%;
+  width: 106px;
   white-space: nowrap;
   overflow: hidden;
   text-align: right;
@@ -1604,8 +1610,8 @@ select.hb-input option {
   .hb-entries-table .hb-col-date { width: 18%; }
   .hb-entries-table .hb-col-type { width: 14%; }
   .hb-entries-table .hb-col-category { width: 24%; }
-  .hb-entries-table .hb-col-amount { width: 20%; }
-  .hb-entries-table .hb-col-actions { width: 24%; }
+  .hb-entries-table .hb-col-amount { width: auto; }
+  .hb-entries-table .hb-col-actions { width: 60px; }
 }
 
 @media (max-width: 480px) {
@@ -1615,8 +1621,8 @@ select.hb-input option {
 
   .hb-entries-table .hb-col-date { width: 22%; }
   .hb-entries-table .hb-col-category { width: 28%; }
-  .hb-entries-table .hb-col-amount { width: 24%; }
-  .hb-entries-table .hb-col-actions { width: 26%; }
+  .hb-entries-table .hb-col-amount { width: auto; }
+  .hb-entries-table .hb-col-actions { width: 60px; }
 }
 
 /* =====================================================
@@ -1806,6 +1812,58 @@ select.hb-input option {
   .hb-modal-panel--form {
     overflow-y: auto;
   }
+}
+
+/*
+  Buchungs-Dialoge (Eintrag bearbeiten / Buchung hinzufügen): feste Fenstergröße,
+  damit das Fenster beim Wechsel der Buchungs-Art nicht springt. Der Body behält
+  overflow:visible (HbDatePicker-Popover), die Picker-Box scrollt intern. Kürzere
+  Varianten (Transfer/Entnahme) lassen unten Leerraum statt die Höhe zu ändern.
+*/
+.hb-modal-panel--form:has(.hb-entry-form) {
+  height: 720px;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+}
+
+.hb-modal-panel--form:has(.hb-entry-form) .hb-modal-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hb-entry-form {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+  Picker-/Zweck-Block füllt die Resthöhe unter den Formularfeldern. Bei
+  Einnahme/Ausgabe scrollt die Kategorieliste intern (statt fixer 280px), damit
+  der Inhalt nie über den Footer hinausragt. Kürzere Varianten lassen Leerraum.
+*/
+.hb-entry-form__tail {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hb-entry-form__tail .hb-hcat-picker {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hb-entry-form__tail .hb-hcat-box {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
 }
 
 @keyframes modalSlideIn {
@@ -2221,7 +2279,90 @@ select.hb-input option {
   color: var(--green);
   font-weight: 600;
   font-size: 13px;
-  border: 1px solid var(--green);
+  /* Translucent statt voll gesättigter Border — ruhiger, Fluent-typischer
+     Chip, der den grünen Akzent trotzdem klar trägt. */
+  border: 1px solid var(--green-border);
+}
+.hb-goal-success svg {
+  flex-shrink: 0;
+}
+
+/* Erreichtes Ziel: Glückwunsch-Pill + Abschliessen-Button in einer Reihe.
+   Die Pill nimmt den verfügbaren Platz ein, der Button bleibt rechts und
+   schrumpft nicht. Bei zu schmaler Karte bricht der Button unter die Pill
+   und bleibt dort rechtsbündig. */
+.hb-goal-success-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.hb-goal-success-row .hb-goal-success {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+.hb-goal-success-row .hb-btn {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* ===== Archiv: abgeschlossene Sparziele ===== */
+.hb-goal-badge--done {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--green-soft);
+  color: var(--green);
+  border-color: var(--green-border);
+}
+.hb-goal-badge--done svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Abgeschlossene Ziele lesen sich ruhiger als die aktiven Karten: leicht
+   zurückgenommene Fläche + dezenter grüner Akzent links als „erledigt"-Signal,
+   konsistent zur Akzent-Border-Sprache der Stat-Pills. */
+.hb-goal-card--archived {
+  background: var(--bg-subtle);
+  /* Grüner „erledigt"-Streifen via inset-Shadow statt border-left:
+     kein Layout-Shift (Border bleibt 1px) und übersteht den Hover-State,
+     der border-color als Shorthand neu setzt. */
+  box-shadow: inset 3px 0 0 0 var(--green), var(--shadow-sm);
+}
+.hb-goal-card--archived:hover {
+  box-shadow: inset 3px 0 0 0 var(--green), var(--shadow-md);
+}
+
+.hb-goal-archive-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 14px;
+}
+.hb-goal-archive-stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13px;
+}
+.hb-goal-archive-stat:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.hb-goal-archive-stat-label {
+  color: var(--muted);
+  font-weight: 500;
+}
+.hb-goal-archive-stat-value {
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 /* =====================================================
@@ -3530,20 +3671,124 @@ select.hb-input option {
 /* =====================================================
    POT TILES (Flex-Zeile, bis 5 nebeneinander)
    ===================================================== */
-.hb-pot-tiles {
-  display: flex;
-  flex-wrap: wrap;
+/* =====================================================
+   POT CARDS (Dashboard „Topf-Stände", 4-Spalten-Grid)
+   ===================================================== */
+.hb-pot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
-.hb-pot-tile {
-  flex: 1 1 120px;
-  min-width: 100px;
-  max-width: 200px;
+/* responsiv: 4 → 2 → 1 Spalte */
+@media (max-width: 1300px) {
+  .hb-pot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .hb-pot-grid { grid-template-columns: 1fr; }
+}
+
+.hb-pot-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;                       /* verhindert Overflow bei langen Namen */
   background: var(--bg-subtle);
   border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.hb-pot-card:hover {
+  border-color: var(--border);
+}
+
+/* --- Oberer Bereich: Name + Betrag links, Spar-Tag rechts oben --- */
+.hb-pot-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hb-pot-card-head {
+  min-width: 0;                       /* erlaubt Ellipsis am Namen */
+}
+
+.hb-pot-card-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.2px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hb-pot-card-amount {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+/* --- Spar-Indikator: dezentes, monochromes Akzent-Pill --- */
+.hb-pot-savings-tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+}
+
+/* --- Trennlinie + unterer Bereich --- */
+.hb-pot-card-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+}
+
+.hb-pot-card-foot-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.hb-pot-card-foot-value {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.hb-pot-foot-in  { color: var(--green); font-weight: 600; }
+.hb-pot-foot-out { color: var(--red);   font-weight: 600; }
+
+.hb-pot-card-foot-date {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.hb-pot-card-foot--empty {
+  justify-content: flex-start;
+}
+.hb-pot-card-foot--empty span {
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--muted);
 }
 
 /* =====================================================
@@ -4099,6 +4344,27 @@ select.hb-input option {
 .hb-chart-tooltip-key {
   color: var(--muted);
   font-weight: 600;
+  white-space: nowrap;
+}
+/* Monats-Überschrift im gestapelten Cashflow-Tooltip */
+.hb-chart-tooltip-title {
+  color: var(--muted);
+  font-weight: 600;
+  padding-bottom: 4px;
+  margin-bottom: 1px;
+  border-bottom: 1px solid var(--border);
+}
+/* Betrag rechtsbündig, monospaced Ziffern */
+.hb-chart-tooltip-val {
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* Trennlinie vor der "Frei"-Zeile */
+.hb-chart-tooltip-divider {
+  border-top: 1px solid var(--border);
+  margin: 2px 0;
 }
 
 /* =====================================================
