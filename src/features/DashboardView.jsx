@@ -6,12 +6,20 @@ import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../utils/
 import { IconPots } from "../components/icons.jsx";
 import { generateId } from "../utils/idUtils.js";
 import { getFinancialMonthRange } from "../utils/financialMonthUtils.js";
+import { MONTHS_SHORT } from "../utils/constants.js";
 import SurplusSweepDialog, { SWEEP_FALLBACK_POT } from "./insights/SurplusSweepDialog.jsx";
 
 import EntryFormDialog from "./EntryFormDialog.jsx";
 import Charts from "./Charts.jsx";
 import InsightsPanel from "./InsightsPanel.jsx";
 import EntriesTable from "./EntriesTable.jsx";
+
+// "2026-06-18" -> "18. Jun."
+function fmtTileDate(iso) {
+  if (!iso) return "";
+  const [, m, d] = String(iso).split("-");
+  return `${Number(d)}. ${MONTHS_SHORT[Number(m) - 1] || m}.`;
+}
 
 export default function DashboardView({
   activeBook,
@@ -48,6 +56,41 @@ export default function DashboardView({
     () => (potBalances || []).filter((p) => p.isSavings),
     [potBalances]
   );
+
+  // Letzte Topf-Bewegung je Topf (Einzahlung = transfer, Auszahlung = withdrawal).
+  // Über ALLE Einträge des Buchs, nicht nur die monatsgefilterten – die letzte
+  // Bewegung kann aus einem früheren Monat stammen.
+  const lastTxByPot = useMemo(() => {
+    const map = new Map();
+    for (const e of activeBook?.entries || []) {
+      if (!e.potId) continue;
+      if (e.kind !== "transfer" && e.kind !== "withdrawal") continue;
+      const prev = map.get(e.potId);
+      if (
+        !prev ||
+        String(e.date) > String(prev.date) ||
+        (e.date === prev.date && Number(e.id) > Number(prev.id))
+      ) {
+        map.set(e.potId, e);
+      }
+    }
+    return map;
+  }, [activeBook?.entries]);
+
+  // Sichtbar/Sortierung: jüngste letzte Buchung zuerst, Töpfe ohne Bewegung ans Ende.
+  const sortedPots = useMemo(() => {
+    const arr = [...(potBalances || [])];
+    arr.sort((a, b) => {
+      const ta = lastTxByPot.get(a.id);
+      const tb = lastTxByPot.get(b.id);
+      if (ta && !tb) return -1;
+      if (!ta && tb) return 1;
+      if (!ta && !tb) return 0;
+      if (ta.date !== tb.date) return ta.date > tb.date ? -1 : 1; // neuer zuerst
+      return Number(tb.id) - Number(ta.id); // Tie-Break: neuere id zuerst
+    });
+    return arr;
+  }, [potBalances, lastTxByPot]);
 
   // Übrigen Frei-Betrag als Sparen-Transfer auf den letzten Tag des Finanzmonats
   // verbuchen. Ohne eigenen Spar-Topf wird ein „Überschuss"-Topf (isSavings) angelegt.
@@ -182,15 +225,6 @@ export default function DashboardView({
         <CardContent>
           <div className="hb-row" style={{ marginBottom: 10 }}>
             <h3 className="hb-card-title">Topf-Stände</h3>
-            {potBalances.length > 8 && (
-              <button
-                type="button"
-                className="hb-link-btn"
-                onClick={() => setShowAllPots((v) => !v)}
-              >
-                {showAllPots ? "Weniger anzeigen" : `Alle ${potBalances.length} anzeigen`}
-              </button>
-            )}
           </div>
           {potBalances.length === 0 ? (
             <div className="hb-empty hb-empty--sm">
@@ -199,16 +233,53 @@ export default function DashboardView({
               <div className="hb-empty-text">Lege Töpfe an, um Geld für bestimmte Zwecke zurückzulegen.</div>
             </div>
           ) : (
-            <div className="hb-pot-tiles">
-              {(showAllPots ? potBalances : potBalances.slice(0, 8)).map((pot) => (
-                <div key={pot.id} className="hb-pot-tile">
-                  <div className="hb-stat-title">{pot.name}</div>
-                  <div className={`hb-stat-val ${pot.balance >= 0 ? "hb-ok" : "hb-bad"}`}>
-                    {fmt(pot.balance)}
+            <>
+            <div className="hb-pot-grid">
+              {(showAllPots ? sortedPots : sortedPots.slice(0, 4)).map((pot) => {
+                const txn = lastTxByPot.get(pot.id);
+                const isIn = txn?.kind === "transfer";
+                return (
+                  <div key={pot.id} className="hb-pot-card">
+                    <div className="hb-pot-card-top">
+                      <div className="hb-pot-card-head">
+                        <div className="hb-pot-card-name">{pot.name}</div>
+                        <div className="hb-pot-card-amount">
+                          {fmt(pot.balance)}
+                        </div>
+                      </div>
+                      {pot.isSavings && <span className="hb-pot-savings-tag">Sparen</span>}
+                    </div>
+
+                    {txn ? (
+                      <div className="hb-pot-card-foot">
+                        <span className="hb-pot-card-foot-label">
+                          {isIn ? "Letzte Einzahlung" : "Letzte Auszahlung"}
+                        </span>
+                        <span className="hb-pot-card-foot-value">
+                          <span className={isIn ? "hb-pot-foot-in" : "hb-pot-foot-out"}>
+                            {isIn ? "+" : "−"}{fmt(txn.amount)}
+                          </span>
+                          <span className="hb-pot-card-foot-date"> · {fmtTileDate(txn.date)}</span>
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="hb-pot-card-foot hb-pot-card-foot--empty">
+                        <span>Noch keine Bewegung</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+
+            {potBalances.length > 4 && (
+              <div style={{ marginTop: 12, paddingTop: 10, textAlign: "center" }}>
+                <Button variant="outline" onClick={() => setShowAllPots((v) => !v)}>
+                  {showAllPots ? "Weniger anzeigen" : `Weitere ${potBalances.length - 4} anzeigen`}
+                </Button>
+              </div>
+            )}
+            </>
           )}
         </CardContent>
       </Card>
