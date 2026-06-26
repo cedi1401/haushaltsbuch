@@ -3,12 +3,17 @@ import { EMPTY_ARRAY } from "../utils/constants.js";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import EditDialog from "../components/EditDialog.jsx";
-import { calcGoalProgress, calcGoalPrognosis } from "../utils/goalUtils.js";
+import OverflowMenu from "../components/OverflowMenu.jsx";
+import {
+  calcGoalProgress,
+  calcGoalPrognosis,
+  calcGoalArchiveStats,
+} from "../utils/goalUtils.js";
 import { parseAmount, todayISO } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
-import { IconEdit, IconDelete, IconGoals, IconPlus } from "../components/icons.jsx";
+import { IconGoals, IconPlus, IconCheck } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 
 export default function GoalsView({
@@ -48,6 +53,66 @@ export default function GoalsView({
     }));
     // todayISO is a stable module import → intentionally not a dependency
   }, [goals, entries, pots, monthStartDay]);
+
+  // Aktive vs. abgeschlossene (archivierte) Ziele
+  const activeGoals = useMemo(
+    () => goalsWithProgress.filter((g) => !g.completedAt),
+    [goalsWithProgress]
+  );
+  const archivedGoals = useMemo(
+    () =>
+      goalsWithProgress
+        .filter((g) => g.completedAt)
+        .map((g) => ({ ...g, archive: calcGoalArchiveStats(g, entries) }))
+        .toSorted((a, b) =>
+          String(b.completedAt).localeCompare(String(a.completedAt))
+        ),
+    [goalsWithProgress, entries]
+  );
+
+  // KPIs über alle Ziele
+  const stats = useMemo(() => {
+    const all = goalsWithProgress;
+    const currentYear = new Date().getFullYear();
+
+    const createdThisYear = all.filter(
+      (g) => g.createdAt && new Date(g.createdAt).getFullYear() === currentYear
+    );
+    const activeThisYear = createdThisYear.filter((g) => !g.completedAt);
+
+    const completedCount = all.filter((g) => g.completedAt).length;
+    const successRate =
+      all.length > 0 ? Math.round((completedCount / all.length) * 100) : 0;
+
+    const avgActivePercent =
+      activeGoals.length > 0
+        ? Math.round(
+            activeGoals.reduce(
+              (s, g) => s + Math.min(g.progress.percent, 100),
+              0
+            ) / activeGoals.length
+          )
+        : 0;
+
+    const totalSaved = activeGoals.reduce((s, g) => s + g.progress.current, 0);
+    const totalTarget = activeGoals.reduce((s, g) => s + g.progress.target, 0);
+    const totalPercent =
+      totalTarget > 0
+        ? Math.min(100, Math.round((totalSaved / totalTarget) * 100))
+        : 0;
+
+    return {
+      currentYear,
+      createdThisYearCount: createdThisYear.length,
+      activeThisYearCount: activeThisYear.length,
+      completedCount,
+      successRate,
+      avgActivePercent,
+      totalSaved,
+      totalTarget,
+      totalPercent,
+    };
+  }, [goalsWithProgress, activeGoals]);
 
   function openCreateDialog() {
     setEditingGoal(null);
@@ -140,6 +205,28 @@ export default function GoalsView({
     toast.success("Sparziel gelöscht.");
   }
 
+  // Erreichtes Ziel abschliessen → wandert ins Archiv (Geld bleibt im Topf)
+  function archiveGoal(goal) {
+    if (!activeBook) return;
+    const updatedGoals = goals.map((g) =>
+      g.id === goal.id
+        ? { ...g, completedAt: todayISO(), completedAmount: goal.progress.current }
+        : g
+    );
+    onUpdateBook({ ...activeBook, goals: updatedGoals });
+    toast.success(`Sparziel „${goal.name}“ abgeschlossen.`);
+  }
+
+  // Abgeschlossenes Ziel wieder aktivieren
+  function reactivateGoal(goal) {
+    if (!activeBook) return;
+    const updatedGoals = goals.map((g) =>
+      g.id === goal.id ? { ...g, completedAt: null, completedAmount: null } : g
+    );
+    onUpdateBook({ ...activeBook, goals: updatedGoals });
+    toast.success(`Sparziel „${goal.name}“ wieder aktiviert.`);
+  }
+
   const canSave = useMemo(() => {
     if (!draft.name.trim()) return false;
     const n = parseAmount(draft.targetAmount);
@@ -180,6 +267,25 @@ export default function GoalsView({
     }
   }
 
+  function formatPeriod(arch) {
+    if (!arch) return "—";
+    if (arch.durationMonths != null && arch.durationMonths >= 1) {
+      return `${arch.durationMonths} Monat${arch.durationMonths !== 1 ? "e" : ""}`;
+    }
+    if (arch.durationDays != null) {
+      return `${arch.durationDays} Tag${arch.durationDays !== 1 ? "e" : ""}`;
+    }
+    return "—";
+  }
+
+  function deadlineLabel(delta) {
+    if (delta == null) return null;
+    if (delta > 0) return `${delta} Tag${delta !== 1 ? "e" : ""} vor Deadline`;
+    if (delta === 0) return "Pünktlich zur Deadline";
+    const abs = Math.abs(delta);
+    return `${abs} Tag${abs !== 1 ? "e" : ""} nach Deadline`;
+  }
+
   return (
     <div>
       <div className="hb-row" style={{ marginBottom: 12, alignItems: "flex-start" }}>
@@ -207,10 +313,69 @@ export default function GoalsView({
           </CardContent>
         </Card>
       ) : (
-        <div className="hb-two">
-          {goalsWithProgress.map((goal) => (
-            <Card key={goal.id} style={{ display: "flex", flexDirection: "column" }}>
-              <CardContent style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <>
+          {/* KPI-Übersicht */}
+          <div
+            className="hb-stat-pills"
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}
+          >
+            <div className="hb-stat-pill hb-stat-pill--accent">
+              <div className="hb-stat-pill-label">Angelegt {stats.currentYear}</div>
+              <div className="hb-stat-pill-value">{stats.createdThisYearCount}</div>
+              <div className="hb-stat-pill-sub">{stats.activeThisYearCount} davon aktiv</div>
+            </div>
+
+            <div className="hb-stat-pill hb-stat-pill--ok">
+              <div className="hb-stat-pill-label">Erreicht</div>
+              <div className="hb-stat-pill-value hb-ok">{stats.completedCount}</div>
+              <div className="hb-stat-pill-sub">{stats.successRate}% Erfolgsquote</div>
+            </div>
+
+            <div className="hb-stat-pill hb-stat-pill--accent">
+              <div className="hb-stat-pill-label">Erfüllungsgrad aktiv</div>
+              <div className="hb-stat-pill-value">{stats.avgActivePercent}%</div>
+              <div className="hb-stat-pill-gauge-track">
+                <div
+                  className="hb-stat-pill-gauge-fill"
+                  style={{ width: `${stats.avgActivePercent}%`, background: "var(--accent)" }}
+                />
+              </div>
+            </div>
+
+            <div className="hb-stat-pill hb-stat-pill--ok">
+              <div className="hb-stat-pill-label">Gesamt angespart</div>
+              <div className="hb-stat-pill-value">{fmt(stats.totalSaved)}</div>
+              <div className="hb-stat-pill-sub">von {fmt(stats.totalTarget)} Gesamtziel</div>
+              <div className="hb-stat-pill-gauge-track">
+                <div
+                  className="hb-stat-pill-gauge-fill"
+                  style={{ width: `${stats.totalPercent}%`, background: "var(--green)" }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {activeGoals.length === 0 ? (
+            <Card>
+              <CardContent>
+                <div className="hb-empty">
+                  <div className="hb-empty-icon"><IconCheck /></div>
+                  <div className="hb-empty-title">Alle Ziele abgeschlossen</div>
+                  <div className="hb-empty-text">
+                    Du hast aktuell keine aktiven Sparziele. Lege ein neues an oder
+                    sieh dir deine erreichten Ziele unten an.
+                  </div>
+                  <Button onClick={openCreateDialog}>
+                    <IconPlus /> Neues Sparziel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="hb-two">
+              {activeGoals.map((goal) => (
+                <Card key={goal.id} style={{ display: "flex", flexDirection: "column" }}>
+                  <CardContent style={{ flex: 1, display: "flex", flexDirection: "column" }}>
 
                 {/* Header: Name + Badges + Actions */}
                 <div className="hb-goal-header">
@@ -231,26 +396,12 @@ export default function GoalsView({
                       <span className="hb-goal-badge">{getStartModeLabel(goal)}</span>
                     </div>
                   </div>
-                  <div className="hb-actions">
-                    <button
-                      type="button"
-                      className="hb-icon-btn"
-                      onClick={() => openEditDialog(goal)}
-                      title="Bearbeiten"
-                      aria-label="Bearbeiten"
-                    >
-                      <IconEdit />
-                    </button>
-                    <button
-                      type="button"
-                      className="hb-icon-btn"
-                      onClick={() => deleteGoal(goal.id)}
-                      title="Löschen"
-                      aria-label="Löschen"
-                    >
-                      <IconDelete />
-                    </button>
-                  </div>
+                  <OverflowMenu
+                    items={[
+                      { label: "Bearbeiten", onClick: () => openEditDialog(goal) },
+                      { label: "Löschen", danger: true, onClick: () => deleteGoal(goal.id) },
+                    ]}
+                  />
                 </div>
 
                 {/* Fortschritt */}
@@ -327,16 +478,108 @@ export default function GoalsView({
                 {/* Ziel erreicht */}
                 {goal.progress.percent >= 100 && (
                   <div className="hb-goal-success-wrap">
-                    <div className="hb-goal-success">
-                      Ziel erreicht! Herzlichen Glückwunsch!
+                    <div className="hb-goal-success-row">
+                      <div className="hb-goal-success">
+                        <IconCheck /> Ziel erreicht! Herzlichen Glückwunsch!
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => archiveGoal(goal)}>
+                        <IconCheck /> Abschliessen
+                      </Button>
                     </div>
                   </div>
                 )}
 
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Archiv: abgeschlossene Sparziele */}
+          {archivedGoals.length > 0 && (
+            <div className="hb-goal-archive">
+              <div className="hb-row" style={{ alignItems: "center", margin: "28px 0 12px" }}>
+                <div className="hb-title-group">
+                  <h3 className="hb-card-title">Geschafft</h3>
+                  <span className="hb-info-pill hb-info-pill--title">
+                    {archivedGoals.length} {archivedGoals.length === 1 ? "Ziel" : "Ziele"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="hb-two">
+                {archivedGoals.map((goal) => {
+                  const arch = goal.archive;
+                  const dl = deadlineLabel(arch?.deadlineDelta);
+                  return (
+                    <Card key={goal.id} className="hb-goal-card--archived">
+                      <CardContent>
+                        <div className="hb-goal-header">
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <h3 className="hb-goal-title">{goal.name}</h3>
+                            <div className="hb-goal-badges">
+                              <span className="hb-goal-badge hb-goal-badge--done">
+                                <IconCheck /> Erreicht am {formatDate(goal.completedAt)}
+                              </span>
+                              <span className="hb-goal-badge">Topf: {getPotName(goal)}</span>
+                              {goal.transferCategory && (
+                                <span className="hb-goal-badge hb-goal-badge--accent">
+                                  Zweck: {goal.transferCategory}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <OverflowMenu
+                            items={[
+                              { label: "Wieder aktivieren", onClick: () => reactivateGoal(goal) },
+                              { label: "Entfernen", danger: true, onClick: () => deleteGoal(goal.id) },
+                            ]}
+                          />
+                        </div>
+
+                        <div className="hb-goal-archive-stats">
+                          <div className="hb-goal-archive-stat">
+                            <span className="hb-goal-archive-stat-label">Angespart</span>
+                            <span className="hb-goal-archive-stat-value">
+                              {fmt(arch?.savedAmount ?? 0)}
+                              <span className="hb-muted" style={{ fontWeight: 500 }}>
+                                {" "}von {fmt(arch?.target ?? 0)}
+                              </span>
+                            </span>
+                          </div>
+                          <div className="hb-goal-archive-stat">
+                            <span className="hb-goal-archive-stat-label">Sparzeitraum</span>
+                            <span className="hb-goal-archive-stat-value">{formatPeriod(arch)}</span>
+                          </div>
+                          <div className="hb-goal-archive-stat">
+                            <span className="hb-goal-archive-stat-label">Ø pro Monat</span>
+                            <span className="hb-goal-archive-stat-value">{fmt(arch?.avgMonthly ?? 0)}</span>
+                          </div>
+                          <div className="hb-goal-archive-stat">
+                            <span className="hb-goal-archive-stat-label">Einzahlungen</span>
+                            <span className="hb-goal-archive-stat-value">{arch?.depositCount ?? 0}</span>
+                          </div>
+                          {dl && (
+                            <div className="hb-goal-archive-stat">
+                              <span className="hb-goal-archive-stat-label">Deadline</span>
+                              <span
+                                className={`hb-goal-archive-stat-value ${
+                                  arch.deadlineDelta >= 0 ? "hb-ok" : "hb-bad"
+                                }`}
+                              >
+                                {dl}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Dialog: Sparziel erstellen/bearbeiten */}

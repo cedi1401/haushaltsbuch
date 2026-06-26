@@ -1,8 +1,8 @@
 import React from "react";
 
-export function Card({ children, style }) {
+export function Card({ children, style, className }) {
   return (
-    <div className="hb-card" style={style}>
+    <div className={`hb-card${className ? ` ${className}` : ""}`} style={style}>
       {children}
     </div>
   );

@@ -80,6 +80,32 @@ export function formatCurrency(n, currency = "CHF", fractionDigits = 2) {
   }
 }
 
+// Kompakte Währungsdarstellung für enge Kontexte (z. B. Chart-Achsen):
+// Tausender/Millionen werden zu „k"/„M" gekürzt, z. B. CHF3.5k, −EUR1.2k, $4M.
+// Affix-Platzierung folgt formatCurrency; bewusst ohne Leerzeichen für maximale Kürze.
+function trimCompactNumber(x) {
+  const s = x.toFixed(1);
+  return s.endsWith(".0") ? s.slice(0, -2) : s;
+}
+
+export function formatCurrencyCompact(n, currency = "CHF") {
+  const cur = String(currency).toUpperCase();
+  const amount = Number(n || 0);
+  const sign = amount < 0 ? "−" : "";
+  const abs = Math.abs(amount);
+  let num;
+  if (abs >= 1_000_000) num = `${trimCompactNumber(abs / 1_000_000)}M`;
+  else if (abs >= 1_000) num = `${trimCompactNumber(abs / 1_000)}k`;
+  else num = String(Math.round(abs));
+
+  if (cur === "EUR") return `${sign}${num} €`;
+  if (cur === "USD") return `${sign}$${num}`;
+  if (cur === "GBP") return `${sign}£${num}`;
+  if (cur === "JPY") return `${sign}¥${num}`;
+  if (cur === "CHF") return `${sign}CHF${num}`;
+  return `${sign}${cur}${num}`;
+}
+
 export function todayISO() {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -820,6 +846,13 @@ export function normalizeBook(book) {
   // Sparziele hinzufügen, falls nicht vorhanden
   if (!Array.isArray(normalized.goals)) {
     normalized.goals = [];
+  } else {
+    // Archiv-Felder (Abschluss) für ältere Ziele ergänzen
+    normalized.goals = normalized.goals.map((g) => ({
+      completedAt: null,
+      completedAmount: null,
+      ...g,
+    }));
   }
 
   // Fixkosten hinzufügen, falls nicht vorhanden

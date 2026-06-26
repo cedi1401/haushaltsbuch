@@ -173,3 +173,80 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
     avgMonthly: Math.round(avgMonthly * 100) / 100,
   };
 }
+
+/**
+ * Berechnet Kennzahlen für ein abgeschlossenes (archiviertes) Sparziel.
+ * Stützt sich auf den Schnappschuss `completedAmount` zum Abschlusszeitpunkt
+ * und zählt nur Einzahlungen bis zum Abschlussdatum.
+ * @param {Object} goal - Das (abgeschlossene) Sparziel mit completedAt
+ * @param {Array} entries - Alle Einträge
+ * @returns {{
+ *   start: string|null, completedAt: string|null,
+ *   durationMonths: number|null, durationDays: number|null,
+ *   depositCount: number, savedAmount: number, target: number,
+ *   avgMonthly: number, deadlineDelta: number|null
+ * } | null}
+ */
+export function calcGoalArchiveStats(goal, entries) {
+  if (!goal) return null;
+
+  const completedAt = goal.completedAt || null;
+
+  // Relevante Einzahlungen (Transfers in den Topf, optional nach Zweck gefiltert)
+  const relevantAll = (entries || []).filter(
+    (e) =>
+      e.kind === "transfer" &&
+      e.potId === goal.potId &&
+      (!goal.transferCategory || e.category === goal.transferCategory)
+  );
+  // Nur Buchungen bis zum Abschluss berücksichtigen
+  const relevant = completedAt
+    ? relevantAll.filter((e) => e.date && e.date <= completedAt)
+    : relevantAll;
+
+  const depositCount = relevant.length;
+
+  const dates = relevant.map((e) => e.date).filter(Boolean).sort();
+  const start = resolveStartDate(goal) || dates[0] || goal.createdAt || null;
+
+  let durationMonths = null;
+  let durationDays = null;
+  if (start && completedAt) {
+    const s = new Date(start);
+    const e = new Date(completedAt);
+    durationDays = Math.max(0, Math.round((e - s) / 86400000));
+    durationMonths = Math.max(
+      0,
+      (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth())
+    );
+  }
+
+  const savedAmount =
+    goal.completedAmount != null && Number.isFinite(Number(goal.completedAmount))
+      ? Number(goal.completedAmount)
+      : Number(goal.targetAmount) || 0;
+
+  // Ø monatlich — mindestens 1 Monat als Divisor, um Division durch 0 zu vermeiden
+  const monthsForAvg = durationMonths && durationMonths > 0 ? durationMonths : 1;
+  const avgMonthly = Math.round((savedAmount / monthsForAvg) * 100) / 100;
+
+  // Deadline-Vergleich: positiv = vor Deadline erreicht, negativ = danach
+  let deadlineDelta = null;
+  if (goal.deadline && completedAt) {
+    const dl = new Date(goal.deadline);
+    const c = new Date(completedAt);
+    deadlineDelta = Math.round((dl - c) / 86400000);
+  }
+
+  return {
+    start,
+    completedAt,
+    durationMonths,
+    durationDays,
+    depositCount,
+    savedAmount,
+    target: Number(goal.targetAmount) || 0,
+    avgMonthly,
+    deadlineDelta,
+  };
+}
