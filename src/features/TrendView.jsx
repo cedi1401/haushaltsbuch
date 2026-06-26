@@ -16,8 +16,10 @@ import {
   ReferenceLine,
 } from "recharts";
 import { useThemeColors } from "../hooks/useThemeColors.jsx";
-import { useFmt } from "../contexts/CurrencyContext.jsx";
+import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
+import { formatCurrencyCompact } from "../utils/hbUtils.js";
 import { useFixedCostTrend } from "../hooks/useFixedCostTrend.js";
+import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import FixedCostTrendSection from "./FixedCostTrendSection.jsx";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
 import { MONTHS_SHORT } from "../utils/constants.js";
@@ -27,78 +29,36 @@ const monthLabel = formatYearMonth;
 // oldest → lightest, newest → darkest
 const YOY_YEAR_COLORS = [TRANSFER_PALETTE[7], TRANSFER_PALETTE[3], TRANSFER_PALETTE[0]];
 
-const BAR_RADIUS = 0;
-
-function roundedBarPath(x, y, width, height, { topRounded, bottomRounded }) {
-  const left = Math.min(x, x + width);
-  const top = Math.min(y, y + height);
-  const w = Math.abs(width);
-  const h = Math.abs(height);
-  const right = left + w;
-  const bottom = top + h;
-  const r = Math.min(BAR_RADIUS, h / 2, w / 2);
-  const rt = topRounded ? r : 0;
-  const rb = bottomRounded ? r : 0;
-  return [
-    `M${left},${top + rt}`,
-    rt ? `A${rt},${rt} 0 0 1 ${left + rt},${top}` : `L${left},${top}`,
-    `L${right - rt},${top}`,
-    rt ? `A${rt},${rt} 0 0 1 ${right},${top + rt}` : `L${right},${top}`,
-    `L${right},${bottom - rb}`,
-    rb ? `A${rb},${rb} 0 0 1 ${right - rb},${bottom}` : `L${right},${bottom}`,
-    `L${left + rb},${bottom}`,
-    rb ? `A${rb},${rb} 0 0 1 ${left},${bottom - rb}` : `L${left},${bottom}`,
-    "Z",
-  ].join(" ");
-}
-
-function makeStackBarShape(fill) {
-  return function StackBarShape({ x, y, width, height }) {
-    if (!height || !width) return null;
-    const d = roundedBarPath(x, y, width, height, { topRounded: true, bottomRounded: true });
-    return <path d={d} fill={fill} />;
-  };
-}
-
 function CashflowTooltip({ active, payload, label, fmt }) {
   if (!active || !payload?.length) return null;
-  const income = payload.find((p) => p.dataKey === "income");
-  const expense = payload.find((p) => p.dataKey === "expense");
-  const transfer = payload.find((p) => p.dataKey === "transfer");
-  const savings = payload.find((p) => p.dataKey === "savings");
-  // expense/transfer sind im chartData negativ, savings positiv → Sparen subtrahieren.
-  const frei = (income?.value ?? 0) + (expense?.value ?? 0) + (transfer?.value ?? 0) - (savings?.value ?? 0);
+  const row = payload[0].payload || {};
+  const income = Number(row.income || 0);
+  const expense = Number(row.expense || 0);
+  const transfer = Number(row.transfer || 0);
+  const savings = Number(row.savings || 0);
+  const cumSavings = Number(row.cumSavings || 0);
+  const outflow = expense + transfer; // Ausgaben + Rücklagen zusammengefasst
+  // Frei-Rest des Monats: nach Ausgaben, Rücklagen und Sparen.
+  const frei = income - outflow - savings;
   return (
-    <div className="hb-chart-tooltip">
-      <span className="hb-chart-tooltip-label">{label}</span>
-      {income && (
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
-          <span style={{ color: "var(--green)" }}>Einnahmen</span>
-          <span>+{fmt(income.value)}</span>
-        </div>
-      )}
-      {expense && (
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
-          <span style={{ color: "var(--red)" }}>Ausgaben</span>
-          <span>−{fmt(Math.abs(expense.value))}</span>
-        </div>
-      )}
-      {transfer && Math.abs(transfer.value) > 0 && (
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
-          <span style={{ color: "var(--blue)" }}>Rücklagen</span>
-          <span>−{fmt(Math.abs(transfer.value))}</span>
-        </div>
-      )}
-      {savings && Math.abs(savings.value) > 0 && (
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
-          <span style={{ color: "var(--teal)" }}>Sparen</span>
-          <span>−{fmt(Math.abs(savings.value))}</span>
-        </div>
-      )}
-      <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0" }} />
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 20, fontWeight: 600 }}>
-        <span className="hb-muted">Frei</span>
-        <span style={{ color: frei >= 0 ? "var(--green)" : "var(--red)" }}>
+    <div className="hb-chart-tooltip hb-chart-tooltip--col">
+      <div className="hb-chart-tooltip-title">{label}</div>
+      <div className="hb-chart-tooltip-row">
+        <span className="hb-chart-tooltip-key" style={{ color: "var(--green)" }}>Einnahmen</span>
+        <span className="hb-chart-tooltip-val">+{fmt(income)}</span>
+      </div>
+      <div className="hb-chart-tooltip-row">
+        <span className="hb-chart-tooltip-key" style={{ color: "var(--red)" }}>Ausgaben &amp; Rücklagen</span>
+        <span className="hb-chart-tooltip-val">−{fmt(outflow)}</span>
+      </div>
+      <div className="hb-chart-tooltip-row">
+        <span className="hb-chart-tooltip-key" style={{ color: "var(--blue)" }}>Sparen (kumuliert)</span>
+        <span className="hb-chart-tooltip-val">{fmt(cumSavings)}</span>
+      </div>
+      <div className="hb-chart-tooltip-divider" />
+      <div className="hb-chart-tooltip-row">
+        <span className="hb-chart-tooltip-key hb-muted">Frei</span>
+        <span className="hb-chart-tooltip-val" style={{ color: frei >= 0 ? "var(--green)" : "var(--red)" }}>
           {frei >= 0 ? "+" : "−"}{fmt(Math.abs(frei))}
         </span>
       </div>
@@ -106,25 +66,30 @@ function CashflowTooltip({ active, payload, label, fmt }) {
   );
 }
 
-function YoYTooltip({ active, payload, label, fmt }) {
+function YoYTooltip({ active, payload, label, fmt, avgColor }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="hb-chart-tooltip">
       <span className="hb-chart-tooltip-label">{label}</span>
       {payload
         .filter((p) => p.value != null)
-        .map((p) => (
-          <div key={p.dataKey} style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
-            <span style={{ color: p.fill }}>{p.dataKey}</span>
-            <span>{fmt(p.value)}</span>
-          </div>
-        ))}
+        .map((p) => {
+          const isAvg = p.dataKey === "__avg";
+          return (
+            <div key={p.dataKey} style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
+              <span style={{ color: isAvg ? avgColor : p.fill }}>{isAvg ? "Ø" : p.dataKey}</span>
+              <span>{fmt(p.value)}</span>
+            </div>
+          );
+        })}
     </div>
   );
 }
 
 export default function TrendView({ entries, entriesAll, recurringExpenses = [], expenseCategories = [], monthStartDay = 1, pots = [] }) {
   const fmt = useFmt();
+  const baseCurrency = useBaseCurrency();
+  const fmtTick = (v) => formatCurrencyCompact(v, baseCurrency);
   const hasAll = Array.isArray(entriesAll) && entriesAll.length > 0;
   const [userScope, setUserScope] = useState("book"); // "book" | "all"
   const [saldoRangeOption, setSaldoRangeOption] = useState("12");
@@ -197,7 +162,14 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
       };
     });
 
-    return withAvg.map((d) => ({ ...d, label: monthLabel(d.month) }));
+    // Kumuliertes Sparen über die volle Zeitreihe (Spar-Kontostand-Verlauf).
+    let cum = 0;
+    const withCum = withAvg.map((d) => {
+      cum += Number(d.savings || 0);
+      return { ...d, cumSavings: cum };
+    });
+
+    return withCum.map((d) => ({ ...d, label: monthLabel(d.month) }));
   }, [sourceEntries, monthStartDay]);
 
   const saldoRangePool = useMemo(() => {
@@ -268,16 +240,14 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
 
   const cashflowChartData = useMemo(() => evaWindowData.map((m) => ({
     name: m.label,
-    income: m.income,
-    expense: -m.expense,
-    transfer: -m.transfer,
-    savings: m.savings, // positiv: eigener Slot oben neben den Einnahmen
+    income: m.income, // grüner Balken nach oben
+    outflow: -(m.expense + m.transfer), // roter Balken nach unten: Ausgaben + Rücklagen
+    cumSavings: m.cumSavings, // blaue Linie (rechte Achse)
+    // Rohwerte fürs Tooltip:
+    expense: m.expense,
+    transfer: m.transfer,
+    savings: m.savings,
   })), [evaWindowData]);
-
-  const stackShapes = useMemo(() => ({
-    expense: makeStackBarShape(themeColors.red),
-    transfer: makeStackBarShape(themeColors.blue),
-  }), [themeColors]);
 
   const highlights = useMemo(() => {
     if (!monthly.length) return null;
@@ -339,6 +309,15 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
     if (!yoyData.length) return [];
     return Object.keys(yoyData[0]).filter((k) => /^\d{4}$/.test(k)).sort().slice(-3);
   }, [yoyData]);
+
+  // Pro Monat Durchschnitt über die Jahre mit Daten; bei nur einem Jahr ist es dessen Wert.
+  const yoyChartData = useMemo(() => {
+    return yoyData.map((row) => {
+      const vals = yoyYears.map((y) => row[y]).filter((v) => v != null);
+      const avg = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+      return { ...row, __avg: avg };
+    });
+  }, [yoyData, yoyYears]);
 
   const colorForYear = (year) => {
     const idx = yoyYears.indexOf(year); // 0=ältestes, 2=aktuellstes
@@ -512,44 +491,57 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                       )}
                     </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px 14px" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted, whiteSpace: "nowrap" }}>
                       <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: themeColors.green }} />
                       Einnahmen
                     </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted, whiteSpace: "nowrap" }}>
                       <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: themeColors.red }} />
-                      Ausgaben
+                      Ausgaben & Rücklagen
                     </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                      <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: themeColors.blue }} />
-                      Rücklagen
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                      <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: themeColors.teal }} />
-                      Sparen
+                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted, whiteSpace: "nowrap" }}>
+                      <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
+                        <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.blue} strokeWidth="2.5" strokeLinecap="round" />
+                        <circle cx="10" cy="5" r="2.5" fill={themeColors.blue} />
+                      </svg>
+                      Sparen (kumuliert)
                     </span>
                   </div>
                 </div>
 
                 <div style={{ width: "100%", height: 280, marginTop: 16 }}>
                   <ResponsiveContainer width="100%" height={280}>
-                    <ComposedChart data={cashflowChartData} barCategoryGap="28%" barGap={0} stackOffset="sign">
+                    <ComposedChart data={cashflowChartData} barCategoryGap="32%" stackOffset="sign">
                       <CartesianGrid strokeDasharray="3 3" stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
-                      <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => fmt(v)} />
-                      <ReferenceLine y={0} stroke={themeColors.muted} strokeOpacity={0.6} strokeWidth={1.5} />
+                      <YAxis yAxisId="cash" tick={{ fontSize: 11 }} tickFormatter={fmtTick} />
+                      {/* Rechte Achse dezent in Blau, passend zur Sparen-Linie; ohne Achsen-/Tick-Linie, damit sie nicht mit der linken Cash-Achse konkurriert */}
+                      <YAxis yAxisId="savings" orientation="right" axisLine={false} tickLine={false} width={56} tick={{ fontSize: 11, fill: themeColors.blue }} tickFormatter={fmtTick} />
                       <Tooltip
                         wrapperStyle={{ zIndex: 10 }}
                         content={(props) => <CashflowTooltip {...props} fmt={fmt} />}
                         cursor={{ fill: themeColors.blue, fillOpacity: 0.06 }}
                       />
-                      {/* Linke Säule: Einnahmen (oben) */}
-                      <Bar dataKey="income" stackId="left" barSize={20} fill={themeColors.green} radius={[BAR_RADIUS, BAR_RADIUS, BAR_RADIUS, BAR_RADIUS]} isAnimationActive={false} />
-                      {/* Rechte Säule: Sparen (oben) / Ausgaben + Rücklagen gestapelt (unten) */}
-                      <Bar dataKey="savings" stackId="right" barSize={20} fill={themeColors.teal} radius={[BAR_RADIUS, BAR_RADIUS, BAR_RADIUS, BAR_RADIUS]} isAnimationActive={false} />
-                      <Bar dataKey="expense" stackId="right" barSize={20} isAnimationActive={false} shape={stackShapes.expense} />
-                      <Bar dataKey="transfer" stackId="right" barSize={20} isAnimationActive={false} shape={stackShapes.transfer} />
+                      {/* Ein grüner Balken nach oben (Einnahmen) + ein roter nach unten (Ausgaben + Rücklagen), leicht gerundet zur Nulllinie hin offen */}
+                      <Bar yAxisId="cash" dataKey="income" stackId="cf" barSize={20} fill={themeColors.green} shape={IncomeBarShape} />
+                      <Bar yAxisId="cash" dataKey="outflow" stackId="cf" barSize={20} fill={themeColors.red} shape={OutflowBarShape} />
+                      {/* Nulllinie über den Balken, damit sie sauber abschliesst */}
+                      <ReferenceLine yAxisId="cash" y={0} stroke={themeColors.muted} strokeOpacity={0.6} strokeWidth={1.5} />
+                      {/* Blaue Linie: kumuliertes Sparen (rechte Achse), mit Akzent-Dot am letzten Punkt */}
+                      <Line
+                        yAxisId="savings"
+                        type="monotone"
+                        dataKey="cumSavings"
+                        dot={(props) => {
+                          const isLast = props.index === cashflowChartData.length - 1;
+                          if (!isLast) return null;
+                          return <circle key={props.index} cx={props.cx} cy={props.cy} r={3.5} fill={themeColors.blue} stroke="var(--card)" strokeWidth={1.5} />;
+                        }}
+                        activeDot={{ r: 4, fill: themeColors.blue, stroke: "var(--card)", strokeWidth: 1.5 }}
+                        strokeWidth={2.5}
+                        stroke={themeColors.blue}
+                      />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -578,22 +570,29 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                           {y}
                         </span>
                       ))}
+                      <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
+                        <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
+                          <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.orange} strokeWidth="1.5" strokeDasharray="5 3" />
+                        </svg>
+                        Ø
+                      </span>
                     </div>
                     <div style={{ width: "100%", height: 260, marginTop: 4 }}>
                       <ResponsiveContainer width="100%" height={260}>
-                        <BarChart data={yoyData} barCategoryGap="20%" barGap={-2}>
+                        <ComposedChart data={yoyChartData} barCategoryGap="20%" barGap={-2}>
                           <CartesianGrid strokeDasharray="3 3" stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                           <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                           <YAxis tick={{ fontSize: 11 }} />
                           <Tooltip
                             wrapperStyle={{ zIndex: 10 }}
-                            content={(props) => <YoYTooltip {...props} fmt={fmt} />}
+                            content={(props) => <YoYTooltip {...props} fmt={fmt} avgColor={themeColors.orange} />}
                             cursor={false}
                           />
                           {yoyYears.map((y) => (
                             <Bar key={y} dataKey={y} fill={colorForYear(y)} barSize={18} radius={[2, 2, 0, 0]} />
                           ))}
-                        </BarChart>
+                          <Line type="monotone" dataKey="__avg" dot={false} strokeWidth={1.5} stroke={themeColors.orange} strokeDasharray="5 3" connectNulls isAnimationActive={false} />
+                        </ComposedChart>
                       </ResponsiveContainer>
                     </div>
                   </>
