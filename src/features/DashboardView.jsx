@@ -198,7 +198,7 @@ export default function DashboardView({
         }}
       />
 
-      <div className="hb-stat-pills" style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" }}>
+      <div className="hb-stat-pills">
         <div className="hb-stat-pill hb-stat-pill--ok">
           <span className="hb-stat-pill-label">Einnahmen</span>
           <span className="hb-stat-pill-value hb-ok">+{fmt(totalIncome)}</span>
