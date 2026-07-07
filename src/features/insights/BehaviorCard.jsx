@@ -47,7 +47,6 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
   const themeColors = useThemeColors();
   const hasBarData = dailySpendData.some((d) => d.count > 0);
   const hasAreaData = thirtyDayData.some((d) => d.amount > 0);
-  const maxCount = Math.max(...dailySpendData.map((d) => d.count), 1);
   const avgAmount = thirtyDayData.reduce((s, d) => s + d.amount, 0) / 30;
   const maxAmount = Math.max(...thirtyDayData.map((d) => d.amount), 10);
   const areaStep = Math.max(10, Math.ceil(maxAmount / 4 / 10) * 10);
@@ -77,8 +76,8 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                 >
                   <CartesianGrid
                     vertical={false}
-                    stroke="var(--border-light)"
-                    strokeDasharray="3 3"
+                    stroke={themeColors.muted}
+                    strokeOpacity={0.15}
                   />
                   <XAxis
                     dataKey="day"
@@ -114,7 +113,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                       <Cell
                         key={i}
                         fill={themeColors.accent}
-                        opacity={entry.count > 0 ? 0.35 + 0.65 * (entry.count / maxCount) : 0.12}
+                        opacity={entry.count > 0 ? 0.85 : 0.12}
                       />
                     ))}
                   </Bar>
@@ -185,8 +184,8 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                   <CartesianGrid
                     horizontal={true}
                     vertical={false}
-                    stroke="var(--border-light)"
-                    strokeDasharray="3 3"
+                    stroke={themeColors.muted}
+                    strokeOpacity={0.15}
                   />
                   <YAxis
                     ticks={areaTicks}

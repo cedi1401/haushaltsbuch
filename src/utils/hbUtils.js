@@ -106,6 +106,24 @@ export function formatCurrencyCompact(n, currency = "CHF") {
   return `${sign}${cur}${num}`;
 }
 
+// Achsen-Beschriftung für Charts: ganzzahliger Betrag mit Währungs-Affix,
+// ohne Dezimalstellen und ohne Tausendertrennzeichen (z. B. CHF1500, −EUR1500).
+// Anders als formatCurrencyCompact wird nicht zu „k"/„M" gekürzt — der volle
+// gerundete Betrag bleibt stehen. Affix-Platzierung folgt formatCurrency.
+export function formatCurrencyAxis(n, currency = "CHF") {
+  const cur = String(currency).toUpperCase();
+  const amount = Number(n || 0);
+  const sign = amount < 0 ? "−" : "";
+  const num = String(Math.round(Math.abs(amount)));
+
+  if (cur === "EUR") return `${sign}${num} €`;
+  if (cur === "USD") return `${sign}$${num}`;
+  if (cur === "GBP") return `${sign}£${num}`;
+  if (cur === "JPY") return `${sign}¥${num}`;
+  if (cur === "CHF") return `${sign}CHF${num}`;
+  return `${sign}${cur}${num}`;
+}
+
 export function todayISO() {
   const d = new Date();
   const yyyy = d.getFullYear();

@@ -117,8 +117,8 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
               <CartesianGrid
                 horizontal={true}
                 vertical={false}
-                stroke="var(--border-light)"
-                strokeDasharray="3 3"
+                stroke={themeColors.muted}
+                strokeOpacity={0.15}
               />
               <XAxis
                 dataKey="day"

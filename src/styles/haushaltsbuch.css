@@ -4371,6 +4371,19 @@ select.hb-input option {
   color: var(--muted);
 }
 
+/* Farbiger Identitäts-Dot vor dem Tooltip-Label. Trägt die Serienfarbe, damit
+   der Text im ruhigen Ink-Token bleibt (kein Kontrastrisiko durch helle
+   Serienfarben als Textfarbe). */
+.hb-tooltip-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
 /* Mehrzeiliger Tooltip (Burn-Down: Frei / Soll / Delta) */
 .hb-chart-tooltip--col {
   flex-direction: column;

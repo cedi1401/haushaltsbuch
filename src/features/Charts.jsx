@@ -226,7 +226,10 @@ export default function Charts({
                           : fmt(p.value);
                         return (
                           <div className="hb-chart-tooltip">
-                            <span className="hb-chart-tooltip-label" style={{ color: p.fill }}>{p.name}</span>
+                            <span className="hb-chart-tooltip-label">
+                              <span className="hb-tooltip-dot" style={{ background: p.fill }} />
+                              {p.name}
+                            </span>
                             <span>{valStr}</span>
                           </div>
                         );
@@ -356,7 +359,10 @@ export default function Charts({
                         : fmt(p.value);
                       return (
                         <div className="hb-chart-tooltip">
-                          <span className="hb-chart-tooltip-label" style={{ color: p.fill }}>{p.name}</span>
+                          <span className="hb-chart-tooltip-label">
+                            <span className="hb-tooltip-dot" style={{ background: p.fill }} />
+                            {p.name}
+                          </span>
                           <span>{valStr}</span>
                         </div>
                       );

@@ -17,7 +17,7 @@ import {
 } from "recharts";
 import { useThemeColors } from "../hooks/useThemeColors.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
-import { formatCurrencyCompact } from "../utils/hbUtils.js";
+import { formatCurrencyCompact, formatCurrencyAxis } from "../utils/hbUtils.js";
 import { useFixedCostTrend } from "../hooks/useFixedCostTrend.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import FixedCostTrendSection from "./FixedCostTrendSection.jsx";
@@ -90,6 +90,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const fmtTick = (v) => formatCurrencyCompact(v, baseCurrency);
+  const fmtAxis = (v) => formatCurrencyAxis(v, baseCurrency);
   const hasAll = Array.isArray(entriesAll) && entriesAll.length > 0;
   const [userScope, setUserScope] = useState("book"); // "book" | "all"
   const [saldoRangeOption, setSaldoRangeOption] = useState("12");
@@ -513,7 +514,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                 <div style={{ width: "100%", height: 280, marginTop: 16 }}>
                   <ResponsiveContainer width="100%" height={280}>
                     <ComposedChart data={cashflowChartData} barCategoryGap="32%" stackOffset="sign">
-                      <CartesianGrid strokeDasharray="3 3" stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
+                      <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
                       <YAxis yAxisId="cash" tick={{ fontSize: 11 }} tickFormatter={fmtTick} />
                       {/* Rechte Achse dezent in Blau, passend zur Sparen-Linie; ohne Achsen-/Tick-Linie, damit sie nicht mit der linken Cash-Achse konkurriert */}
@@ -580,9 +581,9 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                     <div style={{ width: "100%", height: 260, marginTop: 4 }}>
                       <ResponsiveContainer width="100%" height={260}>
                         <ComposedChart data={yoyChartData} barCategoryGap="20%" barGap={-2}>
-                          <CartesianGrid strokeDasharray="3 3" stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
+                          <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                           <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                          <YAxis tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtAxis} width={64} />
                           <Tooltip
                             wrapperStyle={{ zIndex: 10 }}
                             content={(props) => <YoYTooltip {...props} fmt={fmt} avgColor={themeColors.orange} />}

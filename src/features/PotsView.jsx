@@ -470,7 +470,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                   <div style={{ width: "100%", height: 240, marginTop: 16 }}>
                     <ResponsiveContainer width="100%" height={240}>
                       <BarChart data={barChartData} barCategoryGap="32%" stackOffset="sign">
-                        <CartesianGrid strokeDasharray="3 3" stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
+                        <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                         <XAxis
                           dataKey="name"
                           tick={{ fontSize: 11 }}
@@ -557,7 +557,10 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                             const p = payload[0];
                             return (
                               <div className="hb-chart-tooltip">
-                                <span className="hb-chart-tooltip-label" style={{ color: p.fill }}>{p.name}</span>
+                                <span className="hb-chart-tooltip-label">
+                                  <span className="hb-tooltip-dot" style={{ background: p.fill }} />
+                                  {p.name}
+                                </span>
                                 <span>{fmt(p.value)}</span>
                               </div>
                             );
