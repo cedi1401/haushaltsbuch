@@ -6,7 +6,7 @@ import { generateId } from "../utils/idUtils.js";
 import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, todayISO } from "../utils/hbUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
-import { IconFixed, IconPlus, IconDelete, IconDrag } from "../components/icons.jsx";
+import { IconFixed, IconPlus, IconDelete, IconDrag, IconTag } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 
@@ -359,7 +359,7 @@ export default function FixedCostsView({
   function renderTagPills(item) {
     if (!item.tags || item.tags.length === 0) return null;
     return item.tags.map((tag) => (
-      <span key={tag} className="hb-tag-pill">#{tag}</span>
+      <span key={tag} className="hb-tag-pill"><IconTag width={13} height={13} />{tag}</span>
     ));
   }
 
@@ -642,7 +642,8 @@ export default function FixedCostsView({
             <div className="hb-tag-input-field">
               {draft.tags.map((tag) => (
                 <span key={tag} className="hb-tag-chip">
-                  #{tag}
+                  <IconTag width={13} height={13} />
+                  {tag}
                   <button
                     type="button"
                     className="hb-tag-chip-remove"
@@ -680,7 +681,9 @@ export default function FixedCostsView({
                     className="hb-tag-suggestion-pill"
                     onClick={() => handleTagAdd(tag)}
                   >
-                    + #{tag}
+                    <IconPlus width={12} height={12} />
+                    <IconTag width={13} height={13} />
+                    {tag}
                   </button>
                 ))}
               </div>

@@ -11,9 +11,11 @@ import {
 } from "recharts";
 import { Card, CardContent } from "../components/ui.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
+import HbSparklineHover from "../components/HbSparklineHover.jsx";
+import { IconTag } from "../components/icons.jsx";
 import { useThemeColors } from "../hooks/useThemeColors.jsx";
-import { getCategoryLabel } from "../utils/hbUtils.js";
-import { useFmt } from "../contexts/CurrencyContext.jsx";
+import { getCategoryLabel, formatCurrencyAxis } from "../utils/hbUtils.js";
+import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { MONTHS_SHORT } from "../utils/constants.js";
 
 function fmtMonthDE(ym) {
@@ -22,20 +24,35 @@ function fmtMonthDE(ym) {
   return MONTHS_SHORT[m - 1] ?? ym;
 }
 
-function KpiCard({ label, value, sub, accent }) {
+function KpiCard({ label, value, sub, accent, spark }) {
   return (
     <div className="hb-fct-kpi" style={accent ? { borderLeftColor: accent } : undefined}>
-      <div className="hb-fct-kpi-label">{label}</div>
+      <div className="hb-fct-kpi-top">
+        <div className="hb-fct-kpi-label">{label}</div>
+        {spark && (
+          <HbSparklineHover
+            data={spark.data}
+            dataKey={spark.dataKey}
+            color={spark.color}
+            caption={spark.caption}
+            label={`Verlauf: ${label}`}
+          />
+        )}
+      </div>
       <div className="hb-fct-kpi-value">{value}</div>
       {sub && <div className="hb-fct-kpi-sub">{sub}</div>}
     </div>
   );
 }
 
-// Horizontaler Balken: Anteil des Items an der Gesamtsumme
+// Horizontaler Balken: Anteil des Items an der Gesamtsumme.
+// Der Track wird in der Item-Hue getönt (Hue-auf-Hue statt neutralem Grau).
 function ProportionBar({ pct, color }) {
   return (
-    <div className="hb-fct-prop-track">
+    <div
+      className="hb-fct-prop-track"
+      style={color ? { background: `${color}24` } : undefined}
+    >
       <div
         className="hb-fct-prop-fill"
         style={{ width: `${Math.min(pct, 100)}%`, background: color }}
@@ -54,6 +71,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
   avgMonthlyExpense = 0,
 }) {
   const fmt = useFmt();
+  const baseCurrency = useBaseCurrency();
   const themeColors = useThemeColors();
   const [fctRangeOption, setFctRangeOption] = useState("12");
   const [fctScrollOffset, setFctScrollOffset] = useState(0);
@@ -147,11 +165,13 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
           value={fmt(kpis.bookedLast)}
           sub={momLabel}
           accent={kpis.momDelta == null ? undefined : kpis.momDelta > 0 ? "var(--red)" : "var(--green)"}
+          spark={{ data: fctWindowData, dataKey: "fixedTotal", color: themeColors.accent, caption: fctWindowLabel }}
         />
         <KpiCard
           label="Ø Anteil an Ausgaben"
           value={kpis.avgShare != null ? `${kpis.avgShare.toFixed(1)} %` : "—"}
           sub="über den Zeitraum"
+          spark={{ data: fctWindowData, dataKey: "share", color: themeColors.purple, caption: fctWindowLabel }}
         />
         <KpiCard
           label="Teuerste Position"
@@ -174,10 +194,6 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.orange} strokeWidth="1.5" strokeDasharray="5 3" /></svg>
                 Konfiguriert
               </span>
-              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.purple} strokeWidth="1.5" strokeDasharray="3 3" /></svg>
-                Anteil %
-              </span>
             </div>
             <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: fctMaxOffset > 0 ? "visible" : "hidden" }}>
@@ -196,11 +212,10 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
           </div>
 
           <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={fctWindowData} margin={{ top: 4, right: 48, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={themeColors.muted} strokeOpacity={0.15} />
+            <LineChart data={fctWindowData} margin={{ top: 4, right: 12, bottom: 0, left: 0 }}>
+              <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
-              <YAxis yAxisId="chf" tick={{ fontSize: 11 }} tickFormatter={(v) => fmt(v)} width={70} />
-              <YAxis yAxisId="pct" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `${v.toFixed(0)}%`} width={40} domain={[0, 100]} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)} width={64} />
               <Tooltip
                 wrapperStyle={{ zIndex: 10 }}
                 content={({ active, payload, label }) => {
@@ -210,10 +225,8 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                       <span className="hb-chart-tooltip-label">{label}</span>
                       {payload.filter((p) => p.value != null).map((p) => (
                         <div key={p.dataKey} style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-                          <span style={{ color: p.stroke }}>
-                            {p.dataKey === "fixedTotal" ? "Gebucht" : p.dataKey === "share" ? "Anteil" : p.dataKey}
-                          </span>
-                          <span>{p.dataKey === "share" ? `${p.value.toFixed(1)} %` : fmt(p.value)}</span>
+                          <span>Gebucht</span>
+                          <span>{fmt(p.value)}</span>
                         </div>
                       ))}
                     </div>
@@ -221,15 +234,13 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 }}
               />
               <ReferenceLine
-                yAxisId="chf"
                 y={configuredTotal}
                 stroke={themeColors.orange}
                 strokeDasharray="5 3"
                 strokeWidth={1.5}
                 label={{ value: "Soll", position: "insideTopRight", fill: themeColors.orange, fontSize: 11 }}
               />
-              <Line yAxisId="chf" type="monotone" dataKey="fixedTotal" stroke={themeColors.accent} strokeWidth={2.5} dot={false} connectNulls={false} />
-              <Line yAxisId="pct" type="monotone" dataKey="share" stroke={themeColors.purple} strokeWidth={1.5} strokeDasharray="3 3" dot={false} connectNulls={false} />
+              <Line type="monotone" dataKey="fixedTotal" stroke={themeColors.accent} strokeWidth={2.5} dot={false} connectNulls={false} />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
@@ -267,7 +278,8 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                           return next;
                         })}
                       >
-                        #{tag}
+                        <IconTag width={13} height={13} />
+                        {tag}
                       </button>
                     ))}
                   </div>

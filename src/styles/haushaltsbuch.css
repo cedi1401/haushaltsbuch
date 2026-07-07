@@ -1221,11 +1221,21 @@ select.hb-input option {
   border-left: 3px solid var(--border-light); /* accent variant: .hb-fct-kpi--accent */
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
-  transition: border-color var(--transition-fast);
 }
 
-.hb-fct-kpi:hover { border-color: var(--reveal-border); }
+/* Reine KPI-Anzeige (nicht klickbar) → kein Hover-Highlight. */
 .hb-fct-kpi--accent { border-left-color: var(--accent); }
+
+/* Kopfzeile der KPI-Karte: Label links, Graph-Icon (Sparkline-Hover) rechts.
+   min-height reserviert die Trigger-Höhe, damit die Wert-Zeilen aller Karten
+   fluchten — auch wenn nur ein Teil der Karten ein Graph-Icon trägt. */
+.hb-fct-kpi-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 19px;
+}
 
 .hb-fct-kpi-label {
   font-size: 11px;
@@ -2693,30 +2703,35 @@ select.hb-input option {
 .hb-tag-pill {
   display: inline-flex;
   align-items: center;
-  padding: 2px 7px;
+  gap: 4px;
+  padding: 3px 9px;
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
   border: 1px solid var(--reveal-border);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--accent);
   white-space: nowrap;
 }
 
+.hb-tag-pill svg { opacity: 0.85; flex-shrink: 0; }
+
 /* Editierbarer Tag-Chip im Dialog */
 .hb-tag-chip {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 3px 4px 3px 8px;
+  gap: 4px;
+  padding: 4px 5px 4px 9px;
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
   border: 1px solid var(--reveal-border);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--accent);
   white-space: nowrap;
 }
+
+.hb-tag-chip > svg { opacity: 0.85; flex-shrink: 0; }
 
 .hb-tag-chip-remove {
   display: inline-flex;
@@ -2784,16 +2799,19 @@ select.hb-input option {
 .hb-tag-suggestion-pill {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  gap: 4px;
+  padding: 3px 9px;
   border-radius: var(--radius-sm);
   background: transparent;
   border: 1px solid var(--border-light);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--muted);
   cursor: pointer;
   transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 }
+
+.hb-tag-suggestion-pill svg { flex-shrink: 0; }
 
 .hb-tag-suggestion-pill:hover {
   background: var(--accent-soft);
@@ -3312,6 +3330,13 @@ select.hb-input option {
 }
 
 .hb-pill-tab:hover { background: var(--hover-bg); color: var(--text); }
+
+/* Tag-Filter-Pills tragen ein Tag-Icon (nur diese .hb-pill-tab haben ein svg) */
+.hb-pill-tab > svg {
+  vertical-align: -2px;
+  margin-right: 5px;
+  opacity: 0.85;
+}
 
 .hb-pill-tab-active {
   background: var(--card);
