@@ -688,6 +688,7 @@ export function makeDefaultBook(name = "Mein Haushaltsbuch") {
     goals: [],
     recurringExpenses: [],
     fixedCostGroups: [],
+    costGroups: [],
     baseCurrency: "CHF",
     monthStartDay: 1,
   };
@@ -921,6 +922,18 @@ export function normalizeBook(book) {
   // Fixkosten-Gruppen hinzufügen, falls nicht vorhanden
   if (!Array.isArray(normalized.fixedCostGroups)) {
     normalized.fixedCostGroups = [];
+  }
+
+  // Kostengruppen (Kostenrechner) hinzufügen, falls nicht vorhanden
+  if (!Array.isArray(normalized.costGroups)) {
+    normalized.costGroups = [];
+  } else {
+    normalized.costGroups = normalized.costGroups.map((g) => ({
+      ...g,
+      categoryIds: Array.isArray(g.categoryIds) ? g.categoryIds : [],
+      subcategoryIds: Array.isArray(g.subcategoryIds) ? g.subcategoryIds : [],
+      plannedItems: Array.isArray(g.plannedItems) ? g.plannedItems : [],
+    }));
   }
 
   // Basiswährung: Standard CHF (bisherige implizite Währung)

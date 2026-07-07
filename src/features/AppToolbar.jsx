@@ -6,7 +6,7 @@ import OverflowMenu from "../components/OverflowMenu.jsx";
 import { IconMenu, IconClose, IconSettings, IconSun, IconMoon } from "../components/icons.jsx";
 import { HbMonthPicker } from "../components/HbDatePicker.jsx";
 
-const VIEW_TITLES = { book: "Dashboard", trend: "Trend", pots: "Töpfe", goals: "Sparziele", fixed: "Fixkosten" };
+const VIEW_TITLES = { book: "Dashboard", trend: "Trend", pots: "Töpfe", goals: "Sparziele", fixed: "Fixkosten", costgroups: "Kostenrechner" };
 
 export default function AppToolbar({
   books,

@@ -12,6 +12,7 @@ import TrendView from "./features/TrendView.jsx";
 import PotsView from "./features/PotsView.jsx";
 import GoalsView from "./features/GoalsView.jsx";
 import FixedCostsView from "./features/FixedCostsView.jsx";
+import CostGroupsView from "./features/CostGroupsView.jsx";
 import NavDrawer from "./features/NavDrawer.jsx";
 import EditEntryDialog from "./features/EditEntryDialog.jsx";
 import AppToolbar from "./features/AppToolbar.jsx";
@@ -35,7 +36,7 @@ import { useAppSettings } from "./hooks/useAppSettings.js";
 import { useUpdateManager } from "./hooks/useUpdateManager.js";
 import { useEntryActions } from "./hooks/useEntryActions.js";
 
-const VIEW_LABELS = { trend: "Trend", pots: "Töpfe", goals: "Sparziele", fixed: "Fixkosten" };
+const VIEW_LABELS = { trend: "Trend", pots: "Töpfe", goals: "Sparziele", fixed: "Fixkosten", costgroups: "Kostenrechner" };
 
 export default function HaushaltsbuchApp() {
   const toast = useToast();
@@ -271,7 +272,7 @@ export default function HaushaltsbuchApp() {
             isViewWithoutMonth={isViewWithoutMonth}
           />
 
-          <ErrorBoundary context={view === "book" ? "Dashboard" : view === "trend" ? "Trend" : view === "pots" ? "Töpfe" : view === "goals" ? "Sparziele" : "Fixkosten"}>
+          <ErrorBoundary context={view === "book" ? "Dashboard" : view === "trend" ? "Trend" : view === "pots" ? "Töpfe" : view === "goals" ? "Sparziele" : view === "costgroups" ? "Kostenrechner" : "Fixkosten"}>
             {view === "trend" ? (
               <TrendView
                 entries={entries}
@@ -307,6 +308,12 @@ export default function HaushaltsbuchApp() {
                 entries={entries}
                 onUpdateBook={updateBook}
                 onAddEntry={entryActions.addTransferEntry}
+              />
+            ) : view === "costgroups" ? (
+              <CostGroupsView
+                activeBook={activeBook}
+                onUpdateBook={updateBook}
+                monthStartDay={monthStartDay}
               />
             ) : (
               <DashboardView

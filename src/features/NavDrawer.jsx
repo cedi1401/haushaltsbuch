@@ -6,6 +6,7 @@ import {
   IconGoals,
   IconFixed,
   IconTrend,
+  IconCostGroups,
 } from "../components/icons.jsx";
 
 const NAV_ITEMS = [
@@ -13,6 +14,7 @@ const NAV_ITEMS = [
   { id: "pots", label: "Töpfe", Icon: IconPots },
   { id: "goals", label: "Sparziele", Icon: IconGoals },
   { id: "fixed", label: "Fixkosten", Icon: IconFixed },
+  { id: "costgroups", label: "Kostenrechner", Icon: IconCostGroups },
   { id: "trend", label: "Trend", Icon: IconTrend },
 ];
 
