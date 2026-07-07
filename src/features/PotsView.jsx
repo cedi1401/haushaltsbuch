@@ -156,13 +156,28 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
     return result.toSorted((a, b) => b.value - a.value);
   }, [entries, selectedPot]);
 
+  // Farbe folgt dem Zweck (Entität), nicht dem aktuellen Wert-Rang. Sonst
+  // repainten sich die Donut-Segmente, sobald sich die Zusammensetzung (und
+  // damit die Sortierung) ändert (recolor-on-filter). Stabile Reihenfolge:
+  // zuerst die kanonische Transfer-Kategorienliste des Buchs, danach unbekannte
+  // Zwecke (z.B. „Sonstiges") alphabetisch angehängt. So behält ein Zweck über
+  // Zeit dieselbe Farbe aus dem Blau-Ramp („alle Transfers eine Familie").
   const transferCatColor = useMemo(() => {
+    const order = [];
+    const seen = new Set();
+    for (const cat of transferCategories || []) {
+      const name = String(cat).trim();
+      if (name && !seen.has(name)) { seen.add(name); order.push(name); }
+    }
+    for (const d of [...transfersByCategory].sort((a, b) => a.name.localeCompare(b.name))) {
+      if (!seen.has(d.name)) { seen.add(d.name); order.push(d.name); }
+    }
     const map = new Map();
-    transfersByCategory.forEach((d, i) => {
-      map.set(d.name, TRANSFER_PALETTE[i % TRANSFER_PALETTE.length]);
+    order.forEach((name, i) => {
+      map.set(name, TRANSFER_PALETTE[i % TRANSFER_PALETTE.length]);
     });
     return map;
-  }, [transfersByCategory]);
+  }, [transferCategories, transfersByCategory]);
 
   // Alle Einzelbuchungen (Transfers + Entnahmen) für den gewählten Topf, optional nach Monat gefiltert
   const potEntries = useMemo(() => {
@@ -291,36 +306,39 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
         </div>
         <div className={`hb-stat-pill ${currentBalance >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
           <div className="hb-stat-pill-label">Aktueller Stand</div>
-          <div className={`hb-stat-pill-value ${currentBalance >= 0 ? "hb-ok" : "hb-bad"}`}>
+          <div className={`hb-stat-pill-value ${currentBalance >= 0 ? "hb-ok" : "hb-bad"}`} style={{ marginTop: 14 }}>
             {fmt(currentBalance)}
-          </div>
-          <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
-            {selectedPot.name}
           </div>
         </div>
 
-        {highlights && potSeries.length > 0 ? (
-          <>
-            <div className="hb-stat-pill hb-stat-pill--ok">
-              <div className="hb-stat-pill-label">Höchste Einzahlung</div>
-              <div className="hb-stat-pill-value hb-ok">
-                +{fmt(highlights.topTransfer.transfersIn)}
-              </div>
-              <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
-                {highlights.topTransfer.label}
-              </div>
+        {/*
+          Highlight-Pills immer rendern — auch bei leerem Topf, damit die KPI-Reihe
+          konsistent 5 Pills zeigt. Ohne Bewegungen fällt der Betrag auf 0 zurück und
+          das Monats-Sublabel entfällt (label-only Pills brauchen marginTop:14, siehe
+          PotsView Pill-Alignment).
+        */}
+        <div className="hb-stat-pill hb-stat-pill--ok">
+          <div className="hb-stat-pill-label">Höchste Einzahlung</div>
+          <div className="hb-stat-pill-value hb-ok" style={highlights ? undefined : { marginTop: 14 }}>
+            +{fmt(highlights ? highlights.topTransfer.transfersIn : 0)}
+          </div>
+          {highlights ? (
+            <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
+              {highlights.topTransfer.label}
             </div>
-            <div className="hb-stat-pill hb-stat-pill--bad">
-              <div className="hb-stat-pill-label">Höchste Entnahme</div>
-              <div className="hb-stat-pill-value hb-bad">
-                -{fmt(highlights.topExpense.expensesOut)}
-              </div>
-              <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
-                {highlights.topExpense.label}
-              </div>
+          ) : null}
+        </div>
+        <div className="hb-stat-pill hb-stat-pill--bad">
+          <div className="hb-stat-pill-label">Höchste Entnahme</div>
+          <div className="hb-stat-pill-value hb-bad" style={highlights ? undefined : { marginTop: 14 }}>
+            -{fmt(highlights ? highlights.topExpense.expensesOut : 0)}
+          </div>
+          {highlights ? (
+            <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
+              {highlights.topExpense.label}
             </div>
-          </>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
       {potSeries.length === 0 ? (
