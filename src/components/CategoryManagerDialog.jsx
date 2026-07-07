@@ -563,30 +563,54 @@ export default function CategoryManagerDialog({
         hideFooter
       >
         <div className="hb-cat-manager">
-          {/* Primäre Tab-Leiste: Kategorien / Transfer-Zwecke */}
-          <div
-            className="hb-segmented hb-segmented--md hb-cat-tabs"
-            role="tablist"
-            aria-label="Kategorie-Bereiche"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "categories"}
-              className={`hb-segmented__item${activeTab === "categories" ? " hb-segmented__item--active" : ""}`}
-              onClick={() => setActiveTab("categories")}
+          {/* Kopfzeile: Tabs links, Filter (Alle/Eigene) rechts daneben */}
+          <div className="hb-cat-tabbar">
+            <div
+              className="hb-segmented hb-segmented--md hb-cat-tabs"
+              role="tablist"
+              aria-label="Kategorie-Bereiche"
             >
-              Kategorien
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "transfer"}
-              className={`hb-segmented__item${activeTab === "transfer" ? " hb-segmented__item--active" : ""}`}
-              onClick={() => setActiveTab("transfer")}
-            >
-              Transfer-Zwecke
-            </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "categories"}
+                className={`hb-segmented__item${activeTab === "categories" ? " hb-segmented__item--active" : ""}`}
+                onClick={() => setActiveTab("categories")}
+              >
+                Kategorien
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "transfer"}
+                className={`hb-segmented__item${activeTab === "transfer" ? " hb-segmented__item--active" : ""}`}
+                onClick={() => setActiveTab("transfer")}
+              >
+                Transfer-Zwecke
+              </button>
+            </div>
+
+            {/* Sekundärer Filter: Alle / Eigene — nur im Kategorien-Tab */}
+            {activeTab === "categories" && (
+              <div className="hb-segmented hb-segmented--md hb-cat-filter-row">
+                <button
+                  type="button"
+                  aria-pressed={filter === "all"}
+                  className={`hb-segmented__item${filter === "all" ? " hb-segmented__item--active" : ""}`}
+                  onClick={() => setFilter("all")}
+                >
+                  Alle Kategorien
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={filter === "custom"}
+                  className={`hb-segmented__item${filter === "custom" ? " hb-segmented__item--active" : ""}`}
+                  onClick={() => setFilter("custom")}
+                >
+                  Eigene Kategorien
+                </button>
+              </div>
+            )}
           </div>
 
           {activeTab === "categories" ? (
@@ -609,26 +633,6 @@ export default function CategoryManagerDialog({
                 </Button>
               </div>
 
-              {/* Sekundärer Filter: Alle / Eigene */}
-              <div className="hb-segmented hb-segmented--sm hb-cat-filter-row">
-                <button
-                  type="button"
-                  aria-pressed={filter === "all"}
-                  className={`hb-segmented__item${filter === "all" ? " hb-segmented__item--active" : ""}`}
-                  onClick={() => setFilter("all")}
-                >
-                  Alle Kategorien
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={filter === "custom"}
-                  className={`hb-segmented__item${filter === "custom" ? " hb-segmented__item--active" : ""}`}
-                  onClick={() => setFilter("custom")}
-                >
-                  Eigene Kategorien
-                </button>
-              </div>
-
               {/* Kategorie-Liste */}
               <div className="hb-cat-list">
                 {allExpense.length === 0 && allIncome.length === 0 && (
@@ -637,23 +641,23 @@ export default function CategoryManagerDialog({
                   </div>
                 )}
 
+                {hasIncome && (
+                  <>
+                    <div className="hb-label" style={{ padding: "6px 0 4px" }}>
+                      Einnahmen
+                    </div>
+                    {renderCategoryList(allIncome, false)}
+                  </>
+                )}
+
                 {allExpense.length > 0 && (
                   <>
                     {hasIncome && (
-                      <div className="hb-label" style={{ padding: "6px 0 4px" }}>
+                      <div className="hb-label" style={{ padding: "12px 0 4px" }}>
                         Ausgaben
                       </div>
                     )}
                     {renderCategoryList(allExpense, true)}
-                  </>
-                )}
-
-                {hasIncome && (
-                  <>
-                    <div className="hb-label" style={{ padding: "12px 0 4px" }}>
-                      Einnahmen
-                    </div>
-                    {renderCategoryList(allIncome, false)}
                   </>
                 )}
               </div>

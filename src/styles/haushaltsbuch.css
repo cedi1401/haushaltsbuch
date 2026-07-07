@@ -2999,6 +2999,11 @@ select.hb-input option {
   align-items: center;
 }
 
+/* „+ Neue Kategorie"-Button auf die Höhe des Suchfelds daneben strecken */
+.hb-cat-manager-header .hb-btn {
+  align-self: stretch;
+}
+
 .hb-search-field {
   position: relative;
   flex: 1;
@@ -3023,14 +3028,19 @@ select.hb-input option {
   min-width: 0;
 }
 
-/* Primäre Tab-Leiste (Kategorien / Transfer-Zwecke): linksbündig, nicht gestreckt */
-.hb-cat-tabs {
-  align-self: flex-start;
+/* Kopfzeile: Tabs (Kategorien / Transfer-Zwecke) links, Filter (Alle / Eigene) rechts */
+.hb-cat-tabbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-/* Sekundärer Filter (Alle / Eigene): linksbündig unter dem Kategorien-Header */
+/* Primäre Tab-Leiste und sekundärer Filter: nicht gestreckt */
+.hb-cat-tabs,
 .hb-cat-filter-row {
-  align-self: flex-start;
+  flex: 0 0 auto;
 }
 
 /* Transfer-Zwecke-Tab */
