@@ -34,18 +34,22 @@ export const CUSTOM_CATEGORY_PALETTE = [
   "#455a64", // Blaugrau
 ];
 
-// Sequenzielle Blau-Palette für Transfer-Kategorien im Topf-Donut-Chart.
-// Gleiche Farbfamilie → kommuniziert visuell „alle Transfers derselben Natur".
-// Sortiert von dunkel → hell: größte Position = dunkelste Farbe, kleinste = hellste.
+// Blau-Palette für Transfer-Kategorien im Topf-Donut-Chart. Gleiche Farbfamilie
+// (Hue ≈208°) → kommuniziert visuell „alle Transfers derselben Natur". Die
+// Zuweisung erfolgt stabil nach Zweck-Key (siehe PotsView), nicht nach Wert-Rang.
+// Monoton gespreizt (dunkel → hell) mit gleichmäßigen Lightness-Abständen, damit
+// benachbarte Zwecke auch bei vielen Kategorien unterscheidbar bleiben; die hellen
+// Stufen kontrastieren schwach mit weißer Fläche, was im Donut durch die stets
+// vorhandene Legende/Beschriftung (Secondary Encoding) aufgefangen wird.
 export const TRANSFER_PALETTE = [
-  "#1e5fa0", // L≈37%
-  "#2d6a9f", // L≈40%
-  "#3a7cb8", // L≈48%
-  "#52a3cc", // L≈56%
-  "#4a90d9", // L≈57%
-  "#6cbdf0", // L≈68%
-  "#7ec8e3", // L≈69%
-  "#8db4d4", // L≈69%
+  "#215583", // L≈32%
+  "#27669c", // L≈38%
+  "#2d76b6", // L≈44%
+  "#3687cd", // L≈51%
+  "#5096d3", // L≈57%
+  "#6aa5da", // L≈63%
+  "#83b5e0", // L≈70%
+  "#9dc4e7", // L≈76%
 ];
 
 // Specific colors for income/expense charts

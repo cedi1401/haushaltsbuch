@@ -5,12 +5,11 @@ import { IconInbox } from "../../components/icons.jsx";
 function MomDelta({ momDelta, fontSize }) {
   const style = fontSize ? { fontSize } : undefined;
   if (!momDelta) return <span className="hb-insight-mom hb-insight-mom--flat" style={style}>–</span>;
-  const arrow = momDelta.dir === "up" ? "↑" : momDelta.dir === "down" ? "↓"
-    : <span style={{ display: "inline-block", transform: "rotate(-90deg)" }}>↓</span>;
-  const sign = momDelta.dir === "up" ? "+" : momDelta.dir === "down" ? "" : "";
+  const arrow = momDelta.dir === "up" ? "▲" : momDelta.dir === "down" ? "▼" : "";
+  const sign = momDelta.dir === "up" ? "+" : "";
   return (
     <span className={`hb-insight-mom hb-insight-mom--${momDelta.dir}`} style={style}>
-      {arrow} {sign}{Math.abs(momDelta.pct).toFixed(0)}%
+      {arrow ? `${arrow} ` : ""}{sign}{Math.abs(momDelta.pct).toFixed(0)}%
     </span>
   );
 }
@@ -42,7 +41,10 @@ const OverviewCard = memo(function OverviewCard({ analytics }) {
                   <span className="hb-insight-cat-amt">{fmt(cat.value)}</span>
                   <MomDelta momDelta={cat.momDelta} fontSize={14} />
                 </div>
-                <div className="hb-insight-bar-track">
+                <div
+                  className="hb-insight-bar-track"
+                  style={cat.color ? { background: `${cat.color}24` } : undefined}
+                >
                   <div
                     className="hb-insight-bar-fill"
                     style={{ "--w": `${cat.pct}%`, "--c": cat.color || "var(--accent)" }}
