@@ -84,7 +84,7 @@ export function calcBudgetStatus(filteredEntries, expenseCategories) {
  * @param {boolean} [opts.includeBudget] - wenn true, wird `budget` ins Result übernommen
  * @returns {Array}
  */
-function calcByHierarchy(entries, categories, month, monthStartDay, { entryFilter, fallbackCategoryId, includeBudget = false }) {
+function calcByHierarchy(entries, categories, month, monthStartDay, { entryFilter, fallbackCategoryId, fallbackName = "Unkategorisiert", fallbackColor = "#6b6b6b", includeBudget = false }) {
   const topMap = new Map();
   const validCategoryIds = new Set((categories || []).map((c) => c.id));
 
@@ -156,6 +156,25 @@ function calcByHierarchy(entries, categories, month, monthStartDay, { entryFilte
     };
     if (includeBudget) item.budget = cat.budget || null;
     result.push(item);
+  }
+
+  // Fallback-Bucket (fehlende/ungültige Kategorie) synthetisieren, falls die
+  // Fallback-Kategorie nicht (mehr) als echte Kategorie in der Liste existiert
+  // (z.B. die ausgemusterte "Unkategorisiert"-Oberkategorie).
+  if (!validCategoryIds.has(fallbackCategoryId)) {
+    const fbData = topMap.get(fallbackCategoryId);
+    if (fbData && fbData.value > 0) {
+      const item = {
+        id: fallbackCategoryId,
+        name: fallbackName,
+        color: fallbackColor,
+        value: fbData.value,
+        entryCount: fbData.entryCount,
+        subcategories: [],
+      };
+      if (includeBudget) item.budget = null;
+      result.push(item);
+    }
   }
 
   return result.sort((a, b) => b.value - a.value);

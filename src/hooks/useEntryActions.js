@@ -18,7 +18,7 @@ const INITIAL_ADD_DRAFT = {
   potId: "",
   note: "",
   date: "",
-  categoryId: "cat_unkategorisiert",
+  categoryId: null,
   subcategoryId: null,
 };
 
@@ -41,7 +41,7 @@ const INITIAL_EDIT_DRAFT = {
 function applyKindToDraft(draft, kind, transferCategories) {
   const next = { ...draft, kind };
   if (kind === "expense") {
-    next.categoryId = "cat_unkategorisiert";
+    next.categoryId = null;
     next.subcategoryId = null;
     // legacy `category` is derived from categoryId in buildEntry — no sync needed
   } else if (kind === "income") {

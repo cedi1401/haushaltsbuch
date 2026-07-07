@@ -208,11 +208,12 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
       { id: "sub_immobilienkredit", name: "Immobilienkredit", parentId: "cat_wohnen", isDefault: true },
       { id: "sub_haushaltsdienstleistungen", name: "Haushaltsdienstleistungen", parentId: "cat_wohnen", isDefault: true },
       { id: "sub_moebel_haushaltsgeraete", name: "Möbel und Haushaltsgeräte", parentId: "cat_wohnen", isDefault: true },
-      { id: "sub_miete_wohngeld", name: "Miete / Wohngeld", parentId: "cat_wohnen", isDefault: true },
+      { id: "sub_miete_wohngeld", name: "Miete", parentId: "cat_wohnen", isDefault: true },
       { id: "sub_heimwerken_garten", name: "Heimwerken und Garten", parentId: "cat_wohnen", isDefault: true },
       { id: "sub_strom", name: "Strom", parentId: "cat_wohnen", isDefault: true },
       { id: "sub_gas", name: "Gas", parentId: "cat_wohnen", isDefault: true },
-      { id: "sub_oel", name: "Öl", parentId: "cat_wohnen", isDefault: true },
+      { id: "sub_oel", name: "Heizöl", parentId: "cat_wohnen", isDefault: true },
+      { id: "sub_wasser", name: "Wasser und Abwasser", parentId: "cat_wohnen", isDefault: true },
     ],
   },
   {
@@ -263,6 +264,7 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
       { id: "sub_buecher_zeitungen", name: "Bücher / Zeitungen / Zeitschriften", parentId: "cat_shopping", isDefault: true },
       { id: "sub_tv_video_musik", name: "TV / Video / Musik", parentId: "cat_shopping", isDefault: true },
       { id: "sub_bekleidung_schuhe", name: "Bekleidung / Schuhe / Accessoires", parentId: "cat_shopping", isDefault: true },
+      { id: "sub_elektronik", name: "Elektronik und Technik", parentId: "cat_shopping", isDefault: true },
       { id: "sub_geschenke", name: "Geschenke", parentId: "cat_shopping", isDefault: true },
     ],
   },
@@ -276,7 +278,7 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
     subcategories: [
       { id: "sub_hotel_unterkunft", name: "Hotel und Unterkunft", parentId: "cat_reisen", isDefault: true },
       { id: "sub_pauschalreise", name: "Pauschalreise", parentId: "cat_reisen", isDefault: true },
-      { id: "sub_reise_transport", name: "Transport", parentId: "cat_reisen", isDefault: true },
+      { id: "sub_reise_transport", name: "An- und Abreise", parentId: "cat_reisen", isDefault: true },
     ],
   },
   {
@@ -287,10 +289,13 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
     isDefault: true,
     budget: null,
     subcategories: [
-      { id: "sub_kfz_versicherung", name: "KFZ-Versicherung", parentId: "cat_mobilitaet", isDefault: true },
-      { id: "sub_tanken", name: "Tanken", parentId: "cat_mobilitaet", isDefault: true },
-      { id: "sub_kfz_kredit", name: "KFZ-Kredit / Leasingrate / KFZ-Kauf", parentId: "cat_mobilitaet", isDefault: true },
-      { id: "sub_kfz_sonstige", name: "KFZ Sonstige", parentId: "cat_mobilitaet", isDefault: true },
+      { id: "sub_kfz_versicherung", name: "Autoversicherung", parentId: "cat_mobilitaet", isDefault: true },
+      { id: "sub_tanken", name: "Tanken / Laden", parentId: "cat_mobilitaet", isDefault: true },
+      { id: "sub_kfz_kredit", name: "Autokredit / Leasing / Autokauf", parentId: "cat_mobilitaet", isDefault: true },
+      { id: "sub_werkstatt", name: "Werkstatt / Reparatur / Wartung", parentId: "cat_mobilitaet", isDefault: true },
+      { id: "sub_kfz_sonstige", name: "Auto Sonstiges", parentId: "cat_mobilitaet", isDefault: true },
+      { id: "sub_parken", name: "Parken", parentId: "cat_mobilitaet", isDefault: true },
+      { id: "sub_oepnv", name: "ÖPNV / Bahn / Ticket", parentId: "cat_mobilitaet", isDefault: true },
     ],
   },
   {
@@ -305,7 +310,6 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
       { id: "sub_festnetz_internet", name: "Festnetz und Internet", parentId: "cat_lebenshaltung", isDefault: true },
       { id: "sub_handy", name: "Handy", parentId: "cat_lebenshaltung", isDefault: true },
       { id: "sub_lebensmittel_zuhause", name: "Lebensmittel zu Hause", parentId: "cat_lebenshaltung", isDefault: true },
-      { id: "sub_lebensmittel_auswaerts", name: "Lebensmittel auswärts", parentId: "cat_lebenshaltung", isDefault: true },
       { id: "sub_haustierbedarf", name: "Haustierbedarf", parentId: "cat_lebenshaltung", isDefault: true },
       { id: "sub_haushaltsbedarf", name: "Haushaltsbedarf", parentId: "cat_lebenshaltung", isDefault: true },
     ],
@@ -365,13 +369,30 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
     ],
   },
   {
-    id: "cat_unkategorisiert",
-    name: "Unkategorisiert",
-    color: "#6b6b6b",
+    id: "cat_steuern",
+    name: "Steuern und Abgaben",
+    color: "#8e562e",
     type: "expense",
     isDefault: true,
     budget: null,
-    subcategories: [],
+    subcategories: [
+      { id: "sub_steuern", name: "Steuern", parentId: "cat_steuern", isDefault: true },
+      { id: "sub_rundfunk", name: "Rundfunkbeitrag", parentId: "cat_steuern", isDefault: true },
+      { id: "sub_gebuehren_abgaben", name: "Gebühren und Abgaben", parentId: "cat_steuern", isDefault: true },
+    ],
+  },
+  {
+    id: "cat_bildung",
+    name: "Bildung und Weiterbildung",
+    color: "#00b7c3",
+    type: "expense",
+    isDefault: true,
+    budget: null,
+    subcategories: [
+      { id: "sub_schule_ausbildung", name: "Schule und Ausbildung", parentId: "cat_bildung", isDefault: true },
+      { id: "sub_weiterbildung", name: "Weiterbildung und Kurse", parentId: "cat_bildung", isDefault: true },
+      { id: "sub_studiengebuehren", name: "Studiengebühren", parentId: "cat_bildung", isDefault: true },
+    ],
   },
 ];
 
@@ -385,11 +406,14 @@ export const DEFAULT_INCOME_CATEGORIES = [
     budget: null,
     subcategories: [
       { id: "sub_gehalt", name: "Gehalt", parentId: "cat_einnahmen", isDefault: true },
-      { id: "sub_kapitaleinkommen", name: "Kapitaleinkommen", parentId: "cat_einnahmen", isDefault: true },
+      { id: "sub_nebentaetigkeit", name: "Nebentätigkeit und Selbstständigkeit", parentId: "cat_einnahmen", isDefault: true },
+      { id: "sub_kapitaleinkommen", name: "Kapitalerträge", parentId: "cat_einnahmen", isDefault: true },
       { id: "sub_mieteinnahmen", name: "Mieteinnahmen", parentId: "cat_einnahmen", isDefault: true },
       { id: "sub_rente_pension", name: "Rente und Pension", parentId: "cat_einnahmen", isDefault: true },
       { id: "sub_staatliche_leistung", name: "Staatliche Leistung und Förderung", parentId: "cat_einnahmen", isDefault: true },
       { id: "sub_unterhalt_einnahme", name: "Unterhalt", parentId: "cat_einnahmen", isDefault: true },
+      { id: "sub_erstattungen", name: "Erstattungen und Rückzahlungen", parentId: "cat_einnahmen", isDefault: true },
+      { id: "sub_verkaufserloese", name: "Verkaufserlöse", parentId: "cat_einnahmen", isDefault: true },
       { id: "sub_bareinzahlung", name: "Bareinzahlung", parentId: "cat_einnahmen", isDefault: true },
     ],
   },
@@ -447,15 +471,19 @@ const REMOVED_SUB_MAP = new Map([
   ["sub_festgeld_tagesgeld", { categoryId: "cat_sparen", subcategoryId: null }],
   ["sub_private_rente", { categoryId: "cat_sparen", subcategoryId: null }],
   ["sub_kapitallebensversicherung", { categoryId: "cat_sparen", subcategoryId: null }],
-  ["sub_elektronik_software", { categoryId: "cat_shopping", subcategoryId: null }],
   ["sub_bueromaterial", { categoryId: "cat_shopping", subcategoryId: null }],
-  ["sub_taxi_oepnv", { categoryId: "cat_mobilitaet", subcategoryId: null }],
   ["sub_kontentransfer", { categoryId: "cat_bank", subcategoryId: null }],
   // Umbenannte IDs (alte ID → neue ID)
   ["sub_lebensmittel_getraenke", { categoryId: "cat_lebenshaltung", subcategoryId: "sub_lebensmittel_zuhause" }],
   ["sub_haustier", { categoryId: "cat_lebenshaltung", subcategoryId: "sub_haustierbedarf" }],
   ["sub_kirche_spende", { categoryId: "cat_freizeit", subcategoryId: "sub_spenden" }],
   ["sub_kredittilgung", { categoryId: "cat_bank", subcategoryId: "sub_tilgung" }],
+  ["sub_elektronik_software", { categoryId: "cat_shopping", subcategoryId: "sub_elektronik" }],
+  ["sub_taxi_oepnv", { categoryId: "cat_mobilitaet", subcategoryId: "sub_oepnv" }],
+  // Entfernt: "Lebensmittel auswärts" → zusammengeführt mit "Restaurant / Cafe / Bar"
+  ["sub_lebensmittel_auswaerts", { categoryId: "cat_freizeit", subcategoryId: "sub_restaurant_cafe" }],
+  // Entfernt: "Kirchensteuer" → auf die allgemeine Unterkategorie "Steuern" zusammengeführt
+  ["sub_kirchensteuer", { categoryId: "cat_steuern", subcategoryId: "sub_steuern" }],
 ]);
 
 // Bekannte Mappings: alter Kategoriename (lowercase) → neue categoryId + subcategoryId
@@ -788,6 +816,13 @@ export function normalizeBook(book) {
     normalized.expenseCategories = syncDefaultCategoryColors(
       normalized.expenseCategories,
       DEFAULT_EXPENSE_CATEGORIES
+    );
+    // Ausgemusterte Default-Oberkategorie "Unkategorisiert" aus bestehenden
+    // Büchern entfernen. Sie bleibt als virtueller Fallback-Bucket in der
+    // Auswertung erhalten (siehe calcByHierarchy). Nur entfernen, wenn keine
+    // benutzerdefinierten Unterkategorien daran hängen.
+    normalized.expenseCategories = normalized.expenseCategories.filter(
+      (c) => c.id !== "cat_unkategorisiert" || (c.subcategories || []).some((s) => !s.isDefault)
     );
     if (!Array.isArray(normalized.incomeCategories)) {
       normalized.incomeCategories = DEFAULT_INCOME_CATEGORIES.map((c) => ({
