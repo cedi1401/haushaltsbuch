@@ -480,10 +480,10 @@ export default function GoalsView({
                   <div className="hb-goal-success-wrap">
                     <div className="hb-goal-success-row">
                       <div className="hb-goal-success">
-                        <IconCheck /> Ziel erreicht! Herzlichen Glückwunsch!
+                        Ziel erreicht! Herzlichen Glückwunsch!
                       </div>
                       <Button variant="outline" size="sm" onClick={() => archiveGoal(goal)}>
-                        <IconCheck /> Abschliessen
+                        <IconCheck strokeWidth={3} /> Abschliessen
                       </Button>
                     </div>
                   </div>
@@ -519,7 +519,7 @@ export default function GoalsView({
                             <h3 className="hb-goal-title">{goal.name}</h3>
                             <div className="hb-goal-badges">
                               <span className="hb-goal-badge hb-goal-badge--done">
-                                <IconCheck /> Erreicht am {formatDate(goal.completedAt)}
+                                Erreicht am {formatDate(goal.completedAt)}
                               </span>
                               <span className="hb-goal-badge">Topf: {getPotName(goal)}</span>
                               {goal.transferCategory && (

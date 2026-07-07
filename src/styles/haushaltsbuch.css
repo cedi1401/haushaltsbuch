@@ -2329,8 +2329,8 @@ select.hb-input option {
   background: var(--green-soft);
   border-radius: var(--radius-md);
   color: var(--green);
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 500;
+  font-size: 15px;
   /* Translucent statt voll gesättigter Border — ruhiger, Fluent-typischer
      Chip, der den grünen Akzent trotzdem klar trägt. */
   border: 1px solid var(--green-border);
