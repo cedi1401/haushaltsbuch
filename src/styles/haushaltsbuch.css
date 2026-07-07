@@ -1064,20 +1064,26 @@ select.hb-input option {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
-  transition: border-color var(--transition-fast);
 }
 
-.hb-stat-pill:hover {
-  border-top-color: var(--reveal-border);
-  border-right-color: var(--reveal-border);
-  border-bottom-color: var(--reveal-border);
-}
+/* KPI-Pills sind reine Anzeigen (nicht klickbar) → kein Hover-Highlight,
+   damit sie nicht fälschlich interaktiv wirken. */
 
 .hb-stat-pill--ok       { border-left: 3px solid var(--green); }
 .hb-stat-pill--bad      { border-left: 3px solid var(--red); }
 .hb-stat-pill--transfer { border-left: 3px solid var(--blue); }
 .hb-stat-pill--accent   { border-left: 3px solid var(--accent); }
 
+
+/* Kopfzeile der Pill: Label links, Graph-Icon (Sparkline-Hover) rechts.
+   min-height hält die Wert-Zeilen bündig, falls einzelne Pills ohne Icon rendern. */
+.hb-stat-pill-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 19px;
+}
 
 .hb-stat-pill-label {
   font-size: 11px;
@@ -1104,6 +1110,24 @@ select.hb-input option {
   margin-top: 1px;
 }
 
+/* Vormonatsdelta: signierte Veränderung ggü. Vormonat. Farbe = Richtung ×
+   Bewertung (via inline style), Pfeil trägt die Richtung, Wert in tabular-nums. */
+.hb-stat-pill-delta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.hb-stat-pill-delta-note {
+  color: var(--muted);
+  font-weight: 500;
+}
+
 .hb-stat-pill-gauge-track {
   height: 3px;
   background: var(--border-light);
@@ -1120,6 +1144,18 @@ select.hb-input option {
   height: 100%;
   border-radius: var(--radius-xs);
   transition: width 0.4s ease;
+}
+
+/* Meter-Track in der Hue des Fills tönen (Hue-auf-Hue statt neutralem Grau) —
+   die Pill-Modifier tragen die passende Semantik-Farbe des Fills. */
+.hb-stat-pill--accent .hb-stat-pill-gauge-track {
+  background: color-mix(in srgb, var(--accent) 20%, var(--border-light));
+}
+.hb-stat-pill--ok .hb-stat-pill-gauge-track {
+  background: color-mix(in srgb, var(--green) 20%, var(--border-light));
+}
+.hb-stat-pill--bad .hb-stat-pill-gauge-track {
+  background: color-mix(in srgb, var(--red) 20%, var(--border-light));
 }
 
 /* =====================================================
