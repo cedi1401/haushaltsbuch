@@ -160,7 +160,7 @@ export default function SettingsDialog({
                     Version <strong>v{update.available.version}</strong> verfügbar
                   </span>
                   <Button variant="outline" onClick={update.download}>
-                    Herunterladen
+                    {update.manualDownload ? "Auf GitHub herunterladen" : "Herunterladen"}
                   </Button>
                 </>
               )}

@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Updates
   checkForUpdates: () => ipcRenderer.invoke('updates:check'),
   downloadUpdate: () => ipcRenderer.invoke('updates:download'),
+  openReleasesPage: () => ipcRenderer.invoke('updates:openReleasesPage'),
   getDownloadedUpdate: () => ipcRenderer.invoke('updates:getDownloaded'),
   installUpdate: () => ipcRenderer.invoke('updates:install'),
   onUpdateAvailable: (callback) => {
@@ -38,4 +39,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Platform info
   isElectron: true,
+  platform: process.platform,
 });

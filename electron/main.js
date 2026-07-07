@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, session } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, session, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -265,6 +265,14 @@ function registerIpcHandlers() {
 
   ipcMain.handle('updates:install', () => {
     autoUpdater.quitAndInstall();
+  });
+
+  // macOS cannot auto-update without a signed/notarized build (Squirrel.Mac
+  // requires a valid code signature). Instead of a download that would always
+  // fail there, the renderer sends the user to the GitHub releases page to grab
+  // the new .dmg manually.
+  ipcMain.handle('updates:openReleasesPage', () => {
+    return shell.openExternal('https://github.com/cedi1401/haushaltsbuch/releases');
   });
 
   // Forward update events to renderer

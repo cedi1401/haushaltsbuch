@@ -202,7 +202,11 @@ export default function HaushaltsbuchApp() {
               </div>
               <div className="hb-infobar-actions">
                 <Button onClick={update.download} disabled={update.downloading}>
-                  {update.downloading ? "Wird heruntergeladen…" : "Herunterladen"}
+                  {update.downloading
+                    ? "Wird heruntergeladen…"
+                    : update.manualDownload
+                    ? "Auf GitHub herunterladen"
+                    : "Herunterladen"}
                 </Button>
                 <button
                   type="button"

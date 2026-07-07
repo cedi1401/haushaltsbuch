@@ -13,6 +13,12 @@ const log = makeLogger("useUpdateManager");
  * Must be invoked exactly once (in HaushaltsbuchApp); the result is shared with
  * SettingsDialog via props.
  */
+// macOS builds are unsigned, so electron-updater cannot apply downloads there
+// (Squirrel.Mac rejects unsigned packages). On macOS we therefore skip the
+// auto-download entirely and send the user to the GitHub releases page to
+// install the new .dmg by hand. Windows keeps the real in-app auto-update.
+const isMac = typeof window !== "undefined" && window.electronAPI?.platform === "darwin";
+
 export function useUpdateManager() {
   const toast = useToast();
 
@@ -60,6 +66,17 @@ export function useUpdateManager() {
 
   const download = useCallback(async () => {
     const api = window.electronAPI;
+    // On macOS, open the releases page in the browser instead of downloading
+    // in-app (unsigned builds can't be auto-updated).
+    if (isMac) {
+      try {
+        await api?.openReleasesPage?.();
+      } catch (err) {
+        log.error("Releases-Seite konnte nicht geöffnet werden", err);
+        toast.error("Releases-Seite konnte nicht geöffnet werden.");
+      }
+      return;
+    }
     if (!api?.downloadUpdate) return;
     setDownloading(true);
     try {
@@ -90,5 +107,8 @@ export function useUpdateManager() {
     available, ready, downloading, checkStatus,
     checkForUpdates, download, install,
     dismissAvailable, dismissReady,
+    // true on macOS: `download` opens the GitHub releases page rather than
+    // fetching the update in-app, so the UI can adjust its button label.
+    manualDownload: isMac,
   };
 }
