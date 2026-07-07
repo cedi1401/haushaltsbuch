@@ -334,8 +334,22 @@ button, input, select, textarea {
   overflow: visible;
 }
 
-/* WinUI-3 Reveal Highlight: subtle accent border + outline on hover */
+/* Cards sind standardmässig reine Container (nicht klickbar) → nur ein sehr
+   dezenter Border-Wechsel beim Hover, damit sie NICHT interaktiv wirken.
+   Der auffällige WinUI-3 Reveal-Highlight ist bewusst an die explizite
+   Interaktiv-Markierung .hb-card--interactive gebunden (siehe unten), damit
+   Auffälligkeit = Interaktivität signalisiert. */
 .hb-card:hover {
+  border-color: var(--border);
+}
+
+/* WinUI-3 Reveal Highlight: nur für klickbare Cards (führen zu Drilldown,
+   öffnen Dialog, lösen Aktion aus). Explizit per Modifier markieren. */
+.hb-card--interactive {
+  cursor: pointer;
+}
+
+.hb-card--interactive:hover {
   box-shadow: var(--shadow-md);
   border-color: var(--reveal-border);
   outline: 1px solid var(--accent-soft);
