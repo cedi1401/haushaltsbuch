@@ -4483,6 +4483,74 @@ select.hb-input option {
   .hb-tooltip-bubble { animation: none; }
 }
 
+/* ── KPI-Sparkline-Hover ──────────────────────────────────────────────────
+   Kleines Graph-Icon in einer KPI-Karte; bei Hover/Fokus klappt eine
+   Mini-Sparkline als überlappendes, fixed positioniertes Panel auf, ohne die
+   Kartenhöhe zu verändern. Vgl. HbSparklineHover.jsx. */
+.hb-spark-hover {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.hb-spark-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.hb-spark-trigger:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.hb-spark-trigger:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+  color: var(--accent);
+}
+
+.hb-spark-panel {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  animation: hb-spark-in 0.12s var(--ease-decelerate);
+}
+
+.hb-spark-caption {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.hb-spark-chart {
+  flex: 1;
+  min-height: 0;
+}
+
+@keyframes hb-spark-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-spark-panel { animation: none; }
+}
+
 /* Trend pill (z.B. "+12% vs. Vormonat") */
 .hb-trend-pill {
   display: inline-flex;
