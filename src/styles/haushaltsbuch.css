@@ -2444,24 +2444,16 @@ select.hb-input option {
 }
 
 
-/* Neue Gruppe anlegen */
-.hb-fixed-group-create {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  align-items: center;
-}
-
-.hb-fixed-group-create .hb-input {
-  flex: 1;
-  max-width: 320px;
-}
-
 /* Gruppen-Container */
 .hb-fixed-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
+  /* 2-Spalten-Grid, zeilenweise befüllt: Gruppe 1 links, 2 rechts,
+     3 startet links in der nächsten Zeile usw.
+     align-items: start → jede Gruppe behält ihre Eigenhöhe,
+     Zeilen dürfen unterschiedlich hoch sein. */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 28px 24px;
 }
 
 /* Einzelne Gruppe */
@@ -2469,6 +2461,7 @@ select.hb-input option {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
 }
 
 /* Gruppen-Header */
@@ -2625,8 +2618,21 @@ select.hb-input option {
   min-width: 0;
 }
 
+/* Titelzeile: Name + Betrag als zusammengehöriges Paar */
+.hb-fixed-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
 .hb-fixed-name {
-  font-size: 18px;
+  /* füllt die Zeile → Betrag rechtsbündig; lange Namen werden gekürzt */
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 16px;
   font-weight: 700;
   margin: 0;
   color: var(--text);
@@ -2634,10 +2640,11 @@ select.hb-input option {
 }
 
 .hb-fixed-amount {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
   white-space: nowrap;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .hb-fixed-actions {
@@ -2826,6 +2833,10 @@ select.hb-input option {
 }
 
 @media (max-width: 640px) {
+  .hb-fixed-groups {
+    grid-template-columns: 1fr;
+  }
+
   .hb-fixed-toolbar {
     flex-direction: column;
     align-items: stretch;
@@ -2833,14 +2844,6 @@ select.hb-input option {
 
   .hb-fixed-toolbar-actions {
     justify-content: flex-end;
-  }
-
-  .hb-fixed-top {
-    flex-wrap: wrap;
-  }
-
-  .hb-fixed-amount {
-    font-size: 18px;
   }
 
   .hb-fixed-actions {

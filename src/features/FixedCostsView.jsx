@@ -46,6 +46,7 @@ export default function FixedCostsView({
   // Gruppen-Verwaltung
   const [renamingGroupId, setRenamingGroupId] = useState(null);
   const [groupNameDraft, setGroupNameDraft] = useState("");
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
 
   // Drag & Drop
   const [draggingId, setDraggingId] = useState(null);
@@ -95,7 +96,7 @@ export default function FixedCostsView({
     const newGroup = { id: generateId("fcg"), name, order: maxOrder + 1 };
     onUpdateBook({ ...activeBook, fixedCostGroups: [...fixedCostGroups, newGroup] });
     setGroupNameDraft("");
-    setRenamingGroupId(null);
+    setGroupDialogOpen(false);
   }
 
   function renameGroup(groupId, newName) {
@@ -388,7 +389,10 @@ export default function FixedCostsView({
               <div className="hb-fixed-body">
                 <div className="hb-fixed-top">
                   <div className="hb-fixed-info">
-                    <h3 className="hb-fixed-name">{item.name}</h3>
+                    <div className="hb-fixed-title-row">
+                      <h3 className="hb-fixed-name">{item.name}</h3>
+                      <div className="hb-fixed-amount hb-bad">-{fmt(item.amount)}</div>
+                    </div>
                     <div className="hb-fixed-pills">
                       <span
                         className={
@@ -403,7 +407,6 @@ export default function FixedCostsView({
                       {renderTagPills(item)}
                     </div>
                   </div>
-                  <div className="hb-fixed-amount hb-bad">-{fmt(item.amount)}</div>
                 </div>
                 <div className="hb-fixed-actions">
                   <Button size="sm" onClick={() => bookNow(item)}>Jetzt buchen</Button>
@@ -433,7 +436,7 @@ export default function FixedCostsView({
         <div className="hb-fixed-toolbar-actions">
           <Button
             variant="outline"
-            onClick={() => { setRenamingGroupId("__new__"); setGroupNameDraft(""); }}
+            onClick={() => { setGroupNameDraft(""); setGroupDialogOpen(true); }}
           >
             <IconPlus /> Gruppe
           </Button>
@@ -444,23 +447,27 @@ export default function FixedCostsView({
       </div>
 
       {/* Neue Gruppe anlegen */}
-      {renamingGroupId === "__new__" && (
-        <div className="hb-fixed-group-create">
+      <EditDialog
+        open={groupDialogOpen}
+        title="Neue Gruppe"
+        onClose={() => setGroupDialogOpen(false)}
+        onSave={createGroup}
+        canSave={!!groupNameDraft.trim()}
+        saveLabel="Anlegen"
+      >
+        <div className="hb-field">
+          <div className="hb-label">Gruppenname</div>
           <input
             className="hb-input"
-            autoFocus
-            placeholder="Gruppenname (z.B. Wohnen, Abos)"
+            style={{ width: "100%", minWidth: 0 }}
+            type="text"
+            placeholder="z.B. Wohnen, Abos"
             value={groupNameDraft}
             onChange={(e) => setGroupNameDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") createGroup();
-              if (e.key === "Escape") setRenamingGroupId(null);
-            }}
+            onKeyDown={(e) => { if (e.key === "Enter" && groupNameDraft.trim()) createGroup(); }}
           />
-          <Button onClick={createGroup} disabled={!groupNameDraft.trim()}>Anlegen</Button>
-          <Button variant="outline" onClick={() => setRenamingGroupId(null)}>Abbrechen</Button>
         </div>
-      )}
+      </EditDialog>
 
       {/* Empty State */}
       {isEmpty ? (
