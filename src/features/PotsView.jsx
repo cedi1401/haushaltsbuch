@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import PotsManager from "./PotsManager.jsx";
@@ -26,6 +26,7 @@ import { formatYearMonth } from "../utils/financialMonthUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useThemeColors } from "../hooks/useThemeColors.jsx";
 import { useCardBg } from "../hooks/useCardBg.js";
+import { useClickOutside } from "../hooks/useClickOutside.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import {
   IconEdit,
@@ -33,6 +34,7 @@ import {
   IconPots,
   IconPlus,
   IconInbox,
+  IconCheck,
 } from "../components/icons.jsx";
 
 const fmtYearMonth = formatYearMonth;
@@ -61,6 +63,58 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
   const selectedPot = useMemo(() => {
     return pots.find((p) => p.id === selectedPotId) || pots[0] || null;
   }, [pots, selectedPotId]);
+
+  // Topf-Dropdown (Titel als aufklappbares Menü, Muster wie im Kostenrechner)
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuWrapRef = useRef(null);
+  const menuTriggerRef = useRef(null);
+  const menuListRef = useRef(null);
+  useClickOutside(menuWrapRef, () => setMenuOpen(false), { enabled: menuOpen });
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") { setMenuOpen(false); menuTriggerRef.current?.focus(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (menuOpen && menuListRef.current) {
+      const active = menuListRef.current.querySelector("[role='menuitemradio'][aria-checked='true']");
+      (active || menuListRef.current.querySelector("[role='menuitemradio']"))?.focus();
+    }
+  }, [menuOpen]);
+
+  function handleMenuKeyDown(e) {
+    const focusable = Array.from(
+      menuListRef.current?.querySelectorAll("[role='menuitemradio']") ?? []
+    );
+    const idx = focusable.indexOf(document.activeElement);
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      focusable[(idx + 1) % focusable.length]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      focusable[(idx - 1 + focusable.length) % focusable.length]?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      focusable[0]?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      focusable[focusable.length - 1]?.focus();
+    }
+  }
+
+  function selectPot(id) {
+    setSelectedPotId(id);
+    setShowAllEntries(false);
+    setLineScrollOffset(0);
+    setBarScrollOffset(0);
+    setMenuOpen(false);
+    menuTriggerRef.current?.focus();
+  }
 
   // Topf-Entwicklung über Monate
   const potSeries = useMemo(() => {
@@ -249,9 +303,52 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
 
   return (
     <div>
-      <div className="hb-row" style={{ marginBottom: 12, alignItems: "flex-start" }}>
-        <div>
-          <div className="hb-section-title">Entwicklung & Zusammensetzung deiner Transfers</div>
+      <div className="hb-row" style={{ marginBottom: 16, alignItems: "center" }}>
+        {/* Topf-Auswahl als aufklappbares Dropdown (Muster wie im Kostenrechner) */}
+        <div className="hb-cg-group-menu" ref={menuWrapRef}>
+          <button
+            ref={menuTriggerRef}
+            type="button"
+            className="hb-cg-group-trigger"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+            title="Topf wechseln"
+          >
+            <span className="hb-cg-group-trigger-name">{selectedPot.name}</span>
+            <svg
+              className={"hb-cg-group-chevron" + (menuOpen ? " hb-cg-group-chevron--open" : "")}
+              width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true"
+            >
+              <path d="M4.5 6L8 9.5L11.5 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          {menuOpen && (
+            <div
+              className="hb-cg-group-list"
+              role="menu"
+              aria-orientation="vertical"
+              ref={menuListRef}
+              onKeyDown={handleMenuKeyDown}
+            >
+              {pots.map((pot) => {
+                const isActive = selectedPot?.id === pot.id;
+                return (
+                  <button
+                    key={pot.id}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={isActive}
+                    className={"hb-cg-group-item" + (isActive ? " hb-cg-group-item--active" : "")}
+                    onClick={() => selectPot(pot.id)}
+                  >
+                    <span className="hb-cg-group-item-name">{pot.name}</span>
+                    {isActive && <IconCheck width={16} height={16} className="hb-cg-group-item-check" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div style={{ display: "flex", gap: 8 }}>
@@ -272,22 +369,6 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
             <IconPlus /> Buchung hinzufügen
           </Button>
         </div>
-      </div>
-
-      {/* Pot-Auswahl als Tab-Gruppe */}
-      <div className="hb-pill-tabs" role="tablist" aria-label="Topf wählen" style={{ marginBottom: 16 }}>
-        {pots.map((pot) => (
-          <button
-            key={pot.id}
-            type="button"
-            role="tab"
-            aria-selected={selectedPotId === pot.id}
-            className={`hb-pill-tab ${selectedPotId === pot.id ? "hb-pill-tab-active" : ""}`}
-            onClick={() => { setSelectedPotId(pot.id); setShowAllEntries(false); setLineScrollOffset(0); setBarScrollOffset(0); }}
-          >
-            {pot.name}
-          </button>
-        ))}
       </div>
 
       {/*
