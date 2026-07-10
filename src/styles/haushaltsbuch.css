@@ -1124,6 +1124,11 @@ select.hb-input option {
   margin-top: 1px;
 }
 
+/* Grössere Variante für Pills ohne Fortschrittsbalken (mehr vertikaler Raum) */
+.hb-stat-pill-sub--lg {
+  font-size: 15px;
+}
+
 /* Vormonatsdelta: signierte Veränderung ggü. Vormonat. Farbe = Richtung ×
    Bewertung (via inline style), Pfeil trägt die Richtung, Wert in tabular-nums. */
 .hb-stat-pill-delta {

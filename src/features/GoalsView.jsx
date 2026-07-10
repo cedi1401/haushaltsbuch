@@ -322,13 +322,13 @@ export default function GoalsView({
             <div className="hb-stat-pill hb-stat-pill--accent">
               <div className="hb-stat-pill-label">Angelegt {stats.currentYear}</div>
               <div className="hb-stat-pill-value">{stats.createdThisYearCount}</div>
-              <div className="hb-stat-pill-sub">{stats.activeThisYearCount} davon aktiv</div>
+              <div className="hb-stat-pill-sub hb-stat-pill-sub--lg">{stats.activeThisYearCount} davon aktiv</div>
             </div>
 
             <div className="hb-stat-pill hb-stat-pill--ok">
               <div className="hb-stat-pill-label">Erreicht</div>
               <div className="hb-stat-pill-value hb-ok">{stats.completedCount}</div>
-              <div className="hb-stat-pill-sub">{stats.successRate}% Erfolgsquote</div>
+              <div className="hb-stat-pill-sub hb-stat-pill-sub--lg">{stats.successRate}% Erfolgsquote</div>
             </div>
 
             <div className="hb-stat-pill hb-stat-pill--accent">
