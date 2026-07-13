@@ -267,24 +267,36 @@ export default function DashboardView({
               <span className={`hb-stat-pill-value ${tile.valueClass}`}>
                 {tile.prefix}{fmt(tile.value)}
               </span>
-              {trend.hasDelta && (
-                <span
-                  className="hb-stat-pill-delta"
-                  style={{ color: themeColors.muted }}
-                >
-                  {changed ? (
-                    <>
-                      <span aria-hidden="true" style={{ color: deltaColor }}>
-                        {delta > 0 ? "▲" : "▼"}
-                      </span>
-                      {fmt(Math.abs(delta))}
-                    </>
-                  ) : (
-                    "unverändert"
-                  )}
-                  <span className="hb-stat-pill-delta-note">ggü. Vormonat</span>
-                </span>
-              )}
+              {/* Delta-Zeile immer rendern, damit die Pill-Höhe konstant bleibt.
+                 Ohne Vergleichsdaten (Monat ohne Buchungen / kein Vormonat)
+                 steht ein „–"-Platzhalter statt der Karte zu schrumpfen. */}
+              <span
+                className="hb-stat-pill-delta"
+                style={{ color: themeColors.muted }}
+              >
+                {!trend.hasDelta ? (
+                  <span
+                    className="hb-stat-pill-delta-note"
+                    aria-label="Kein Vergleich verfügbar"
+                  >
+                    –
+                  </span>
+                ) : (
+                  <>
+                    {changed ? (
+                      <>
+                        <span aria-hidden="true" style={{ color: deltaColor }}>
+                          {delta > 0 ? "▲" : "▼"}
+                        </span>
+                        {fmt(Math.abs(delta))}
+                      </>
+                    ) : (
+                      "unverändert"
+                    )}
+                    <span className="hb-stat-pill-delta-note">ggü. Vormonat</span>
+                  </>
+                )}
+              </span>
             </div>
           );
         })}
