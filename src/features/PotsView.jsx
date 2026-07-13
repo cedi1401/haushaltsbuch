@@ -21,7 +21,7 @@ import {
 import { calcPotSeries } from "../utils/potUtils.js";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
-import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact } from "../utils/hbUtils.js";
+import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact, formatCurrencyAxis } from "../utils/hbUtils.js";
 import { formatYearMonth } from "../utils/financialMonthUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useThemeColors } from "../hooks/useThemeColors.jsx";
@@ -470,6 +470,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                       <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
                         <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
                           <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.blue} strokeWidth="2.5" />
+                          <circle cx="10" cy="5" r="2.5" fill={themeColors.blue} />
                         </svg>
                         Stand
                       </span>
@@ -493,6 +494,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                   <div style={{ width: "100%", height: 260, marginTop: 16 }}>
                     <ResponsiveContainer width="100%" height={260}>
                       <LineChart data={lineChartData}>
+                        <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                         <XAxis
                           dataKey="name"
                           tick={{ fontSize: 11 }}
@@ -501,7 +503,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                           textAnchor="end"
                           height={60}
                         />
-                        <YAxis tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)} width={64} />
                         <Tooltip
                           wrapperStyle={{ zIndex: 10 }}
                           content={({ active, payload, label }) => {
