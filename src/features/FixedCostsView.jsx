@@ -430,7 +430,7 @@ export default function FixedCostsView({
       {/* Toolbar */}
       <div className="hb-fixed-toolbar">
         <div className="hb-stat-pill hb-stat-pill--accent hb-fixed-toolbar-pill">
-          <span className="hb-stat-pill-label">Monatliche Summe</span>
+          <span className="hb-stat-pill-label">Gesamt</span>
           <span className="hb-stat-pill-value">{fmt(totalAmount)}</span>
         </div>
         <div className="hb-fixed-toolbar-actions">
