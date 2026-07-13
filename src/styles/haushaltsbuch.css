@@ -2003,10 +2003,10 @@ select.hb-input option {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-dialog);
-  padding: 9px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   animation: navPopupIn 0.15s ease-out;
 }
 
@@ -2026,29 +2026,28 @@ select.hb-input option {
   border: none;
   background: transparent;
   border-radius: var(--radius-sm);
-  padding: 15px 18px;
+  padding: 10px 12px;
   cursor: pointer;
   text-align: left;
   color: var(--text);
   font-weight: 500;
-  font-size: 18px;
+  font-size: 14px;
   letter-spacing: 0;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 18px;
+  gap: 12px;
   transition: background var(--transition-fast);
   position: relative;
-  padding-left: 24px;
-  padding-right: 28px;
+  padding-left: 16px;
 }
 
 .hb-nav-item-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   color: var(--muted);
   flex-shrink: 0;
 }
@@ -2068,11 +2067,11 @@ select.hb-input option {
 .hb-nav-item-active::before {
   content: "";
   position: absolute;
-  left: 6px;
+  left: 4px;
   top: 50%;
   transform: translateY(-50%);
-  width: 4px;
-  height: 24px;
+  width: 3px;
+  height: 16px;
   border-radius: var(--radius-xs);
   background: var(--accent);
 }

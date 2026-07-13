@@ -38,7 +38,7 @@ export default function NavDrawer({ open, onClose, view, onChangeView, anchor })
         role="menu"
         style={{
           top: anchor?.top ?? 56,
-          left: Math.min(anchor?.left ?? 8, window.innerWidth - 260),
+          left: Math.min(anchor?.left ?? 8, window.innerWidth - 240),
         }}
       >
         {NAV_ITEMS.map((item) => {
