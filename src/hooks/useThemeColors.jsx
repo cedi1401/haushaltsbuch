@@ -9,6 +9,9 @@ const DEFAULT_COLORS = {
   purple: "#7160e8",
   accent: "#0078d4",
   muted: "#636363",
+  yoyOld: "#8ab6e0",
+  yoyMid: "#2b7fd4",
+  yoyNew: "#153a70",
 };
 
 function readColors() {
@@ -27,6 +30,9 @@ function readColors() {
     purple: get("--purple", DEFAULT_COLORS.purple),
     accent: get("--accent", DEFAULT_COLORS.accent),
     muted: get("--muted", DEFAULT_COLORS.muted),
+    yoyOld: get("--yoy-old", DEFAULT_COLORS.yoyOld),
+    yoyMid: get("--yoy-mid", DEFAULT_COLORS.yoyMid),
+    yoyNew: get("--yoy-new", DEFAULT_COLORS.yoyNew),
   };
 }
 

@@ -21,13 +21,9 @@ import { formatCurrencyCompact, formatCurrencyAxis } from "../utils/hbUtils.js";
 import { useFixedCostTrend } from "../hooks/useFixedCostTrend.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import FixedCostTrendSection from "./FixedCostTrendSection.jsx";
-import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
 import { MONTHS_SHORT } from "../utils/constants.js";
 
 const monthLabel = formatYearMonth;
-
-// oldest → lightest, newest → darkest
-const YOY_YEAR_COLORS = [TRANSFER_PALETTE[7], TRANSFER_PALETTE[3], TRANSFER_PALETTE[0]];
 
 function CashflowTooltip({ active, payload, label, fmt }) {
   if (!active || !payload?.length) return null;
@@ -320,9 +316,12 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
     });
   }, [yoyData, yoyYears]);
 
+  // Drei unterscheidbare Blautöne (ältestes → hell, aktuellstes → dunkel), pro
+  // Theme über CSS-Variablen definiert, damit sie zum jeweiligen Hintergrund passen.
+  const yoyYearColors = [themeColors.yoyOld, themeColors.yoyMid, themeColors.yoyNew];
   const colorForYear = (year) => {
     const idx = yoyYears.indexOf(year); // 0=ältestes, 2=aktuellstes
-    return YOY_YEAR_COLORS[idx] ?? YOY_YEAR_COLORS[0];
+    return yoyYearColors[idx] ?? yoyYearColors[0];
   };
 
   return (
@@ -441,6 +440,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                 <div style={{ width: "100%", height: 280, marginTop: 16 }}>
                   <ResponsiveContainer width="100%" height={280}>
                     <LineChart data={saldoChartData}>
+                      <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
                       <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v.toFixed(0)} %`} />
                       <Tooltip
@@ -504,7 +504,6 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                     <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted, whiteSpace: "nowrap" }}>
                       <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
                         <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.blue} strokeWidth="2.5" strokeLinecap="round" />
-                        <circle cx="10" cy="5" r="2.5" fill={themeColors.blue} />
                       </svg>
                       Sparen (kumuliert)
                     </span>
@@ -514,7 +513,8 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                 <div style={{ width: "100%", height: 280, marginTop: 16 }}>
                   <ResponsiveContainer width="100%" height={280}>
                     <ComposedChart data={cashflowChartData} barCategoryGap="32%" stackOffset="sign">
-                      <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
+                      {/* yAxisId="cash" nötig, weil beide Y-Achsen explizite IDs haben; sonst sucht das Grid die Default-Achse (id 0) und rendert keine horizontalen Linien */}
+                      <CartesianGrid yAxisId="cash" stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
                       <YAxis yAxisId="cash" tick={{ fontSize: 11 }} tickFormatter={fmtTick} />
                       {/* Rechte Achse dezent in Blau, passend zur Sparen-Linie; ohne Achsen-/Tick-Linie, damit sie nicht mit der linken Cash-Achse konkurriert */}
@@ -580,7 +580,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                     </div>
                     <div style={{ width: "100%", height: 260, marginTop: 4 }}>
                       <ResponsiveContainer width="100%" height={260}>
-                        <ComposedChart data={yoyChartData} barCategoryGap="20%" barGap={-2}>
+                        <ComposedChart data={yoyChartData} barCategoryGap="20%" barGap={3}>
                           <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                           <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                           <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtAxis} width={64} />

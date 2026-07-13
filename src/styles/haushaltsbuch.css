@@ -41,6 +41,10 @@
   --blue-soft: rgba(0, 120, 212, 0.08);
   --teal: #038387;
   --teal-soft: rgba(3, 131, 135, 0.08);
+  /* Jahresvergleich: drei unterscheidbare Blautöne (oldest → newest) für hellen Hintergrund */
+  --yoy-old: #8ab6e0;
+  --yoy-mid: #2b7fd4;
+  --yoy-new: #153a70;
   --yellow: #d97706;
   --yellow-soft: rgba(217, 119, 6, 0.09);
   --purple: #7160e8;
@@ -113,6 +117,10 @@
   --blue-soft: rgba(69, 197, 255, 0.1);
   --teal: #2dd4bf;
   --teal-soft: rgba(45, 212, 191, 0.12);
+  /* Jahresvergleich: hellere Blautöne, damit auch der dunkelste sich vom dunklen Hintergrund abhebt */
+  --yoy-old: #bcddff;
+  --yoy-mid: #5aa6ea;
+  --yoy-new: #3070c8;
   --yellow: #fce100;
   --yellow-soft: rgba(252, 225, 0, 0.1);
   --purple: #b4a0ff;
