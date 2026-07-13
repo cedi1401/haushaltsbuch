@@ -34,22 +34,23 @@ export const CUSTOM_CATEGORY_PALETTE = [
   "#455a64", // Blaugrau
 ];
 
-// Blau-Palette für Transfer-Kategorien im Topf-Donut-Chart. Gleiche Farbfamilie
-// (Hue ≈208°) → kommuniziert visuell „alle Transfers derselben Natur". Die
-// Zuweisung erfolgt stabil nach Zweck-Key (siehe PotsView), nicht nach Wert-Rang.
-// Monoton gespreizt (dunkel → hell) mit gleichmäßigen Lightness-Abständen, damit
-// benachbarte Zwecke auch bei vielen Kategorien unterscheidbar bleiben; die hellen
-// Stufen kontrastieren schwach mit weißer Fläche, was im Donut durch die stets
-// vorhandene Legende/Beschriftung (Secondary Encoding) aufgefangen wird.
+// Palette für Transfer-Kategorien im Topf-Donut-Chart. Kühle, analoge Farbfamilie
+// (Teal → Cyan → Blau → Indigo → Violett, Hue 190°→268°) → kommuniziert weiterhin
+// visuell „alle Transfers derselben Natur", während benachbarte Zwecke sich nun in
+// mehreren Dimensionen unterscheiden. Eine reine Mono-Hue-Helligkeitsrampe war in
+// der Legende (kleine Farbquadrate) praktisch nicht auseinanderzuhalten; daher hier
+// zusätzlich zur Lightness eine Hue-Progression plus alternierende Helligkeit
+// (Zickzack), damit direkt benachbarte Stufen maximal kontrastieren. Zuweisung
+// erfolgt stabil nach Zweck-Key (siehe PotsView), nicht nach Wert-Rang.
 export const TRANSFER_PALETTE = [
-  "#215583", // L≈32%
-  "#27669c", // L≈38%
-  "#2d76b6", // L≈44%
-  "#3687cd", // L≈51%
-  "#5096d3", // L≈57%
-  "#6aa5da", // L≈63%
-  "#83b5e0", // L≈70%
-  "#9dc4e7", // L≈76%
+  "#267e8f", // Teal        H190 L36%
+  "#338aba", // Cyan-Blau   H201 L46%
+  "#295b94", // Azur        H212 L37%
+  "#375cbf", // Blau        H223 L48%
+  "#2d3799", // Indigo      H235 L39%
+  "#483bc3", // Blauviolett H246 L50%
+  "#50319e", // Violett     H257 L41%
+  "#7f43c4", // Purpur      H268 L52%
 ];
 
 // Specific colors for income/expense charts
