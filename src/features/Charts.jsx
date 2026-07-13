@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { EMPTY_ARRAY } from "../utils/constants.js";
-import { Card, CardContent } from "../components/ui.jsx";
+import { Card, CardContent, Button } from "../components/ui.jsx";
 import { IconInbox } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { useCardBg } from "../hooks/useCardBg.js";
@@ -259,13 +259,13 @@ export default function Charts({
 
               {/* Back button when in drill-down */}
               {drilldownId && (
-                <button
-                  type="button"
-                  className="hb-legend-back-btn"
+                <Button
+                  variant="outline"
                   onClick={handleBack}
+                  style={{ alignSelf: "flex-start", margin: "0 0 6px 10px" }}
                 >
                   Zurück
-                </button>
+                </Button>
               )}
 
               {/* Section title — only shown in drilldown */}

@@ -354,15 +354,12 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
           {/* Kopfzeile: Zurück zur Übersicht + Titel als Gruppen-Dropdown + Zeitraumwähler */}
           <div className="hb-cg-head">
             <div className="hb-cg-head-left">
-              <button
-                type="button"
-                className="hb-legend-back-btn"
-                style={{ margin: 0, fontSize: 13, padding: "8px 14px" }}
+              <Button
+                variant="outline"
                 onClick={() => setViewMode("overview")}
-                title="Zurück zur Übersicht"
               >
                 Zurück
-              </button>
+              </Button>
               <div className="hb-cg-group-menu" ref={menuWrapRef}>
               <button
                 ref={menuTriggerRef}
