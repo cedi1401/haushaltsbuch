@@ -2975,6 +2975,15 @@ select.hb-input option {
   box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
+/* Recharts markiert beim Maus-Klick das SVG/Segment mit dem Browser-Default-
+   Outline (weisser Kasten). Keyboard-Fokus deckt weiterhin :focus-visible ab. */
+.recharts-wrapper:focus,
+.recharts-surface:focus,
+.recharts-wrapper svg:focus,
+.recharts-wrapper svg *:focus {
+  outline: none;
+}
+
 /* =====================================================
    PRINT STYLES
    ===================================================== */
