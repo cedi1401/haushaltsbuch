@@ -166,7 +166,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
     });
 
     return withCum.map((d) => ({ ...d, label: monthLabel(d.month) }));
-  }, [sourceEntries, monthStartDay]);
+  }, [sourceEntries, monthStartDay, savingsPotIds]);
 
   const saldoRangePool = useMemo(() => {
     if (saldoRangeOption === "12") return monthly.slice(-12);

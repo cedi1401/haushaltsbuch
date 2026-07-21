@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { IconSuccess, IconError, IconWarning, IconInfo, IconClose } from "./icons.jsx";
 import makeLogger from "../utils/logger.js";
 
@@ -29,14 +29,17 @@ export function ToastProvider({ children }) {
     return id;
   }, []);
 
-  const api = {
+  // Stabile Referenz: `show`/`dismiss` sind via useCallback stabil, also ändert
+  // sich `api` nie. Wichtig, damit Consumer den Toast-Getter gefahrlos in
+  // Effect-Deps aufnehmen können, ohne bei jedem Render neu auszulösen.
+  const api = useMemo(() => ({
     show,
     dismiss,
     success: (message, opts = {}) => show({ ...opts, message, severity: "success" }),
     error: (message, opts = {}) => show({ ...opts, message, severity: "error" }),
     warning: (message, opts = {}) => show({ ...opts, message, severity: "warning" }),
     info: (message, opts = {}) => show({ ...opts, message, severity: "info" }),
-  };
+  }), [show, dismiss]);
 
   return (
     <ToastContext.Provider value={api}>

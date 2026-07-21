@@ -57,7 +57,8 @@ export function useBookManager({ toast, confirm }) {
       }
     }
     load();
-  }, []);
+    // toast ist stabil (memoisiert), daher läuft dieser Initial-Load genau einmal.
+  }, [toast]);
 
   useEffect(() => {
     if (isInitialLoad.current) return;
@@ -78,7 +79,7 @@ export function useBookManager({ toast, confirm }) {
       }
     })();
     return () => { cancelled = true; };
-  }, [books]);
+  }, [books, toast]);
 
   // Clear the initial-load flag once the first real books commit has been
   // processed. Declared after the save effect, so within the same commit the
