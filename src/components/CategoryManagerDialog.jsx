@@ -9,6 +9,7 @@ import { Button } from "./ui.jsx";
 import { useToast } from "./Toast.jsx";
 import { useConfirm } from "./ConfirmDialog.jsx";
 import { canSetParentBudget, canSetSubBudget } from "../utils/hbUtils.js";
+import { generateId } from "../utils/idUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 
 function filterCategories(categories, search, filter) {
@@ -183,7 +184,7 @@ export default function CategoryManagerDialog({
     if (isSubcategory) {
       // Unterkategorie zur Oberkategorie hinzufügen
       const newSub = {
-        id: `sub_custom_${Date.now()}`,
+        id: generateId("sub_custom"),
         name,
         parentId,
         isDefault: false,
@@ -208,7 +209,7 @@ export default function CategoryManagerDialog({
     } else {
       // Neue Oberkategorie
       const newCat = {
-        id: `cat_custom_${Date.now()}`,
+        id: generateId("cat_custom"),
         name,
         color: color || "#0078d4",
         type: "expense",

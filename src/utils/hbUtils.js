@@ -1,6 +1,7 @@
 // src/utils/hbUtils.js
 import { CUSTOM_CATEGORY_PALETTE } from "./hbPalette.js";
 import { MONTHS_LONG } from "./constants.js";
+import { generateId } from "./idUtils.js";
 
 export const CURRENT_SCHEMA_VERSION = 2;
 
@@ -659,7 +660,7 @@ function syncDefaultSubcategories(existingCategories, defaultCategories) {
 
 export function makeDefaultBook(name = "Mein Haushaltsbuch") {
   return {
-    id: `book_${Date.now()}`,
+    id: generateId("book"),
     name,
     expenseCategories: DEFAULT_EXPENSE_CATEGORIES.map((c) => ({
       ...c,
