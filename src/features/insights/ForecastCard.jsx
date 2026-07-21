@@ -12,11 +12,13 @@ import {
   CartesianGrid,
 } from "recharts";
 import { useThemeColors } from "../../hooks/useThemeColors.jsx";
-import { useFmt } from "../../contexts/CurrencyContext.jsx";
+import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
+import { formatCurrencyAxis } from "../../utils/hbUtils.js";
 import { IconInbox } from "../../components/icons.jsx";
 
 const ForecastCard = memo(function ForecastCard({ analytics }) {
   const fmt = useFmt();
+  const baseCurrency = useBaseCurrency();
   const {
     projectedBalance,
     freiBudget,
@@ -138,7 +140,7 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
                 allowDecimals={false}
                 tick={({ y, payload }) => (
                   <text x={0} y={y} dy="0.35em" textAnchor="start" fontSize={10} fill="var(--muted, #888)">
-                    {Math.round(payload.value).toLocaleString("de-CH")}
+                    {formatCurrencyAxis(payload.value, baseCurrency)}
                   </text>
                 )}
               />

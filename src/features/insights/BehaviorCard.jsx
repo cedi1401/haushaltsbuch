@@ -132,7 +132,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
               <span style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                 {hasAreaData && (
                   <span className="hb-insight-label" style={{ fontSize: 11 }}>
-                   --- Ø {fmt ? fmt(Math.round(avgAmount), 0) : Math.round(avgAmount)} pro Tag
+                   --- Ø {fmt(Math.round(avgAmount), 0)} pro Tag
                   </span>
                 )}
                 {dailyTrendPct !== null && (
@@ -205,7 +205,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                       return (
                         <div className="hb-chart-tooltip">
                           <span className="hb-chart-tooltip-label">{formatDateDELong(d.date)}</span>
-                          <span>{fmt ? fmt(d.amount) : d.amount.toFixed(2)}</span>
+                          <span>{fmt(d.amount)}</span>
                         </div>
                       );
                     }}
