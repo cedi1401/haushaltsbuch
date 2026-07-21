@@ -110,8 +110,8 @@ function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, onCon
             type="button"
             className="hb-icon-btn"
             onClick={onCancel}
-            aria-label="Schließen"
-            title="Schließen"
+            aria-label="Schliessen"
+            title="Schliessen"
           >
             <IconClose />
           </button>

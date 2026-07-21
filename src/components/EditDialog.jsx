@@ -82,8 +82,8 @@ export default function EditDialog({
           <button
             className="hb-icon-btn"
             onClick={onClose}
-            aria-label="Schließen"
-            title="Schließen"
+            aria-label="Schliessen"
+            title="Schliessen"
             type="button"
           >
             <IconClose />

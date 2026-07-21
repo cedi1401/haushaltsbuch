@@ -124,7 +124,7 @@ export default function SettingsDialog({
       onClose={onClose}
       onSave={onClose}
       canSave={true}
-      saveLabel="Schließen"
+      saveLabel="Schliessen"
     >
       {/* App-Updates (nur Electron) */}
       {isElectronEnv && (

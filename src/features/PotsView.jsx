@@ -293,7 +293,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
           onClose={() => setManagePotsOpen(false)}
           onSave={() => setManagePotsOpen(false)}
           canSave={true}
-          saveLabel="Schließen"
+          saveLabel="Schliessen"
         >
           <PotsManager activeBook={activeBook} onUpdateBook={onUpdateBook} />
         </EditDialog>
@@ -806,7 +806,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
         onClose={() => setManagePotsOpen(false)}
         onSave={() => setManagePotsOpen(false)}
         canSave={true}
-        saveLabel="Schließen"
+        saveLabel="Schliessen"
       >
         <PotsManager activeBook={activeBook} onUpdateBook={onUpdateBook} />
       </EditDialog>

@@ -158,7 +158,7 @@ export default function PotsManager({ activeBook, onUpdateBook }) {
                     />
                     <span style={{ fontSize: 13 }}>Spar-Topf</span>
                     <HbTooltip
-                      text="Einzahlungen in diesen Topf werden als Sparbetrag gezählt und fließen in die Berechnung der Sparquote ein."
+                      text="Einzahlungen in diesen Topf werden als Sparbetrag gezählt und fliessen in die Berechnung der Sparquote ein."
                       placement="right"
                     />
                   </label>

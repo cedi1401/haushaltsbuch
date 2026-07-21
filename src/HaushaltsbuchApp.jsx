@@ -200,8 +200,8 @@ export default function HaushaltsbuchApp() {
                   type="button"
                   className="hb-icon-btn"
                   onClick={update.dismissAvailable}
-                  aria-label="Schließen"
-                  title="Schließen"
+                  aria-label="Schliessen"
+                  title="Schliessen"
                 >
                   <IconClose />
                 </button>
@@ -223,8 +223,8 @@ export default function HaushaltsbuchApp() {
                   type="button"
                   className="hb-icon-btn"
                   onClick={update.dismissReady}
-                  aria-label="Schließen"
-                  title="Schließen"
+                  aria-label="Schliessen"
+                  title="Schliessen"
                 >
                   <IconClose />
                 </button>
