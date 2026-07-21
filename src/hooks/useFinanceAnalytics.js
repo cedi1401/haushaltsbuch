@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { getEntryFinancialMonth, getFinancialMonthRange, getFinancialMonth } from "../utils/financialMonthUtils.js";
+import { toLocalISO } from "../utils/hbUtils.js";
 import { BURNRATE_DELTA_THRESHOLD_PCT } from "../utils/constants.js";
 
 const DAY_NAMES_MON_FIRST = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -24,7 +25,7 @@ function getFinancialMonthInfo(monthFilter, monthStartDay) {
   if (!range) return null;
 
   const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
+  const todayStr = toLocalISO(today);
   const isCurrentMonth = getFinancialMonth(todayStr, startDay)?.yyyymm === monthFilter;
 
   const msPerDay = 86400000;
@@ -110,7 +111,7 @@ export function useFinanceAnalytics({
     return Array.from({ length: 30 }, (_, i) => {
       const d = new Date(today);
       d.setDate(today.getDate() - 29 + i);
-      const key = d.toISOString().slice(0, 10);
+      const key = toLocalISO(d);
       return { date: key, amount: dailyMap.get(key) || 0 };
     });
   }, [entries]);

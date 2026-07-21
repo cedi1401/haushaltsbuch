@@ -1,6 +1,18 @@
 // src/utils/goalUtils.js
-import { getEntryFinancialMonth } from "./financialMonthUtils.js";
+import { getEntryFinancialMonth, getFinancialMonth } from "./financialMonthUtils.js";
 import { sumAmounts } from "./hbUtils.js";
+
+/**
+ * Anzahl Finanzmonate von fromYm bis toYm (inklusive beider Grenzen), mindestens 1.
+ * @param {string} fromYm - "YYYY-MM"
+ * @param {string} toYm - "YYYY-MM"
+ */
+function diffMonthsInclusive(fromYm, toYm) {
+  const [fy, fm] = fromYm.split("-").map(Number);
+  const [ty, tm] = toYm.split("-").map(Number);
+  const span = (ty - fy) * 12 + (tm - fm) + 1;
+  return span < 1 ? 1 : span;
+}
 
 /**
  * Bestimmt das Startdatum basierend auf dem startMode
@@ -96,7 +108,9 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
     };
   }
 
-  // Berechne durchschnittlichen monatlichen Zufluss
+  // Berechne durchschnittlichen monatlichen Zufluss.
+  // Konsistent zu calcGoalProgress: nur Einzahlungen ab dem Zielstart zählen (F-2).
+  const startDate = resolveStartDate(goal);
   let relevantEntries = [];
 
   if (goal.transferCategory) {
@@ -111,6 +125,9 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
       (e) => e.kind === "transfer" && e.potId === goal.potId
     );
   }
+  if (startDate) {
+    relevantEntries = relevantEntries.filter((e) => e.date && e.date >= startDate);
+  }
 
   if (relevantEntries.length === 0) {
     return {
@@ -121,7 +138,7 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
     };
   }
 
-  // Gruppiere nach Monat
+  // Gruppiere nach Finanzmonat
   const monthlyTotals = new Map();
   for (const e of relevantEntries) {
     const ym = getEntryFinancialMonth(e, monthStartDay);
@@ -130,8 +147,8 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
     monthlyTotals.set(ym, prev + Number(e.amount || 0));
   }
 
-  const months = Array.from(monthlyTotals.values());
-  if (months.length === 0) {
+  const monthKeys = Array.from(monthlyTotals.keys()).sort();
+  if (monthKeys.length === 0) {
     return {
       monthsRemaining: Infinity,
       estimatedDate: null,
@@ -140,7 +157,14 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
     };
   }
 
-  const avgMonthly = months.reduce((a, b) => a + b, 0) / months.length;
+  // Ø über die verstrichene Zeitspanne (erste Einzahlung → heute), Nullmonate
+  // eingeschlossen — sonst wird die Prognose zu optimistisch (F-1).
+  const totalIn = Array.from(monthlyTotals.values()).reduce((a, b) => a + b, 0);
+  const firstYm = monthKeys[0];
+  const todayYm =
+    getFinancialMonth(todayISO, monthStartDay)?.yyyymm || monthKeys[monthKeys.length - 1];
+  const monthSpan = diffMonthsInclusive(firstYm, todayYm);
+  const avgMonthly = totalIn / monthSpan;
 
   if (avgMonthly <= 0) {
     return {

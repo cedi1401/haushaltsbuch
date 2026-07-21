@@ -141,7 +141,9 @@ export default function HaushaltsbuchApp() {
       filteredEntries.toSorted((a, b) => {
         const da = String(a.date || ""), db = String(b.date || "");
         if (da !== db) return db.localeCompare(da);
-        return Number(b.id) - Number(a.id);
+        // IDs sind Strings ("entry_<timestamp>_<rand>") → Number() wäre NaN.
+        // String-Vergleich sortiert bei gleichem Datum neueste zuerst.
+        return String(b.id || "").localeCompare(String(a.id || ""));
       }),
     [filteredEntries]
   );
