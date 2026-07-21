@@ -41,7 +41,6 @@ export default function DashboardView({
   monthStartDay,
   entriesSorted,
   entryActions,
-  onUpdateBook,
   patchActiveBook,
   indicateTransferCategories,
 }) {

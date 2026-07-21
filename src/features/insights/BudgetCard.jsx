@@ -119,7 +119,6 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
   const overCount    = budgetItems.filter((i) => i.spent > i.budget).length;
   const timeInfo     = getMonthTimeInfo(monthFilter, monthStartDay);
 
-  const totalMetrics = calcItemMetrics(totalSpent, totalBudget, timeInfo);
   const totalStatus  = getBudgetStatus(totalPct);
 
   const pagedItems = budgetItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);

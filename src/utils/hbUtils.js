@@ -466,19 +466,6 @@ export function getCategoryLabel(expenseCategories, incomeCategories, categoryId
   return parent.name;
 }
 
-/**
- * Prüft ob eine Kategorie oder Unterkategorie eine Standard-Kategorie ist (nicht löschbar).
- */
-export function isCategoryDefault(expenseCategories, incomeCategories, categoryId, subcategoryId) {
-  const parent = findCategoryById(expenseCategories, incomeCategories, categoryId);
-  if (!parent) return false;
-  if (subcategoryId) {
-    const sub = (parent.subcategories || []).find((s) => s.id === subcategoryId);
-    return sub?.isDefault ?? false;
-  }
-  return parent.isDefault ?? false;
-}
-
 // ============================================
 // Migration: Legacy-Kategorienamen → neue IDs
 // ============================================

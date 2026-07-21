@@ -10,7 +10,6 @@ const CHUNK_SIZE = 100;
 export default function EntriesTable({
   entriesSorted,
   monthLabel,
-  monthFilter,
   startEdit,
   removeEntry,
   onAddEntry,

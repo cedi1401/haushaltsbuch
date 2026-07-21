@@ -1,4 +1,3 @@
-export const RECURRING_DUE_THRESHOLD_DAYS = 7;
 export const BURNRATE_DELTA_THRESHOLD_PCT = 10;
 
 // Shared stable empty-array reference for memo/default fallbacks.

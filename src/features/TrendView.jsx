@@ -9,7 +9,6 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  BarChart,
   Bar,
   CartesianGrid,
   ComposedChart,
@@ -230,10 +229,6 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
   const saldoChartData = useMemo(() => saldoWindowData.map((m) => ({
     name: m.label, savingsRate: m.savingsRate, avg3: m.avg3, avg6: m.avg6,
   })), [saldoWindowData]);
-
-  const evaChartData = useMemo(() => evaWindowData.map((m) => ({
-    name: m.label, income: m.income, expense: m.expense,
-  })), [evaWindowData]);
 
   const cashflowChartData = useMemo(() => evaWindowData.map((m) => ({
     name: m.label,

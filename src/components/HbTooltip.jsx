@@ -38,7 +38,7 @@ export default function HbTooltip({
   useLayoutEffect(() => {
     if (!state || !tipRef.current || !triggerRef.current) return;
     const bubble = tipRef.current.getBoundingClientRect();
-    const { cx, cy, r } = getTriggerCenter(triggerRef.current);
+    const { cx, r } = getTriggerCenter(triggerRef.current);
 
     let effectivePlacement = state.effectivePlacement;
 
