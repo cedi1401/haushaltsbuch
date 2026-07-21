@@ -603,7 +603,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
                     <div className="hb-empty-title">Noch keine geplanten Kosten</div>
                     <div className="hb-empty-text">
                       Lege z.B. „Service 400.- jährlich" oder „Reifen 800.- alle 2 Jahre" an, um
-                      unregelmässige Kosten auf einen Betrag pro Monat umzurechnen.
+                      unregelmäßige Kosten auf einen Betrag pro Monat umzurechnen.
                     </div>
                   </div>
                 ) : (
@@ -819,7 +819,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
           <div className="hb-field">
             <div className="hb-label">Geplante Kosten (optional)</div>
             <div className="hb-cg-picker-hint" style={{ marginTop: 0, marginBottom: 10 }}>
-              Erwartete, oft unregelmässige Kosten. Werden automatisch auf einen Betrag pro Monat
+              Erwartete, oft unregelmäßige Kosten. Werden automatisch auf einen Betrag pro Monat
               umgerechnet und mit den tatsächlichen Kosten verglichen.
             </div>
             {draft.plannedItems.length > 0 && (

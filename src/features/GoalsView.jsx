@@ -205,7 +205,7 @@ export default function GoalsView({
     toast.success("Sparziel gelöscht.");
   }
 
-  // Erreichtes Ziel abschliessen → wandert ins Archiv (Geld bleibt im Topf)
+  // Erreichtes Ziel abschließen → wandert ins Archiv (Geld bleibt im Topf)
   function archiveGoal(goal) {
     if (!activeBook) return;
     const updatedGoals = goals.map((g) =>
@@ -483,7 +483,7 @@ export default function GoalsView({
                         Ziel erreicht! Herzlichen Glückwunsch!
                       </div>
                       <Button variant="outline" size="sm" onClick={() => archiveGoal(goal)}>
-                        <IconCheck strokeWidth={3} /> Abschliessen
+                        <IconCheck strokeWidth={3} /> Abschließen
                       </Button>
                     </div>
                   </div>

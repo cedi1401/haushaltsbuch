@@ -522,7 +522,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                       {/* Ein grüner Balken nach oben (Einnahmen) + ein roter nach unten (Ausgaben + Rücklagen), leicht gerundet zur Nulllinie hin offen */}
                       <Bar yAxisId="cash" dataKey="income" stackId="cf" barSize={20} fill={themeColors.green} shape={IncomeBarShape} />
                       <Bar yAxisId="cash" dataKey="outflow" stackId="cf" barSize={20} fill={themeColors.red} shape={OutflowBarShape} />
-                      {/* Nulllinie über den Balken, damit sie sauber abschliesst */}
+                      {/* Nulllinie über den Balken, damit sie sauber abschließt */}
                       <ReferenceLine yAxisId="cash" y={0} stroke={themeColors.muted} strokeOpacity={0.6} strokeWidth={1.5} />
                       {/* Blaue Linie: kumuliertes Sparen (rechte Achse), mit Akzent-Dot am letzten Punkt */}
                       <Line

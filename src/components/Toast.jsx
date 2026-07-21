@@ -102,7 +102,7 @@ function ToastItem({ toast, onDismiss }) {
         type="button"
         className="hb-icon-btn hb-toast-close"
         onClick={() => onDismiss(toast.id)}
-        aria-label="Schliessen"
+        aria-label="Schließen"
       >
         <IconClose />
       </button>

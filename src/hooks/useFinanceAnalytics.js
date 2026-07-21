@@ -272,7 +272,7 @@ export function useFinanceAnalytics({
       const day = i + 1;
       running += dailyMap.get(day) || 0;
       // Prognose beginnt am letzten Ist-Tag (day === daysElapsed), damit Ist- und
-      // Prognose-Linie nahtlos aneinander anschliessen.
+      // Prognose-Linie nahtlos aneinander anschließen.
       const projected =
         isCurrentMonth && day >= daysElapsed
           ? freiBudget - (expense + burnRate * (day - daysElapsed))

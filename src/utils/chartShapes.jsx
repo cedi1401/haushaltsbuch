@@ -2,7 +2,7 @@ import React from "react";
 
 export const BAR_RADIUS = 3;
 
-// Rundet nur das äussere Ende eines Balkens (weg von der Nulllinie). Recharts
+// Rundet nur das äußere Ende eines Balkens (weg von der Nulllinie). Recharts
 // normalisiert für negative Werte nicht zuverlässig über die radius-Prop, daher
 // als deterministische Custom-Shape: "top" für nach oben (Zuflüsse), "bottom"
 // für nach unten (Abflüsse).

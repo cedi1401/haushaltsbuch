@@ -10,7 +10,7 @@ import { getEntryFinancialMonth } from "./financialMonthUtils.js";
  * Die Aggregation spiegelt exakt die Scalar-Kennzahlen aus HaushaltsbuchApp:
  * Ausgaben nur `source === "month"`, Transfers je nach Spar-Topf in
  * `savings`/`reserve`, Frei = Einnahmen − Ausgaben − Rücklagen − Gespart.
- * Entnahmen (`withdrawal`) fliessen — wie in der App — in keine dieser Zahlen.
+ * Entnahmen (`withdrawal`) fließen — wie in der App — in keine dieser Zahlen.
  *
  * @param {Array} entries - alle Einträge des Buchs
  * @param {Set<string>} savingsPotIds - Topf-IDs, die als „Sparen" markiert sind

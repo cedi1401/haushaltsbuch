@@ -1073,7 +1073,7 @@ select.hb-input option {
   margin-top: 1px;
 }
 
-/* Grössere Variante für Pills ohne Fortschrittsbalken (mehr vertikaler Raum) */
+/* Größere Variante für Pills ohne Fortschrittsbalken (mehr vertikaler Raum) */
 .hb-stat-pill-sub--lg {
   font-size: 15px;
 }
@@ -2155,7 +2155,7 @@ select.hb-input option {
   flex-shrink: 0;
 }
 
-/* Erreichtes Ziel: Glückwunsch-Pill + Abschliessen-Button in einer Reihe.
+/* Erreichtes Ziel: Glückwunsch-Pill + Abschließen-Button in einer Reihe.
    Die Pill nimmt den verfügbaren Platz ein, der Button bleibt rechts und
    schrumpft nicht. Bei zu schmaler Karte bricht der Button unter die Pill
    und bleibt dort rechtsbündig. */
