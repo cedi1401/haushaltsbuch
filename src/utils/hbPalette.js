@@ -1,3 +1,9 @@
+// Fluent-Blau — Standard-Akzent-/Kategoriefarbe. Spiegelt `--accent` aus dem CSS
+// für JS-Kontexte (Default-Kategoriefarbe, Theme-Fallback-Farben).
+export const DEFAULT_CATEGORY_COLOR = "#0078d4";
+// Neutrales Grau für Kategorien/Einträge ohne eigene Farbe.
+export const FALLBACK_CATEGORY_COLOR = "#6b6b6b";
+
 // WinUI 3 / Fluent-inspired base palette — used internally as the fallback
 // shade source for makeSubcategoryColorShades.
 const PIE_PALETTE = [

@@ -1,5 +1,5 @@
 // src/utils/hbUtils.js
-import { CUSTOM_CATEGORY_PALETTE } from "./hbPalette.js";
+import { CUSTOM_CATEGORY_PALETTE, DEFAULT_CATEGORY_COLOR } from "./hbPalette.js";
 import { MONTHS_LONG } from "./constants.js";
 import { generateId } from "./idUtils.js";
 
@@ -223,7 +223,7 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
   {
     id: "cat_wohnen",
     name: "Wohnen",
-    color: "#0078d4",
+    color: DEFAULT_CATEGORY_COLOR,
     type: "expense",
     isDefault: true,
     budget: null,

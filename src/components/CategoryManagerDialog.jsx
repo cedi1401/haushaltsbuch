@@ -4,7 +4,7 @@ import CategoryCreateDialog from "./CategoryCreateDialog.jsx";
 import CategoryEditDialog from "./CategoryEditDialog.jsx";
 import { IconEdit, IconPlus, IconDelete, IconWallet, IconLock, IconTransfer, IconSearch } from "./icons.jsx";
 import HbTooltip from "./HbTooltip.jsx";
-import { CHART_COLORS } from "../utils/hbPalette.js";
+import { CHART_COLORS, DEFAULT_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { Button } from "./ui.jsx";
 import { useToast } from "./Toast.jsx";
 import { useConfirm } from "./ConfirmDialog.jsx";
@@ -211,7 +211,7 @@ export default function CategoryManagerDialog({
       const newCat = {
         id: generateId("cat_custom"),
         name,
-        color: color || "#0078d4",
+        color: color || DEFAULT_CATEGORY_COLOR,
         type: "expense",
         isDefault: false,
         budget: null,

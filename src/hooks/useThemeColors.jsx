@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { DEFAULT_CATEGORY_COLOR } from "../utils/hbPalette.js";
 
 const DEFAULT_COLORS = {
   green: "#0f7b0f",
   red: "#c42b1c",
-  blue: "#0078d4",
+  blue: DEFAULT_CATEGORY_COLOR,
   teal: "#038387",
   orange: "#ca5010",
   purple: "#7160e8",
-  accent: "#0078d4",
+  accent: DEFAULT_CATEGORY_COLOR,
   muted: "#636363",
   yoyOld: "#8ab6e0",
   yoyMid: "#2b7fd4",

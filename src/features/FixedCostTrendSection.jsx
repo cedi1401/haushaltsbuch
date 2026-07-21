@@ -15,6 +15,7 @@ import HbSparklineHover from "../components/HbSparklineHover.jsx";
 import { IconTag } from "../components/icons.jsx";
 import { useThemeColors } from "../hooks/useThemeColors.jsx";
 import { getCategoryLabel, formatCurrencyAxis } from "../utils/hbUtils.js";
+import { FALLBACK_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { MONTHS_SHORT } from "../utils/constants.js";
 
@@ -124,7 +125,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
           ...r,
           amount: Number(r.amount || 0),
           categoryLabel: getCategoryLabel(expenseCategories || [], [], r.categoryId, null),
-          color: cat?.color || "#6b6b6b",
+          color: cat?.color || FALLBACK_CATEGORY_COLOR,
         };
       })
       .sort((a, b) => b.amount - a.amount);
