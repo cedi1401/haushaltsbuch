@@ -20,7 +20,6 @@ import DashboardView from "./features/DashboardView.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 import {
-  getCategoryNames,
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
   sumAmounts,
@@ -49,7 +48,7 @@ export default function HaushaltsbuchApp() {
 
   const bookManager = useBookManager({ toast, confirm });
   const {
-    books, setBooks, setActiveBookId,
+    books, setActiveBookId,
     activeBook, baseCurrency, monthStartDay, fmt,
     patchActiveBook, updateBook,
     createBook, applyRenameActiveBook, deleteActiveBook,
@@ -81,20 +80,6 @@ export default function HaushaltsbuchApp() {
     createBook(name);
     entryActions.setAddField("category", "Allgemein");
     setView("book");
-  }
-
-  // Restores a full backup: orchestrates multiple hooks
-  function restoreAll(restored) {
-    setBooks(restored.books);
-    setActiveBookId(restored.activeBookId);
-    setMonthFilter(restored.monthFilter);
-
-    const nextBook = restored.books.find((b) => b.id === restored.activeBookId) || restored.books[0];
-    const nextCatNames = getCategoryNames(nextBook?.categories || []);
-    if (!nextCatNames.includes(entryActions.addDraft.category)) {
-      const fallback = nextCatNames.includes("Allgemein") ? "Allgemein" : nextCatNames[0];
-      entryActions.setAddField("category", fallback || "Allgemein");
-    }
   }
 
   // Derived data
@@ -359,7 +344,6 @@ export default function HaushaltsbuchApp() {
             open={settingsOpen}
             onClose={() => setSettingsOpen(false)}
             monthFilter={monthFilter}
-            onRestoreAll={restoreAll}
             onImportBook={importBook}
             activeBook={activeBook}
             onUpdateBook={updateBook}

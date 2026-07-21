@@ -2,8 +2,10 @@
 // The React app calls these functions; they route to the right backend automatically.
 
 import { formatFileStamp } from "../utils/hbUtils.js";
+import makeLogger from "../utils/logger.js";
 
 const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
+const log = makeLogger('dal/storage');
 
 // --- Books ---
 
@@ -15,7 +17,8 @@ export async function loadBooks() {
   try {
     const parsed = JSON.parse(raw || 'null');
     return Array.isArray(parsed) ? parsed : null;
-  } catch {
+  } catch (err) {
+    log.error('loadBooks: konnte hb_books nicht parsen', err);
     return null;
   }
 }
@@ -99,7 +102,8 @@ export async function importBackupFile() {
       const text = await file.text();
       try {
         resolve({ canceled: false, data: JSON.parse(text) });
-      } catch {
+      } catch (err) {
+        log.error('importBackupFile: ungültiges JSON in Backup-Datei', err);
         resolve({ canceled: true, error: 'Ungültiges JSON' });
       }
     };
