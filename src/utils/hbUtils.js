@@ -769,6 +769,11 @@ export function normalizeBook(book) {
 
   const normalized = { ...book };
 
+  // Nicht-leeren Namen erzwingen. Sonst lehnt die Electron-IPC-Validierung
+  // (validateBook: name.length > 0) das GESAMTE Buch-Array ab → db:saveBooks
+  // liefert false → unter Electron wird nichts persistiert (Datenverlust).
+  normalized.name = String(book.name || "").trim() || "Unbenanntes Buch";
+
   // Pots hinzufügen, falls nicht vorhanden
   if (!Array.isArray(normalized.pots)) {
     normalized.pots = [...DEFAULT_POTS];
