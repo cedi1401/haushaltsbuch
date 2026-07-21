@@ -245,15 +245,6 @@ button, input, select, textarea {
   flex-shrink: 0;
 }
 
-.hb-infobar-success { background: var(--green-soft); border-color: var(--green); }
-.hb-infobar-success .hb-infobar-icon { color: var(--green); }
-
-.hb-infobar-warning { background: var(--yellow-soft); border-color: var(--yellow); }
-.hb-infobar-warning .hb-infobar-icon { color: var(--yellow); }
-
-.hb-infobar-error { background: var(--red-soft); border-color: var(--red); }
-.hb-infobar-error .hb-infobar-icon { color: var(--red); }
-
 
 /* =====================================================
    HEADER / TOP BAR
@@ -343,25 +334,9 @@ button, input, select, textarea {
 }
 
 /* Cards sind standardmässig reine Container (nicht klickbar) → nur ein sehr
-   dezenter Border-Wechsel beim Hover, damit sie NICHT interaktiv wirken.
-   Der auffällige WinUI-3 Reveal-Highlight ist bewusst an die explizite
-   Interaktiv-Markierung .hb-card--interactive gebunden (siehe unten), damit
-   Auffälligkeit = Interaktivität signalisiert. */
+   dezenter Border-Wechsel beim Hover, damit sie NICHT interaktiv wirken. */
 .hb-card:hover {
   border-color: var(--border);
-}
-
-/* WinUI-3 Reveal Highlight: nur für klickbare Cards (führen zu Drilldown,
-   öffnen Dialog, lösen Aktion aus). Explizit per Modifier markieren. */
-.hb-card--interactive {
-  cursor: pointer;
-}
-
-.hb-card--interactive:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--reveal-border);
-  outline: 1px solid var(--accent-soft);
-  outline-offset: -1px;
 }
 
 .hb-card-content {
@@ -986,26 +961,6 @@ select.hb-input option {
 /* =====================================================
    GRID LAYOUTS
    ===================================================== */
-.hb-grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  text-align: center;
-}
-
-@media (max-width: 640px) {
-  .hb-grid-3 {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-}
-
-@media (max-width: 400px) {
-  .hb-grid-3 {
-    grid-template-columns: 1fr;
-  }
-}
-
 .hb-two {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1046,27 +1001,13 @@ select.hb-input option {
 /* =====================================================
    STATISTICS
    ===================================================== */
-.hb-stat-title {
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  margin-bottom: 4px;
-}
-
-/* Shared numeric-KPI typography kernel — single source for the three KPI value
-   variants below (stat-val, stat-pill-value, fct-kpi-value). Size, colour and
+/* Shared numeric-KPI typography kernel — single source for the two KPI value
+   variants below (stat-pill-value, fct-kpi-value). Size, colour and
    spacing deltas stay on the individual classes. */
-.hb-stat-val,
 .hb-stat-pill-value,
 .hb-fct-kpi-value {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-}
-
-.hb-stat-val {
-  font-size: 22px;
-  letter-spacing: -0.5px;
 }
 
 /* Stat pills (used e.g. in Pots highlights) */
@@ -1231,13 +1172,10 @@ select.hb-input option {
   padding: 14px 16px;
   background: var(--card);
   border: 1px solid var(--border-light);
-  border-left: 3px solid var(--border-light); /* accent variant: .hb-fct-kpi--accent */
+  border-left: 3px solid var(--border-light);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
 }
-
-/* Reine KPI-Anzeige (nicht klickbar) → kein Hover-Highlight. */
-.hb-fct-kpi--accent { border-left-color: var(--accent); }
 
 /* Kopfzeile der KPI-Karte: Label links, Graph-Icon (Sparkline-Hover) rechts.
    min-height reserviert die Trigger-Höhe, damit die Wert-Zeilen aller Karten
@@ -1292,10 +1230,6 @@ select.hb-input option {
 @media (max-width: 900px) {
   .hb-fct-three-grid {
     grid-template-columns: 1fr 1fr;
-  }
-  .hb-fct-three-grid .hb-fct-donut-col {
-    grid-column: 1 / -1;
-    grid-row: auto !important;
   }
 }
 
@@ -1422,12 +1356,6 @@ select.hb-input option {
   color: var(--muted);
 }
 
-.hb-fct-annual-empty {
-  font-size: 14px;
-  color: var(--border-light);
-  padding-left: 4px;
-}
-
 .hb-fct-annual-total {
   display: flex;
   flex-direction: column;
@@ -1474,21 +1402,6 @@ select.hb-input option {
   height: 16px;
   cursor: pointer;
 }
-
-.hb-fct-show-more {
-  appearance: none;
-  border: none;
-  background: none;
-  color: var(--accent);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 10px 0 0 0;
-  cursor: pointer;
-  text-align: left;
-  transition: opacity var(--transition-fast);
-}
-
-.hb-fct-show-more:hover { opacity: 0.75; }
 
 /* Changes section */
 .hb-fct-changes {
@@ -1688,76 +1601,6 @@ select.hb-input option {
   .hb-entries-table .hb-col-category { width: 28%; }
   .hb-entries-table .hb-col-amount { width: auto; }
   .hb-entries-table .hb-col-actions { width: 60px; }
-}
-
-/* =====================================================
-   DROPDOWN
-   ===================================================== */
-.hb-dropdown {
-  position: relative;
-}
-
-.hb-input-btn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  cursor: pointer;
-}
-
-.hb-caret {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.hb-dropdown-menu {
-  position: absolute;
-  z-index: 100;
-  margin-top: 4px;
-  width: 100%;
-  max-height: 280px;
-  overflow: auto;
-  border: 1px solid var(--border);
-  background: var(--card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  color: var(--text);
-  padding: 4px;
-}
-
-.hb-dropdown-menu * {
-  color: inherit;
-}
-
-.hb-dropdown-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  transition: background var(--transition-fast);
-}
-
-.hb-dropdown-row:hover {
-  background: var(--hover-bg);
-}
-
-.hb-dropdown-item {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
-  flex: 1;
-  text-align: left;
-  color: var(--text);
-  font-size: 14px;
-}
-
-.hb-row-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 /* =====================================================
@@ -2119,11 +1962,6 @@ select.hb-input option {
   border-color: transparent;
 }
 
-.hb-orphan {
-  color: var(--muted);
-  font-style: italic;
-}
-
 .hb-ok {
   color: var(--green);
   font-weight: 700;
@@ -2165,41 +2003,6 @@ select.hb-input option {
   color: var(--muted);
   margin-top: 22px;
   line-height: 1.5;
-}
-
-/* =====================================================
-   CATEGORY PICKER FIELD
-   ===================================================== */
-.hb-field-category {
-  min-width: 220px;
-}
-
-.hb-field-category .hb-input {
-  width: 100%;
-}
-
-.hb-field-note {
-  flex: 1 1 280px !important;
-  min-width: 200px !important;
-  max-width: 480px;
-}
-
-.hb-field-note .hb-input {
-  width: 100%;
-  max-width: none;
-}
-
-@media (max-width: 640px) {
-  .hb-field-category {
-    min-width: 180px;
-    width: 100%;
-  }
-
-  .hb-field-note {
-    flex: 1 1 100% !important;
-    min-width: 0 !important;
-    max-width: none;
-  }
 }
 
 /* =====================================================
@@ -3099,23 +2902,6 @@ select.hb-input option {
   border-color: var(--border);
 }
 
-.hb-radio-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  color: var(--text);
-  cursor: pointer;
-  user-select: none;
-}
-
-.hb-radio-label input[type="radio"] {
-  accent-color: var(--accent);
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
 .hb-cat-list {
   display: flex;
   flex-direction: column;
@@ -3896,8 +3682,6 @@ select.hb-input option {
 /* =====================================================
    HIERARCHICAL CHARTS
    ===================================================== */
-.hb-hier-chart-card { width: 100%; }
-
 .hb-chart-tabs-header {
   display: flex;
   align-items: center;
@@ -4004,7 +3788,6 @@ select.hb-input option {
   box-shadow: var(--shadow-sm);
 }
 
-.hb-segmented--sm .hb-segmented__item { padding: 4px 12px; font-size: 12px; }
 .hb-segmented--md .hb-segmented__item { padding: 8px 14px; font-size: 14px; }
 
 .hb-chart-body {
@@ -4311,15 +4094,6 @@ select.hb-input option {
   margin-right: 6px;
 }
 
-.hb-insight-cat-pct {
-  font-size: 11px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  min-width: 36px;
-  text-align: right;
-}
-
 .hb-insight-bar-track {
   height: 8px;
   background: var(--bar-track-bg);
@@ -4378,16 +4152,7 @@ select.hb-input option {
   line-height: 1.2;
 }
 
-.hb-insight-kpi--bad  { color: var(--red); }
-.hb-insight-kpi--good { color: var(--green); }
 .hb-insight-kpi--info { color: var(--blue); }
-.hb-insight-kpi--warn { color: var(--yellow); }
-
-.hb-insight-sub {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.4;
-}
 
 /* Sparkline / Bar chart tooltip */
 .hb-chart-tooltip {
@@ -4666,10 +4431,6 @@ select.hb-input option {
   color: var(--muted);
 }
 
-.hb-trend-pill--up   { background: var(--red-soft);   color: var(--red); }
-.hb-trend-pill--down { background: var(--green-soft); color: var(--green); }
-.hb-trend-pill--flat { background: var(--bg-subtle);  color: var(--muted); }
-
 /* Burn-Down-Status (Forecast-Hero) */
 .hb-trend-pill--good { background: var(--green-soft); color: var(--green); }
 .hb-trend-pill--over { background: var(--red-soft);   color: var(--red); }
@@ -4827,17 +4588,6 @@ select.hb-input option {
   margin-top: 1px;
 }
 
-/* Forecast Kontext-Satz */
-.hb-insight-context {
-  margin-top: 10px;
-  padding: 8px 10px;
-  background: var(--bg-subtle);
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
 /* Forecast Tab Layout */
 .hb-forecast-layout .hb-insight-kpi-grid {
   padding-top: 16px;
@@ -4894,13 +4644,6 @@ select.hb-input option {
   overflow: hidden;
   margin-bottom: 18px;
   flex-shrink: 0;
-}
-
-.hb-budget-total-forecast {
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 10px;
-  padding-left: 2px;
 }
 
 /* Trennlinie zwischen Gesamt-Bereich und Kategorie-Liste */
@@ -5000,15 +4743,6 @@ select.hb-input option {
 .hb-budget-status-pill--warn { color: var(--yellow); background: var(--yellow-soft); }
 .hb-budget-status-pill--risk { color: var(--yellow); background: var(--yellow-soft); }
 .hb-budget-status-pill--over { color: var(--red);    background: var(--red-soft);    }
-
-/* YoY half-width card */
-.hb-half-card {
-  max-width: calc(50% - 10px);
-  margin-top: 16px;
-}
-@media (max-width: 900px) {
-  .hb-half-card { max-width: 100%; }
-}
 
 .hb-full-card {
   margin-top: 16px;
