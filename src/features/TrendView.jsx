@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Card, CardContent } from "../components/ui.jsx";
+import { Card, CardContent, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import { IconTrend } from "../components/icons.jsx";
 import { getEntryFinancialMonth, formatYearMonth } from "../utils/financialMonthUtils.js";
 import {
@@ -20,7 +20,7 @@ import { formatCurrencyCompact, formatCurrencyAxis } from "../utils/hbUtils.js";
 import { useFixedCostTrend } from "../hooks/useFixedCostTrend.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import FixedCostTrendSection from "./FixedCostTrendSection.jsx";
-import { MONTHS_SHORT } from "../utils/constants.js";
+import { MONTHS_SHORT, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 
 const monthLabel = formatYearMonth;
 
@@ -396,17 +396,20 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
                     <h3 className="hb-card-title">Sparquote pro Monat</h3>
                     <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: saldoMaxOffset > 0 ? "visible" : "hidden" }}>
-                        <button type="button" className="hb-icon-btn" onClick={() => setSaldoScrollOffset((o) => Math.min(o + 1, saldoMaxOffset))} disabled={saldoScrollOffset >= saldoMaxOffset} title="Älteren Bereich anzeigen">‹</button>
-                        <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{saldoWindowLabel}</span>
-                        <button type="button" className="hb-icon-btn" onClick={() => setSaldoScrollOffset((o) => Math.max(o - 1, 0))} disabled={saldoScrollOffset === 0} title="Neueren Bereich anzeigen">›</button>
-                      </div>
+                      <ChartScrollNav
+                        offset={saldoScrollOffset}
+                        maxOffset={saldoMaxOffset}
+                        onOffsetChange={setSaldoScrollOffset}
+                        label={saldoWindowLabel}
+                        style={{ visibility: saldoMaxOffset > 0 ? "visible" : "hidden" }}
+                      />
                       {monthly.length > 12 && (
-                        <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
-                          {[["12", "12 M"], ["24", "24 M"], ["all", "Gesamt"]].map(([val, lbl]) => (
-                            <button key={val} type="button" className={`hb-pill-tab ${saldoRangeOption === val ? "hb-pill-tab-active" : ""}`} onClick={() => { setSaldoRangeOption(val); setSaldoScrollOffset(0); }}>{lbl}</button>
-                          ))}
-                        </div>
+                        <RangeTabs
+                          options={MONTH_RANGE_OPTIONS}
+                          value={saldoRangeOption}
+                          onChange={(val) => { setSaldoRangeOption(val); setSaldoScrollOffset(0); }}
+                          ariaLabel="Zeitraum wählen"
+                        />
                       )}
                     </div>
                   </div>
@@ -473,17 +476,20 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
                     <h3 className="hb-card-title">Cashflow</h3>
                     <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: evaMaxOffset > 0 ? "visible" : "hidden" }}>
-                        <button type="button" className="hb-icon-btn" onClick={() => setEvaScrollOffset((o) => Math.min(o + 1, evaMaxOffset))} disabled={evaScrollOffset >= evaMaxOffset} title="Älteren Bereich anzeigen">‹</button>
-                        <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{evaWindowLabel}</span>
-                        <button type="button" className="hb-icon-btn" onClick={() => setEvaScrollOffset((o) => Math.max(o - 1, 0))} disabled={evaScrollOffset === 0} title="Neueren Bereich anzeigen">›</button>
-                      </div>
+                      <ChartScrollNav
+                        offset={evaScrollOffset}
+                        maxOffset={evaMaxOffset}
+                        onOffsetChange={setEvaScrollOffset}
+                        label={evaWindowLabel}
+                        style={{ visibility: evaMaxOffset > 0 ? "visible" : "hidden" }}
+                      />
                       {monthly.length > 12 && (
-                        <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
-                          {[["12", "12 M"], ["24", "24 M"], ["all", "Gesamt"]].map(([val, lbl]) => (
-                            <button key={val} type="button" className={`hb-pill-tab ${evaRangeOption === val ? "hb-pill-tab-active" : ""}`} onClick={() => { setEvaRangeOption(val); setEvaScrollOffset(0); }}>{lbl}</button>
-                          ))}
-                        </div>
+                        <RangeTabs
+                          options={MONTH_RANGE_OPTIONS}
+                          value={evaRangeOption}
+                          onChange={(val) => { setEvaRangeOption(val); setEvaScrollOffset(0); }}
+                          ariaLabel="Zeitraum wählen"
+                        />
                       )}
                     </div>
                   </div>
@@ -551,11 +557,16 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
               <CardContent>
                 <div className="hb-row" style={{ alignItems: "center", marginBottom: 8 }}>
                   <h3 className="hb-card-title">Jahresvergleich</h3>
-                  <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
-                    {[["expense", "Ausgaben"], ["transfer", "Rücklagen"], ["savings", "Sparen"]].map(([val, lbl]) => (
-                      <button key={val} type="button" className={`hb-pill-tab ${yoyMode === val ? "hb-pill-tab-active" : ""}`} onClick={() => setYoyMode(val)}>{lbl}</button>
-                    ))}
-                  </div>
+                  <RangeTabs
+                    options={[
+                      { value: "expense", label: "Ausgaben" },
+                      { value: "transfer", label: "Rücklagen" },
+                      { value: "savings", label: "Sparen" },
+                    ]}
+                    value={yoyMode}
+                    onChange={setYoyMode}
+                    ariaLabel="Kennzahl wählen"
+                  />
                 </div>
                 {yoyYears.length >= 2 ? (
                   <>

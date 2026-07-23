@@ -9,7 +9,7 @@ import {
   ReferenceLine,
   CartesianGrid,
 } from "recharts";
-import { Card, CardContent } from "../components/ui.jsx";
+import { Card, CardContent, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
 import HbSparklineHover from "../components/HbSparklineHover.jsx";
 import { IconTag } from "../components/icons.jsx";
@@ -17,7 +17,7 @@ import { useThemeColors } from "../hooks/themeColors.js";
 import { getCategoryLabel, formatCurrencyAxis } from "../utils/hbUtils.js";
 import { FALLBACK_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
-import { MONTHS_SHORT } from "../utils/constants.js";
+import { MONTHS_SHORT, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 
 function fmtMonthDE(ym) {
   if (!ym) return "";
@@ -197,17 +197,20 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
               </span>
             </div>
             <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: fctMaxOffset > 0 ? "visible" : "hidden" }}>
-                <button type="button" className="hb-icon-btn" onClick={() => setFctScrollOffset((o) => Math.min(o + 1, fctMaxOffset))} disabled={fctScrollOffset >= fctMaxOffset} title="Älteren Bereich anzeigen">‹</button>
-                <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{fctWindowLabel}</span>
-                <button type="button" className="hb-icon-btn" onClick={() => setFctScrollOffset((o) => Math.max(o - 1, 0))} disabled={fctScrollOffset === 0} title="Neueren Bereich anzeigen">›</button>
-              </div>
+              <ChartScrollNav
+                offset={fctScrollOffset}
+                maxOffset={fctMaxOffset}
+                onOffsetChange={setFctScrollOffset}
+                label={fctWindowLabel}
+                style={{ visibility: fctMaxOffset > 0 ? "visible" : "hidden" }}
+              />
               {fixedMonthly.length > 12 && (
-                <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
-                  {[["12", "12 M"], ["24", "24 M"], ["all", "Gesamt"]].map(([val, lbl]) => (
-                    <button key={val} type="button" className={`hb-pill-tab ${fctRangeOption === val ? "hb-pill-tab-active" : ""}`} onClick={() => { setFctRangeOption(val); setFctScrollOffset(0); }}>{lbl}</button>
-                  ))}
-                </div>
+                <RangeTabs
+                  options={MONTH_RANGE_OPTIONS}
+                  value={fctRangeOption}
+                  onChange={(val) => { setFctRangeOption(val); setFctScrollOffset(0); }}
+                  ariaLabel="Zeitraum wählen"
+                />
               )}
             </div>
           </div>
@@ -260,7 +263,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                   )}
                 </div>
                 {availableTags.length > 0 && (
-                  <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
+                  <div className="hb-pill-tabs" role="group">
                     <button
                       type="button"
                       className={`hb-pill-tab${selectedTags.size === 0 ? " hb-pill-tab-active" : ""}`}

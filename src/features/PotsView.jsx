@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Card, CardContent, Button } from "../components/ui.jsx";
+import { Card, CardContent, Button, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
+import { MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 import EditDialog from "../components/EditDialog.jsx";
 import PotsManager from "./PotsManager.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
@@ -476,17 +477,20 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                       </span>
                     </div>
                     <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: lineMaxOffset > 0 ? "visible" : "hidden" }}>
-                        <button type="button" className="hb-icon-btn" onClick={() => setLineScrollOffset((o) => Math.min(o + 1, lineMaxOffset))} disabled={lineScrollOffset >= lineMaxOffset} title="Älteren Bereich anzeigen" aria-label="Älteren Bereich anzeigen">‹</button>
-                        <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{lineWindowLabel}</span>
-                        <button type="button" className="hb-icon-btn" onClick={() => setLineScrollOffset((o) => Math.max(o - 1, 0))} disabled={lineScrollOffset === 0} title="Neueren Bereich anzeigen" aria-label="Neueren Bereich anzeigen">›</button>
-                      </div>
+                      <ChartScrollNav
+                        offset={lineScrollOffset}
+                        maxOffset={lineMaxOffset}
+                        onOffsetChange={setLineScrollOffset}
+                        label={lineWindowLabel}
+                        style={{ visibility: lineMaxOffset > 0 ? "visible" : "hidden" }}
+                      />
                       {potSeries.length > 12 && (
-                        <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
-                          {[["12", "12 M"], ["24", "24 M"], ["all", "Gesamt"]].map(([val, lbl]) => (
-                            <button key={val} type="button" className={`hb-pill-tab ${lineRangeOption === val ? "hb-pill-tab-active" : ""}`} onClick={() => { setLineRangeOption(val); setLineScrollOffset(0); }}>{lbl}</button>
-                          ))}
-                        </div>
+                        <RangeTabs
+                          options={MONTH_RANGE_OPTIONS}
+                          value={lineRangeOption}
+                          onChange={(val) => { setLineRangeOption(val); setLineScrollOffset(0); }}
+                          ariaLabel="Zeitraum wählen"
+                        />
                       )}
                     </div>
                   </div>
@@ -542,17 +546,20 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                     <div className="hb-row" style={{ alignItems: "center" }}>
                       <h3 className="hb-card-title">Ein-/Auszahlungen</h3>
                       <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4, visibility: barMaxOffset > 0 ? "visible" : "hidden" }}>
-                          <button type="button" className="hb-icon-btn" onClick={() => setBarScrollOffset((o) => Math.min(o + 1, barMaxOffset))} disabled={barScrollOffset >= barMaxOffset} title="Älteren Bereich anzeigen" aria-label="Älteren Bereich anzeigen">‹</button>
-                          <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{barWindowLabel}</span>
-                          <button type="button" className="hb-icon-btn" onClick={() => setBarScrollOffset((o) => Math.max(o - 1, 0))} disabled={barScrollOffset === 0} title="Neueren Bereich anzeigen" aria-label="Neueren Bereich anzeigen">›</button>
-                        </div>
+                        <ChartScrollNav
+                          offset={barScrollOffset}
+                          maxOffset={barMaxOffset}
+                          onOffsetChange={setBarScrollOffset}
+                          label={barWindowLabel}
+                          style={{ visibility: barMaxOffset > 0 ? "visible" : "hidden" }}
+                        />
                         {potSeries.length > 12 && (
-                          <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
-                            {[["12", "12 M"], ["24", "24 M"], ["all", "Gesamt"]].map(([val, lbl]) => (
-                              <button key={val} type="button" className={`hb-pill-tab ${barRangeOption === val ? "hb-pill-tab-active" : ""}`} onClick={() => { setBarRangeOption(val); setBarScrollOffset(0); }}>{lbl}</button>
-                            ))}
-                          </div>
+                          <RangeTabs
+                            options={MONTH_RANGE_OPTIONS}
+                            value={barRangeOption}
+                            onChange={(val) => { setBarRangeOption(val); setBarScrollOffset(0); }}
+                            ariaLabel="Zeitraum wählen"
+                          />
                         )}
                       </div>
                     </div>

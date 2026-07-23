@@ -11,7 +11,7 @@ import {
   ReferenceLine,
   CartesianGrid,
 } from "recharts";
-import { Card, CardContent, Button } from "../components/ui.jsx";
+import { Card, CardContent, Button, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
@@ -21,15 +21,9 @@ import { useThemeColors } from "../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { generateId } from "../utils/idUtils.js";
 import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, formatCurrencyAxis } from "../utils/hbUtils.js";
-import { EMPTY_ARRAY } from "../utils/constants.js";
+import { EMPTY_ARRAY, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 import { CUSTOM_CATEGORY_PALETTE } from "../utils/hbPalette.js";
 import { calcCostGroupStats, calcExpectedMonthly } from "../utils/costGroupUtils.js";
-
-const RANGE_OPTIONS = [
-  { id: "12", label: "12 M" },
-  { id: "24", label: "24 M" },
-  { id: "all", label: "Gesamt" },
-];
 
 const INTERVAL_OPTIONS = [
   { months: 1, label: "Monatlich" },
@@ -419,18 +413,13 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
               </div>
             </div>
             <div className="hb-cg-head-actions">
-              <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4, marginRight: 10 }}>
-                {RANGE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    className={`hb-pill-tab ${rangeOption === opt.id ? "hb-pill-tab-active" : ""}`}
-                    onClick={() => { setRangeOption(opt.id); setChartOffset(0); }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+              <RangeTabs
+                options={MONTH_RANGE_OPTIONS}
+                value={rangeOption}
+                onChange={(val) => { setRangeOption(val); setChartOffset(0); }}
+                ariaLabel="Zeitraum wählen"
+                style={{ marginRight: 10 }}
+              />
               <Button onClick={() => openEditDialog(activeGroup)}>
                 <IconEdit width={16} height={16} /> Bearbeiten
               </Button>
@@ -480,11 +469,12 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
                   )}
                 </div>
                 {chartMaxOffset > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <button type="button" className="hb-icon-btn" onClick={() => setChartOffset((o) => Math.min(o + 1, chartMaxOffset))} disabled={chartOffset >= chartMaxOffset} title="Älteren Bereich anzeigen">‹</button>
-                    <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{chartWindowLabel}</span>
-                    <button type="button" className="hb-icon-btn" onClick={() => setChartOffset((o) => Math.max(o - 1, 0))} disabled={chartOffset === 0} title="Neueren Bereich anzeigen">›</button>
-                  </div>
+                  <ChartScrollNav
+                    offset={chartOffset}
+                    maxOffset={chartMaxOffset}
+                    onOffsetChange={setChartOffset}
+                    label={chartWindowLabel}
+                  />
                 )}
               </div>
 
@@ -639,18 +629,12 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
         <div className="hb-cg-head">
           <h2 className="hb-cg-overview-title">Kostengruppen</h2>
           <div className="hb-cg-head-actions">
-            <div className="hb-pill-tabs" role="group" style={{ padding: "2px 4px", gap: 4 }}>
-              {RANGE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  className={`hb-pill-tab ${rangeOption === opt.id ? "hb-pill-tab-active" : ""}`}
-                  onClick={() => { setRangeOption(opt.id); setChartOffset(0); }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            <RangeTabs
+              options={MONTH_RANGE_OPTIONS}
+              value={rangeOption}
+              onChange={(val) => { setRangeOption(val); setChartOffset(0); }}
+              ariaLabel="Zeitraum wählen"
+            />
             <Button onClick={openCreateDialog}>
               <IconPlus /> Neue Gruppe
             </Button>
