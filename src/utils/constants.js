@@ -13,3 +13,11 @@ export const MONTHS_SHORT = [
   "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
   "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
 ];
+
+// Zeitraum-Optionen für die Chart-RangeTabs (12/24 Monate bzw. gesamter Verlauf).
+// App-weit identisch — geteilt, damit die Auswahl konsistent bleibt.
+export const MONTH_RANGE_OPTIONS = [
+  { value: "12", label: "12 M" },
+  { value: "24", label: "24 M" },
+  { value: "all", label: "Gesamt" },
+];

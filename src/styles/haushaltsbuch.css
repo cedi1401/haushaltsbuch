@@ -3130,8 +3130,8 @@ select.hb-input option {
 .hb-pill-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 4px;
+  gap: 4px;
+  padding: 2px 4px;
   background: var(--bg-subtle);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
