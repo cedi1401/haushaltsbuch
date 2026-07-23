@@ -24,7 +24,7 @@ import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact, formatCurrencyAxis } from "../utils/hbUtils.js";
 import { formatYearMonth } from "../utils/financialMonthUtils.js";
 import { generateId } from "../utils/idUtils.js";
-import { useThemeColors } from "../hooks/useThemeColors.jsx";
+import { useThemeColors } from "../hooks/themeColors.js";
 import { useCardBg } from "../hooks/useCardBg.js";
 import { useClickOutside } from "../hooks/useClickOutside.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";

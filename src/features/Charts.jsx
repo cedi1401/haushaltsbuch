@@ -4,7 +4,7 @@ import { Card, CardContent, Button } from "../components/ui.jsx";
 import { IconInbox } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { useCardBg } from "../hooks/useCardBg.js";
-import { useThemeColors } from "../hooks/useThemeColors.jsx";
+import { useThemeColors } from "../hooks/themeColors.js";
 import {
   PieChart,
   Pie,

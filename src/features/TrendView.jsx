@@ -14,7 +14,7 @@ import {
   ComposedChart,
   ReferenceLine,
 } from "recharts";
-import { useThemeColors } from "../hooks/useThemeColors.jsx";
+import { useThemeColors } from "../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { formatCurrencyCompact, formatCurrencyAxis } from "../utils/hbUtils.js";
 import { useFixedCostTrend } from "../hooks/useFixedCostTrend.js";

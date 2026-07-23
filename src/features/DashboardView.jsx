@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from "react";
 import { Button, Card, CardContent } from "../components/ui.jsx";
 import CategoryManagerDialog from "../components/CategoryManagerDialog.jsx";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
-import { useThemeColors } from "../hooks/useThemeColors.jsx";
+import { useThemeColors } from "../hooks/themeColors.js";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../utils/hbUtils.js";
 import { IconPots } from "../components/icons.jsx";
 import HbSparklineHover from "../components/HbSparklineHover.jsx";

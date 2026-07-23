@@ -13,7 +13,7 @@ import { Card, CardContent } from "../components/ui.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
 import HbSparklineHover from "../components/HbSparklineHover.jsx";
 import { IconTag } from "../components/icons.jsx";
-import { useThemeColors } from "../hooks/useThemeColors.jsx";
+import { useThemeColors } from "../hooks/themeColors.js";
 import { getCategoryLabel, formatCurrencyAxis } from "../utils/hbUtils.js";
 import { FALLBACK_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";

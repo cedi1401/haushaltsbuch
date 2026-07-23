@@ -1,7 +1,7 @@
 import HaushaltsbuchApp from "./HaushaltsbuchApp.jsx";
 import { ToastProvider } from "./components/Toast.jsx";
 import { ConfirmProvider } from "./components/ConfirmDialog.jsx";
-import { ThemeColorsProvider } from "./hooks/useThemeColors.jsx";
+import { ThemeColorsProvider } from "./hooks/ThemeColorsProvider.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 export default function App() {

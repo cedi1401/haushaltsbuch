@@ -17,7 +17,7 @@ import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
 import { IconCostGroups, IconPlus, IconEdit, IconDelete, IconCheck, IconInbox, IconFixed } from "../components/icons.jsx";
 import { useClickOutside } from "../hooks/useClickOutside.js";
-import { useThemeColors } from "../hooks/useThemeColors.jsx";
+import { useThemeColors } from "../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { generateId } from "../utils/idUtils.js";
 import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, formatCurrencyAxis } from "../utils/hbUtils.js";

@@ -11,7 +11,7 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { useThemeColors } from "../../hooks/useThemeColors.jsx";
+import { useThemeColors } from "../../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
 import { formatCurrencyAxis } from "../../utils/hbUtils.js";
 import { IconInbox } from "../../components/icons.jsx";

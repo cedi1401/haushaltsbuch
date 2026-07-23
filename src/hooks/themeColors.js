@@ -1,7 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext } from "react";
 import { DEFAULT_CATEGORY_COLOR } from "../utils/hbPalette.js";
 
-const DEFAULT_COLORS = {
+// Context + Consumer-Hook getrennt von der Provider-Komponente
+// (ThemeColorsProvider.jsx), damit Fast Refresh der Komponente sauber
+// funktioniert (only-export-components).
+
+export const DEFAULT_COLORS = {
   green: "#0f7b0f",
   red: "#c42b1c",
   blue: DEFAULT_CATEGORY_COLOR,
@@ -15,7 +19,7 @@ const DEFAULT_COLORS = {
   yoyNew: "#153a70",
 };
 
-function readColors() {
+export function readColors() {
   if (typeof window === "undefined") return DEFAULT_COLORS;
   const styles = getComputedStyle(document.documentElement);
   const get = (name, fallback) => {
@@ -38,27 +42,6 @@ function readColors() {
 }
 
 export const ThemeColorsContext = createContext(DEFAULT_COLORS);
-
-export function ThemeColorsProvider({ children }) {
-  const [colors, setColors] = useState(readColors);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const update = () => setColors(readColors());
-    const observer = new MutationObserver(update);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <ThemeColorsContext.Provider value={colors}>
-      {children}
-    </ThemeColorsContext.Provider>
-  );
-}
 
 export function useThemeColors() {
   return useContext(ThemeColorsContext);
