@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import EditDialog from "./EditDialog.jsx";
 import { CUSTOM_CATEGORY_PALETTE } from "../utils/hbPalette.js";
 
@@ -13,15 +13,18 @@ export default function CategoryCreateDialog({
   const [color, setColor] = useState(CUSTOM_CATEGORY_PALETTE[0]);
   const [parentId, setParentId] = useState("");
 
-  // State zurücksetzen wenn Dialog öffnet
-  useEffect(() => {
+  // State beim Öffnen zurücksetzen — abgeleitet aus dem open-Übergang statt via
+  // Effekt (vermeidet set-state-in-effect und den zusätzlichen Render-Durchlauf).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setMode("parent");
       setName("");
       setColor(CUSTOM_CATEGORY_PALETTE[0]);
       setParentId(expenseCategories?.[0]?.id || "");
     }
-  }, [open, expenseCategories]);
+  }
 
   const canSave =
     name.trim().length > 0 && (mode === "parent" || parentId !== "");

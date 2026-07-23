@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import EditDialog from "./EditDialog.jsx";
 import { CUSTOM_CATEGORY_PALETTE } from "../utils/hbPalette.js";
 import { useConfirm } from "./ConfirmDialog.jsx";
@@ -15,13 +15,16 @@ export default function CategoryEditDialog({
   const [color, setColor] = useState(CUSTOM_CATEGORY_PALETTE[0]);
   const { confirm } = useConfirm();
 
-  // Felder vorausfüllen wenn Kategorie übergeben wird
-  useEffect(() => {
+  // Felder beim Öffnen vorausfüllen — abgeleitet aus dem open-Übergang statt via
+  // Effekt (vermeidet set-state-in-effect und den zusätzlichen Render-Durchlauf).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open && category) {
       setName(category.name || "");
       setColor(category.color || CUSTOM_CATEGORY_PALETTE[0]);
     }
-  }, [open, category]);
+  }
 
   const canSave = name.trim().length > 0;
 

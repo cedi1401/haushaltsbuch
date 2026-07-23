@@ -78,25 +78,34 @@ export function HbDatePicker({ value, onChange, disabled, style, className, plac
   const todayM = now.getMonth() + 1;
   const todayD = now.getDate();
 
-  // Initialise calendar view whenever the popover opens
-  useEffect(() => {
-    if (!open) return;
-    const src = parsed ?? { y: todayY, m: todayM };
-    setViewYear(src.y);
-    setViewMonth(src.m);
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Initialise calendar view whenever the popover opens — derived from the open
+  // transition rather than via an Effect (avoids set-state-in-effect).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      const src = parsed ?? { y: todayY, m: todayM };
+      setViewYear(src.y);
+      setViewMonth(src.m);
+    }
+  }
 
-  // Flip the popover upward when there is not enough room below the trigger
+  // Flip the popover upward when there is not enough room below the trigger.
+  // Genuine DOM measurement after layout, so this must stay an Effect.
   useEffect(() => {
-    if (!open) { setDropUp(false); return; }
-    const trigger = triggerRef.current;
-    const popover = popoverRef.current;
-    if (!trigger || !popover) return;
-    const triggerRect = trigger.getBoundingClientRect();
-    const popHeight = popover.offsetHeight || 330;
-    const spaceBelow = window.innerHeight - triggerRect.bottom;
-    const spaceAbove = triggerRect.top;
-    setDropUp(spaceBelow < popHeight + 12 && spaceAbove > spaceBelow);
+    let up = false;
+    if (open) {
+      const trigger = triggerRef.current;
+      const popover = popoverRef.current;
+      if (trigger && popover) {
+        const triggerRect = trigger.getBoundingClientRect();
+        const popHeight = popover.offsetHeight || 330;
+        const spaceBelow = window.innerHeight - triggerRect.bottom;
+        const spaceAbove = triggerRect.top;
+        up = spaceBelow < popHeight + 12 && spaceAbove > spaceBelow;
+      }
+    }
+    setDropUp(up);
   }, [open, viewMonth, viewYear]);
 
   useCloseOnOutside(open, setOpen, triggerRef, popoverRef);
@@ -216,21 +225,30 @@ export function HbMonthPicker({ value, onChange, disabled, style, className }) {
   const todayY = now.getFullYear();
   const todayM = now.getMonth() + 1;
 
-  useEffect(() => {
-    if (!open) return;
-    setViewYear(parsed?.y ?? todayY);
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Initialise view year whenever the popover opens — derived from the open
+  // transition rather than via an Effect (avoids set-state-in-effect).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) setViewYear(parsed?.y ?? todayY);
+  }
 
+  // Flip the popover upward when there is not enough room below the trigger.
+  // Genuine DOM measurement after layout, so this must stay an Effect.
   useEffect(() => {
-    if (!open) { setDropUp(false); return; }
-    const trigger = triggerRef.current;
-    const popover = popoverRef.current;
-    if (!trigger || !popover) return;
-    const triggerRect = trigger.getBoundingClientRect();
-    const popHeight = popover.offsetHeight || 240;
-    const spaceBelow = window.innerHeight - triggerRect.bottom;
-    const spaceAbove = triggerRect.top;
-    setDropUp(spaceBelow < popHeight + 12 && spaceAbove > spaceBelow);
+    let up = false;
+    if (open) {
+      const trigger = triggerRef.current;
+      const popover = popoverRef.current;
+      if (trigger && popover) {
+        const triggerRect = trigger.getBoundingClientRect();
+        const popHeight = popover.offsetHeight || 240;
+        const spaceBelow = window.innerHeight - triggerRect.bottom;
+        const spaceAbove = triggerRect.top;
+        up = spaceBelow < popHeight + 12 && spaceAbove > spaceBelow;
+      }
+    }
+    setDropUp(up);
   }, [open, viewYear]);
 
   useCloseOnOutside(open, setOpen, triggerRef, popoverRef);

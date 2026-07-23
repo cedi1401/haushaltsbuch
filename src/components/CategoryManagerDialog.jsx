@@ -102,8 +102,11 @@ export default function CategoryManagerDialog({
     }
   }, [budgetTarget]);
 
-  // Reset on close
-  useEffect(() => {
+  // Reset beim Schließen — abgeleitet aus dem open-Übergang statt via Effekt
+  // (vermeidet set-state-in-effect und den zusätzlichen Render-Durchlauf).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (!open) {
       setSearch("");
       setActiveTab("categories");
@@ -116,7 +119,7 @@ export default function CategoryManagerDialog({
       setBudgetTarget(null);
       setBudgetDraft("");
     }
-  }, [open]);
+  }
 
   // -------------------------------------------------------
   // Transfer-Zwecke CRUD

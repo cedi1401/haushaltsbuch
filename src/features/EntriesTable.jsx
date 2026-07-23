@@ -19,11 +19,14 @@ export default function EntriesTable({
   const [visibleCount, setVisibleCount] = useState(CHUNK_SIZE);
   const sentinelRef = useRef(null);
 
-  // Reset when the entries list changes (month or filter change)
-  useEffect(() => {
+  // Reset when the entries list changes (month or filter change) — derived from
+  // the prop transition rather than via an Effect (avoids set-state-in-effect).
+  const [prevEntries, setPrevEntries] = useState(entriesSorted);
+  if (entriesSorted !== prevEntries) {
+    setPrevEntries(entriesSorted);
     setCollapsed(true);
     setVisibleCount(CHUNK_SIZE);
-  }, [entriesSorted]);
+  }
 
   // Auto-load next chunk when sentinel scrolls into view
   useEffect(() => {

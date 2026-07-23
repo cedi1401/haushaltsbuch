@@ -49,12 +49,15 @@ export default function SettingsDialog({
   // State für Monatsbeginn-Input
   const [monthStartDayDraft, setMonthStartDayDraft] = useState(1);
 
-  // Monatsbeginn-Draft initialisieren wenn Dialog öffnet
-  useEffect(() => {
+  // Monatsbeginn-Draft beim Öffnen initialisieren — abgeleitet aus dem
+  // open-Übergang statt via Effekt (vermeidet set-state-in-effect).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open && activeBook) {
       setMonthStartDayDraft(activeBook.monthStartDay ?? 1);
     }
-  }, [open, activeBook]);
+  }
 
   async function doExportBackup() {
     if (!activeBook) return;

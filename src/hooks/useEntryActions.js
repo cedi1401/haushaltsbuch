@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   parseAmount,
   todayISO,
@@ -89,24 +89,33 @@ export function useEntryActions({
     setAddDraft((d) => ({ ...d, [field]: value }));
   }
 
-  // Sync potId when available pots change
-  useEffect(() => {
-    const pots = activeBook?.pots || [];
-    if (pots.length === 0) {
-      setAddDraft((d) => ({ ...d, potId: "" }));
-      return;
-    }
+  // Sync potId when available pots change — derived from the prop transition
+  // rather than via an Effect (avoids set-state-in-effect). Reacts to async book
+  // loads where `pots` arrives after the initial render.
+  const pots = activeBook?.pots || EMPTY_ARRAY;
+  const [prevPots, setPrevPots] = useState(pots);
+  if (pots !== prevPots) {
+    setPrevPots(pots);
     setAddDraft((d) => {
+      if (pots.length === 0) return d.potId === "" ? d : { ...d, potId: "" };
       if (!pots.some((p) => p.id === d.potId)) return { ...d, potId: pots[0].id };
       return d;
     });
-  }, [activeBook?.pots]);
+  }
 
   // Re-validate the legacy `category` when the active book or its transfer
   // categories change. The kind-change path is handled synchronously in
-  // setAddField (applyKindToDraft) — this effect only reacts to external data.
-  useEffect(() => {
-    if (!activeBook) return;
+  // setAddField (applyKindToDraft) — this only reacts to external data. Derived
+  // from the prop transition rather than via an Effect (avoids set-state-in-effect).
+  const bookId = activeBook?.id;
+  const [prevBookId, setPrevBookId] = useState(bookId);
+  const [prevTransferCats, setPrevTransferCats] = useState(indicateTransferCategories);
+  if (
+    activeBook &&
+    (bookId !== prevBookId || indicateTransferCategories !== prevTransferCats)
+  ) {
+    setPrevBookId(bookId);
+    setPrevTransferCats(indicateTransferCategories);
     setAddDraft((d) => {
       const { kind, category } = d;
       if (kind === "transfer" || kind === "withdrawal") {
@@ -120,7 +129,7 @@ export function useEntryActions({
       // so the draft string needs no sync here.
       return d;
     });
-  }, [activeBook?.id, indicateTransferCategories]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   const availableWithdrawalCategories = useMemo(
     () => getWithdrawalCategoriesForPot(entries, addDraft.potId, indicateTransferCategories),

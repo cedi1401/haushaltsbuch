@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import EditDialog from "./EditDialog.jsx";
 
 /**
@@ -15,9 +15,13 @@ export default function RenameDialog({
 }) {
   const [value, setValue] = useState(initialValue);
 
-  useEffect(() => {
+  // Draft beim Öffnen zurücksetzen — abgeleitet aus dem open-Übergang statt via
+  // Effekt (vermeidet set-state-in-effect und den zusätzlichen Render-Durchlauf).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) setValue(initialValue);
-  }, [open, initialValue]);
+  }
 
   const trimmed = value.trim();
   const canSave = trimmed.length > 0;
