@@ -26,7 +26,7 @@ import {
 } from "./utils/hbUtils.js";
 import { calcExpenseByHierarchy, calcIncomeByHierarchy } from "./utils/budgetUtils.js";
 import { EMPTY_ARRAY, MONTHS_LONG, MONTHS_SHORT } from "./utils/constants.js";
-import CurrencyContext from "./contexts/CurrencyContext.jsx";
+import { CurrencyContext } from "./contexts/CurrencyContext.jsx";
 import { getEntryFinancialMonth, getFinancialMonthRange } from "./utils/financialMonthUtils.js";
 import { calcPotBalance } from "./utils/potUtils.js";
 
