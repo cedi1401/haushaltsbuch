@@ -5,7 +5,7 @@ import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPi
 import { generateId } from "../utils/idUtils.js";
 import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, todayISO } from "../utils/hbUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
-import { useToast } from "../components/Toast.jsx";
+import { useToast } from "../components/toastContext.js";
 import { IconFixed, IconPlus, IconDelete, IconDrag, IconTag } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { EMPTY_ARRAY } from "../utils/constants.js";

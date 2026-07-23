@@ -12,7 +12,7 @@ import {
 import { parseAmount, todayISO } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
-import { useToast } from "../components/Toast.jsx";
+import { useToast } from "../components/toastContext.js";
 import { IconGoals, IconPlus, IconCheck } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 

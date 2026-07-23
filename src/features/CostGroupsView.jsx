@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
-import { useToast } from "../components/Toast.jsx";
+import { useToast } from "../components/toastContext.js";
 import { IconCostGroups, IconPlus, IconEdit, IconDelete, IconCheck, IconInbox, IconFixed } from "../components/icons.jsx";
 import { useClickOutside } from "../hooks/useClickOutside.js";
 import { useThemeColors } from "../hooks/useThemeColors.jsx";

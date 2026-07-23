@@ -6,7 +6,7 @@ import { IconEdit, IconPlus, IconDelete, IconWallet, IconLock, IconTransfer, Ico
 import HbTooltip from "./HbTooltip.jsx";
 import { CHART_COLORS, DEFAULT_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { Button } from "./ui.jsx";
-import { useToast } from "./Toast.jsx";
+import { useToast } from "./toastContext.js";
 import { useConfirm } from "./ConfirmDialog.jsx";
 import { canSetParentBudget, canSetSubBudget } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";

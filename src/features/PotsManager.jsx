@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "../components/ui.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
 import { generateId } from "../utils/idUtils.js";
-import { useToast } from "../components/Toast.jsx";
+import { useToast } from "../components/toastContext.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { IconPlus, IconPots } from "../components/icons.jsx";
 

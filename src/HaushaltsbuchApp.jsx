@@ -3,7 +3,7 @@ import React, { useState, useMemo } from "react";
 import "./styles/haushaltsbuch.css";
 
 import { Button } from "./components/ui.jsx";
-import { useToast } from "./components/Toast.jsx";
+import { useToast } from "./components/toastContext.js";
 import { useConfirm } from "./components/ConfirmDialog.jsx";
 import { IconInfo, IconClose } from "./components/icons.jsx";
 

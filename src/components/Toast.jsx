@@ -1,13 +1,10 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconSuccess, IconError, IconWarning, IconInfo, IconClose } from "./icons.jsx";
-import makeLogger from "../utils/logger.js";
+import { ToastContext } from "./toastContext.js";
 
 // -------------------------------------------------------
 // Toast / InfoBar System (WinUI 3 style)
 // -------------------------------------------------------
-
-const ToastContext = createContext(null);
-const log = makeLogger("Toast");
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
@@ -47,22 +44,6 @@ export function ToastProvider({ children }) {
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
     </ToastContext.Provider>
   );
-}
-
-export function useToast() {
-  const ctx = useContext(ToastContext);
-  if (!ctx) {
-    // Fallback ohne Provider: strukturiertes Logging statt Toast-UI
-    return {
-      show: (o) => log.info("show", o),
-      dismiss: () => {},
-      success: (m) => log.info("success", m),
-      error: (m) => log.error("error", m),
-      warning: (m) => log.warn("warning", m),
-      info: (m) => log.info("info", m),
-    };
-  }
-  return ctx;
 }
 
 function severityIcon(severity) {

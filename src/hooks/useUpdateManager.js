@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useToast } from "../components/Toast.jsx";
+import { useToast } from "../components/toastContext.js";
 import makeLogger from "../utils/logger.js";
 
 const log = makeLogger("useUpdateManager");
