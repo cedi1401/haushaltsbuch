@@ -53,7 +53,8 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
   // "overview" = Karten-Grid aller Gruppen, "detail" = Einzelgruppe mit Chart
   const [viewMode, setViewMode] = useState("overview");
   const [selectedGroupId, setSelectedGroupId] = useState(costGroups[0]?.id || null);
-  const [rangeOption, setRangeOption] = useState("12");
+  // Default "all" (Gesamt): beim Zurückkehren in den Kostenrechner immer der gesamte Verlauf
+  const [rangeOption, setRangeOption] = useState("all");
   // Scrollfenster des Verlaufscharts (0 = neueste 12 Monate)
   const [chartOffset, setChartOffset] = useState(0);
 
