@@ -33,6 +33,13 @@ const CalIcon = () => (
   </svg>
 );
 
+const ClearIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
 const ChevLeft = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <polyline points="15 18 9 12 15 6" />
@@ -64,7 +71,7 @@ function useCloseOnOutside(open, setOpen, triggerRef, popoverRef) {
   }, [open, setOpen, triggerRef, popoverRef]);
 }
 
-export function HbDatePicker({ value, onChange, disabled, style, className, placeholder = "Datum wählen" }) {
+export function HbDatePicker({ value, onChange, disabled, style, className, placeholder = "Datum wählen", clearable = false }) {
   const [open, setOpen] = useState(false);
   const [dropUp, setDropUp] = useState(false);
   const [viewYear, setViewYear] = useState(0);
@@ -126,6 +133,11 @@ export function HbDatePicker({ value, onChange, disabled, style, className, plac
     onChange(`${todayY}-${String(todayM).padStart(2, "0")}-${String(todayD).padStart(2, "0")}`);
     setOpen(false);
   }
+  function clearDate(e) {
+    e.stopPropagation();
+    onChange("");
+    setOpen(false);
+  }
 
   const displayText = parsed
     ? `${String(parsed.d).padStart(2, "0")}. ${MONTH_NAMES[parsed.m - 1]} ${parsed.y}`
@@ -138,12 +150,18 @@ export function HbDatePicker({ value, onChange, disabled, style, className, plac
   for (let d = 1; d <= total; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
+  const showClear = clearable && !!parsed && !disabled;
+
   return (
     <div className={`hb-datepicker${className ? " " + className : ""}`} style={style}>
       <button
         ref={triggerRef}
         type="button"
-        className={`hb-input hb-datepicker-trigger${open ? " hb-datepicker-trigger--open" : ""}`}
+        className={[
+          "hb-input hb-datepicker-trigger",
+          open ? "hb-datepicker-trigger--open" : "",
+          showClear ? "hb-datepicker-trigger--clearable" : "",
+        ].join(" ").trim()}
         onClick={() => setOpen(o => !o)}
         disabled={disabled}
         aria-haspopup="dialog"
@@ -154,6 +172,20 @@ export function HbDatePicker({ value, onChange, disabled, style, className, plac
         </span>
         <span className="hb-datepicker-trigger-icon"><CalIcon /></span>
       </button>
+
+      {/* Eigenständiger Button neben dem Trigger — Buttons dürfen nicht
+          verschachtelt werden, darum absolut positioniert statt innen. */}
+      {showClear && (
+        <button
+          type="button"
+          className="hb-datepicker-clear"
+          onClick={clearDate}
+          aria-label="Datum entfernen"
+          title="Datum entfernen"
+        >
+          <ClearIcon />
+        </button>
+      )}
 
       {open && (
         <div
@@ -206,6 +238,11 @@ export function HbDatePicker({ value, onChange, disabled, style, className, plac
             <button type="button" className="hb-datepicker-today-btn" onClick={selectToday}>
               Heute
             </button>
+            {clearable && parsed && (
+              <button type="button" className="hb-datepicker-clear-btn" onClick={clearDate}>
+                Datum entfernen
+              </button>
+            )}
           </div>
         </div>
       )}

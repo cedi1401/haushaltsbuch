@@ -472,6 +472,35 @@ select.hb-input option {
   align-items: center;
 }
 
+/* Platz für den Entfernen-Button am rechten Trigger-Rand freihalten */
+.hb-datepicker-trigger--clearable {
+  padding-right: 44px;
+}
+
+.hb-datepicker-clear {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.hb-datepicker-clear:hover {
+  background: var(--hover-bg);
+  color: var(--text);
+}
+
 /* Popover card */
 .hb-datepicker-popover {
   position: absolute;
@@ -591,6 +620,10 @@ select.hb-input option {
   margin-top: 10px;
   padding-top: 8px;
   border-top: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .hb-datepicker-today-btn {
@@ -607,6 +640,23 @@ select.hb-input option {
 
 .hb-datepicker-today-btn:hover {
   background: var(--accent-soft);
+}
+
+.hb-datepicker-clear-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.hb-datepicker-clear-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text);
 }
 
 /* Month picker: 3-column grid */

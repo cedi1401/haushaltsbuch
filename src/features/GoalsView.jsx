@@ -643,6 +643,7 @@ export default function GoalsView({
                   onChange={(v) => setDraft((d) => ({ ...d, deadline: v }))}
                   style={{ minWidth: 0, width: "100%" }}
                   placeholder="Kein Enddatum"
+                  clearable
                 />
               </div>
             </div>
