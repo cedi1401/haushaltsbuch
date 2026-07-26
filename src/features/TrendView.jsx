@@ -81,32 +81,17 @@ function YoYTooltip({ active, payload, label, fmt, avgColor }) {
   );
 }
 
-export default function TrendView({ entries, entriesAll, recurringExpenses = [], expenseCategories = [], monthStartDay = 1, pots = [] }) {
+export default function TrendView({ entries = [], recurringExpenses = [], expenseCategories = [], monthStartDay = 1, pots = [] }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const fmtTick = (v) => formatCurrencyCompact(v, baseCurrency);
   const fmtAxis = (v) => formatCurrencyAxis(v, baseCurrency);
-  const hasAll = Array.isArray(entriesAll) && entriesAll.length > 0;
-  const [userScope, setUserScope] = useState("book"); // "book" | "all"
   const [saldoRangeOption, setSaldoRangeOption] = useState("12");
   const [saldoScrollOffset, setSaldoScrollOffset] = useState(0);
   const [evaRangeOption, setEvaRangeOption] = useState("12");
   const [evaScrollOffset, setEvaScrollOffset] = useState(0);
   const [yoyMode, setYoyMode] = useState("expense"); // "expense" | "transfer" | "savings"
   const themeColors = useThemeColors();
-
-  // Derived scope: force "book" when active book is empty (prevents stale data from other books)
-  const scope = useMemo(() => {
-    if (!entries || entries.length === 0) return "book";
-    if (userScope === "all" && !hasAll) return "book";
-    return userScope;
-  }, [entries, userScope, hasAll]);
-
-  const sourceEntries = useMemo(() => {
-    if (!entries || entries.length === 0) return [];
-    if (scope === "all" && hasAll) return entriesAll;
-    return entries;
-  }, [scope, hasAll, entriesAll, entries]);
 
   const savingsPotIds = useMemo(
     () => new Set((pots || []).filter((p) => p.isSavings).map((p) => p.id)),
@@ -115,7 +100,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
 
   const monthly = useMemo(() => {
     const map = new Map();
-    for (const e of sourceEntries || []) {
+    for (const e of entries || []) {
       const ym = getEntryFinancialMonth(e, monthStartDay);
       if (!ym) continue;
       const prev = map.get(ym) || { month: ym, income: 0, expense: 0, transfer: 0, savings: 0, sweep: 0, balance: 0 };
@@ -166,7 +151,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
     });
 
     return withCum.map((d) => ({ ...d, label: monthLabel(d.month) }));
-  }, [sourceEntries, monthStartDay, savingsPotIds]);
+  }, [entries, monthStartDay, savingsPotIds]);
 
   const saldoRangePool = useMemo(() => {
     if (saldoRangeOption === "12") return monthly.slice(-12);
@@ -251,7 +236,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
   }, [monthly]);
 
   const { fixedMonthly, changes, kpis } = useFixedCostTrend({
-    entries: sourceEntries,
+    entries,
     recurringExpenses,
     monthly,
     monthStartDay,
@@ -269,7 +254,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
     const transferMap = new Map();
     const savingsMap = new Map();
     const yearSet = new Set();
-    for (const e of sourceEntries || []) {
+    for (const e of entries || []) {
       const ym = getEntryFinancialMonth(e, monthStartDay);
       if (!ym) continue;
       const [yStr, mStr] = ym.split("-");
@@ -295,7 +280,7 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
       for (const y of years) row[y] = bucket[y] ?? null;
       return row;
     });
-  }, [sourceEntries, monthStartDay, savingsPotIds, yoyMode]);
+  }, [entries, monthStartDay, savingsPotIds, yoyMode]);
 
   const yoyYears = useMemo(() => {
     if (!yoyData.length) return [];
@@ -324,21 +309,6 @@ export default function TrendView({ entries, entriesAll, recurringExpenses = [],
       <div className="hb-row" style={{ marginBottom: 12 }}>
         <div>
           <h2 className="hb-section-title">Monatsvergleich & Trend</h2>
-        </div>
-
-        <div className="hb-group">
-          <label className="hb-muted" htmlFor="trend-scope-select">Quelle</label>
-          <select
-            id="trend-scope-select"
-            className="hb-input"
-            value={userScope}
-            onChange={(e) => setUserScope(e.target.value)}
-            disabled={!hasAll}
-            title={!hasAll ? "Keine Daten über mehrere Bücher verfügbar." : undefined}
-          >
-            <option value="book">Aktives Buch</option>
-            <option value="all">Alle Bücher</option>
-          </select>
         </div>
       </div>
 

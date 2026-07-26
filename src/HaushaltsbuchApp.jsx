@@ -163,14 +163,6 @@ export default function HaushaltsbuchApp() {
     return `${monthName} ${yyyy} · ${fmtDate(range.startDate)} – ${fmtDate(range.endDate)}`;
   }, [monthFilter, monthStartDay]);
 
-  const allEntries = useMemo(
-    () =>
-      (books || []).flatMap((b) =>
-        (b.entries || []).map((e) => ({ ...e, __bookId: b.id, __bookName: b.name }))
-      ),
-    [books]
-  );
-
   const isViewWithoutMonth = view in VIEW_LABELS;
 
   const currencyContextValue = useMemo(() => ({ fmt, baseCurrency }), [fmt, baseCurrency]);
@@ -263,7 +255,6 @@ export default function HaushaltsbuchApp() {
             {view === "trend" ? (
               <TrendView
                 entries={entries}
-                entriesAll={allEntries}
                 recurringExpenses={activeBook?.recurringExpenses || []}
                 expenseCategories={activeBook?.expenseCategories || []}
                 monthStartDay={monthStartDay}
