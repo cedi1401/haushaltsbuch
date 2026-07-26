@@ -278,6 +278,37 @@ export default function GoalsView({
     return "—";
   }
 
+  function deadlineStatusLabel(prognosis) {
+    if (prognosis.deadlinePassed) return "Überschritten";
+    return prognosis.isAchievable ? "Erreichbar" : "Nicht erreichbar";
+  }
+
+  // Zeigt, wie viel ab jetzt monatlich nötig wäre, um die Deadline zu halten.
+  function renderRequiredMonthly(goal) {
+    const p = goal.prognosis;
+    if (!goal.deadline || goal.progress.remaining <= 0) return null;
+    if (p.deadlinePassed || p.requiredMonthly == null || !p.monthsToDeadline) return null;
+
+    const months = p.monthsToDeadline;
+    return (
+      <div className="hb-goal-prognosis-row">
+        <span className="hb-goal-prognosis-label">Nötig pro Monat</span>
+        <span
+          className={
+            p.isAchievable
+              ? "hb-goal-prognosis-value"
+              : "hb-goal-prognosis-value hb-goal-prognosis-value--warn"
+          }
+        >
+          {fmt(p.requiredMonthly)}
+          <span className="hb-muted" style={{ fontWeight: 500 }}>
+            {" "}· noch {months} Monat{months !== 1 ? "e" : ""}
+          </span>
+        </span>
+      </div>
+    );
+  }
+
   function deadlineLabel(delta) {
     if (delta == null) return null;
     if (delta > 0) return `${delta} Tag${delta !== 1 ? "e" : ""} vor Deadline`;
@@ -460,17 +491,21 @@ export default function GoalsView({
                             <span className={goal.prognosis.isAchievable
                               ? "hb-goal-prognosis-value hb-goal-prognosis-value--ok"
                               : "hb-goal-prognosis-value hb-goal-prognosis-value--bad"}>
-                              {goal.prognosis.isAchievable ? "Erreichbar" : "Nicht erreichbar"}
+                              {deadlineStatusLabel(goal.prognosis)}
                             </span>
                           </div>
                         )}
+                        {renderRequiredMonthly(goal)}
                       </>
                     ) : (
-                      <div className="hb-goal-prognosis-row">
-                        <span className="hb-muted" style={{ fontSize: 12 }}>
-                          Noch keine Daten für Prognose. Buche Transfers, um eine Prognose zu erhalten.
-                        </span>
-                      </div>
+                      <>
+                        <div className="hb-goal-prognosis-row">
+                          <span className="hb-muted" style={{ fontSize: 12 }}>
+                            Noch keine Daten für Prognose. Buche Transfers, um eine Prognose zu erhalten.
+                          </span>
+                        </div>
+                        {renderRequiredMonthly(goal)}
+                      </>
                     )}
                   </div>
                 )}

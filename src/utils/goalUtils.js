@@ -79,11 +79,44 @@ export function calcGoalProgress(goal, entries, _pots) {
 }
 
 /**
+ * Kennzahlen zur Deadline: verbleibende Finanzmonate und der Betrag, der ab
+ * jetzt monatlich zurückgelegt werden müsste, um das Ziel noch zu schaffen.
+ * @param {Object} goal - Das Sparziel
+ * @param {number} remaining - Noch fehlender Betrag
+ * @param {string} todayISO - Heutiges Datum (YYYY-MM-DD)
+ * @param {number} monthStartDay
+ * @returns {{ monthsToDeadline: number|null, requiredMonthly: number|null, deadlinePassed: boolean }}
+ */
+function calcDeadlineNeed(goal, remaining, todayISO, monthStartDay) {
+  const none = { monthsToDeadline: null, requiredMonthly: null, deadlinePassed: false };
+  if (!goal?.deadline) return none;
+
+  // Deadline verstrichen → kein sinnvoller Monatsbetrag mehr berechenbar
+  if (todayISO && goal.deadline < todayISO) {
+    return { monthsToDeadline: 0, requiredMonthly: null, deadlinePassed: true };
+  }
+
+  const todayYm = getFinancialMonth(todayISO, monthStartDay)?.yyyymm;
+  const deadlineYm = getFinancialMonth(goal.deadline, monthStartDay)?.yyyymm;
+  if (!todayYm || !deadlineYm) return none;
+
+  const monthsToDeadline = diffMonthsInclusive(todayYm, deadlineYm);
+  const requiredMonthly =
+    remaining > 0 ? Math.round((remaining / monthsToDeadline) * 100) / 100 : 0;
+
+  return { monthsToDeadline, requiredMonthly, deadlinePassed: false };
+}
+
+/**
  * Berechnet die Prognose für ein Sparziel
  * @param {Object} goal - Das Sparziel
  * @param {Array} entries - Alle Einträge
  * @param {string} todayISO - Heutiges Datum als ISO-String (YYYY-MM-DD)
- * @returns {{ monthsRemaining: number, estimatedDate: string|null, isAchievable: boolean, avgMonthly: number }}
+ * @returns {{
+ *   monthsRemaining: number, estimatedDate: string|null, isAchievable: boolean,
+ *   avgMonthly: number, monthsToDeadline: number|null,
+ *   requiredMonthly: number|null, deadlinePassed: boolean
+ * }}
  */
 export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
   if (!goal) {
@@ -92,11 +125,15 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
       estimatedDate: null,
       isAchievable: false,
       avgMonthly: 0,
+      monthsToDeadline: null,
+      requiredMonthly: null,
+      deadlinePassed: false,
     };
   }
 
   const progress = calcGoalProgress(goal, entries, []);
   const remaining = progress.remaining;
+  const deadlineNeed = calcDeadlineNeed(goal, remaining, todayISO, monthStartDay);
 
   // Wenn Ziel bereits erreicht
   if (remaining <= 0) {
@@ -105,6 +142,7 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
       estimatedDate: todayISO,
       isAchievable: true,
       avgMonthly: 0,
+      ...deadlineNeed,
     };
   }
 
@@ -135,6 +173,7 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
       estimatedDate: null,
       isAchievable: false,
       avgMonthly: 0,
+      ...deadlineNeed,
     };
   }
 
@@ -154,6 +193,7 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
       estimatedDate: null,
       isAchievable: false,
       avgMonthly: 0,
+      ...deadlineNeed,
     };
   }
 
@@ -172,6 +212,7 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
       estimatedDate: null,
       isAchievable: false,
       avgMonthly: 0,
+      ...deadlineNeed,
     };
   }
 
@@ -195,6 +236,7 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
     estimatedDate: estimatedISO,
     isAchievable,
     avgMonthly: Math.round(avgMonthly * 100) / 100,
+    ...deadlineNeed,
   };
 }
 

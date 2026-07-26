@@ -2177,6 +2177,7 @@ select.hb-input option {
 }
 .hb-goal-prognosis-value--ok { color: var(--green); }
 .hb-goal-prognosis-value--bad { color: var(--red); }
+.hb-goal-prognosis-value--warn { color: var(--yellow); }
 /* Füllt den verbleibenden Leerraum der im Grid gestreckten Card und
    zentriert die Pill darin vertikal — bleibt bei fehlendem Leerraum
    einfach ein 12px-Abstand unter dem Fortschritt. */
