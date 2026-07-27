@@ -11,6 +11,7 @@ These rules must never be broken, regardless of what seems convenient:
 - **Keine hardcodierten Währungen**: Immer `fmt`/`baseCurrency` aus dem aktiven Buch verwenden — nie `CHF` oder ein Symbol fest im Code hinterlegen.
 - **DAL-Pattern einhalten**: Jeder Datenzugriff läuft über `src/dal/storage.js` — nie direkt `localStorage` oder SQLite ansprechen.
 - **Nie automatisch committen**: Commits werden ausschließlich über den `git-expert`-Subagenten gemacht. Nie selbst `git commit` ausführen — auch nicht nach abgeschlossenen Änderungen.
+- **Git-Identität vor jedem Commit prüfen**: Vor dem ersten Commit einer Session `git var GIT_AUTHOR_IDENT` ausführen. Erwartet wird `Cedric <155153700+cedi1401@users.noreply.github.com>`. Weicht die Adresse ab (z.B. eine aus Benutzername und Hostname abgeleitete wie `cedric@<hostname>.local`), NICHT committen, sondern den Nutzer informieren — dann fehlt die Git-Config und die Commits würden falsch zugeordnet.
 
 ## Quick Reference
 
