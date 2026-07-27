@@ -1086,6 +1086,11 @@ select.hb-input option {
 .hb-stat-pill--bad      { border-left: 3px solid var(--red); }
 .hb-stat-pill--transfer { border-left: 3px solid var(--blue); }
 .hb-stat-pill--accent   { border-left: 3px solid var(--accent); }
+/* Plan-/Soll-Werte (Kostenrechner): Violett wie die Rücklagenlinie im Chart.
+   Bewusst nicht Orange — das liegt im hellen Theme zu nah an --red und würde
+   neben der Abweichungs-Pill wie ein zweiter Warnzustand wirken, obwohl der
+   Plan-Wert keine Bewertung ist. */
+.hb-stat-pill--plan     { border-left: 3px solid var(--purple); }
 
 
 /* Kopfzeile der Pill: Label links, Graph-Icon (Sparkline-Hover) rechts.
@@ -5058,14 +5063,6 @@ select.hb-input option {
   font-weight: 700;
   color: var(--text);
 }
-
-/* Leerstaaten-Text in den Karten-Sektionen */
-.hb-cg-empty-text {
-  font-size: 14px;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
 
 .hb-cg-color-row {
   display: flex;

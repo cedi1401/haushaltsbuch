@@ -13,9 +13,10 @@ import {
 } from "recharts";
 import { Card, CardContent, Button, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
+import HbTooltip from "../components/HbTooltip.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
-import { IconCostGroups, IconPlus, IconEdit, IconDelete, IconCheck, IconInbox, IconFixed } from "../components/icons.jsx";
+import { IconCostGroups, IconPlus, IconEdit, IconDelete, IconCheck, IconInbox, IconFixed, IconTrend } from "../components/icons.jsx";
 import { useClickOutside } from "../hooks/useClickOutside.js";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
@@ -36,6 +37,28 @@ const INTERVAL_OPTIONS = [
 function intervalLabel(months) {
   return INTERVAL_OPTIONS.find((o) => o.months === months)?.label || `Alle ${months} Mt.`;
 }
+
+// Erklärtexte der beiden Unterfunktionen (Ist-Erfassung vs. Planung). Bewusst
+// ausgelagert, weil sie an mehreren Stellen als Info-Popover erscheinen und der
+// Kern des Konzepts sind: die beiden Zahlen werden nie addiert.
+const HELP_ACTUAL =
+  "Summe aller Buchungen in den zugeordneten Kategorien im gewählten Zeitraum, geteilt durch die Anzahl Monate. " +
+  "Das sind tatsächlich erfasste Ausgaben — unabhängig davon, ob sie aus dem Monatsbudget oder aus einem Topf bezahlt wurden.";
+
+const HELP_PLAN =
+  "Reine Vorschau für unregelmäßige Kosten: Jeder Posten wird auf einen Betrag pro Monat heruntergerechnet. " +
+  "Diese Beträge sind keine Buchungen und werden nicht zu den erfassten Kosten addiert. Sie zeigen, wie viel du " +
+  "pro Monat zurücklegen müsstest, um solche Rechnungen decken zu können.";
+
+const HELP_DEVIATION =
+  "Ist minus Plan. Ein Minus bedeutet, dass deine Planung die realen Kosten deckt; ein Plus, dass die Kosten " +
+  "höher ausfallen als geplant. Beide Werte beschreiben dieselben Kosten aus zwei Blickwinkeln — sie werden " +
+  "deshalb gegenübergestellt und nicht summiert.";
+
+const HELP_CHART =
+  "Die Balken zeigen die tatsächlich gebuchten Kosten pro Monat. Die gestrichelte Linie „Ø Ist\" ist deren " +
+  "Durchschnitt, die Linie „Rücklagenbedarf\" der aus der Planung errechnete Monatsbetrag. Balken unterhalb der " +
+  "Rücklagenlinie bedeuten, dass der Monat günstiger war als die Rücklage — Balken darüber zehren an ihr.";
 
 const EMPTY_DRAFT = { name: "", color: CUSTOM_CATEGORY_PALETTE[0], categoryIds: [], subcategoryIds: [], plannedItems: [] };
 
@@ -122,6 +145,11 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
 
   // Kennzahlen aller Gruppen — Basis für die Übersichts-Cards und (per
   // Lookup) für die Detailansicht, damit nichts doppelt gerechnet wird.
+  //
+  // Ist und Plan werden bewusst NICHT addiert: geplante Posten sind eine
+  // Vorwegnahme derselben Kosten, die das Ist bereits erfasst, sobald die
+  // Rechnung gebucht ist. Eine Summe würde solche Kosten doppelt zählen.
+  // Stattdessen ist das Ist die Leitzahl und der Plan die Gegenüberstellung.
   const groupCards = useMemo(() => {
     return costGroups.map((group) => {
       const stats = calcCostGroupStats(group, entries, { rangeOption, monthStartDay });
@@ -130,7 +158,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
         group,
         stats,
         planned,
-        combinedMonthly: planned.expectedMonthly + stats.avgMonthly,
+        deviation: stats.avgMonthly - planned.expectedMonthly,
       };
     });
   }, [costGroups, entries, rangeOption, monthStartDay]);
@@ -146,6 +174,12 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
   );
   const stats = activeCard?.stats || null;
   const planned = activeCard?.planned || { expectedMonthly: 0, items: EMPTY_ARRAY };
+  const hasPlan = planned.items.length > 0;
+
+  // Richtung der Abweichung mit Toleranz, damit ein rechnerisches ±0.001 nicht
+  // als "über Plan" erscheint.
+  const deviation = activeCard?.deviation || 0;
+  const deviationSign = deviation > 0.005 ? 1 : deviation < -0.005 ? -1 : 0;
 
   // Chart-Fenster: max. 12 Monate sichtbar, ältere per ‹ › erreichbar
   const chartSeries = stats?.monthlySeries || EMPTY_ARRAY;
@@ -154,6 +188,8 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
     const start = Math.max(0, chartSeries.length - 12 - chartOffset);
     return chartSeries.slice(start, start + 12);
   }, [chartSeries, chartOffset]);
+
+  const hasChartData = chartWindow.length > 0;
 
   const chartWindowLabel = useMemo(() => {
     if (!chartWindow.length) return "";
@@ -430,42 +466,99 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
             </div>
           </div>
 
-          {/* KPIs — immer alle rendern, auch ohne Daten (dann mit 0). Additives
-              Modell: Ø/Monat = geplante Kosten (Soll) + Kategorie-Ist. */}
+          {/* KPIs — Soll/Ist-Gegenüberstellung statt Summe. Das Ist ist die
+              Leitzahl (Akzent), der Plan die zweite Sicht (Violett, wie die
+              Rücklagenlinie im Chart). Die Abweichung bleibt ohne Planung
+              neutral, weil es dann nichts zu vergleichen gibt. */}
           <div className="hb-stat-pills">
             <div className="hb-stat-pill hb-stat-pill--accent">
-              <span className="hb-stat-pill-label">Kosten Ø/Monat</span>
-              <span className="hb-stat-pill-value">{fmt(activeCard.combinedMonthly)}</span>
-            </div>
-            <div className="hb-stat-pill hb-stat-pill--accent">
-              <span className="hb-stat-pill-label">Geplant</span>
-              <span className="hb-stat-pill-value">{fmt(planned.expectedMonthly)}</span>
-            </div>
-            <div className="hb-stat-pill hb-stat-pill--accent">
-              <span className="hb-stat-pill-label">Aus Kategorien</span>
+              <div className="hb-stat-pill-top">
+                <span className="hb-stat-pill-label">Ist Ø/Monat</span>
+                <HbTooltip size={16} text={HELP_ACTUAL} />
+              </div>
               <span className="hb-stat-pill-value">{fmt(stats.avgMonthly)}</span>
+              <span className="hb-stat-pill-sub">
+                {fmt(stats.total)} in {stats.monthCount} Mt.
+              </span>
             </div>
-            <div className="hb-stat-pill hb-stat-pill--accent">
-              <span className="hb-stat-pill-label">Gesamt im Zeitraum</span>
-              <span className="hb-stat-pill-value">{fmt(activeCard.combinedMonthly * stats.monthCount)}</span>
+
+            <div className="hb-stat-pill hb-stat-pill--plan">
+              <div className="hb-stat-pill-top">
+                <span className="hb-stat-pill-label">Plan Ø/Monat</span>
+                <HbTooltip size={16} text={HELP_PLAN} />
+              </div>
+              <span className="hb-stat-pill-value">{fmt(planned.expectedMonthly)}</span>
+              <span className="hb-stat-pill-sub">
+                {hasPlan
+                  ? `${planned.items.length} ${planned.items.length === 1 ? "geplanter Posten" : "geplante Posten"}`
+                  : "Noch nichts geplant"}
+              </span>
+            </div>
+
+            {/* Ohne Planung gibt es nichts zu bewerten: die Pill bleibt stehen,
+                zeigt aber neutral 0 statt eine rote "Ist über Plan"-Warnung,
+                die nur daran läge, dass der Nutzer die Planung nicht nutzt. */}
+            <div
+              className={
+                "hb-stat-pill " +
+                (!hasPlan
+                  ? "hb-stat-pill--accent"
+                  : deviationSign > 0
+                  ? "hb-stat-pill--bad"
+                  : "hb-stat-pill--ok")
+              }
+            >
+              <div className="hb-stat-pill-top">
+                <span className="hb-stat-pill-label">Abweichung</span>
+                <HbTooltip size={16} text={HELP_DEVIATION} />
+              </div>
+              <span
+                className="hb-stat-pill-value"
+                style={
+                  hasPlan
+                    ? { color: deviationSign > 0 ? "var(--red)" : "var(--green)" }
+                    : undefined
+                }
+              >
+                {hasPlan && deviationSign > 0 ? "+" : hasPlan && deviationSign < 0 ? "−" : ""}
+                {fmt(hasPlan ? Math.abs(deviation) : 0)}
+              </span>
+              <span className="hb-stat-pill-sub">
+                {!hasPlan
+                  ? "Keine Planung zum Vergleich"
+                  : deviationSign > 0
+                  ? "Ist über Plan"
+                  : deviationSign < 0
+                  ? "Planung deckt das Ist"
+                  : "Ist entspricht dem Plan"}
+              </span>
             </div>
           </div>
 
-          {/* Kostenverlauf: Ist-Kosten pro Monat, Referenzlinien für Ø (Kategorien)
-              und Ø inkl. geplant — Chart-Idiom wie FixedCostTrendSection. */}
+          {/* Kostenverlauf: Ist-Kosten pro Monat, Referenzlinien für den Ist-Ø
+              und den Rücklagenbedarf aus der Planung — Chart-Idiom wie
+              FixedCostTrendSection. Die Rücklagenlinie ist eine Zielmarke zum
+              Ablesen, keine Summe über den Balken. */}
           <Card style={{ marginBottom: 20 }}>
             <CardContent>
               <div className="hb-row" style={{ alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-                  <h4 style={{ margin: 0, fontSize: 15 }}>Kostenverlauf</h4>
-                  <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                    <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.accent} strokeWidth="1.5" strokeDasharray="5 3" /></svg>
-                    Ø Kategorien
+                  <span className="hb-title-with-help">
+                    <h4 style={{ margin: 0, fontSize: 15 }}>Kostenverlauf</h4>
+                    <HbTooltip size={16} text={HELP_CHART} />
                   </span>
-                  {planned.expectedMonthly > 0 && (
+                  {/* Legende nur bei gezeichnetem Chart — im Empty-State gäbe es
+                      keine Linien, die sie erklären könnte. */}
+                  {hasChartData && (
                     <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                      <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.orange} strokeWidth="1.5" strokeDasharray="5 3" /></svg>
-                      Ø inkl. geplant
+                      <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.accent} strokeWidth="1.5" strokeDasharray="5 3" /></svg>
+                      Ø Ist
+                    </span>
+                  )}
+                  {hasChartData && planned.expectedMonthly > 0 && (
+                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
+                      <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.purple} strokeWidth="1.5" strokeDasharray="5 3" /></svg>
+                      Rücklagenbedarf
                     </span>
                   )}
                 </div>
@@ -479,9 +572,14 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
                 )}
               </div>
 
-              {chartWindow.length === 0 ? (
-                <div className="hb-cg-empty-text">
-                  Im gewählten Zeitraum gibt es keine Buchungen in den zugeordneten Kategorien.
+              {!hasChartData ? (
+                <div className="hb-empty hb-empty--sm">
+                  <div className="hb-empty-icon"><IconTrend /></div>
+                  <div className="hb-empty-title">Kein Verlauf</div>
+                  <div className="hb-empty-text">
+                    Für die zugeordneten Kategorien gibt es im gewählten Zeitraum keine Buchungen.
+                    Sobald die erste Ausgabe gebucht ist, erscheint hier der Verlauf pro Monat.
+                  </div>
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={240}>
@@ -506,7 +604,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
                       }}
                     />
                     {planned.expectedMonthly > 0 && (
-                      <ReferenceLine y={activeCard.combinedMonthly} stroke={themeColors.orange} strokeDasharray="5 3" strokeWidth={1.5} />
+                      <ReferenceLine y={planned.expectedMonthly} stroke={themeColors.purple} strokeDasharray="5 3" strokeWidth={1.5} />
                     )}
                     <ReferenceLine y={stats.avgMonthly} stroke={themeColors.accent} strokeDasharray="5 3" strokeWidth={1.5} />
                     <Bar
@@ -523,18 +621,23 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
             </CardContent>
           </Card>
 
-          {/* Kategorien im Zeitraum + Geplante Kosten nebeneinander in zwei
-              Cards (hb-two, bricht unter 900px auf eine Spalte um). */}
+          {/* Die zwei Unterfunktionen nebeneinander: links das Ist (erfasste
+              Buchungen), rechts die Planung (Vorschau). Beide Cards tragen ein
+              Info-Popover, damit die Abgrenzung an Ort und Stelle nachlesbar
+              ist. (hb-two bricht unter 900px auf eine Spalte um.) */}
           <div
             className="hb-two"
             style={{ alignItems: stats.byCategory.length === 0 && planned.items.length === 0 ? "stretch" : "start" }}
           >
             <Card>
               <CardContent>
-                {/* Kategorien im Zeitraum — dezente Ist-Aufschlüsselung: zeigt, welche
-                    Kategorie wie viel zum „Kategorien"-Wert beigetragen hat. */}
+                {/* Ist-Aufschlüsselung: zeigt, welche Kategorie wie viel zum
+                    Ist-Wert beigetragen hat. */}
                 <div className="hb-cg-section-head">
-                  <h3 className="hb-cg-section-title">Kategorien im Zeitraum</h3>
+                  <span className="hb-title-with-help">
+                    <h3 className="hb-cg-section-title">Erfasste Kosten</h3>
+                    <HbTooltip size={17} text={HELP_ACTUAL} />
+                  </span>
                   {stats.byCategory.length > 0 && (
                     <span className="hb-cg-catlist-total">{fmt(stats.total)}</span>
                   )}
@@ -584,10 +687,15 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
               </CardContent>
             </Card>
 
-            {/* Geplante Kosten (zu erwartende Kosten / Soll) */}
+            {/* Planung (Soll) — reine Vorschau, fliesst nicht ins Ist ein */}
             <Card>
               <CardContent>
-                <h3 className="hb-cg-section-title">Geplante Kosten</h3>
+                <div className="hb-cg-section-head">
+                  <span className="hb-title-with-help">
+                    <h3 className="hb-cg-section-title">Planung</h3>
+                    <HbTooltip size={17} text={HELP_PLAN} />
+                  </span>
+                </div>
                 {planned.items.length === 0 ? (
                   <div className="hb-empty hb-empty--sm">
                     <div className="hb-empty-icon"><IconFixed /></div>
@@ -607,7 +715,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
                       </div>
                     ))}
                     <div className="hb-cg-planned-total">
-                      <span>Erwartet Ø/Monat</span>
+                      <span>Plan Ø/Monat</span>
                       <span>{fmt(planned.expectedMonthly)}</span>
                     </div>
                   </div>
@@ -643,7 +751,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
         </div>
 
         <div className="hb-pot-grid">
-          {groupCards.map(({ group, stats: gStats, planned: gPlanned, combinedMonthly }) => (
+          {groupCards.map(({ group, stats: gStats, planned: gPlanned }) => (
             <button
               key={group.id}
               type="button"
@@ -657,9 +765,11 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
                     <span className="hb-cat-dot" style={{ background: group.color || "var(--accent)", flexShrink: 0 }} />
                     <span className="hb-cg-card-name-text">{group.name}</span>
                   </div>
-                  <div className="hb-pot-card-amount">{fmt(combinedMonthly)}</div>
+                  <div className="hb-pot-card-amount">{fmt(gStats.avgMonthly)}</div>
                 </div>
-                <span className="hb-pot-savings-tag">Ø/Monat</span>
+                {/* Leitzahl ist bewusst das Ist: echte Daten, über alle Gruppen
+                    hinweg vergleichbar — auch wenn keine Planung gepflegt ist. */}
+                <span className="hb-pot-savings-tag">Ist Ø/Monat</span>
               </div>
               {gStats.monthlySeries.length > 1 && (
                 <div className="hb-cg-card-spark" aria-hidden="true">
@@ -680,11 +790,11 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
               <div className={"hb-pot-card-foot" + (gPlanned.items.length > 0 ? "" : " hb-pot-card-foot--empty")}>
                 {gPlanned.items.length > 0 ? (
                   <>
-                    <span className="hb-pot-card-foot-label">Geplant</span>
+                    <span className="hb-pot-card-foot-label">Plan Ø/Monat</span>
                     <span className="hb-pot-card-foot-value">{fmt(gPlanned.expectedMonthly)}/Mt.</span>
                   </>
                 ) : (
-                  <span>Keine geplanten Kosten</span>
+                  <span>Keine Planung hinterlegt</span>
                 )}
               </div>
             </button>
@@ -800,12 +910,12 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
             </div>
           </div>
 
-          {/* Geplante Kosten (zu erwartende Kosten) */}
+          {/* Planung (zu erwartende Kosten) */}
           <div className="hb-field">
-            <div className="hb-label">Geplante Kosten (optional)</div>
+            <div className="hb-label">Planung (optional)</div>
             <div className="hb-cg-picker-hint" style={{ marginTop: 0, marginBottom: 10 }}>
-              Erwartete, oft unregelmäßige Kosten. Werden automatisch auf einen Betrag pro Monat
-              umgerechnet und mit den tatsächlichen Kosten verglichen.
+              Erwartete, oft unregelmäßige Kosten. Werden auf einen Betrag pro Monat umgerechnet
+              und den tatsächlichen Kosten gegenübergestellt — nicht dazugerechnet.
             </div>
             {draft.plannedItems.length > 0 && (
               <div className="hb-cg-plan-editor">
@@ -853,7 +963,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
                 <IconPlus width={14} height={14} /> Posten hinzufügen
               </Button>
               {draftExpectedMonthly > 0 && (
-                <span className="hb-cg-plan-expected">Erwartet Ø/Monat: <strong>{fmt(draftExpectedMonthly)}</strong></span>
+                <span className="hb-cg-plan-expected">Plan Ø/Monat: <strong>{fmt(draftExpectedMonthly)}</strong></span>
               )}
             </div>
           </div>
