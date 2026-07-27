@@ -302,7 +302,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
               {/* Spalten-Header */}
               <div className="hb-fct-col-head" style={{ gridColumn: 1, gridRow: 1 }}>Position</div>
               <div className="hb-fct-col-head" style={{ gridColumn: 2, gridRow: 1 }}>Anteil Ø-Ausgaben</div>
-              <div className="hb-fct-col-head" style={{ gridColumn: 3, gridRow: 1 }}>Jahresbetrag</div>
+              <div className="hb-fct-col-head hb-fct-col-head--right" style={{ gridColumn: 3, gridRow: 1 }}>Jahresbetrag</div>
 
               {/* Spalte 1 + 2: Items */}
               {activeItems.map((item, i) => [
