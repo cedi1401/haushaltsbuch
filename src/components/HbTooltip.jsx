@@ -1,6 +1,9 @@
 import React, { useId, useRef, useState, useLayoutEffect } from "react";
 import { IconHelp } from "./icons.jsx";
 
+// Mindestabstand der Bubble zum Fensterrand
+const EDGE_GAP = 8;
+
 function getTriggerCenter(triggerEl) {
   const r = triggerEl.getBoundingClientRect();
   return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, r };
@@ -34,7 +37,7 @@ export default function HbTooltip({
     setState(null);
   }
 
-  // After bubble renders: flip if needed + calculate arrow offset
+  // After bubble renders: flip if needed + clamp horizontally + arrow offset
   useLayoutEffect(() => {
     if (!state || !tipRef.current || !triggerRef.current) return;
     const bubble = tipRef.current.getBoundingClientRect();
@@ -43,22 +46,37 @@ export default function HbTooltip({
     let effectivePlacement = state.effectivePlacement;
 
     // Flip top→bottom if bubble overflows viewport top
-    if (effectivePlacement === "top" && bubble.top < 8) {
+    if (effectivePlacement === "top" && bubble.top < EDGE_GAP) {
       effectivePlacement = "bottom";
     }
+
+    let coords =
+      effectivePlacement === "bottom" && state.effectivePlacement !== "bottom"
+        ? { left: cx, top: r.bottom + 10 }
+        : state.coords;
 
     // Arrow offset: where the trigger center falls within the bubble (horizontal for top/bottom)
     let arrowX = null;
     if (effectivePlacement === "top" || effectivePlacement === "bottom") {
-      const raw = cx - bubble.left;
-      arrowX = Math.max(12, Math.min(bubble.width - 12, raw));
+      // Die Bubble hängt per translateX(-50%) mittig am Trigger. Sitzt der
+      // Trigger nah am Fensterrand (z.B. die rechte KPI-Pill), würde sie dort
+      // herausragen. Statt zu flippen wird sie in den Viewport geschoben und
+      // der Pfeil zeigt weiterhin auf den Trigger.
+      const half = bubble.width / 2;
+      const minCenter = EDGE_GAP + half;
+      const maxCenter = window.innerWidth - EDGE_GAP - half;
+      const center =
+        maxCenter >= minCenter ? Math.min(Math.max(cx, minCenter), maxCenter) : cx;
+      coords = { ...coords, left: center };
+      arrowX = Math.max(12, Math.min(bubble.width - 12, cx - (center - half)));
     }
 
-    if (arrowX !== state.arrowX || effectivePlacement !== state.effectivePlacement) {
-      const coords =
-        effectivePlacement === "bottom"
-          ? { left: cx, top: r.bottom + 10 }
-          : state.coords;
+    if (
+      arrowX !== state.arrowX ||
+      effectivePlacement !== state.effectivePlacement ||
+      coords.left !== state.coords.left ||
+      coords.top !== state.coords.top
+    ) {
       setState({ coords, arrowX, effectivePlacement });
     }
   }, [state]);

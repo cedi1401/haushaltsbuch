@@ -4328,7 +4328,8 @@ select.hb-input option {
   position: fixed;
   z-index: 9999;
   width: max-content;
-  max-width: 300px;
+  /* 16px = 2×8px Mindestabstand zum Fensterrand (vgl. EDGE_GAP in HbTooltip) */
+  max-width: min(300px, calc(100vw - 16px));
   padding: 10px 14px;
   font-size: 13px;
   font-weight: 400;
