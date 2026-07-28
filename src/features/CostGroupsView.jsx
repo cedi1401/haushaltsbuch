@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, Button, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
+import OverflowMenu from "../components/OverflowMenu.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
 import { IconCostGroups, IconPlus, IconEdit, IconDelete, IconCheck, IconInbox, IconFixed, IconTrend } from "../components/icons.jsx";
@@ -60,7 +61,12 @@ const HELP_CHART =
   "Durchschnitt, die Linie „Rücklagenbedarf\" der aus der Planung errechnete Monatsbetrag. Balken unterhalb der " +
   "Rücklagenlinie bedeuten, dass der Monat günstiger war als die Rücklage — Balken darüber zehren an ihr.";
 
-const EMPTY_DRAFT = { name: "", color: CUSTOM_CATEGORY_PALETTE[0], categoryIds: [], subcategoryIds: [], plannedItems: [] };
+// Planung ist bewusst NICHT Teil des Gruppen-Drafts: Planungsposten werden
+// ausschließlich in der Planungs-Card gepflegt (ein Ort, keine Doppelspurigkeit).
+const EMPTY_DRAFT = { name: "", color: CUSTOM_CATEGORY_PALETTE[0], categoryIds: [], subcategoryIds: [] };
+
+// Draft des kleinen Einzel-Posten-Dialogs (Planungs-Card). id === null = neuer Posten.
+const EMPTY_PLAN_ITEM = { id: null, name: "", amount: "", intervalMonths: 12 };
 
 export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay = 1 }) {
   const fmt = useFmt();
@@ -213,12 +219,6 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
       color: group.color || CUSTOM_CATEGORY_PALETTE[0],
       categoryIds: [...(group.categoryIds || [])],
       subcategoryIds: [...(group.subcategoryIds || [])],
-      plannedItems: (group.plannedItems || []).map((p) => ({
-        id: p.id,
-        name: p.name || "",
-        amount: String(p.amount ?? ""),
-        intervalMonths: Number(p.intervalMonths || 12),
-      })),
     });
     // Kategorien mit Auswahl direkt aufklappen
     const toExpand = new Set();
@@ -263,54 +263,20 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
     });
   }
 
-  // Planungsposten (zu erwartende Kosten)
-  function addPlannedItem() {
-    setDraft((d) => ({
-      ...d,
-      plannedItems: [...d.plannedItems, { id: generateId("plan"), name: "", amount: "", intervalMonths: 12 }],
-    }));
-  }
-
-  function updatePlannedItem(id, patch) {
-    setDraft((d) => ({
-      ...d,
-      plannedItems: d.plannedItems.map((p) => (p.id === id ? { ...p, ...patch } : p)),
-    }));
-  }
-
-  function removePlannedItem(id) {
-    setDraft((d) => ({ ...d, plannedItems: d.plannedItems.filter((p) => p.id !== id) }));
-  }
-
-  // Live-Vorschau des erwarteten Betrags im Dialog
-  const draftExpectedMonthly = useMemo(() => {
-    return draft.plannedItems.reduce((s, p) => {
-      const amt = parseAmount(p.amount);
-      const interval = Math.max(1, Number(p.intervalMonths || 1));
-      return Number.isFinite(amt) ? s + amt / interval : s;
-    }, 0);
-  }, [draft.plannedItems]);
-
   const canSave = useMemo(() => {
     return draft.name.trim().length > 0 && (draft.categoryIds.length > 0 || draft.subcategoryIds.length > 0);
   }, [draft]);
 
   function saveGroup() {
     if (!activeBook || !canSave) return;
-    // Planungsposten bereinigen: nur Posten mit gültigem Betrag übernehmen
-    const cleanPlanned = draft.plannedItems
-      .map((p) => ({
-        id: p.id,
-        name: p.name.trim(),
-        amount: parseAmount(p.amount),
-        intervalMonths: Math.max(1, Number(p.intervalMonths || 1)),
-      }))
-      .filter((p) => Number.isFinite(p.amount) && p.amount > 0);
 
     if (editingGroup) {
+      // plannedItems werden hier NICHT geschrieben: der Dialog kennt sie nicht
+      // (mehr). `...g` reicht den bestehenden Stand unverändert durch — sonst
+      // würde jedes Speichern die Planung der Gruppe löschen.
       const updated = costGroups.map((g) =>
         g.id === editingGroup.id
-          ? { ...g, name: draft.name.trim(), color: draft.color, categoryIds: draft.categoryIds, subcategoryIds: draft.subcategoryIds, plannedItems: cleanPlanned }
+          ? { ...g, name: draft.name.trim(), color: draft.color, categoryIds: draft.categoryIds, subcategoryIds: draft.subcategoryIds }
           : g
       );
       onUpdateBook({ ...activeBook, costGroups: updated });
@@ -321,7 +287,9 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
         color: draft.color,
         categoryIds: draft.categoryIds,
         subcategoryIds: draft.subcategoryIds,
-        plannedItems: cleanPlanned,
+        // Leere Planung; gefüllt wird sie anschließend in der Detailansicht,
+        // in die openDetail() direkt springt.
+        plannedItems: [],
       };
       onUpdateBook({ ...activeBook, costGroups: [...costGroups, newGroup] });
       // Neue Gruppe direkt im Detail zeigen
@@ -343,6 +311,68 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
     if (selectedGroupId === group.id) setSelectedGroupId(updated[0]?.id || null);
     setViewMode("overview");
     toast.success("Kostengruppe gelöscht.");
+  }
+
+  // ── Planungsposten direkt aus der Planungs-Card ──────────────────────────
+  // Bewusst ein eigener, kleiner Dialog statt des großen Gruppen-Dialogs: für
+  // einen einzelnen Posten müsste der Nutzer sonst an Name, Farbe und dem
+  // Kategorien-Picker vorbei nach unten scrollen. Der Planungs-Abschnitt im
+  // Gruppen-Dialog bleibt bestehen — beim Anlegen einer neuen Gruppe gibt es
+  // noch keine Card, in der man Posten pflegen könnte.
+  const [planItemOpen, setPlanItemOpen] = useState(false);
+  const [planItemDraft, setPlanItemDraft] = useState(EMPTY_PLAN_ITEM);
+
+  function openPlanItemCreate() {
+    setPlanItemDraft({ ...EMPTY_PLAN_ITEM });
+    setPlanItemOpen(true);
+  }
+
+  function openPlanItemEdit(itemId) {
+    // Auf den Roh-Posten zurückmappen: die Card zeigt die abgeleiteten Items
+    // aus calcExpectedMonthly (inkl. monthly), gespeichert wird plannedItems.
+    const raw = (activeGroup?.plannedItems || []).find((p) => p.id === itemId);
+    if (!raw) return;
+    setPlanItemDraft({
+      id: raw.id,
+      name: raw.name || "",
+      amount: String(raw.amount ?? ""),
+      intervalMonths: Number(raw.intervalMonths || 12),
+    });
+    setPlanItemOpen(true);
+  }
+
+  function persistPlannedItems(items) {
+    if (!activeBook || !activeGroup) return;
+    const updated = costGroups.map((g) => (g.id === activeGroup.id ? { ...g, plannedItems: items } : g));
+    onUpdateBook({ ...activeBook, costGroups: updated });
+  }
+
+  function savePlanItem() {
+    const amount = parseAmount(planItemDraft.amount);
+    if (!planItemDraft.name.trim() || !Number.isFinite(amount) || amount <= 0) return;
+    const item = {
+      id: planItemDraft.id || generateId("plan"),
+      name: planItemDraft.name.trim(),
+      amount,
+      intervalMonths: Math.max(1, Number(planItemDraft.intervalMonths || 1)),
+    };
+    const current = activeGroup?.plannedItems || [];
+    const isEdit = Boolean(planItemDraft.id) && current.some((p) => p.id === planItemDraft.id);
+    persistPlannedItems(isEdit ? current.map((p) => (p.id === item.id ? item : p)) : [...current, item]);
+    setPlanItemOpen(false);
+    toast.success(isEdit ? "Posten aktualisiert." : "Posten hinzugefügt.");
+  }
+
+  async function deletePlanItem(item) {
+    const ok = await confirm({
+      title: "Posten löschen",
+      message: `Geplanten Posten „${item.name || "Posten"}" wirklich löschen? Deine Buchungen bleiben unverändert.`,
+      confirmLabel: "Löschen",
+      danger: true,
+    });
+    if (!ok) return;
+    persistPlannedItems((activeGroup?.plannedItems || []).filter((p) => p.id !== item.id));
+    toast.success("Posten gelöscht.");
   }
 
   // ── Render ──────────────────────────────────────────────────────────────
@@ -695,6 +725,13 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
                     <h3 className="hb-cg-section-title">Planung</h3>
                     <HbTooltip size={17} text={HELP_PLAN} />
                   </span>
+                  {/* Nur neben einer gefüllten Liste: im Empty-State trägt der
+                      dortige Button die Aktion — zwei gleiche CTAs wären Noise. */}
+                  {planned.items.length > 0 && (
+                    <Button size="sm" variant="outline" onClick={openPlanItemCreate}>
+                      <IconPlus width={14} height={14} /> Posten hinzufügen
+                    </Button>
+                  )}
                 </div>
                 {planned.items.length === 0 ? (
                   <div className="hb-empty hb-empty--sm">
@@ -704,16 +741,36 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
                       Lege z.B. „Service 400.- jährlich" oder „Reifen 800.- alle 2 Jahre" an, um
                       unregelmäßige Kosten auf einen Betrag pro Monat umzurechnen.
                     </div>
+                    <Button size="sm" onClick={openPlanItemCreate}>
+                      <IconPlus width={14} height={14} /> Posten hinzufügen
+                    </Button>
                   </div>
                 ) : (
                   <div className="hb-cg-planned-list">
-                    {planned.items.map((p) => (
-                      <div key={p.id} className="hb-cg-planned-row">
-                        <span className="hb-cg-planned-name">{p.name || "Posten"}</span>
-                        <span className="hb-cg-planned-meta">{fmt(p.amount)} · {intervalLabel(p.intervalMonths)}</span>
-                        <span className="hb-cg-planned-monthly">{fmt(p.monthly)}/Mt.</span>
-                      </div>
-                    ))}
+                    {planned.items.map((p, idx) => {
+                      const label = p.name || "Posten";
+                      const isLast = idx === planned.items.length - 1;
+                      return (
+                        <div
+                          key={p.id}
+                          className={"hb-cg-planned-row" + (isLast ? " hb-cg-planned-row--last" : "")}
+                        >
+                          <span className="hb-cg-planned-name">{label}</span>
+                          <span className="hb-cg-planned-meta">{fmt(p.amount)} · {intervalLabel(p.intervalMonths)}</span>
+                          <span className="hb-cg-planned-monthly">{fmt(p.monthly)}/Mt.</span>
+                          {/* Zeilen-Aktionen über das projektweite Kebab-Menü —
+                              dauerhaft sichtbar, damit sie auffindbar bleiben. */}
+                          <OverflowMenu
+                            label={`Aktionen für ${label}`}
+                            buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+                            items={[
+                              { label: "Bearbeiten", onClick: () => openPlanItemEdit(p.id) },
+                              { label: "Löschen", danger: true, onClick: () => deletePlanItem(p) },
+                            ]}
+                          />
+                        </div>
+                      );
+                    })}
                     <div className="hb-cg-planned-total">
                       <span>Plan Ø/Monat</span>
                       <span>{fmt(planned.expectedMonthly)}</span>
@@ -727,6 +784,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
       )}
 
       {renderDialog()}
+      {renderPlanItemDialog()}
     </div>
   );
 
@@ -801,6 +859,75 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
           ))}
         </div>
       </>
+    );
+  }
+
+  // ── Einzelner Planungsposten (kleiner Dialog aus der Planungs-Card) ───────
+  function renderPlanItemDialog() {
+    const amount = parseAmount(planItemDraft.amount);
+    const validAmount = Number.isFinite(amount) && amount > 0;
+    const interval = Math.max(1, Number(planItemDraft.intervalMonths || 1));
+    const isEdit = Boolean(planItemDraft.id);
+    return (
+      <EditDialog
+        open={planItemOpen}
+        title={isEdit ? "Geplanten Posten bearbeiten" : "Geplanten Posten hinzufügen"}
+        onClose={() => setPlanItemOpen(false)}
+        onSave={savePlanItem}
+        canSave={planItemDraft.name.trim().length > 0 && validAmount}
+        saveLabel={isEdit ? "Speichern" : "Hinzufügen"}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
+          <div className="hb-cg-picker-hint" style={{ marginTop: 0 }}>
+            Erwartete, oft unregelmäßige Kosten. Sie werden auf einen Betrag pro Monat
+            umgerechnet und den erfassten Kosten gegenübergestellt — nicht dazugerechnet.
+          </div>
+
+          <div className="hb-field">
+            <div className="hb-label">Name</div>
+            <input
+              className="hb-input hb-full"
+              style={{ minWidth: 0 }}
+              type="text"
+              placeholder="z.B. Service, Reifen, Versicherung"
+              value={planItemDraft.name}
+              onChange={(e) => setPlanItemDraft((d) => ({ ...d, name: e.target.value }))}
+            />
+          </div>
+
+          <div className="hb-two hb-two--dialog" style={{ gap: 14 }}>
+            <div className="hb-field">
+              <div className="hb-label">Betrag ({baseCurrency})</div>
+              <input
+                className="hb-input"
+                type="text"
+                inputMode="decimal"
+                placeholder="z.B. 400"
+                value={planItemDraft.amount}
+                onChange={(e) => setPlanItemDraft((d) => ({ ...d, amount: e.target.value }))}
+              />
+            </div>
+            <div className="hb-field">
+              <div className="hb-label">Intervall</div>
+              <select
+                className="hb-input"
+                value={planItemDraft.intervalMonths}
+                onChange={(e) => setPlanItemDraft((d) => ({ ...d, intervalMonths: Number(e.target.value) }))}
+              >
+                {INTERVAL_OPTIONS.map((o) => (
+                  <option key={o.months} value={o.months}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Live-Vorschau: macht die Umrechnung Betrag ÷ Intervall sichtbar,
+              bevor gespeichert wird — dieselbe Kernaussage wie die Card. */}
+          <div className="hb-cg-plan-expected">
+            Rücklagenbedarf: <strong>{fmt(validAmount ? amount / interval : 0)}</strong> pro Monat
+          </div>
+        </div>
+      </EditDialog>
     );
   }
 
@@ -907,64 +1034,6 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
             <div className="hb-cg-picker-hint">
               Ganze Kategorie wählen erfasst alle ihre Buchungen. Für mehr Genauigkeit einzelne
               Unterkategorien ankreuzen.
-            </div>
-          </div>
-
-          {/* Planung (zu erwartende Kosten) */}
-          <div className="hb-field">
-            <div className="hb-label">Planung (optional)</div>
-            <div className="hb-cg-picker-hint" style={{ marginTop: 0, marginBottom: 10 }}>
-              Erwartete, oft unregelmäßige Kosten. Werden auf einen Betrag pro Monat umgerechnet
-              und den tatsächlichen Kosten gegenübergestellt — nicht dazugerechnet.
-            </div>
-            {draft.plannedItems.length > 0 && (
-              <div className="hb-cg-plan-editor">
-                {draft.plannedItems.map((p) => (
-                  <div key={p.id} className="hb-cg-plan-edit-row">
-                    <input
-                      className="hb-input"
-                      type="text"
-                      placeholder="z.B. Service"
-                      value={p.name}
-                      onChange={(e) => updatePlannedItem(p.id, { name: e.target.value })}
-                    />
-                    <input
-                      className="hb-input"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Betrag"
-                      value={p.amount}
-                      onChange={(e) => updatePlannedItem(p.id, { amount: e.target.value })}
-                    />
-                    <select
-                      className="hb-input"
-                      value={p.intervalMonths}
-                      onChange={(e) => updatePlannedItem(p.id, { intervalMonths: Number(e.target.value) })}
-                    >
-                      {INTERVAL_OPTIONS.map((o) => (
-                        <option key={o.months} value={o.months}>{o.label}</option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      className="hb-icon-btn hb-icon-btn--danger"
-                      onClick={() => removePlannedItem(p.id)}
-                      title="Posten entfernen"
-                      aria-label="Posten entfernen"
-                    >
-                      <IconDelete width={15} height={15} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="hb-cg-plan-footer">
-              <Button size="sm" variant="outline" onClick={addPlannedItem}>
-                <IconPlus width={14} height={14} /> Posten hinzufügen
-              </Button>
-              {draftExpectedMonthly > 0 && (
-                <span className="hb-cg-plan-expected">Plan Ø/Monat: <strong>{fmt(draftExpectedMonthly)}</strong></span>
-              )}
             </div>
           </div>
         </div>
