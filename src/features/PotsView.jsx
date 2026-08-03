@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, Button, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import { MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 import EditDialog from "../components/EditDialog.jsx";
-import PotsManager from "./PotsManager.jsx";
+import PotsManager, { POTS_MANAGER_TITLE } from "./PotsManager.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import {
   ResponsiveContainer,
@@ -290,7 +290,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
         </Card>
         <EditDialog
           open={managePotsOpen}
-          title="Töpfe verwalten"
+          title={POTS_MANAGER_TITLE}
           onClose={() => setManagePotsOpen(false)}
           onSave={() => setManagePotsOpen(false)}
           canSave={true}
@@ -809,7 +809,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
 
       <EditDialog
         open={managePotsOpen}
-        title="Töpfe verwalten"
+        title={POTS_MANAGER_TITLE}
         onClose={() => setManagePotsOpen(false)}
         onSave={() => setManagePotsOpen(false)}
         canSave={true}

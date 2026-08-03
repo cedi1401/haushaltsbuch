@@ -5328,3 +5328,173 @@ select.hb-input option {
   font-variant-numeric: tabular-nums;
 }
 
+
+/* =====================================================
+   TOGGLE SWITCH (Fluent)
+   Für Einstellungen, die sofort wirken — im Gegensatz zur
+   Checkbox, die auf ein explizites "Speichern" wartet.
+   ===================================================== */
+.hb-switch {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--muted);
+  border-radius: var(--radius-pill);
+  background: var(--bar-track-bg);
+  cursor: pointer;
+  transition: background var(--transition-normal), border-color var(--transition-normal),
+    opacity var(--transition-fast);
+}
+
+.hb-switch:hover {
+  border-color: var(--text);
+}
+
+.hb-switch[aria-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.hb-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.hb-switch-knob {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--muted);
+  transform: translateX(3px);
+  transition: transform var(--transition-normal) var(--ease-standard),
+    background var(--transition-normal);
+}
+
+.hb-switch[aria-checked="true"] .hb-switch-knob {
+  background: var(--text-on-accent);
+  transform: translateX(23px);
+}
+
+/* Auf Touch-Breiten das Klickziel vergrößern, ohne die Optik zu ändern. */
+@media (max-width: 480px) {
+  .hb-switch::before {
+    content: "";
+    position: absolute;
+    inset: -10px;
+  }
+}
+
+/* =====================================================
+   TÖPFE VERWALTEN (Dialog)
+   Zeilenliste mit Bearbeiten-in-place statt Dauer-Formular.
+   ===================================================== */
+.hb-potmgr-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.hb-potmgr-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.hb-potmgr-list .hb-potmgr-row:last-child {
+  border-bottom: none;
+}
+
+.hb-potmgr-row:hover {
+  background: var(--hover-bg);
+}
+
+.hb-potmgr-row--editing {
+  background: var(--accent-soft);
+}
+
+.hb-potmgr-main {
+  min-width: 0;
+}
+
+/* Name und Eingabefeld sind exakt gleich hoch, damit der Wechsel in den
+   Bearbeiten-Modus die Zeilenhöhe nicht springen lässt. */
+.hb-potmgr-name {
+  height: 30px;
+  line-height: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-potmgr-input.hb-input {
+  height: 30px;
+  width: 100%;
+  max-width: 320px;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.hb-potmgr-input--invalid.hb-input,
+.hb-potmgr-input--invalid.hb-input:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 1px var(--red);
+}
+
+.hb-potmgr-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 16px;
+  line-height: 16px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hb-potmgr-meta > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-potmgr-error {
+  color: var(--red);
+}
+
+.hb-potmgr-counter {
+  margin-left: auto;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Der Schalter bleibt immer an seinem Platz, tritt bei nicht markierten
+   Töpfen aber zurück und wird erst beim Überfahren der Zeile voll sichtbar. */
+.hb-potmgr-row .hb-switch[aria-checked="false"]:not(:disabled) {
+  opacity: 0.4;
+}
+
+.hb-potmgr-row:hover .hb-switch:not(:disabled),
+.hb-potmgr-row:focus-within .hb-switch:not(:disabled) {
+  opacity: 1;
+}
+
+.hb-potmgr-footer {
+  margin-top: 12px;
+}
+
+/* Die Zeile zum Anlegen steht allein und braucht keinen Trenner. */
+.hb-potmgr-footer .hb-potmgr-row {
+  border-bottom: none;
+}
