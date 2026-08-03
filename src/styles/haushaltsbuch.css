@@ -2982,17 +2982,51 @@ select.hb-input option {
 .hb-cat-transfer-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 6px;
   padding: 8px 12px;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   background: var(--card);
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
 .hb-cat-transfer-item:hover {
   border-color: var(--border);
+}
+
+.hb-cat-transfer-item--editing {
+  background: var(--accent-soft);
+  border-color: var(--border);
+}
+
+/* Nimmt wie der Name den Platz bis zu den Aktionen ein, damit die Buttons beim
+   Wechsel in den Bearbeiten-Modus an derselben Stelle bleiben. */
+.hb-cat-transfer-edit {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hb-cat-transfer-input.hb-input {
+  height: 30px;
+  width: 100%;
+  max-width: 320px;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.hb-cat-transfer-input--invalid.hb-input,
+.hb-cat-transfer-input--invalid.hb-input:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 1px var(--red);
+}
+
+.hb-cat-transfer-error {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--red);
 }
 
 .hb-cat-list {

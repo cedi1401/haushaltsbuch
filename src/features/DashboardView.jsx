@@ -134,6 +134,35 @@ export default function DashboardView({
     return arr;
   }, [potBalances, lastTxByPot]);
 
+  // Transfer-Zwecke werden überall als Klartext referenziert (Buchungen, Fixkosten,
+  // Sparziele). Ein Umbenennen muss diese Referenzen im selben Patch mitziehen,
+  // sonst zeigen bestehende Daten auf einen Zweck, den es nicht mehr gibt.
+  const renameTransferCategory = useCallback(
+    (oldName, newName) => {
+      if (!oldName || !newName || oldName === newName) return;
+      patchActiveBook((b) => ({
+        ...b,
+        transferCategories: (b.transferCategories || []).map((c) =>
+          c === oldName ? newName : c
+        ),
+        entries: (b.entries || []).map((e) =>
+          (e.kind === "transfer" || e.kind === "withdrawal") && e.category === oldName
+            ? { ...e, category: newName }
+            : e
+        ),
+        recurringExpenses: (b.recurringExpenses || []).map((r) =>
+          r.kind === "transfer" && r.transferCategory === oldName
+            ? { ...r, transferCategory: newName }
+            : r
+        ),
+        goals: (b.goals || []).map((g) =>
+          g.transferCategory === oldName ? { ...g, transferCategory: newName } : g
+        ),
+      }));
+    },
+    [patchActiveBook]
+  );
+
   // Übrigen Frei-Betrag als Sparen-Transfer auf den letzten Tag des Finanzmonats
   // verbuchen. Ohne eigenen Spar-Topf wird ein „Überschuss"-Topf (isSavings) angelegt.
   const handleSweepSurplus = useCallback(
@@ -414,6 +443,7 @@ export default function DashboardView({
         onUpdateTransferCategories={(newCats) =>
           patchActiveBook((b) => ({ ...b, transferCategories: newCats }))
         }
+        onRenameTransferCategory={renameTransferCategory}
       />
     </>
   );

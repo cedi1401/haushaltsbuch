@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import EditDialog from "./EditDialog.jsx";
 import CategoryCreateDialog from "./CategoryCreateDialog.jsx";
 import CategoryEditDialog from "./CategoryEditDialog.jsx";
-import { IconEdit, IconPlus, IconDelete, IconWallet, IconLock, IconTransfer, IconSearch } from "./icons.jsx";
+import { IconEdit, IconPlus, IconDelete, IconWallet, IconLock, IconTransfer, IconSearch, IconCheck, IconClose } from "./icons.jsx";
 import HbTooltip from "./HbTooltip.jsx";
 import { CHART_COLORS, DEFAULT_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { Button } from "./ui.jsx";
@@ -11,6 +11,8 @@ import { useConfirm } from "./ConfirmDialog.jsx";
 import { canSetParentBudget, canSetSubBudget } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
+
+const MAX_TRANSFER_NAME_LENGTH = 50;
 
 function filterCategories(categories, search, filter) {
   const q = search.trim().toLowerCase();
@@ -74,11 +76,18 @@ export default function CategoryManagerDialog({
   onUpdateExpenseCategories,
   onUpdateIncomeCategories,
   onUpdateTransferCategories,
+  onRenameTransferCategory,
 }) {
   const fmt = useFmt();
   const toast = useToast();
   const { confirm } = useConfirm();
   const [newTransferName, setNewTransferName] = useState("");
+  // Inline-Umbenennung: der ursprüngliche Name identifiziert die Zeile,
+  // weil Transfer-Zwecke reine Strings ohne id sind.
+  const [editingTransfer, setEditingTransfer] = useState(null);
+  const [transferDraft, setTransferDraft] = useState("");
+  const transferInputRef = useRef(null);
+  const transferEditBtnRefs = useRef({});
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("categories"); // "categories" | "transfer"
   const [filter, setFilter] = useState("all"); // "all" | "custom"
@@ -102,6 +111,14 @@ export default function CategoryManagerDialog({
     }
   }, [budgetTarget]);
 
+  useEffect(() => {
+    if (!editingTransfer) return;
+    const el = transferInputRef.current;
+    if (!el) return;
+    el.focus();
+    el.select();
+  }, [editingTransfer]);
+
   // Reset beim Schließen — abgeleitet aus dem open-Übergang statt via Effekt
   // (vermeidet set-state-in-effect und den zusätzlichen Render-Durchlauf).
   const [prevOpen, setPrevOpen] = useState(open);
@@ -116,6 +133,8 @@ export default function CategoryManagerDialog({
       setEditOpen(false);
       setEditTarget(null);
       setNewTransferName("");
+      setEditingTransfer(null);
+      setTransferDraft("");
       setBudgetTarget(null);
       setBudgetDraft("");
     }
@@ -124,16 +143,87 @@ export default function CategoryManagerDialog({
   // -------------------------------------------------------
   // Transfer-Zwecke CRUD
   // -------------------------------------------------------
+  // excludeName: der eigene Name beim Umbenennen, damit die Zeile nicht mit
+  // sich selbst kollidiert.
+  function validateTransferName(name, excludeName) {
+    const trimmed = name.trim();
+    if (!trimmed) return "Name darf nicht leer sein.";
+    if (trimmed.length > MAX_TRANSFER_NAME_LENGTH)
+      return `Name ist zu lang (max. ${MAX_TRANSFER_NAME_LENGTH} Zeichen).`;
+    const normalized = trimmed.toLocaleLowerCase("de");
+    const isDuplicate = transferCategories.some(
+      (c) => c !== excludeName && c.trim().toLocaleLowerCase("de") === normalized
+    );
+    if (isDuplicate) return "Dieser Transfer-Zweck existiert bereits.";
+    return null;
+  }
+
   function addTransferCategory() {
-    const trimmed = newTransferName.trim();
-    if (!trimmed) return;
-    if (transferCategories.includes(trimmed)) {
-      toast.warning("Dieser Transfer-Zweck existiert bereits.");
+    const error = validateTransferName(newTransferName, null);
+    if (error) {
+      if (newTransferName.trim()) toast.warning(error);
       return;
     }
+    const trimmed = newTransferName.trim();
     onUpdateTransferCategories?.([...transferCategories, trimmed]);
     setNewTransferName("");
     toast.success(`Transfer-Zweck „${trimmed}“ erstellt.`);
+  }
+
+  function startTransferEdit(name) {
+    setEditingTransfer(name);
+    setTransferDraft(name);
+  }
+
+  function cancelTransferEdit() {
+    const name = editingTransfer;
+    setEditingTransfer(null);
+    setTransferDraft("");
+    // Erst nach dem Re-Render existiert der Stift-Button wieder.
+    if (name) requestAnimationFrame(() => transferEditBtnRefs.current[name]?.focus());
+  }
+
+  function commitTransferEdit() {
+    const oldName = editingTransfer;
+    if (!oldName) return;
+    const trimmed = transferDraft.trim();
+    if (trimmed === oldName) {
+      cancelTransferEdit();
+      return;
+    }
+    if (validateTransferName(transferDraft, oldName)) return;
+
+    // Umbenennen muss auch die Buchungen, Fixkosten und Sparziele mitziehen,
+    // die den Zweck als Klartext referenzieren — das erledigt der Parent.
+    onRenameTransferCategory?.(oldName, trimmed);
+    setEditingTransfer(null);
+    setTransferDraft("");
+    requestAnimationFrame(() => transferEditBtnRefs.current[trimmed]?.focus());
+    toast.success(`Transfer-Zweck „${oldName}“ in „${trimmed}“ umbenannt.`);
+  }
+
+  // Wegklicken speichert, solange die Eingabe gültig ist — sonst wird verworfen,
+  // damit der Fokus nicht in einem ungültigen Feld gefangen bleibt.
+  function handleTransferEditBlur() {
+    if (!editingTransfer) return;
+    if (validateTransferName(transferDraft, editingTransfer)) {
+      cancelTransferEdit();
+      return;
+    }
+    commitTransferEdit();
+  }
+
+  function handleTransferEditKeyDown(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitTransferEdit();
+    } else if (e.key === "Escape") {
+      // Ohne stopPropagation würde der globale Handler in EditDialog den
+      // kompletten Dialog schließen statt nur das Bearbeiten abzubrechen.
+      e.stopPropagation();
+      e.preventDefault();
+      cancelTransferEdit();
+    }
   }
 
   async function deleteTransferCategory(name) {
@@ -148,6 +238,10 @@ export default function CategoryManagerDialog({
       danger: true,
     });
     if (!ok) return;
+    if (editingTransfer === name) {
+      setEditingTransfer(null);
+      setTransferDraft("");
+    }
     onUpdateTransferCategories?.(transferCategories.filter((c) => c !== name));
     toast.success("Transfer-Zweck gelöscht.");
   }
@@ -705,22 +799,101 @@ export default function CategoryManagerDialog({
                     </div>
                   </div>
                 ) : (
-                  transferCategories.map((cat) => (
-                    <div key={cat} className="hb-cat-transfer-item">
-                      <span className="hb-cat-name">{cat}</span>
-                      <button
-                        type="button"
-                        className="hb-icon-btn"
-                        onClick={() => deleteTransferCategory(cat)}
-                        aria-label={`„${cat}“ löschen`}
-                        title="Löschen"
-                        disabled={transferCategories.length <= 1}
-                        style={{ width: 30, height: 30 }}
+                  transferCategories.map((cat) => {
+                    const isEditing = editingTransfer === cat;
+                    const error = isEditing
+                      ? validateTransferName(transferDraft, cat)
+                      : null;
+
+                    return (
+                      <div
+                        key={cat}
+                        className={`hb-cat-transfer-item${isEditing ? " hb-cat-transfer-item--editing" : ""}`}
                       >
-                        <IconDelete />
-                      </button>
-                    </div>
-                  ))
+                        {isEditing ? (
+                          <div className="hb-cat-transfer-edit">
+                            <input
+                              ref={transferInputRef}
+                              className={`hb-input hb-cat-transfer-input${error ? " hb-cat-transfer-input--invalid" : ""}`}
+                              type="text"
+                              value={transferDraft}
+                              maxLength={MAX_TRANSFER_NAME_LENGTH}
+                              aria-label={`Name von „${cat}“`}
+                              aria-invalid={error ? "true" : undefined}
+                              aria-describedby={error ? `transfer-error-${cat}` : undefined}
+                              onChange={(e) => setTransferDraft(e.target.value)}
+                              onKeyDown={handleTransferEditKeyDown}
+                              onBlur={handleTransferEditBlur}
+                            />
+                            {error && (
+                              <span id={`transfer-error-${cat}`} className="hb-cat-transfer-error">
+                                {error}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span
+                            className="hb-cat-name"
+                            onDoubleClick={() => startTransferEdit(cat)}
+                            title={cat}
+                          >
+                            {cat}
+                          </span>
+                        )}
+
+                        {isEditing ? (
+                          <>
+                            <button
+                              type="button"
+                              className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+                              aria-label="Namen speichern"
+                              title="Speichern"
+                              disabled={!!error}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={commitTransferEdit}
+                            >
+                              <IconCheck />
+                            </button>
+                            <button
+                              type="button"
+                              className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+                              aria-label="Bearbeiten abbrechen"
+                              title="Abbrechen"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={cancelTransferEdit}
+                            >
+                              <IconClose />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              ref={(el) => {
+                                transferEditBtnRefs.current[cat] = el;
+                              }}
+                              className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+                              onClick={() => startTransferEdit(cat)}
+                              aria-label={`„${cat}“ umbenennen`}
+                              title="Umbenennen"
+                            >
+                              <IconEdit />
+                            </button>
+                            <button
+                              type="button"
+                              className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+                              onClick={() => deleteTransferCategory(cat)}
+                              aria-label={`„${cat}“ löschen`}
+                              title="Löschen"
+                              disabled={transferCategories.length <= 1}
+                            >
+                              <IconDelete />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
