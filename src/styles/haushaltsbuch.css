@@ -3067,6 +3067,14 @@ select.hb-input option {
   background: var(--hover-bg);
 }
 
+/* Kontext-Zeile im Filter "Eigene Kategorien": Standard-Oberkategorie, die
+   nur zur Einordnung ihrer eigenen Unterkategorien angezeigt wird. Zurück-
+   haltend über das Schriftgewicht gedämpft, damit der Kontrast trägt. */
+.hb-cat-accordion-header--context .hb-cat-name {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
 .hb-cat-dot {
   width: 12px;
   height: 12px;

@@ -14,24 +14,31 @@ import { useFmt } from "../contexts/CurrencyContext.jsx";
 
 const MAX_TRANSFER_NAME_LENGTH = 50;
 
+// Sieb auf Item-Ebene: erst entscheiden, welche Unterkategorien sichtbar sind,
+// dann daraus ableiten, ob die Oberkategorie überhaupt gezeigt wird. Dadurch
+// bleibt eine Standard-Oberkategorie im Filter "custom" als reiner Kontext-
+// Container stehen, solange sie eigene Unterkategorien enthält.
 function filterCategories(categories, search, filter) {
   const q = search.trim().toLowerCase();
-  return (categories || [])
-    .filter((cat) => {
-      if (filter === "custom" && cat.isDefault) return false;
-      if (!q) return true;
-      if (cat.name.toLowerCase().includes(q)) return true;
-      return (cat.subcategories || []).some((s) => s.name.toLowerCase().includes(q));
-    })
-    .map((cat) => {
-      if (!q) return cat;
-      return {
-        ...cat,
-        subcategories: (cat.subcategories || []).filter(
-          (s) => s.name.toLowerCase().includes(q) || cat.name.toLowerCase().includes(q)
-        ),
-      };
+  const customOnly = filter === "custom";
+  const result = [];
+
+  for (const cat of categories || []) {
+    const allSubs = cat.subcategories || [];
+    const parentMatches = !q || cat.name.toLowerCase().includes(q);
+    const subs = allSubs.filter((sub) => {
+      if (customOnly && sub.isDefault) return false;
+      return parentMatches || sub.name.toLowerCase().includes(q);
     });
+    // Ohne sichtbare Kinder bleibt die Oberkategorie nur, wenn sie selbst ein
+    // Treffer ist — im Custom-Filter zählt ein Namens-Match einer Standard-
+    // Kategorie ausdrücklich nicht.
+    const selfVisible = parentMatches && (!customOnly || !cat.isDefault);
+    if (subs.length === 0 && !selfVisible) continue;
+    result.push(subs.length === allSubs.length ? cat : { ...cat, subcategories: subs });
+  }
+
+  return result;
 }
 
 function BudgetEditor({ inputRef, value, onChange, onSave, onRemove, onCancel }) {
@@ -92,6 +99,10 @@ export default function CategoryManagerDialog({
   const [activeTab, setActiveTab] = useState("categories"); // "categories" | "transfer"
   const [filter, setFilter] = useState("all"); // "all" | "custom"
   const [openAccordions, setOpenAccordions] = useState(new Set());
+  // Während Suche/Custom-Filter sind alle sichtbaren Accordions offen, sonst
+  // stünden im Custom-Filter leere Container da. Zugeklappte Einträge werden
+  // hier separat gehalten und bei jeder Filteränderung verworfen.
+  const [collapsedWhileFiltering, setCollapsedWhileFiltering] = useState(new Set());
 
   // Sub-Dialoge
   const [createOpen, setCreateOpen] = useState(false);
@@ -129,6 +140,7 @@ export default function CategoryManagerDialog({
       setActiveTab("categories");
       setFilter("all");
       setOpenAccordions(new Set());
+      setCollapsedWhileFiltering(new Set());
       setCreateOpen(false);
       setEditOpen(false);
       setEditTarget(null);
@@ -259,11 +271,30 @@ export default function CategoryManagerDialog({
     [incomeCategories, search, filter]
   );
 
+  // Suche und Custom-Filter verhalten sich gleich: beide verengen die Liste
+  // und klappen die verbleibenden Treffer auf.
+  const isFiltering = search.trim() !== "" || filter === "custom";
+
+  function resetCollapsed() {
+    setCollapsedWhileFiltering((prev) => (prev.size ? new Set() : prev));
+  }
+
+  function changeFilter(next) {
+    setFilter(next);
+    resetCollapsed();
+  }
+
+  function changeSearch(next) {
+    setSearch(next);
+    resetCollapsed();
+  }
+
   // -------------------------------------------------------
   // Accordion toggle
   // -------------------------------------------------------
   function toggleAccordion(id) {
-    setOpenAccordions((prev) => {
+    const setter = isFiltering ? setCollapsedWhileFiltering : setOpenAccordions;
+    setter((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -482,9 +513,14 @@ export default function CategoryManagerDialog({
   // isExpense: nur Ausgabenkategorien erhalten Budget-Buttons
   function renderCategoryList(categories, isExpense = false) {
     return categories.map((cat) => {
-      const isOpen = openAccordions.has(cat.id);
+      const isOpen = isFiltering
+        ? !collapsedWhileFiltering.has(cat.id)
+        : openAccordions.has(cat.id);
       const hasSubs = (cat.subcategories || []).length > 0;
       const isCustom = !cat.isDefault;
+      // Im Custom-Filter ist eine Standard-Oberkategorie nie selbst ein
+      // Treffer, sondern nur Einordnung — sie bekommt deshalb keine Aktionen.
+      const isContextRow = filter === "custom" && cat.isDefault;
       const isBudgetEditorOpen = budgetTarget?.type === "parent" && budgetTarget?.categoryId === cat.id;
       const canParent = isExpense ? canSetParentBudget(cat) : false;
 
@@ -492,7 +528,7 @@ export default function CategoryManagerDialog({
         <div key={cat.id} className={`hb-cat-accordion-item${isOpen ? " hb-cat-accordion-open" : ""}`}>
           {/* Accordion Header */}
           <div
-            className="hb-cat-accordion-header"
+            className={`hb-cat-accordion-header${isContextRow ? " hb-cat-accordion-header--context" : ""}`}
             onClick={() => !isBudgetEditorOpen && toggleAccordion(cat.id)}
             role="button"
             tabIndex={0}
@@ -511,8 +547,10 @@ export default function CategoryManagerDialog({
               </span>
             )}
 
-            {/* Budget-Button (nur Ausgaben, hover-reveal) */}
-            {isExpense && !isBudgetEditorOpen && (
+            {/* Budget-Button (nur Ausgaben, hover-reveal). Kontext-Zeilen
+                bleiben aktionsfrei: dort sind die Standard-Unterkategorien
+                ausgeblendet, das Budget-Schloss wäre nicht nachvollziehbar. */}
+            {isExpense && !isBudgetEditorOpen && !isContextRow && (
               <button
                 type="button"
                 className={`hb-cat-budget-btn${!canParent ? " hb-cat-budget-btn--locked" : ""}`}
@@ -590,7 +628,7 @@ export default function CategoryManagerDialog({
                           onClick={(e) => {
                             e.stopPropagation();
                             if (!canSub) {
-                              toast.warning(`„${cat.name}" hat bereits ein Oberkategorien-Budget.`);
+                              toast.warning(`„${cat.name}“ hat bereits ein Oberkategorien-Budget.`);
                               return;
                             }
                             openBudgetEdit(cat, sub);
@@ -639,6 +677,51 @@ export default function CategoryManagerDialog({
   const allExpense = filteredExpense;
   const allIncome = filteredIncome;
   const hasIncome = allIncome.length > 0;
+  const isEmpty = allExpense.length === 0 && allIncome.length === 0;
+
+  // Der generische Text "Keine Kategorien gefunden." wäre im Custom-Filter
+  // irreführend — dort gibt es Kategorien, nur keine eigenen.
+  function renderEmptyState() {
+    const trimmedSearch = search.trim();
+
+    if (filter !== "custom") {
+      return (
+        <div className="hb-muted" style={{ padding: "16px 0", textAlign: "center" }}>
+          Keine Kategorien gefunden.
+        </div>
+      );
+    }
+
+    if (trimmedSearch) {
+      return (
+        <div className="hb-empty hb-empty--sm">
+          <div className="hb-empty-icon"><IconSearch /></div>
+          <div className="hb-empty-title">Keine eigenen Kategorien gefunden</div>
+          <div className="hb-empty-text">
+            Für „{trimmedSearch}“ gibt es keine eigene Kategorie.
+          </div>
+          <button
+            type="button"
+            className="hb-btn-ghost hb-btn-sm"
+            style={{ marginTop: 10 }}
+            onClick={() => changeFilter("all")}
+          >
+            In allen Kategorien suchen
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="hb-empty hb-empty--sm">
+        <div className="hb-empty-icon"><IconPlus /></div>
+        <div className="hb-empty-title">Noch keine eigenen Kategorien</div>
+        <div className="hb-empty-text">
+          Erstelle über „+ Neue Kategorie“ eine eigene Ober- oder Unterkategorie.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -695,7 +778,7 @@ export default function CategoryManagerDialog({
                   type="button"
                   aria-pressed={filter === "all"}
                   className={`hb-segmented__item${filter === "all" ? " hb-segmented__item--active" : ""}`}
-                  onClick={() => setFilter("all")}
+                  onClick={() => changeFilter("all")}
                 >
                   Alle Kategorien
                 </button>
@@ -703,7 +786,7 @@ export default function CategoryManagerDialog({
                   type="button"
                   aria-pressed={filter === "custom"}
                   className={`hb-segmented__item${filter === "custom" ? " hb-segmented__item--active" : ""}`}
-                  onClick={() => setFilter("custom")}
+                  onClick={() => changeFilter("custom")}
                 >
                   Eigene Kategorien
                 </button>
@@ -722,7 +805,7 @@ export default function CategoryManagerDialog({
                     type="text"
                     placeholder="Kategorie suchen..."
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => changeSearch(e.target.value)}
                     autoComplete="off"
                   />
                 </div>
@@ -733,11 +816,7 @@ export default function CategoryManagerDialog({
 
               {/* Kategorie-Liste */}
               <div className="hb-cat-list">
-                {allExpense.length === 0 && allIncome.length === 0 && (
-                  <div className="hb-muted" style={{ padding: "16px 0", textAlign: "center" }}>
-                    Keine Kategorien gefunden.
-                  </div>
-                )}
+                {isEmpty && renderEmptyState()}
 
                 {hasIncome && (
                   <>
@@ -750,11 +829,9 @@ export default function CategoryManagerDialog({
 
                 {allExpense.length > 0 && (
                   <>
-                    {hasIncome && (
-                      <div className="hb-label" style={{ padding: "12px 0 4px" }}>
-                        Ausgaben
-                      </div>
-                    )}
+                    <div className="hb-label" style={{ padding: hasIncome ? "12px 0 4px" : "6px 0 4px" }}>
+                      Ausgaben
+                    </div>
                     {renderCategoryList(allExpense, true)}
                   </>
                 )}
