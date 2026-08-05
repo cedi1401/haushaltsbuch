@@ -299,3 +299,15 @@ export function IconTag(props) {
     </svg>
   );
 }
+
+// Zwei gestapelte Karten mit Inhaltszeilen — Buchungsvorlagen.
+export function IconTemplate(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <rect x="7" y="3" width="14" height="14" rx="2" />
+      <path d="M17 21H5a2 2 0 0 1-2-2V7" />
+      <line x1="10.5" y1="8" x2="17.5" y2="8" />
+      <line x1="10.5" y1="12" x2="15" y2="12" />
+    </svg>
+  );
+}

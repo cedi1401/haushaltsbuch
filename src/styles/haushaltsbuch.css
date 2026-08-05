@@ -2741,6 +2741,115 @@ select.hb-input option {
   border-color: var(--reveal-border);
 }
 
+/* Vorlagen-Manager — Zeilen analog .hb-potmgr-row */
+.hb-tpl-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hb-tpl-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.hb-tpl-row:last-child {
+  border-bottom: none;
+}
+
+.hb-tpl-row:hover {
+  background: var(--hover-bg);
+}
+
+.hb-tpl-main {
+  min-width: 0;
+}
+
+.hb-tpl-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hb-tpl-name > span:not(.hb-cat-dot) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Untertitel-Pills: Buchungsart, Betrag, Notiz — analog .hb-fixed-pills */
+.hb-tpl-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 22px;
+}
+
+.hb-tpl-pill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 2px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  background: var(--bg-subtle);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.hb-tpl-pill--expense    { background: var(--red-soft);    color: var(--red);    border-color: var(--red); }
+.hb-tpl-pill--income     { background: var(--green-soft);  color: var(--green);  border-color: var(--green); }
+.hb-tpl-pill--withdrawal { background: var(--orange-soft); color: var(--orange); border-color: var(--orange); }
+.hb-tpl-pill--transfer   { background: var(--accent-soft); color: var(--accent); border-color: var(--reveal-border); }
+
+.hb-tpl-pill--amount {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ohne festen Betrag ist die Angabe nur ein Hinweis — zurückhaltender */
+.hb-tpl-pill--open {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* inline-block statt inline-flex: nur so greift text-overflow bei langen Notizen */
+.hb-tpl-pill--note {
+  display: inline-block;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.hb-tpl-pill--warn {
+  background: var(--orange-soft);
+  color: var(--orange);
+  border-color: var(--orange);
+}
+
+.hb-tpl-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* Filter-Hinweis im TrendView */
 .hb-fct-filter-hint {
   font-size: 12px;
