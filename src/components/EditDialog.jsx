@@ -2,6 +2,11 @@ import React, { useEffect, useRef } from "react";
 import { Button } from "./ui.jsx";
 import { IconClose } from "./icons.jsx";
 
+// Stack aller offenen Dialoge. Escape und Strg+Enter dürfen nur auf den
+// obersten wirken — sonst schließt ein Sub-Dialog (z.B. im Kategorien-Manager)
+// den Dialog darunter gleich mit.
+const dialogStack = [];
+
 export default function EditDialog({
   open,
   title,
@@ -18,6 +23,18 @@ export default function EditDialog({
   bodyScroll = true,
 }) {
   const panelRef = useRef(null);
+  // Stabile Identität dieser Dialoginstanz im Stack
+  const stackTokenRef = useRef({});
+
+  useEffect(() => {
+    if (!open) return;
+    const token = stackTokenRef.current;
+    dialogStack.push(token);
+    return () => {
+      const i = dialogStack.lastIndexOf(token);
+      if (i !== -1) dialogStack.splice(i, 1);
+    };
+  }, [open]);
 
   // Fokus ins Modal setzen wenn es öffnet (Electron braucht explizites focus management)
   useEffect(() => {
@@ -48,6 +65,8 @@ export default function EditDialog({
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => {
+      // Nur der oberste Dialog reagiert
+      if (dialogStack[dialogStack.length - 1] !== stackTokenRef.current) return;
       if (e.key === "Escape") onClose();
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         if (canSave) onSave?.();

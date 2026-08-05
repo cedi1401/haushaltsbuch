@@ -12,14 +12,17 @@ export function CardContent({ children, style }) {
   return <div className="hb-card-content" style={style}>{children}</div>;
 }
 
-export function Button({ children, onClick, variant = "solid", size, disabled, type = "button", style, className }) {
+// `ref` wird durchgereicht (React 19: ref ist eine normale Prop), damit
+// Aufrufer den Fokus zurückgeben können — z.B. nach dem Schließen eines
+// Sub-Dialogs.
+export function Button({ children, onClick, variant = "solid", size, disabled, type = "button", style, className, ref }) {
   const cls = [
     variant === "outline" ? "hb-btn hb-btn-outline" : "hb-btn",
     size === "sm" ? "hb-btn-sm" : null,
     className,
   ].filter(Boolean).join(" ");
   return (
-    <button className={cls} onClick={onClick} disabled={disabled} type={type} style={style}>
+    <button ref={ref} className={cls} onClick={onClick} disabled={disabled} type={type} style={style}>
       {children}
     </button>
   );

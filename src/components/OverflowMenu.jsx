@@ -16,11 +16,17 @@ export default function OverflowMenu({ items = [], label = "Weitere Aktionen", b
 
   useEffect(() => {
     if (!open) return;
+    // Capture-Phase auf document, damit ein offenes Menü Escape abfängt, bevor
+    // ein darunterliegender EditDialog (window/Bubble) sich mitschließt.
     const onKey = (e) => {
-      if (e.key === "Escape") { setOpen(false); triggerRef.current?.focus(); }
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      setOpen(false);
+      triggerRef.current?.focus();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
   }, [open]);
 
   useEffect(() => {
