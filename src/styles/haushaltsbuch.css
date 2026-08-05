@@ -1769,7 +1769,7 @@ select.hb-input option {
 .hb-modal-panel-wide:has(.hb-cat-manager) {
   width: 720px;
   max-width: 720px;
-  height: 920px;
+  height: 930px;
   max-height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
@@ -1821,7 +1821,7 @@ select.hb-input option {
   Varianten (Transfer/Entnahme) lassen unten Leerraum statt die Höhe zu ändern.
 */
 .hb-modal-panel--form:has(.hb-entry-form) {
-  height: 720px;
+  height: 930px;
   max-height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
@@ -2739,6 +2739,73 @@ select.hb-input option {
   background: var(--accent-soft);
   color: var(--accent);
   border-color: var(--reveal-border);
+}
+
+/* =====================================================
+   BUCHUNGSVORLAGEN — Chip-Leiste im Buchungsdialog
+   Optisch an .hb-tag-suggestion-pill angelehnt, aber eigene Klassen:
+   die Vorlagen-Chips brauchen einen Aktiv-Zustand und Ellipsis, und eine
+   spätere Änderung an den Tag-Pills soll den Buchungsdialog nicht mitziehen.
+   ===================================================== */
+.hb-tpl-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  /* ~3 Reihen, danach scrollt die Leiste intern statt den Dialog zu strecken */
+  max-height: 72px;
+  overflow-y: auto;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 12px;
+}
+
+.hb-tpl-bar-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-right: 2px;
+}
+
+.hb-tpl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 180px;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--border-light);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.hb-tpl-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-tpl-chip:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--reveal-border);
+}
+
+.hb-tpl-chip--active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Nicht global gesetzt — muss hier mitgeliefert werden */
+.hb-tpl-chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 /* Vorlagen-Manager — Zeilen analog .hb-potmgr-row */

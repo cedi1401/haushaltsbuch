@@ -8,6 +8,7 @@ import {
 } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { getWithdrawalCategoriesForPot } from "../utils/potUtils.js";
+import { templateToDraftPatch } from "../utils/entryTemplateUtils.js";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 
 const INITIAL_ADD_DRAFT = {
@@ -72,6 +73,10 @@ export function useEntryActions({
     date: todayISO(),
   }));
 
+  // id der zuletzt angewendeten Vorlage — für den Aktiv-Zustand der Chips und
+  // zum Hochzählen von usageCount beim tatsächlichen Speichern.
+  const [appliedTemplateId, setAppliedTemplateId] = useState(null);
+
   const [editOpen, setEditOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState(() => ({
@@ -83,10 +88,46 @@ export function useEntryActions({
 
   function setAddField(field, value) {
     if (field === "kind") {
+      // Manueller Wechsel der Art entwertet die angewendete Vorlage
+      setAppliedTemplateId(null);
       setAddDraft((d) => applyKindToDraft(d, value, indicateTransferCategories));
       return;
     }
     setAddDraft((d) => ({ ...d, [field]: value }));
+  }
+
+  // Vorlage auf den Add-Draft anwenden. Ein einziges setAddDraft (siehe
+  // Kommentar über applyKindToDraft — keine Effect → setState → Effect-Kette).
+  // `date` wird bewusst nie angefasst.
+  function applyTemplate(template) {
+    if (!template) return;
+    setAppliedTemplateId(template.id);
+    setAddDraft((d) => {
+      // Reihenfolge zwingend: erst die kind-abhängigen Defaults (eine Quelle
+      // der Wahrheit), dann das aufgelöste Patch darüber. Umgekehrt würde
+      // applyKindToDraft categoryId/subcategoryId wieder nullen und die
+      // Vorlage entwerten.
+      const base = applyKindToDraft(d, template.kind || "expense", indicateTransferCategories);
+      const patch = templateToDraftPatch(template, {
+        expenseCategories: activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES,
+        incomeCategories: activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES,
+        transferCategories: indicateTransferCategories,
+        pots,
+        fallbackPotId: d.potId,
+      });
+
+      // Bei Entnahmen hängt die Zweck-Liste am Topf. availableWithdrawalCategories
+      // basiert noch auf dem alten potId — deshalb hier mit dem aufgelösten Topf
+      // frisch rechnen, sonst steht im <select> ein Wert ohne passende Option.
+      if (patch.kind === "withdrawal") {
+        const allowed = getWithdrawalCategoriesForPot(entries, patch.potId, indicateTransferCategories);
+        if (!allowed.includes(patch.category)) {
+          patch.category = allowed[0] || "";
+        }
+      }
+
+      return { ...base, ...patch };
+    });
   }
 
   // Sync potId when available pots change — derived from the prop transition
@@ -143,6 +184,7 @@ export function useEntryActions({
 
   function closeAddEntry() {
     setAddEntryOpen(false);
+    setAppliedTemplateId(null);
     setAddDraft((prev) => ({ ...INITIAL_ADD_DRAFT, date: todayISO(), potId: prev.potId }));
   }
 
@@ -181,7 +223,17 @@ export function useEntryActions({
     if (!addDraft.date) return;
 
     const entry = buildEntry(addDraft, activeBook);
-    patchActiveBook((b) => ({ ...b, entries: [...(b.entries || []), entry] }));
+    patchActiveBook((b) => {
+      const next = { ...b, entries: [...(b.entries || []), entry] };
+      // usageCount erst beim tatsächlichen Speichern hochzählen, nicht beim
+      // Anklicken des Chips — sonst verzerren Fehlklicks die Sortierung.
+      if (appliedTemplateId) {
+        next.entryTemplates = (b.entryTemplates || []).map((t) =>
+          t.id === appliedTemplateId ? { ...t, usageCount: (t.usageCount || 0) + 1 } : t
+        );
+      }
+      return next;
+    });
     closeAddEntry();
   }
 
@@ -336,6 +388,7 @@ export function useEntryActions({
     addDraft, setAddField,
     closeAddEntry, handleAddEntry, canAddEntry,
     availableWithdrawalCategories,
+    applyTemplate, appliedTemplateId,
     // Edit dialog
     editOpen, editingId,
     editDraft, setEditDraft,

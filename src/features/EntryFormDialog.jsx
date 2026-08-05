@@ -1,7 +1,17 @@
-import React from "react";
+import React, { useMemo, useRef } from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
+import { getTemplateColor } from "../utils/entryTemplateUtils.js";
+import { useFmt } from "../contexts/CurrencyContext.jsx";
+import { EMPTY_ARRAY } from "../utils/constants.js";
+
+const KIND_LABELS = {
+  income: "Einnahme",
+  expense: "Ausgabe",
+  withdrawal: "Entnahme",
+  transfer: "Transfer",
+};
 
 export default function EntryFormDialog({
   open,
@@ -16,8 +26,43 @@ export default function EntryFormDialog({
   transferCategories,
   availableWithdrawalCategories,
   onOpenCategoryManager,
+  templates = EMPTY_ARRAY,
+  appliedTemplateId = null,
+  onApplyTemplate,
 }) {
   const { kind, date, amount, potId, category, note, categoryId, subcategoryId } = draft;
+  const fmt = useFmt();
+  const amountInputRef = useRef(null);
+
+  // Meistgenutzte Vorlagen zuerst; bei Gleichstand alphabetisch, damit die
+  // Reihenfolge nicht bei jedem Render springt.
+  const sortedTemplates = useMemo(
+    () =>
+      [...templates].sort(
+        (a, b) =>
+          (b.usageCount || 0) - (a.usageCount || 0) ||
+          a.name.localeCompare(b.name, "de")
+      ),
+    [templates]
+  );
+
+  const templateCtx = { expenseCategories, incomeCategories };
+
+  function templateTitle(tpl) {
+    const parts = [KIND_LABELS[tpl.kind] || "Ausgabe"];
+    if (tpl.amount != null) parts.push(fmt(tpl.amount));
+    else parts.push("Betrag jedes Mal neu");
+    if (tpl.note) parts.push(tpl.note);
+    return parts.join(" · ");
+  }
+
+  function handleApplyTemplate(tpl) {
+    onApplyTemplate?.(tpl);
+    // Ohne festen Betrag ist das Betragsfeld der nächste sinnvolle Schritt.
+    if (tpl.amount == null) {
+      requestAnimationFrame(() => amountInputRef.current?.focus());
+    }
+  }
 
   return (
     <EditDialog
@@ -31,6 +76,25 @@ export default function EntryFormDialog({
       bodyScroll={false}
     >
       <div className="hb-entry-form">
+      {sortedTemplates.length > 0 && (
+        <div className="hb-tpl-bar" role="group" aria-label="Buchungsvorlagen">
+          <span className="hb-tpl-bar-label">Aus Vorlage</span>
+          {sortedTemplates.map((tpl) => (
+            <button
+              key={tpl.id}
+              type="button"
+              className={`hb-tpl-chip${tpl.id === appliedTemplateId ? " hb-tpl-chip--active" : ""}`}
+              aria-pressed={tpl.id === appliedTemplateId ? true : undefined}
+              title={templateTitle(tpl)}
+              onClick={() => handleApplyTemplate(tpl)}
+            >
+              <span className="hb-cat-dot" style={{ background: getTemplateColor(tpl, templateCtx) }} />
+              <span className="hb-tpl-chip-name">{tpl.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="hb-two hb-two--dialog" style={{ gap: 16 }}>
         <div className="hb-field" style={{ gridColumn: "1 / -1" }}>
           <div className="hb-label">Art</div>
@@ -50,6 +114,7 @@ export default function EntryFormDialog({
         <div className="hb-field">
           <div className="hb-label">Betrag</div>
           <input
+            ref={amountInputRef}
             className="hb-input"
             type="text"
             inputMode="decimal"

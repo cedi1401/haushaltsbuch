@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { Button, Card, CardContent } from "../components/ui.jsx";
 import CategoryManagerDialog from "../components/CategoryManagerDialog.jsx";
+import EntryTemplateManagerDialog from "../components/EntryTemplateManagerDialog.jsx";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../utils/hbUtils.js";
@@ -9,7 +10,7 @@ import HbSparklineHover from "../components/HbSparklineHover.jsx";
 import { generateId } from "../utils/idUtils.js";
 import { getFinancialMonthRange } from "../utils/financialMonthUtils.js";
 import { calcMonthlyTotals } from "../utils/dashboardTrend.js";
-import { MONTHS_SHORT } from "../utils/constants.js";
+import { MONTHS_SHORT, EMPTY_ARRAY } from "../utils/constants.js";
 import SurplusSweepDialog, { SWEEP_FALLBACK_POT } from "./insights/SurplusSweepDialog.jsx";
 
 import EntryFormDialog from "./EntryFormDialog.jsx";
@@ -48,10 +49,12 @@ export default function DashboardView({
   const themeColors = useThemeColors();
   const [showAllPots, setShowAllPots] = useState(false);
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+  const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
   const [sweepOpen, setSweepOpen] = useState(false);
 
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
   const incomeCategories = activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES;
+  const entryTemplates = activeBook?.entryTemplates || EMPTY_ARRAY;
 
   // Aus potBalances (enthält bereits `balance`), damit der Dialog den Topf-Stand
   // nach dem Sweep anzeigen kann.
@@ -158,6 +161,13 @@ export default function DashboardView({
         goals: (b.goals || []).map((g) =>
           g.transferCategory === oldName ? { ...g, transferCategory: newName } : g
         ),
+        // Ohne das biegt der Fallback in templateToDraftPatch still auf einen
+        // falschen Zweck um — schlimmer als ein sichtbarer Fehler.
+        entryTemplates: (b.entryTemplates || []).map((t) =>
+          (t.kind === "transfer" || t.kind === "withdrawal") && t.category === oldName
+            ? { ...t, category: newName }
+            : t
+        ),
       }));
     },
     [patchActiveBook]
@@ -230,6 +240,9 @@ export default function DashboardView({
         <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
           Kategorien bearbeiten
         </Button>
+        <Button variant="outline" onClick={() => setTemplateManagerOpen(true)}>
+          Vorlagen bearbeiten
+        </Button>
         {canSweepSurplus && (
           <Button style={{ marginLeft: "auto" }} onClick={() => setSweepOpen(true)}>
             <IconPots width={16} height={16} />
@@ -267,6 +280,9 @@ export default function DashboardView({
           entryActions.setAddEntryOpen(false);
           setCategoryManagerOpen(true);
         }}
+        templates={entryTemplates}
+        appliedTemplateId={entryActions.appliedTemplateId}
+        onApplyTemplate={entryActions.applyTemplate}
       />
 
       <div className="hb-stat-pills">
@@ -444,6 +460,19 @@ export default function DashboardView({
           patchActiveBook((b) => ({ ...b, transferCategories: newCats }))
         }
         onRenameTransferCategory={renameTransferCategory}
+      />
+
+      <EntryTemplateManagerDialog
+        open={templateManagerOpen}
+        onClose={() => setTemplateManagerOpen(false)}
+        templates={entryTemplates}
+        expenseCategories={expenseCategories}
+        incomeCategories={incomeCategories}
+        transferCategories={indicateTransferCategories}
+        pots={activeBook?.pots || EMPTY_ARRAY}
+        onUpdateTemplates={(next) =>
+          patchActiveBook((b) => ({ ...b, entryTemplates: next }))
+        }
       />
     </>
   );
