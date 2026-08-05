@@ -35,7 +35,9 @@ import { useAppSettings } from "./hooks/useAppSettings.js";
 import { useUpdateManager } from "./hooks/useUpdateManager.js";
 import { useEntryActions } from "./hooks/useEntryActions.js";
 
-const VIEW_LABELS = { trend: "Trend", pots: "Töpfe", goals: "Sparziele", fixed: "Fixkosten", costgroups: "Kostenrechner" };
+// Ansichten ohne Monatsbezug — dort ist der Monatsfilter in der Toolbar deaktiviert.
+// "pots" fehlt bewusst: Die Buchungsliste im Töpfe-View filtert nach Monat.
+const VIEW_LABELS = { trend: "Trend", goals: "Sparziele", fixed: "Fixkosten", costgroups: "Kostenrechner" };
 
 export default function HaushaltsbuchApp() {
   const toast = useToast();

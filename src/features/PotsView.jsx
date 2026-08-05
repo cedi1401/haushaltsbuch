@@ -23,7 +23,7 @@ import { calcPotSeries } from "../utils/potUtils.js";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact, formatCurrencyAxis } from "../utils/hbUtils.js";
-import { formatYearMonth } from "../utils/financialMonthUtils.js";
+import { formatYearMonth, getEntryFinancialMonth } from "../utils/financialMonthUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { useCardBg } from "../hooks/useCardBg.js";
@@ -241,7 +241,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
       .filter((e) => {
         if (e.potId !== selectedPot.id) return false;
         if (e.kind !== "transfer" && e.kind !== "withdrawal") return false;
-        if (monthFilter && e.date && !String(e.date).startsWith(monthFilter)) return false;
+        if (monthFilter && getEntryFinancialMonth(e, monthStartDay) !== monthFilter) return false;
         return true;
       })
       .toSorted((a, b) => {
@@ -250,7 +250,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
         if (da !== db) return db.localeCompare(da);
         return Number(b.id) - Number(a.id);
       });
-  }, [entries, selectedPot, monthFilter]);
+  }, [entries, selectedPot, monthFilter, monthStartDay]);
 
   // Highlights
   const highlights = useMemo(() => {
