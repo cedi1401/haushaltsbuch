@@ -2560,6 +2560,12 @@ select.hb-input option {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Kebab rechts andocken, damit "Löschen" nicht neben "Jetzt buchen" klebt */
+.hb-fixed-actions .hb-overflow {
+  margin-left: auto;
 }
 
 /* Pills-Zeile (Buchungsart + Kategorie) */

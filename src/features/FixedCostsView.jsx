@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
+import OverflowMenu from "../components/OverflowMenu.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
 import { generateId } from "../utils/idUtils.js";
 import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, todayISO } from "../utils/hbUtils.js";
@@ -29,6 +30,8 @@ export default function FixedCostsView({
   // Dialog-State
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  // Beim Duplizieren: id des Originals, damit die Kopie direkt dahinter landet
+  const [duplicateSourceId, setDuplicateSourceId] = useState(null);
   const [tagInput, setTagInput] = useState("");
   const [draft, setDraft] = useState({
     name: "",
@@ -129,6 +132,7 @@ export default function FixedCostsView({
   // Dialog
   function openCreateDialog(presetGroupId = null) {
     setEditingItem(null);
+    setDuplicateSourceId(null);
     setDraft({
       name: "",
       amount: "",
@@ -147,7 +151,24 @@ export default function FixedCostsView({
 
   function openEditDialog(item) {
     setEditingItem(item);
-    setDraft({
+    setDuplicateSourceId(null);
+    setDraft(draftFromItem(item));
+    setTagInput("");
+    setDialogOpen(true);
+  }
+
+  // Kopie: bewusst der Edit-Draft als Basis (nicht openCreateDialog), damit
+  // showInOverview, Gruppe und Tags vom Original übernommen werden.
+  function openDuplicateDialog(item) {
+    setEditingItem(null);
+    setDuplicateSourceId(item.id);
+    setDraft({ ...draftFromItem(item), name: makeCopyName(item.name || "") });
+    setTagInput("");
+    setDialogOpen(true);
+  }
+
+  function draftFromItem(item) {
+    return {
       name: item.name || "",
       amount: String(item.amount || ""),
       kind: item.kind || "expense",
@@ -158,14 +179,22 @@ export default function FixedCostsView({
       groupId: item.groupId || null,
       showInOverview: item.showInOverview !== false,
       tags: item.tags || [],
-    });
-    setTagInput("");
-    setDialogOpen(true);
+    };
+  }
+
+  function makeCopyName(baseName) {
+    const taken = new Set(recurringExpenses.map((r) => (r.name || "").trim()));
+    const first = `${baseName} (Kopie)`;
+    if (!taken.has(first)) return first;
+    let n = 2;
+    while (taken.has(`${baseName} (Kopie ${n})`)) n += 1;
+    return `${baseName} (Kopie ${n})`;
   }
 
   function closeDialog() {
     setDialogOpen(false);
     setEditingItem(null);
+    setDuplicateSourceId(null);
   }
 
   function handleTagAdd(tagText) {
@@ -221,7 +250,14 @@ export default function FixedCostsView({
         newItem.transferCategory = draft.transferCategory;
         newItem.potId = draft.potId;
       }
-      onUpdateBook({ ...activeBook, recurringExpenses: [...recurringExpenses, newItem] });
+      // Kopien direkt hinter dem Original einfügen, sonst ans Ende anhängen
+      const idx = duplicateSourceId
+        ? recurringExpenses.findIndex((r) => r.id === duplicateSourceId)
+        : -1;
+      const next = idx === -1
+        ? [...recurringExpenses, newItem]
+        : [...recurringExpenses.slice(0, idx + 1), newItem, ...recurringExpenses.slice(idx + 1)];
+      onUpdateBook({ ...activeBook, recurringExpenses: next });
     }
     closeDialog();
   }
@@ -259,6 +295,12 @@ export default function FixedCostsView({
 
   // Drag & Drop
   function handleDragStart(e, item) {
+    // Die ganze Karte ist draggable — ein Mousedown auf einem Button (Kebab,
+    // "Jetzt buchen", …) darf keinen Karten-Drag starten.
+    if (e.target.closest("button")) {
+      e.preventDefault();
+      return;
+    }
     setDraggingId(item.id);
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", item.id);
@@ -411,7 +453,14 @@ export default function FixedCostsView({
                 <div className="hb-fixed-actions">
                   <Button size="sm" onClick={() => bookNow(item)}>Jetzt buchen</Button>
                   <Button size="sm" variant="outline" onClick={() => openEditDialog(item)}>Bearbeiten</Button>
-                  <Button size="sm" variant="outline" onClick={() => deleteItem(item)}>Löschen</Button>
+                  <OverflowMenu
+                    label={`Weitere Aktionen für „${item.name}“`}
+                    buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+                    items={[
+                      { label: "Duplizieren", onClick: () => openDuplicateDialog(item) },
+                      { label: "Löschen", danger: true, onClick: () => deleteItem(item) },
+                    ]}
+                  />
                 </div>
               </div>
             </div>
@@ -581,11 +630,11 @@ export default function FixedCostsView({
       {/* Dialog: Fixkosten erstellen/bearbeiten */}
       <EditDialog
         open={dialogOpen}
-        title={editingItem ? "Fixkosten bearbeiten" : "Neue Fixkosten"}
+        title={editingItem ? "Fixkosten bearbeiten" : duplicateSourceId ? "Fixkosten duplizieren" : "Neue Fixkosten"}
         onClose={closeDialog}
         onSave={saveItem}
         canSave={canSave}
-        saveLabel={editingItem ? "Speichern" : "Erstellen"}
+        saveLabel={editingItem ? "Speichern" : duplicateSourceId ? "Duplizieren" : "Erstellen"}
         size="medium"
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
