@@ -178,6 +178,33 @@ describe('normalizeBook', () => {
     expect(result.fixedCostGroups).toEqual([]);
   });
 
+  it('adds entryTemplates array when missing', () => {
+    const result = normalizeBook({ id: 'b1' });
+    expect(result.entryTemplates).toEqual([]);
+  });
+
+  it('replaces a non-array entryTemplates value with an empty array', () => {
+    const result = normalizeBook({ id: 'b1', entryTemplates: 'kaputt' });
+    expect(result.entryTemplates).toEqual([]);
+  });
+
+  it('drops malformed entryTemplates and normalizes the rest', () => {
+    const result = normalizeBook({
+      id: 'b1',
+      entryTemplates: [
+        null,
+        { id: 'tpl_1', name: '  Wocheneinkauf  ', kind: 'expense', categoryId: 'cat_x' },
+        { id: 'tpl_2', name: '   ' },
+        'kaputt',
+      ],
+    });
+    expect(result.entryTemplates).toHaveLength(1);
+    expect(result.entryTemplates[0].id).toBe('tpl_1');
+    expect(result.entryTemplates[0].name).toBe('Wocheneinkauf');
+    expect(result.entryTemplates[0].amount).toBe(null);
+    expect(result.entryTemplates[0].usageCount).toBe(0);
+  });
+
   it('defaults baseCurrency to CHF when missing', () => {
     const result = normalizeBook({ id: 'b1' });
     expect(result.baseCurrency).toBe('CHF');

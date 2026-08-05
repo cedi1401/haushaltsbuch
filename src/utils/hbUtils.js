@@ -2,6 +2,7 @@
 import { CUSTOM_CATEGORY_PALETTE, DEFAULT_CATEGORY_COLOR } from "./hbPalette.js";
 import { MONTHS_LONG } from "./constants.js";
 import { generateId } from "./idUtils.js";
+import { normalizeEntryTemplate } from "./entryTemplateUtils.js";
 
 export const CURRENT_SCHEMA_VERSION = 2;
 
@@ -682,6 +683,7 @@ export function makeDefaultBook(name = "Mein Haushaltsbuch") {
     recurringExpenses: [],
     fixedCostGroups: [],
     costGroups: [],
+    entryTemplates: [],
     baseCurrency: "CHF",
     monthStartDay: 1,
   };
@@ -932,6 +934,17 @@ export function normalizeBook(book) {
       subcategoryIds: Array.isArray(g.subcategoryIds) ? g.subcategoryIds : [],
       plannedItems: Array.isArray(g.plannedItems) ? g.plannedItems : [],
     }));
+  }
+
+  // Buchungsvorlagen hinzufügen, falls nicht vorhanden
+  if (!Array.isArray(normalized.entryTemplates)) {
+    normalized.entryTemplates = [];
+  } else {
+    // .filter(Boolean) bewusst: kaputte Einträge aus manipulierten Backups
+    // fliegen hier raus, statt später im Picker zu crashen.
+    normalized.entryTemplates = normalized.entryTemplates
+      .map(normalizeEntryTemplate)
+      .filter(Boolean);
   }
 
   // Basiswährung: Standard CHF (bisherige implizite Währung)
