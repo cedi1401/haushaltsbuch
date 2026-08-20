@@ -4,7 +4,9 @@ import { MONTHS_LONG } from "./constants.js";
 import { generateId } from "./idUtils.js";
 import { normalizeEntryTemplate } from "./entryTemplateUtils.js";
 
-export const CURRENT_SCHEMA_VERSION = 2;
+// 3 = Fixkosten-Gruppen haben ein festes `kind` ("expense" | "transfer") und
+//     damit eine feste Spalte im Fixkosten-View (siehe migrateFixedCostKinds).
+export const CURRENT_SCHEMA_VERSION = 3;
 
 /** Returns true if the book has not yet been migrated to the current schema. */
 export function bookNeedsMigration(book) {
@@ -762,6 +764,78 @@ export function normalizeEntry(entry) {
 }
 
 // ============================================
+// Fixkosten: Spaltenzuordnung (expense | transfer)
+// ============================================
+
+/**
+ * Normalisiert das `kind` einer Fixkosten-Position oder -Gruppe auf eine der
+ * beiden Spalten des Fixkosten-Views. Alles ausser "transfer" gilt als Ausgabe.
+ * @param {{kind?: string}|null|undefined} entity
+ * @returns {"expense"|"transfer"}
+ */
+export function fixedCostKind(entity) {
+  return entity?.kind === "transfer" ? "transfer" : "expense";
+}
+
+/**
+ * Migration: Fixkosten-Gruppen gehören fest zu einer Spalte.
+ *
+ * 1. Jede Gruppe ohne gültiges `kind` bekommt eines nach der Mehrheit ihrer
+ *    Positionen. Gleichstand und leere Gruppen → "expense".
+ * 2. Positionen, deren `kind` nicht zum `kind` ihrer Gruppe passt, verlieren
+ *    ihre `groupId` und landen im „Weitere"-Bereich der anderen Spalte.
+ *
+ * Idempotent: Sind alle Gruppen bereits zugeordnet und alle Positionen
+ * konsistent, werden die Original-Arrays unverändert zurückgegeben.
+ *
+ * Positionen mit einer `groupId`, zu der es keine Gruppe gibt, bleiben
+ * unangetastet — der View behandelt sie ohnehin als ungegruppiert.
+ *
+ * @param {Array} groups fixedCostGroups
+ * @param {Array} items recurringExpenses
+ * @returns {{groups: Array, items: Array}}
+ */
+export function migrateFixedCostKinds(groups, items) {
+  if (!Array.isArray(groups) || !Array.isArray(items)) return { groups, items };
+
+  // 1. Mehrheit je Gruppe auszählen
+  const tally = new Map();
+  for (const item of items) {
+    const gid = item?.groupId || null;
+    if (!gid) continue;
+    if (!tally.has(gid)) tally.set(gid, { expense: 0, transfer: 0 });
+    tally.get(gid)[fixedCostKind(item)] += 1;
+  }
+
+  let groupsChanged = false;
+  const nextGroups = groups.map((group) => {
+    if (group?.kind === "expense" || group?.kind === "transfer") return group;
+    groupsChanged = true;
+    const counts = tally.get(group?.id);
+    // Gleichstand und leere Gruppen bewusst nach "expense"
+    const kind = counts && counts.transfer > counts.expense ? "transfer" : "expense";
+    return { ...group, kind };
+  });
+
+  // 2. Positionen lösen, die nicht in ihre Gruppe passen
+  const kindByGroupId = new Map(nextGroups.map((g) => [g.id, fixedCostKind(g)]));
+  let itemsChanged = false;
+  const nextItems = items.map((item) => {
+    const gid = item?.groupId || null;
+    if (!gid) return item;
+    const groupKind = kindByGroupId.get(gid);
+    if (!groupKind || groupKind === fixedCostKind(item)) return item;
+    itemsChanged = true;
+    return { ...item, groupId: null };
+  });
+
+  return {
+    groups: groupsChanged ? nextGroups : groups,
+    items: itemsChanged ? nextItems : items,
+  };
+}
+
+// ============================================
 // Hauptmigration: normalizeBook()
 // ============================================
 
@@ -915,7 +989,12 @@ export function normalizeBook(book) {
   } else {
     normalized.recurringExpenses = normalized.recurringExpenses.map((r) => {
       const withGroup = r.groupId === undefined ? { ...r, groupId: null } : r;
-      return Array.isArray(withGroup.tags) ? withGroup : { ...withGroup, tags: [] };
+      const withTags = Array.isArray(withGroup.tags) ? withGroup : { ...withGroup, tags: [] };
+      // `kind` explizit setzen: der Fixkosten-View leitet daraus die Spalte ab,
+      // ein fehlender Wert würde sonst als Transfer gerendert.
+      return withTags.kind === "expense" || withTags.kind === "transfer"
+        ? withTags
+        : { ...withTags, kind: "expense" };
     });
   }
 
@@ -923,6 +1002,14 @@ export function normalizeBook(book) {
   if (!Array.isArray(normalized.fixedCostGroups)) {
     normalized.fixedCostGroups = [];
   }
+
+  // Gruppen an eine Spalte binden und nicht passende Positionen daraus lösen
+  const fixedCosts = migrateFixedCostKinds(
+    normalized.fixedCostGroups,
+    normalized.recurringExpenses
+  );
+  normalized.fixedCostGroups = fixedCosts.groups;
+  normalized.recurringExpenses = fixedCosts.items;
 
   // Kostengruppen (Kostenrechner) hinzufügen, falls nicht vorhanden
   if (!Array.isArray(normalized.costGroups)) {

@@ -7,6 +7,8 @@ import {
   normalizeBook,
   normalizeBooks,
   makeDefaultBook,
+  fixedCostKind,
+  migrateFixedCostKinds,
   DEFAULT_POTS,
 } from '../hbUtils.js';
 
@@ -382,5 +384,89 @@ describe('normalizeBooks', () => {
     expect(result).toHaveLength(2);
     expect(result[0].schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(result[1].schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+  });
+});
+
+// ─── Fixkosten: Spaltenzuordnung ──────────────────────────────────────────
+
+describe('fixedCostKind', () => {
+  it('maps "transfer" to transfer', () => {
+    expect(fixedCostKind({ kind: 'transfer' })).toBe('transfer');
+  });
+
+  it('treats everything else as expense', () => {
+    expect(fixedCostKind({ kind: 'expense' })).toBe('expense');
+    expect(fixedCostKind({})).toBe('expense');
+    expect(fixedCostKind(null)).toBe('expense');
+  });
+});
+
+describe('migrateFixedCostKinds', () => {
+  const items = [
+    { id: 'r1', kind: 'expense', groupId: 'g_exp' },
+    { id: 'r2', kind: 'expense', groupId: 'g_exp' },
+    { id: 'r3', kind: 'transfer', groupId: 'g_exp' },
+    { id: 'r4', kind: 'transfer', groupId: 'g_tra' },
+    { id: 'r5', kind: 'transfer', groupId: 'g_tra' },
+    { id: 'r6', kind: 'expense', groupId: 'g_tie' },
+    { id: 'r7', kind: 'transfer', groupId: 'g_tie' },
+    { id: 'r8', kind: 'transfer', groupId: null },
+  ];
+  const groups = [
+    { id: 'g_exp', name: 'Wohnen' },
+    { id: 'g_tra', name: 'Rücklagen' },
+    { id: 'g_tie', name: 'Gemischt' },
+    { id: 'g_empty', name: 'Leer' },
+  ];
+
+  it('assigns the kind of the majority of contained items', () => {
+    const result = migrateFixedCostKinds(groups, items);
+    const byId = new Map(result.groups.map((g) => [g.id, g.kind]));
+    expect(byId.get('g_exp')).toBe('expense');
+    expect(byId.get('g_tra')).toBe('transfer');
+  });
+
+  it('falls back to expense on a tie and for empty groups', () => {
+    const result = migrateFixedCostKinds(groups, items);
+    const byId = new Map(result.groups.map((g) => [g.id, g.kind]));
+    expect(byId.get('g_tie')).toBe('expense');
+    expect(byId.get('g_empty')).toBe('expense');
+  });
+
+  it('detaches items whose kind does not match their group', () => {
+    const result = migrateFixedCostKinds(groups, items);
+    const byId = new Map(result.items.map((r) => [r.id, r.groupId]));
+    expect(byId.get('r3')).toBe(null); // transfer in an expense group
+    expect(byId.get('r7')).toBe(null); // transfer in a tie group → expense
+    expect(byId.get('r1')).toBe('g_exp');
+    expect(byId.get('r4')).toBe('g_tra');
+  });
+
+  it('leaves items pointing at a non-existent group untouched', () => {
+    const result = migrateFixedCostKinds([], [{ id: 'r1', kind: 'expense', groupId: 'gone' }]);
+    expect(result.items[0].groupId).toBe('gone');
+  });
+
+  it('keeps an explicit kind on already migrated groups', () => {
+    const result = migrateFixedCostKinds(
+      [{ id: 'g1', kind: 'transfer' }],
+      [{ id: 'r1', kind: 'transfer', groupId: 'g1' }]
+    );
+    expect(result.groups[0].kind).toBe('transfer');
+  });
+
+  it('is idempotent and returns the original arrays when nothing changes', () => {
+    const first = migrateFixedCostKinds(groups, items);
+    const second = migrateFixedCostKinds(first.groups, first.items);
+    expect(second.groups).toBe(first.groups);
+    expect(second.items).toBe(first.items);
+  });
+
+  it('normalizeBook applies the migration and is idempotent', () => {
+    const book = { id: 'b1', name: 'Test', fixedCostGroups: groups, recurringExpenses: items };
+    const once = normalizeBook(book);
+    const twice = normalizeBook(once);
+    expect(once.fixedCostGroups.map((g) => g.kind)).toEqual(['expense', 'transfer', 'expense', 'expense']);
+    expect(JSON.stringify(twice)).toBe(JSON.stringify(once));
   });
 });

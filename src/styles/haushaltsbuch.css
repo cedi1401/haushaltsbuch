@@ -2448,16 +2448,102 @@ select.hb-input option {
 }
 
 
-/* Gruppen-Container */
-.hb-fixed-groups {
-  /* 2-Spalten-Grid, zeilenweise befüllt: Gruppe 1 links, 2 rechts,
-     3 startet links in der nächsten Zeile usw.
-     align-items: start → jede Gruppe behält ihre Eigenhöhe,
-     Zeilen dürfen unterschiedlich hoch sein. */
+/* Semantische Spalten: links ausschliesslich Ausgaben, rechts ausschliesslich
+   Transfers/Rücklagen. Jede Spalte ist ein eigenständiger vertikaler Stapel —
+   eine Gruppe wandert nie über die Spaltengrenze (früher: ein zeilenweise
+   befülltes Grid ohne semantische Bedeutung der Spalte).
+   align-items: start → jede Spalte behält ihre Eigenhöhe. */
+.hb-fixed-columns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
-  gap: 28px 24px;
+  gap: 24px;
+}
+
+.hb-fixed-column {
+  display: flex;
+  flex-direction: column;
+  gap: 21px;
+  min-width: 0;
+}
+
+/* Spaltenkopf: Titel + Anzahl + Summe + eigener „Gruppe"-Button.
+   Der farbige Balken links kodiert die Spalte (Rot = Ausgabe, Akzent =
+   Transfer) — seit dem Wegfall der Art-Pills die einzige Farbcodierung. */
+.hb-fixed-col-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.hb-fixed-column--expense .hb-fixed-col-head {
+  border-left-color: var(--red);
+}
+
+.hb-fixed-column--transfer .hb-fixed-col-head {
+  border-left-color: var(--accent);
+}
+
+.hb-fixed-col-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.hb-fixed-col-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.hb-fixed-col-meta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hb-fixed-col-total {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Gruppen-Stapel innerhalb einer Spalte */
+.hb-fixed-col-body {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+/* Leere Spalte: dezenter Hinweis statt leerer Fläche */
+.hb-fixed-col-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* Hinweiszeile unter einem Dialog-Feld (Spalten-/Gruppen-Bindung) */
+.hb-fixed-field-hint {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
 }
 
 /* Einzelne Gruppe */
@@ -2472,13 +2558,37 @@ select.hb-input option {
 .hb-fixed-group-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
 
+/* Aktionscluster (Sammelbuchung, Hinzufügen, Löschen) darf nie schrumpfen */
+.hb-fixed-group-head .hb-icon-btn,
+.hb-fixed-group-book {
+  flex-shrink: 0;
+}
+
+/* Beschrifteter Sammelbuchungs-Button: als Icon war die Aktion nicht als
+   solche erkennbar. Kompakter als ein normaler --sm-Button, damit der
+   Gruppenkopf neben Titel und Betrag nicht überläuft. */
+.hb-fixed-group-book {
+  white-space: nowrap;
+  padding-inline: 10px;
+}
+
+/* Auf Touch-Breiten wachsen die Icon-Buttons daneben auf 40px — der
+   beschriftete Button zieht mit, damit der Gruppenkopf bündig bleibt. */
+@media (max-width: 480px) {
+  .hb-fixed-group-book {
+    min-height: 40px;
+  }
+}
+
+/* Gruppen liegen jetzt eine Ebene unter dem Spaltenkopf — Schriftgrad
+   entsprechend kleiner, damit die Hierarchie Spalte > Gruppe lesbar bleibt. */
 .hb-fixed-group-title {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
   background: none;
   border: none;
@@ -2513,10 +2623,12 @@ select.hb-input option {
 
 .hb-fixed-group-total {
   margin-left: auto;
+  /* +5px Luft zum „Alle buchen"-Button, sonst klebt der Betrag daran */
+  margin-right: 5px;
   font-weight: 700;
   color: var(--text);
   font-variant-numeric: tabular-nums;
-  font-size: 16px;
+  font-size: 15px;
   flex-shrink: 0;
 }
 
@@ -2669,30 +2781,6 @@ select.hb-input option {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 6px;
-}
-
-/* Buchungsart-Pill (Basis) */
-.hb-fixed-kind-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-light);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.hb-fixed-kind-pill--expense {
-  background: var(--red-soft);
-  color: var(--red);
-  border-color: var(--red);
-}
-
-.hb-fixed-kind-pill--transfer {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: var(--reveal-border);
 }
 
 /* Kategorie-Pill mit farbigem Dot */
@@ -3106,9 +3194,29 @@ select.hb-input option {
   color: var(--muted);
 }
 
-@media (max-width: 640px) {
-  .hb-fixed-groups {
+/* Unter 1100px wird eine Fixkosten-Karte in zwei Spalten zu eng (Name, Betrag,
+   Pills und drei Aktionen pro Zeile) → Spalten untereinander stapeln.
+   DOM-Reihenfolge = Ausgaben zuerst, die Spaltenköpfe bleiben als
+   Überschriften sichtbar. */
+@media (max-width: 1100px) {
+  .hb-fixed-columns {
     grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+
+@media (max-width: 640px) {
+  .hb-fixed-col-head {
+    flex-wrap: wrap;
+  }
+
+  .hb-fixed-col-heading {
+    flex: 1 1 100%;
+  }
+
+  /* Summe links, „Gruppe"-Button rechts in der umgebrochenen zweiten Zeile */
+  .hb-fixed-col-total {
+    margin-right: auto;
   }
 
   .hb-fixed-toolbar {

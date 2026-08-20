@@ -4,18 +4,52 @@ import EditDialog from "../components/EditDialog.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
 import { generateId } from "../utils/idUtils.js";
-import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, todayISO } from "../utils/hbUtils.js";
+import {
+  DEFAULT_EXPENSE_CATEGORIES,
+  fixedCostKind,
+  formatDateDE,
+  parseAmount,
+  todayISO,
+} from "../utils/hbUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
 import { IconFixed, IconPlus, IconDelete, IconDrag, IconTag } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 
+// Die beiden semantischen Spalten des Views. Die Reihenfolge ist zugleich die
+// Layout- und (auf schmalen Breiten) die Stapel-Reihenfolge.
+const COLUMNS = [
+  {
+    kind: "expense",
+    title: "Ausgaben",
+    addLabel: "Neue Ausgabe",
+    emptyText:
+      "Noch keine wiederkehrenden Ausgaben — z.B. Miete, Abos oder Versicherungen.",
+  },
+  {
+    kind: "transfer",
+    title: "Transfers & Rücklagen",
+    addLabel: "Neuer Transfer",
+    emptyText:
+      "Noch keine wiederkehrenden Transfers — z.B. monatliche Rücklagen in einen Topf.",
+  },
+];
+
+// Sektions-Schlüssel für Drag & Drop: eine Gruppe wird über ihre id
+// adressiert, die beiden „Weitere"-Bereiche über je einen eigenen Schlüssel.
+// Ein gemeinsamer null-Schlüssel würde die beiden Spalten verwechseln.
+const UNGROUPED_KEY = {
+  expense: "ungrouped:expense",
+  transfer: "ungrouped:transfer",
+};
+
 export default function FixedCostsView({
   activeBook,
   entries: _entries,
   onUpdateBook,
   onAddEntry,
+  onAddEntries,
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
@@ -32,6 +66,9 @@ export default function FixedCostsView({
   const [editingItem, setEditingItem] = useState(null);
   // Beim Duplizieren: id des Originals, damit die Kopie direkt dahinter landet
   const [duplicateSourceId, setDuplicateSourceId] = useState(null);
+  // Aus einer Gruppe/Spalte heraus angelegte Positionen erben deren Art —
+  // sie ist dann im Dialog fest vorgegeben.
+  const [kindLocked, setKindLocked] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [draft, setDraft] = useState({
     name: "",
@@ -50,32 +87,61 @@ export default function FixedCostsView({
   const [renamingGroupId, setRenamingGroupId] = useState(null);
   const [groupNameDraft, setGroupNameDraft] = useState("");
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+  // Spalte, in der die neue Gruppe angelegt wird — kein Auswahlschritt im Dialog
+  const [groupDialogKind, setGroupDialogKind] = useState("expense");
 
   // Drag & Drop
   const [draggingId, setDraggingId] = useState(null);
-  const [dragOverGroupId, setDragOverGroupId] = useState(undefined);
+  const [dragOverKey, setDragOverKey] = useState(null);
   const [dropBeforeId, setDropBeforeId] = useState(null);
 
-  // Gruppierung + Summen
-  const { groupedItems, ungroupedItems, totalAmount, groupTotals } = useMemo(() => {
-    const total = recurringExpenses.reduce((s, i) => s + Number(i.amount || 0), 0);
-    const byGroup = new Map();
-    const ungrouped = [];
+  // Spalte je Gruppe — Grundlage für Zuordnung, Drop-Regeln und Dialog-Filter
+  const groupKindById = useMemo(() => {
+    const map = new Map();
+    for (const group of fixedCostGroups) map.set(group.id, fixedCostKind(group));
+    return map;
+  }, [fixedCostGroups]);
+
+  // Gruppen je Spalte, innerhalb der Spalte nach `order` sortiert
+  const groupsByColumn = useMemo(() => {
+    const result = { expense: [], transfer: [] };
+    for (const group of fixedCostGroups) result[fixedCostKind(group)].push(group);
+    result.expense.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    result.transfer.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    return result;
+  }, [fixedCostGroups]);
+
+  // Positionen je Sektion + Summen (Sektion, Spalte, gesamt)
+  const { itemsBySection, sectionTotals, columnTotals, columnCounts, totalAmount } = useMemo(() => {
+    const bySection = new Map();
+    const secTotals = new Map();
+    const colTotals = { expense: 0, transfer: 0 };
+    const colCounts = { expense: 0, transfer: 0 };
+    let total = 0;
+
     for (const item of recurringExpenses) {
+      const kind = fixedCostKind(item);
+      const amount = Number(item.amount || 0);
+      total += amount;
+      colTotals[kind] += amount;
+      colCounts[kind] += 1;
+
+      // Nur eine existierende Gruppe derselben Spalte zählt — sonst „Weitere"
       const gid = item.groupId || null;
-      if (gid && fixedCostGroups.some((g) => g.id === gid)) {
-        if (!byGroup.has(gid)) byGroup.set(gid, []);
-        byGroup.get(gid).push(item);
-      } else {
-        ungrouped.push(item);
-      }
+      const key = gid && groupKindById.get(gid) === kind ? gid : UNGROUPED_KEY[kind];
+      if (!bySection.has(key)) bySection.set(key, []);
+      bySection.get(key).push(item);
+      secTotals.set(key, (secTotals.get(key) || 0) + amount);
     }
-    const totals = new Map();
-    for (const [gid, items] of byGroup) {
-      totals.set(gid, items.reduce((s, i) => s + Number(i.amount || 0), 0));
-    }
-    return { groupedItems: byGroup, ungroupedItems: ungrouped, totalAmount: total, groupTotals: totals };
-  }, [recurringExpenses, fixedCostGroups]);
+
+    return {
+      itemsBySection: bySection,
+      sectionTotals: secTotals,
+      columnTotals: colTotals,
+      columnCounts: colCounts,
+      totalAmount: total,
+    };
+  }, [recurringExpenses, groupKindById]);
 
   const allBookTags = useMemo(() => {
     const set = new Set();
@@ -91,12 +157,29 @@ export default function FixedCostsView({
     return base.slice(0, 8);
   }, [allBookTags, draft.tags, tagInput]);
 
+  // Sektions-Schlüssel einer Position — identisch zur Zuordnung oben
+  function sectionKeyOfItem(item) {
+    const kind = fixedCostKind(item);
+    const gid = item.groupId || null;
+    return gid && groupKindById.get(gid) === kind ? gid : UNGROUPED_KEY[kind];
+  }
+
+  function columnLabel(kind) {
+    return COLUMNS.find((c) => c.kind === kind)?.title || "";
+  }
+
   // Gruppen-CRUD
+  function openGroupDialog(kind) {
+    setGroupDialogKind(kind);
+    setGroupNameDraft("");
+    setGroupDialogOpen(true);
+  }
+
   function createGroup() {
     const name = (groupNameDraft || "").trim();
     if (!name) return;
     const maxOrder = fixedCostGroups.reduce((m, g) => Math.max(m, g.order ?? 0), 0);
-    const newGroup = { id: generateId("fcg"), name, order: maxOrder + 1 };
+    const newGroup = { id: generateId("fcg"), name, order: maxOrder + 1, kind: groupDialogKind };
     onUpdateBook({ ...activeBook, fixedCostGroups: [...fixedCostGroups, newGroup] });
     setGroupNameDraft("");
     setGroupDialogOpen(false);
@@ -111,12 +194,12 @@ export default function FixedCostsView({
   }
 
   async function deleteGroup(group) {
-    const itemCount = recurringExpenses.filter((r) => r.groupId === group.id).length;
+    const itemCount = (itemsBySection.get(group.id) || EMPTY_ARRAY).length;
     const ok = await confirm({
       title: "Gruppe löschen",
       message: itemCount > 0
-        ? `Gruppe „${group.name}" löschen? Die ${itemCount} enthaltene${itemCount !== 1 ? "n" : ""} Fixkosten werden nach „Weitere" verschoben.`
-        : `Gruppe „${group.name}" wirklich löschen?`,
+        ? `Gruppe „${group.name}“ löschen? Die ${itemCount === 1 ? "enthaltene Position wird" : `${itemCount} enthaltenen Positionen werden`} nach „Weitere“ verschoben.`
+        : `Gruppe „${group.name}“ wirklich löschen?`,
       confirmLabel: "Löschen",
       danger: true,
     });
@@ -130,18 +213,19 @@ export default function FixedCostsView({
   }
 
   // Dialog
-  function openCreateDialog(presetGroupId = null) {
+  function openCreateDialog({ groupId = null, kind = "expense", lockKind = false } = {}) {
     setEditingItem(null);
     setDuplicateSourceId(null);
+    setKindLocked(lockKind);
     setDraft({
       name: "",
       amount: "",
-      kind: "expense",
+      kind,
       categoryId: null,
       subcategoryId: null,
       transferCategory: transferCategories[0] || "Steuern",
       potId: pots[0]?.id || "",
-      groupId: presetGroupId,
+      groupId,
       showInOverview: false,
       tags: [],
     });
@@ -152,6 +236,7 @@ export default function FixedCostsView({
   function openEditDialog(item) {
     setEditingItem(item);
     setDuplicateSourceId(null);
+    setKindLocked(false);
     setDraft(draftFromItem(item));
     setTagInput("");
     setDialogOpen(true);
@@ -162,6 +247,7 @@ export default function FixedCostsView({
   function openDuplicateDialog(item) {
     setEditingItem(null);
     setDuplicateSourceId(item.id);
+    setKindLocked(false);
     setDraft({ ...draftFromItem(item), name: makeCopyName(item.name || "") });
     setTagInput("");
     setDialogOpen(true);
@@ -171,7 +257,7 @@ export default function FixedCostsView({
     return {
       name: item.name || "",
       amount: String(item.amount || ""),
-      kind: item.kind || "expense",
+      kind: fixedCostKind(item),
       categoryId: item.categoryId || null,
       subcategoryId: item.subcategoryId || null,
       transferCategory: item.transferCategory || transferCategories[0] || "Steuern",
@@ -195,6 +281,13 @@ export default function FixedCostsView({
     setDialogOpen(false);
     setEditingItem(null);
     setDuplicateSourceId(null);
+    setKindLocked(false);
+  }
+
+  // Art wechseln: die Gruppe gehört fest zu einer Spalte, die Position wandert
+  // also in den „Weitere"-Bereich der anderen Spalte.
+  function handleKindChange(kind) {
+    setDraft((d) => ({ ...d, kind, groupId: null }));
   }
 
   function handleTagAdd(tagText) {
@@ -214,6 +307,11 @@ export default function FixedCostsView({
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
     if (!draft.name.trim()) return;
 
+    // Absicherung gegen inkonsistente Zustände: eine Gruppe der anderen Spalte
+    // wird nie übernommen.
+    const targetGroupId =
+      draft.groupId && groupKindById.get(draft.groupId) === draft.kind ? draft.groupId : null;
+
     if (editingItem) {
       const updatedItems = recurringExpenses.map((item) =>
         item.id === editingItem.id
@@ -226,7 +324,7 @@ export default function FixedCostsView({
               subcategoryId: draft.kind === "expense" ? (draft.subcategoryId || null) : undefined,
               transferCategory: draft.kind === "transfer" ? draft.transferCategory : undefined,
               potId: draft.kind === "transfer" ? draft.potId : undefined,
-              groupId: draft.groupId || null,
+              groupId: targetGroupId,
               showInOverview: draft.showInOverview === true,
               tags: draft.tags || [],
             }
@@ -239,7 +337,7 @@ export default function FixedCostsView({
         name: draft.name.trim(),
         amount: numericAmount,
         kind: draft.kind,
-        groupId: draft.groupId || null,
+        groupId: targetGroupId,
         showInOverview: draft.showInOverview === true,
         tags: draft.tags || [],
       };
@@ -266,7 +364,7 @@ export default function FixedCostsView({
     if (!activeBook) return;
     const ok = await confirm({
       title: "Fixkosten löschen",
-      message: `Fixkosten „${item.name}" wirklich löschen?`,
+      message: `Fixkosten „${item.name}“ wirklich löschen?`,
       confirmLabel: "Löschen",
       danger: true,
     });
@@ -275,25 +373,68 @@ export default function FixedCostsView({
     toast.success("Fixkosten gelöscht.");
   }
 
-  function bookNow(item) {
-    const today = todayISO();
+  // Einzige Quelle für die Entry-Erzeugung — Einzel- und Sammelbuchung teilen sie.
+  function buildEntryFromItem(item, date) {
+    const kind = fixedCostKind(item);
     const entry = {
       id: generateId("entry"),
-      date: today,
+      date,
       amount: item.amount,
-      category: item.kind === "transfer" ? item.transferCategory : undefined,
-      categoryId: item.kind === "expense" ? (item.categoryId || null) : null,
-      subcategoryId: item.kind === "expense" ? (item.subcategoryId || null) : null,
-      kind: item.kind,
+      category: kind === "transfer" ? item.transferCategory : undefined,
+      categoryId: kind === "expense" ? (item.categoryId || null) : null,
+      subcategoryId: kind === "expense" ? (item.subcategoryId || null) : null,
+      kind,
       note: item.name,
     };
-    if (item.kind === "transfer") entry.potId = item.potId;
-    if (item.kind === "expense") entry.source = "month";
-    onAddEntry(entry);
-    toast.success(`„${item.name}" wurde gebucht.`);
+    if (kind === "transfer") entry.potId = item.potId;
+    if (kind === "expense") entry.source = "month";
+    return entry;
+  }
+
+  function bookNow(item) {
+    onAddEntry(buildEntryFromItem(item, todayISO()));
+    toast.success(`„${item.name}“ wurde gebucht.`);
+  }
+
+  // Sammelbuchung einer Gruppe bzw. eines „Weitere"-Bereichs. Alle Einträge
+  // gehen als EIN State-Update raus (onAddEntries), damit bei wiederholten
+  // Aufrufen auf demselben Snapshot nichts verloren geht.
+  async function bookSection(label, items, isGroup) {
+    if (!items || items.length === 0) return;
+    const today = todayISO();
+    const count = items.length;
+    const scope = isGroup ? `der Gruppe „${label}“` : `aus „${label}“`;
+    const ok = await confirm({
+      title: "Alle Positionen buchen",
+      message:
+        (count === 1
+          ? `Wirklich 1 Position ${scope} buchen?`
+          : `Wirklich alle ${count} Positionen ${scope} buchen?`) +
+        `\n\nGebucht wird auf das heutige Datum (${formatDateDE(today)}).`,
+      confirmLabel: "Buchen",
+    });
+    if (!ok) return;
+
+    const newEntries = items.map((item) => buildEntryFromItem(item, today));
+    if (typeof onAddEntries === "function") {
+      onAddEntries(newEntries);
+    } else {
+      // Fallback: onAddEntry arbeitet mit funktionalen State-Updates, mehrfache
+      // Aufrufe auf demselben Snapshot sind daher unkritisch.
+      newEntries.forEach((entry) => onAddEntry(entry));
+    }
+    toast.success(
+      `${count} ${count === 1 ? "Position" : "Positionen"} aus „${label}“ gebucht.`
+    );
   }
 
   // Drag & Drop
+  const draggingKind = useMemo(() => {
+    if (!draggingId) return null;
+    const item = recurringExpenses.find((r) => r.id === draggingId);
+    return item ? fixedCostKind(item) : null;
+  }, [draggingId, recurringExpenses]);
+
   function handleDragStart(e, item) {
     // Die ganze Karte ist draggable — ein Mousedown auf einem Button (Kebab,
     // "Jetzt buchen", …) darf keinen Karten-Drag starten.
@@ -308,34 +449,46 @@ export default function FixedCostsView({
 
   function handleDragEnd() {
     setDraggingId(null);
-    setDragOverGroupId(undefined);
+    setDragOverKey(null);
     setDropBeforeId(null);
   }
 
-  function handleDragOverItem(e, targetGroupId, beforeId) {
+  // Kein preventDefault → der Browser lehnt den Drop ab; zusätzlich wird ein
+  // eventuell noch stehender Indikator gelöscht.
+  function rejectDrop() {
+    setDragOverKey(null);
+    setDropBeforeId(null);
+  }
+
+  function handleDragOverItem(e, sectionKind, sectionKey, beforeId) {
     if (!draggingId) return;
+    if (draggingKind !== sectionKind) { rejectDrop(); return; }
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = "move";
-    setDragOverGroupId(targetGroupId);
+    setDragOverKey(sectionKey);
     setDropBeforeId(beforeId);
   }
 
-  function handleDragOverGroupBody(e, targetGroupId) {
+  function handleDragOverGroupBody(e, sectionKind, sectionKey) {
     if (!draggingId) return;
+    if (draggingKind !== sectionKind) { rejectDrop(); return; }
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    setDragOverGroupId(targetGroupId);
+    setDragOverKey(sectionKey);
     setDropBeforeId(null);
   }
 
-  function handleDrop(e, targetGroupId, beforeId) {
+  function handleDrop(e, sectionKind, targetGroupId, beforeId) {
     e.preventDefault();
     e.stopPropagation();
     const dragId = draggingId || e.dataTransfer.getData("text/plain");
     if (!dragId) return handleDragEnd();
     const dragged = recurringExpenses.find((r) => r.id === dragId);
     if (!dragged) return handleDragEnd();
+    // Spaltenwechsel per Drag ist nicht vorgesehen — die Art einer Position
+    // wird ausschliesslich im Dialog geändert.
+    if (fixedCostKind(dragged) !== sectionKind) return handleDragEnd();
 
     const rest = recurringExpenses.filter((r) => r.id !== dragId);
     const movedItem = { ...dragged, groupId: targetGroupId || null };
@@ -345,11 +498,10 @@ export default function FixedCostsView({
       insertIndex = rest.findIndex((r) => r.id === beforeId);
       if (insertIndex === -1) insertIndex = rest.length;
     } else {
-      const targetKey = targetGroupId || null;
+      const targetKey = targetGroupId || UNGROUPED_KEY[sectionKind];
       let lastIdx = -1;
       rest.forEach((r, idx) => {
-        const gid = (r.groupId && fixedCostGroups.some((g) => g.id === r.groupId)) ? r.groupId : null;
-        if (gid === targetKey) lastIdx = idx;
+        if (sectionKeyOfItem(r) === targetKey) lastIdx = idx;
       });
       insertIndex = lastIdx === -1 ? rest.length : lastIdx + 1;
     }
@@ -365,8 +517,13 @@ export default function FixedCostsView({
     return Number.isFinite(n) && n > 0;
   }, [draft]);
 
+  const dialogGroupOptions = useMemo(
+    () => fixedCostGroups.filter((g) => fixedCostKind(g) === draft.kind),
+    [fixedCostGroups, draft.kind]
+  );
+
   function renderCatPills(item) {
-    if (item.kind === "transfer") {
+    if (fixedCostKind(item) === "transfer") {
       const potName = pots.find((p) => p.id === item.potId)?.name || item.potId;
       return (
         <span className="hb-fixed-cat-pill">
@@ -406,11 +563,9 @@ export default function FixedCostsView({
     ));
   }
 
-  function renderItemCard(item, groupIdOfSection) {
+  function renderItemCard(item, sectionKind, sectionKey, groupIdOfSection) {
     const isDragging = draggingId === item.id;
-    const normGroupId = groupIdOfSection || null;
-    const showDropLine =
-      dragOverGroupId === normGroupId && dropBeforeId === item.id;
+    const showDropLine = dragOverKey === sectionKey && dropBeforeId === item.id;
 
     return (
       <React.Fragment key={item.id}>
@@ -420,8 +575,8 @@ export default function FixedCostsView({
           draggable
           onDragStart={(e) => handleDragStart(e, item)}
           onDragEnd={handleDragEnd}
-          onDragOver={(e) => handleDragOverItem(e, normGroupId, item.id)}
-          onDrop={(e) => handleDrop(e, normGroupId, item.id)}
+          onDragOver={(e) => handleDragOverItem(e, sectionKind, sectionKey, item.id)}
+          onDrop={(e) => handleDrop(e, sectionKind, groupIdOfSection, item.id)}
         >
           <div className="hb-card-content">
             <div className="hb-fixed-card">
@@ -436,15 +591,6 @@ export default function FixedCostsView({
                       <div className="hb-fixed-amount hb-bad">-{fmt(item.amount)}</div>
                     </div>
                     <div className="hb-fixed-pills">
-                      <span
-                        className={
-                          item.kind === "expense"
-                            ? "hb-fixed-kind-pill hb-fixed-kind-pill--expense"
-                            : "hb-fixed-kind-pill hb-fixed-kind-pill--transfer"
-                        }
-                      >
-                        {item.kind === "expense" ? "Ausgabe" : "Transfer"}
-                      </span>
                       {renderCatPills(item)}
                       {renderTagPills(item)}
                     </div>
@@ -470,8 +616,93 @@ export default function FixedCostsView({
     );
   }
 
-  const sortedGroups = [...fixedCostGroups].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  const showUngroupedSection = ungroupedItems.length > 0 || fixedCostGroups.length > 0;
+  // Eine Sektion = eine Gruppe oder der „Weitere"-Bereich einer Spalte.
+  // Beide verhalten sich funktional gleich (Drop-Ziel, „+", Sammelbuchung).
+  function renderSection(columnKind, group) {
+    const isGroup = !!group;
+    const sectionKey = isGroup ? group.id : UNGROUPED_KEY[columnKind];
+    const groupIdOfSection = isGroup ? group.id : null;
+    const items = itemsBySection.get(sectionKey) || EMPTY_ARRAY;
+    const total = sectionTotals.get(sectionKey) || 0;
+    const label = isGroup
+      ? group.name
+      : (groupsByColumn[columnKind].length > 0 ? "Weitere" : "Alle Positionen");
+    const isDropTargetEmpty =
+      draggingId !== null && dragOverKey === sectionKey && dropBeforeId === null;
+
+    return (
+      <section
+        key={sectionKey}
+        className={`hb-fixed-group${isGroup ? "" : " hb-fixed-group--ungrouped"}`}
+      >
+        <header className="hb-fixed-group-head">
+          {isGroup && renamingGroupId === group.id ? (
+            <input
+              className="hb-input hb-fixed-group-rename"
+              autoFocus
+              value={groupNameDraft}
+              onChange={(e) => setGroupNameDraft(e.target.value)}
+              onBlur={() => renameGroup(group.id, groupNameDraft)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") renameGroup(group.id, groupNameDraft);
+                if (e.key === "Escape") setRenamingGroupId(null);
+              }}
+            />
+          ) : isGroup ? (
+            <button
+              className="hb-fixed-group-title"
+              onClick={() => { setRenamingGroupId(group.id); setGroupNameDraft(group.name); }}
+              title="Klicken zum Umbenennen"
+            >
+              {group.name}
+            </button>
+          ) : (
+            <span className="hb-fixed-group-title hb-fixed-group-title--static">{label}</span>
+          )}
+          <span className="hb-fixed-group-total">{fmt(total)}</span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="hb-fixed-group-book"
+            onClick={() => bookSection(label, items, isGroup)}
+            disabled={items.length === 0}
+          >
+            Alle buchen
+          </Button>
+          <button
+            className="hb-icon-btn hb-icon-btn--sm"
+            onClick={() => openCreateDialog({ groupId: groupIdOfSection, kind: columnKind, lockKind: true })}
+            title={isGroup ? `Position zur Gruppe „${label}“ hinzufügen` : "Position ohne Gruppe hinzufügen"}
+            aria-label="Position hinzufügen"
+          >
+            <IconPlus width={15} height={15} />
+          </button>
+          {isGroup && (
+            <button
+              className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--danger"
+              onClick={() => deleteGroup(group)}
+              title="Gruppe löschen"
+              aria-label="Gruppe löschen"
+            >
+              <IconDelete width={15} height={15} />
+            </button>
+          )}
+        </header>
+        <div
+          className={`hb-fixed-group-body${isDropTargetEmpty ? " is-drop-target" : ""}`}
+          onDragOver={(e) => handleDragOverGroupBody(e, columnKind, sectionKey)}
+          onDrop={(e) => handleDrop(e, columnKind, groupIdOfSection, null)}
+        >
+          {items.length === 0 ? (
+            <div className="hb-fixed-group-empty">Positionen hierher ziehen</div>
+          ) : (
+            items.map((item) => renderItemCard(item, columnKind, sectionKey, groupIdOfSection))
+          )}
+        </div>
+      </section>
+    );
+  }
+
   const isEmpty = recurringExpenses.length === 0 && fixedCostGroups.length === 0;
 
   return (
@@ -483,19 +714,13 @@ export default function FixedCostsView({
           <span className="hb-stat-pill-value">{fmt(totalAmount)}</span>
         </div>
         <div className="hb-fixed-toolbar-actions">
-          <Button
-            variant="outline"
-            onClick={() => { setGroupNameDraft(""); setGroupDialogOpen(true); }}
-          >
-            <IconPlus /> Gruppe
-          </Button>
           <Button onClick={() => openCreateDialog()}>
             <IconPlus /> Neue Fixkosten
           </Button>
         </div>
       </div>
 
-      {/* Neue Gruppe anlegen */}
+      {/* Neue Gruppe anlegen — die Spalte ergibt sich aus dem Aufrufer */}
       <EditDialog
         open={groupDialogOpen}
         title="Neue Gruppe"
@@ -510,11 +735,14 @@ export default function FixedCostsView({
             className="hb-input"
             style={{ width: "100%", minWidth: 0 }}
             type="text"
-            placeholder="z.B. Wohnen, Abos"
+            placeholder={groupDialogKind === "expense" ? "z.B. Wohnen, Abos" : "z.B. Steuern, Rücklagen"}
             value={groupNameDraft}
             onChange={(e) => setGroupNameDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && groupNameDraft.trim()) createGroup(); }}
           />
+          <div className="hb-fixed-field-hint">
+            Wird in der Spalte „{columnLabel(groupDialogKind)}“ angelegt.
+          </div>
         </div>
       </EditDialog>
 
@@ -536,94 +764,56 @@ export default function FixedCostsView({
           </CardContent>
         </Card>
       ) : (
-        <div className="hb-fixed-groups">
-          {/* Definierte Gruppen */}
-          {sortedGroups.map((group) => {
-            const items = groupedItems.get(group.id) || [];
-            const isDropTargetEmpty =
-              dragOverGroupId === group.id && dropBeforeId === null && draggingId !== null;
+        <div className="hb-fixed-columns">
+          {COLUMNS.map((column) => {
+            const columnGroups = groupsByColumn[column.kind];
+            const ungroupedItems = itemsBySection.get(UNGROUPED_KEY[column.kind]) || EMPTY_ARRAY;
+            const isColumnEmpty = columnGroups.length === 0 && ungroupedItems.length === 0;
+            const count = columnCounts[column.kind];
 
             return (
-              <section key={group.id} className="hb-fixed-group">
-                <header className="hb-fixed-group-head">
-                  {renamingGroupId === group.id ? (
-                    <input
-                      className="hb-input hb-fixed-group-rename"
-                      autoFocus
-                      value={groupNameDraft}
-                      onChange={(e) => setGroupNameDraft(e.target.value)}
-                      onBlur={() => renameGroup(group.id, groupNameDraft)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") renameGroup(group.id, groupNameDraft);
-                        if (e.key === "Escape") setRenamingGroupId(null);
-                      }}
-                    />
-                  ) : (
-                    <button
-                      className="hb-fixed-group-title"
-                      onClick={() => { setRenamingGroupId(group.id); setGroupNameDraft(group.name); }}
-                      title="Klicken zum Umbenennen"
-                    >
-                      {group.name}
-                    </button>
-                  )}
-                  <span className="hb-fixed-group-total">{fmt(groupTotals.get(group.id) || 0)}</span>
-                  <button
-                    className="hb-icon-btn"
-                    onClick={() => openCreateDialog(group.id)}
-                    title="Fixkosten zu dieser Gruppe hinzufügen"
-                    aria-label="Fixkosten hinzufügen"
+              <section
+                key={column.kind}
+                className={`hb-fixed-column hb-fixed-column--${column.kind}`}
+                aria-label={column.title}
+              >
+                <header className="hb-fixed-col-head">
+                  <div className="hb-fixed-col-heading">
+                    <h2 className="hb-fixed-col-title">{column.title}</h2>
+                    <div className="hb-fixed-col-meta">
+                      {count === 1 ? "1 Position" : `${count} Positionen`}
+                    </div>
+                  </div>
+                  <div className="hb-fixed-col-total">{fmt(columnTotals[column.kind])}</div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openGroupDialog(column.kind)}
                   >
-                    <IconPlus width={15} height={15} />
-                  </button>
-                  <button
-                    className="hb-icon-btn hb-icon-btn--danger"
-                    onClick={() => deleteGroup(group)}
-                    title="Gruppe löschen"
-                    aria-label="Gruppe löschen"
-                  >
-                    <IconDelete width={15} height={15} />
-                  </button>
+                    <IconPlus /> Gruppe
+                  </Button>
                 </header>
-                <div
-                  className={`hb-fixed-group-body${isDropTargetEmpty ? " is-drop-target" : ""}`}
-                  onDragOver={(e) => handleDragOverGroupBody(e, group.id)}
-                  onDrop={(e) => handleDrop(e, group.id, null)}
-                >
-                  {items.length === 0 ? (
-                    <div className="hb-fixed-group-empty">Fixkosten hierher ziehen</div>
-                  ) : (
-                    items.map((item) => renderItemCard(item, group.id))
-                  )}
-                </div>
+
+                {isColumnEmpty ? (
+                  <div className="hb-fixed-col-empty">
+                    <div>{column.emptyText}</div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openCreateDialog({ kind: column.kind, lockKind: true })}
+                    >
+                      <IconPlus /> {column.addLabel}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="hb-fixed-col-body">
+                    {columnGroups.map((group) => renderSection(column.kind, group))}
+                    {renderSection(column.kind, null)}
+                  </div>
+                )}
               </section>
             );
           })}
-
-          {/* Weitere (ungegruppiert) */}
-          {showUngroupedSection && (
-            <section className="hb-fixed-group hb-fixed-group--ungrouped">
-              <header className="hb-fixed-group-head">
-                <span className="hb-fixed-group-title hb-fixed-group-title--static">
-                  {fixedCostGroups.length > 0 ? "Weitere" : "Alle Fixkosten"}
-                </span>
-                <span className="hb-fixed-group-total">
-                  {fmt(ungroupedItems.reduce((s, i) => s + Number(i.amount || 0), 0))}
-                </span>
-              </header>
-              <div
-                className={`hb-fixed-group-body${dragOverGroupId === null && dropBeforeId === null && draggingId !== null ? " is-drop-target" : ""}`}
-                onDragOver={(e) => handleDragOverGroupBody(e, null)}
-                onDrop={(e) => handleDrop(e, null, null)}
-              >
-                {ungroupedItems.length === 0 ? (
-                  <div className="hb-fixed-group-empty">Fixkosten hierher ziehen</div>
-                ) : (
-                  ungroupedItems.map((item) => renderItemCard(item, null))
-                )}
-              </div>
-            </section>
-          )}
         </div>
       )}
 
@@ -671,11 +861,17 @@ export default function FixedCostsView({
               <select
                 className="hb-input"
                 value={draft.kind}
-                onChange={(e) => setDraft((d) => ({ ...d, kind: e.target.value }))}
+                disabled={kindLocked}
+                onChange={(e) => handleKindChange(e.target.value)}
               >
                 <option value="expense">Ausgabe</option>
                 <option value="transfer">Transfer/Rücklage</option>
               </select>
+              {kindLocked && (
+                <div className="hb-fixed-field-hint">
+                  Durch die Spalte „{columnLabel(draft.kind)}“ vorgegeben.
+                </div>
+              )}
             </div>
             <div className="hb-field">
               <div className="hb-label">Gruppe</div>
@@ -685,10 +881,15 @@ export default function FixedCostsView({
                 onChange={(e) => setDraft((d) => ({ ...d, groupId: e.target.value || null }))}
               >
                 <option value="">Weitere (keine Gruppe)</option>
-                {fixedCostGroups.map((g) => (
+                {dialogGroupOptions.map((g) => (
                   <option key={g.id} value={g.id}>{g.name}</option>
                 ))}
               </select>
+              {editingItem && !kindLocked && (
+                <div className="hb-fixed-field-hint">
+                  Beim Wechsel der Art verliert die Position ihre Gruppe.
+                </div>
+              )}
             </div>
           </div>
 

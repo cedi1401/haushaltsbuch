@@ -288,6 +288,7 @@ export default function HaushaltsbuchApp() {
                 entries={entries}
                 onUpdateBook={updateBook}
                 onAddEntry={entryActions.addTransferEntry}
+                onAddEntries={entryActions.addEntries}
               />
             ) : view === "costgroups" ? (
               <CostGroupsView

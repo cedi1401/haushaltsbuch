@@ -258,6 +258,15 @@ export function useEntryActions({
     patchActiveBook((b) => ({ ...b, entries: [...(b.entries || []), entry] }));
   }
 
+  // Batch-Variante für Sammelbuchungen (z.B. „alle Positionen einer Fixkosten-
+  // Gruppe buchen"): ein einziges State-Update statt N Aufrufe — spart N-1
+  // Re-Render/Save-Zyklen und macht die Buchung atomar.
+  function addEntries(newEntries) {
+    if (!activeBook) return;
+    if (!Array.isArray(newEntries) || newEntries.length === 0) return;
+    patchActiveBook((b) => ({ ...b, entries: [...(b.entries || []), ...newEntries] }));
+  }
+
   async function removeEntry(id) {
     if (!activeBook) return;
     const target = (activeBook.entries || []).find((e) => e.id === id) || null;
@@ -411,6 +420,6 @@ export function useEntryActions({
     closeEdit, saveEdit, canSaveEdit,
     editWithdrawalCategories,
     // Shared actions
-    addTransferEntry, removeEntry, startEdit,
+    addTransferEntry, addEntries, removeEntry, startEdit,
   };
 }
