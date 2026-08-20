@@ -48,6 +48,12 @@ export default function HaushaltsbuchApp() {
   const [navAnchor, setNavAnchor] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Frei gewählter Zeitraum des Kostenrechners. Liegt hier, weil CostGroupsView
+  // beim Ansichtswechsel unmountet wird — so überlebt die Einstellung die
+  // Navigation, aber bewusst nur zur Laufzeit: ein Neustart beginnt wieder bei
+  // "Gesamt". `active` merkt sich, ob der Bereich zuletzt auch ausgewählt war.
+  const [costGroupRange, setCostGroupRange] = useState({ from: "", to: "", active: false });
+
   const bookManager = useBookManager({ toast, confirm });
   const {
     books, setActiveBookId,
@@ -295,6 +301,8 @@ export default function HaushaltsbuchApp() {
                 activeBook={activeBook}
                 onUpdateBook={updateBook}
                 monthStartDay={monthStartDay}
+                customRange={costGroupRange}
+                onCustomRangeChange={setCostGroupRange}
               />
             ) : (
               <DashboardView

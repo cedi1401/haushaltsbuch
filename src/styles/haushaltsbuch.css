@@ -4931,6 +4931,16 @@ select.hb-input option {
   margin: 2px 0;
 }
 
+/* Zusatzzeile im Tooltip (z.B. Teilmonat eines frei gewählten Zeitraums) */
+.hb-chart-tooltip-note {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 /* =====================================================
    HB TOOLTIP - Hover-Hilfe hinter ?-Icon (WinUI 3)
    ===================================================== */
@@ -5630,6 +5640,59 @@ select.hb-input option {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Zeitraumwähler: feste Fenster als Pill-Gruppe, der frei gewählte Zeitraum
+   als abgesetzte zweite Gruppe daneben. Der Wrapper ist zugleich der
+   Positionsanker des Popovers. */
+.hb-cg-range {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Flyout wie .hb-cg-group-list. Wichtig: KEIN overflow — im Popover stecken
+   zwei HbDatePicker, deren Kalender (position: absolute) sonst abgeschnitten
+   würde (siehe Kommentar bei .hb-modal-panel--form .hb-modal-body). */
+.hb-cg-range-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 80;
+  /* Breit genug für den Kalender der beiden HbDatePicker (min-width: 264px),
+     damit er nicht über den Popover-Rand hinausragt. */
+  width: 292px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hb-cg-range-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--red);
+}
+
+.hb-cg-range-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Auf schmalen Fenstern die Kopfzeilenbreite nutzen, sonst ragt das Popover
+   aus dem Viewport. */
+@media (max-width: 600px) {
+  .hb-cg-range-popover {
+    right: auto;
+    left: 0;
+    width: min(292px, calc(100vw - 32px));
+  }
 }
 
 /* Linke Kopfzeilen-Hälfte im Detail: Zurück-Button + Gruppen-Dropdown */

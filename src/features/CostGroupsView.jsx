@@ -3,6 +3,7 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  Cell,
   LineChart,
   Line,
   XAxis,
@@ -13,6 +14,7 @@ import {
 } from "recharts";
 import { Card, CardContent, Button, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
+import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
@@ -22,10 +24,10 @@ import { useClickOutside } from "../hooks/useClickOutside.js";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { generateId } from "../utils/idUtils.js";
-import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, formatCurrencyAxis } from "../utils/hbUtils.js";
+import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, formatCurrencyAxis, formatDateDE, todayISO } from "../utils/hbUtils.js";
 import { EMPTY_ARRAY, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 import { CUSTOM_CATEGORY_PALETTE } from "../utils/hbPalette.js";
-import { calcCostGroupStats, calcExpectedMonthly } from "../utils/costGroupUtils.js";
+import { calcCostGroupStats, calcExpectedMonthly, formatMonthCount, addMonthsISO } from "../utils/costGroupUtils.js";
 
 const INTERVAL_OPTIONS = [
   { months: 1, label: "Monatlich" },
@@ -59,7 +61,9 @@ const HELP_DEVIATION =
 const HELP_CHART =
   "Die Balken zeigen die tatsächlich gebuchten Kosten pro Monat. Die gestrichelte Linie „Ø Ist\" ist deren " +
   "Durchschnitt, die Linie „Rücklagenbedarf\" der aus der Planung errechnete Monatsbetrag. Balken unterhalb der " +
-  "Rücklagenlinie bedeuten, dass der Monat günstiger war als die Rücklage — Balken darüber zehren an ihr.";
+  "Rücklagenlinie bedeuten, dass der Monat günstiger war als die Rücklage — Balken darüber zehren an ihr. " +
+  "Bei einem frei gewählten Zeitraum sind angeschnittene Randmonate abgeblendet: sie decken nur einen Teil " +
+  "ihrer Tage ab und sind deshalb nicht mit den vollen Monaten vergleichbar.";
 
 // Planung ist bewusst NICHT Teil des Gruppen-Drafts: Planungsposten werden
 // ausschließlich in der Planungs-Card gepflegt (ein Ort, keine Doppelspurigkeit).
@@ -68,7 +72,24 @@ const EMPTY_DRAFT = { name: "", color: CUSTOM_CATEGORY_PALETTE[0], categoryIds: 
 // Draft des kleinen Einzel-Posten-Dialogs (Planungs-Card). id === null = neuer Posten.
 const EMPTY_PLAN_ITEM = { id: null, name: "", amount: "", intervalMonths: 12 };
 
-export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay = 1 }) {
+// Frei gewählter Zeitraum (leer = keiner gesetzt)
+const EMPTY_RANGE = { from: "", to: "" };
+
+// Kompaktes Datum für das Pill-Label: "15.03.2025" → "15.03.25". Die Kopfzeile
+// trägt beide Daten nebeneinander, ausgeschrieben wäre das Pill zu breit.
+function shortDateDE(iso) {
+  return formatDateDE(iso).replace(/\.\d{2}(\d{2})$/, ".$1");
+}
+
+export default function CostGroupsView({
+  activeBook,
+  onUpdateBook,
+  monthStartDay = 1,
+  // Frei gewählter Zeitraum — liegt in HaushaltsbuchApp, damit er den
+  // Ansichtswechsel überlebt (diese View wird dabei unmountet).
+  customRange = EMPTY_RANGE,
+  onCustomRangeChange,
+}) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const { confirm } = useConfirm();
@@ -82,10 +103,86 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
   // "overview" = Karten-Grid aller Gruppen, "detail" = Einzelgruppe mit Chart
   const [viewMode, setViewMode] = useState("overview");
   const [selectedGroupId, setSelectedGroupId] = useState(costGroups[0]?.id || null);
-  // Default "all" (Gesamt): beim Zurückkehren in den Kostenrechner immer der gesamte Verlauf
-  const [rangeOption, setRangeOption] = useState("all");
+  // Default "all" (Gesamt): beim Zurückkehren in den Kostenrechner immer der
+  // gesamte Verlauf — ausser ein eigener Zeitraum war zuletzt aktiv, der bleibt
+  // bis zum Beenden des Programms bestehen.
+  const [rangeOption, setRangeOption] = useState(customRange.active ? "custom" : "all");
   // Scrollfenster des Verlaufscharts (0 = neueste 12 Monate)
   const [chartOffset, setChartOffset] = useState(0);
+
+  // `customRange` (Prop) ist der übernommene Wert, `draftRange` der Entwurf im
+  // Popover — erst "Übernehmen" schaltet den Zeitraum um. Beides bleibt
+  // Laufzeit-State, das Buch wird davon nicht berührt.
+  const [draftRange, setDraftRange] = useState(EMPTY_RANGE);
+  const [rangePickerOpen, setRangePickerOpen] = useState(false);
+  const rangeWrapRef = useRef(null);
+  useClickOutside(rangeWrapRef, () => setRangePickerOpen(false), { enabled: rangePickerOpen });
+
+  useEffect(() => {
+    if (!rangePickerOpen) return;
+    const onKey = (e) => { if (e.key === "Escape") setRangePickerOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [rangePickerOpen]);
+
+  const today = todayISO();
+
+  // Eigene Pill-Gruppe neben den festen Fenstern: der freie Zeitraum ist eine
+  // andere Art von Auswahl (öffnet ein Popover statt sofort umzuschalten) und
+  // bleibt deshalb abgesetzt. Das Label trägt den gewählten Bereich, damit er
+  // ablesbar ist, ohne das Popover zu öffnen.
+  const customRangeOptions = useMemo(() => {
+    const label = customRange.from && customRange.to
+      ? `${shortDateDE(customRange.from)} – ${shortDateDE(customRange.to)}`
+      : "Zeitraum";
+    return [{ value: "custom", label }];
+  }, [customRange]);
+
+  // HbDatePicker kennt keine min/max-Grenzen, deshalb wird der Entwurf hier
+  // geprüft und "Übernehmen" bis zur Korrektur gesperrt.
+  const rangeError = useMemo(() => {
+    if (!draftRange.from || !draftRange.to) return "Bitte Start- und Enddatum wählen.";
+    if (draftRange.from > draftRange.to) return "Das Startdatum muss vor dem Enddatum liegen.";
+    if (draftRange.to > today) return "Der Zeitraum darf nicht in der Zukunft enden.";
+    return "";
+  }, [draftRange, today]);
+
+  function handleRangeChange(val) {
+    if (val === "custom") { toggleRangePicker(); return; }
+    setRangePickerOpen(false);
+    setRangeOption(val);
+    setChartOffset(0);
+    // Der Bereich bleibt gemerkt (das Popover zeigt ihn beim nächsten Öffnen
+    // wieder), gilt aber nicht mehr als aktive Auswahl.
+    if (customRange.active) onCustomRangeChange?.({ ...customRange, active: false });
+  }
+
+  function toggleRangePicker() {
+    if (rangePickerOpen) { setRangePickerOpen(false); return; }
+    // Vorschlag beim ersten Öffnen: die letzten 12 Monate bis heute
+    setDraftRange(
+      customRange.from && customRange.to
+        ? { from: customRange.from, to: customRange.to }
+        : { from: addMonthsISO(today, -11), to: today }
+    );
+    setRangePickerOpen(true);
+  }
+
+  function applyRange() {
+    if (rangeError) return;
+    onCustomRangeChange?.({ from: draftRange.from, to: draftRange.to, active: true });
+    setRangeOption("custom");
+    setChartOffset(0);
+    setRangePickerOpen(false);
+  }
+
+  function resetRange() {
+    onCustomRangeChange?.({ from: "", to: "", active: false });
+    setDraftRange(EMPTY_RANGE);
+    setRangeOption("all");
+    setChartOffset(0);
+    setRangePickerOpen(false);
+  }
 
   // Gruppen-Dropdown (Titel als aufklappbares Menü)
   const [menuOpen, setMenuOpen] = useState(false);
@@ -158,7 +255,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
   // Stattdessen ist das Ist die Leitzahl und der Plan die Gegenüberstellung.
   const groupCards = useMemo(() => {
     return costGroups.map((group) => {
-      const stats = calcCostGroupStats(group, entries, { rangeOption, monthStartDay });
+      const stats = calcCostGroupStats(group, entries, { rangeOption, customRange, monthStartDay });
       const planned = calcExpectedMonthly(group.plannedItems);
       return {
         group,
@@ -167,7 +264,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
         deviation: stats.avgMonthly - planned.expectedMonthly,
       };
     });
-  }, [costGroups, entries, rangeOption, monthStartDay]);
+  }, [costGroups, entries, rangeOption, customRange, monthStartDay]);
 
   // Aktive Gruppe robust bestimmen (z.B. nach Löschen)
   const activeGroup = useMemo(() => {
@@ -181,6 +278,20 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
   const stats = activeCard?.stats || null;
   const planned = activeCard?.planned || { expectedMonthly: 0, items: EMPTY_ARRAY };
   const hasPlan = planned.items.length > 0;
+
+  // Untertitel der Ist-Pill. Zeiträume unter einem Monat werden als Tage
+  // ausgewiesen: der Ø ist dort eine Hochrechnung aus wenigen Tagen und keine
+  // gemessene Monatskost — ohne Hinweis läse sich die Zahl wie eine echte.
+  const actualSubLabel = useMemo(() => {
+    if (!stats) return "";
+    if (stats.monthCount > 0 && stats.monthCount < 1 && stats.rangeFrom && stats.rangeTo) {
+      const days = Math.round(
+        (new Date(stats.rangeTo) - new Date(stats.rangeFrom)) / 86400000
+      ) + 1;
+      return `${fmt(stats.total)} in ${days} ${days === 1 ? "Tag" : "Tagen"} · Ø hochgerechnet`;
+    }
+    return `${fmt(stats.total)} in ${formatMonthCount(stats.monthCount)} Mt.`;
+  }, [stats, fmt]);
 
   // Richtung der Abweichung mit Toleranz, damit ein rechnerisches ±0.001 nicht
   // als "über Plan" erscheint.
@@ -480,13 +591,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
               </div>
             </div>
             <div className="hb-cg-head-actions">
-              <RangeTabs
-                options={MONTH_RANGE_OPTIONS}
-                value={rangeOption}
-                onChange={(val) => { setRangeOption(val); setChartOffset(0); }}
-                ariaLabel="Zeitraum wählen"
-                style={{ marginRight: 10 }}
-              />
+              {renderRangeSelector({ marginRight: 10 })}
               <Button onClick={() => openEditDialog(activeGroup)}>
                 <IconEdit width={16} height={16} /> Bearbeiten
               </Button>
@@ -507,9 +612,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
                 <HbTooltip size={16} text={HELP_ACTUAL} />
               </div>
               <span className="hb-stat-pill-value">{fmt(stats.avgMonthly)}</span>
-              <span className="hb-stat-pill-sub">
-                {fmt(stats.total)} in {stats.monthCount} Mt.
-              </span>
+              <span className="hb-stat-pill-sub">{actualSubLabel}</span>
             </div>
 
             <div className="hb-stat-pill hb-stat-pill--plan">
@@ -622,6 +725,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
                       cursor={false}
                       content={({ active, payload, label }) => {
                         if (!active || !payload?.length) return null;
+                        const point = payload[0].payload;
                         return (
                           <div className="hb-chart-tooltip">
                             <span className="hb-chart-tooltip-label">{label}</span>
@@ -629,6 +733,11 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
                               <span>Kosten</span>
                               <span>{fmt(payload[0].value)}</span>
                             </div>
+                            {point?.partial && (
+                              <div className="hb-chart-tooltip-note">
+                                Teilmonat: {shortDateDE(point.partialFrom)} – {shortDateDE(point.partialTo)}
+                              </div>
+                            )}
                           </div>
                         );
                       }}
@@ -644,7 +753,14 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
                       maxBarSize={42}
                       isAnimationActive={false}
                       activeBar={false}
-                    />
+                    >
+                      {/* Angeschnittene Randmonate eines freien Zeitraums decken
+                          nur einen Teil ihrer Tage ab — abgeblendet, damit sie
+                          nicht als günstiger Monat missverstanden werden. */}
+                      {chartWindow.map((p) => (
+                        <Cell key={p.ym} fillOpacity={p.partial ? 0.45 : 1} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -788,6 +904,53 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
     </div>
   );
 
+  // ── Zeitraumwähler: Pills + Popover für den freien Zeitraum ──────────────
+  // Beide Kopfzeilen (Übersicht und Detail) teilen sich diese Funktion, damit
+  // Popover-Logik und Validierung nur an einer Stelle leben.
+  function renderRangeSelector(style) {
+    return (
+      <div className="hb-cg-range" ref={rangeWrapRef} style={style}>
+        <RangeTabs
+          options={MONTH_RANGE_OPTIONS}
+          value={rangeOption}
+          onChange={handleRangeChange}
+          ariaLabel="Zeitraum wählen"
+        />
+        <RangeTabs
+          options={customRangeOptions}
+          value={rangeOption}
+          onChange={handleRangeChange}
+          ariaLabel="Eigenen Zeitraum wählen"
+        />
+        {rangePickerOpen && (
+          <div className="hb-cg-range-popover" role="dialog" aria-label="Eigenen Zeitraum wählen">
+            <div className="hb-field">
+              <div className="hb-label">Von</div>
+              <HbDatePicker
+                value={draftRange.from}
+                onChange={(v) => setDraftRange((r) => ({ ...r, from: v }))}
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div className="hb-field">
+              <div className="hb-label">Bis</div>
+              <HbDatePicker
+                value={draftRange.to}
+                onChange={(v) => setDraftRange((r) => ({ ...r, to: v }))}
+                style={{ width: "100%" }}
+              />
+            </div>
+            {rangeError && <p className="hb-cg-range-error">{rangeError}</p>}
+            <div className="hb-cg-range-actions">
+              <Button size="sm" variant="outline" onClick={resetRange}>Zurücksetzen</Button>
+              <Button size="sm" disabled={!!rangeError} onClick={applyRange}>Übernehmen</Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // ── Übersicht: alle Gruppen als Kachel-Grid (Stil der Dashboard-Töpfe) ────
   function renderOverview() {
     return (
@@ -796,12 +959,7 @@ export default function CostGroupsView({ activeBook, onUpdateBook, monthStartDay
         <div className="hb-cg-head">
           <h2 className="hb-cg-overview-title">Kostengruppen</h2>
           <div className="hb-cg-head-actions">
-            <RangeTabs
-              options={MONTH_RANGE_OPTIONS}
-              value={rangeOption}
-              onChange={(val) => { setRangeOption(val); setChartOffset(0); }}
-              ariaLabel="Zeitraum wählen"
-            />
+            {renderRangeSelector()}
             <Button onClick={openCreateDialog}>
               <IconPlus /> Neue Gruppe
             </Button>
