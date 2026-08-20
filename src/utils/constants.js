@@ -14,6 +14,18 @@ export const MONTHS_SHORT = [
   "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
 ];
 
+// Buchungsarten — Beschriftung und Anzeigereihenfolge. App-weit geteilt, damit
+// „Buchung hinzufügen", „Eintrag bearbeiten" und die Vorlagen-Karten dieselben
+// Begriffe in derselben Reihenfolge verwenden.
+export const ENTRY_KIND_LABELS = {
+  income: "Einnahme",
+  expense: "Ausgabe",
+  withdrawal: "Entnahme",
+  transfer: "Transfer",
+};
+
+export const ENTRY_KINDS = ["income", "expense", "withdrawal", "transfer"];
+
 // Zeitraum-Optionen für die Chart-RangeTabs (12/24 Monate bzw. gesamter Verlauf).
 // App-weit identisch — geteilt, damit die Auswahl konsistent bleibt.
 export const MONTH_RANGE_OPTIONS = [
