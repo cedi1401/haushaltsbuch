@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import { CHART_COLORS } from "../utils/hbPalette.js";
+import { EMPTY_ARRAY } from "../utils/constants.js";
+import { IconSearch } from "./icons.jsx";
 
 /**
  * HierarchicalCategoryPicker
@@ -12,6 +14,10 @@ import { CHART_COLORS } from "../utils/hbPalette.js";
  * - Radio buttons allow selecting exactly ONE item (parent OR sub)
  * - Selecting a subcategory sets both categoryId and subcategoryId
  * - Selecting a parent sets categoryId only (subcategoryId = null)
+ * - Ab FILTER_MIN_CATEGORIES Kategorien blendet sich ein Filterfeld über der
+ *   Liste ein; solange gefiltert wird, steuert die Suche das Auf-/Zuklappen
+ *   (der Chevron wäre dann ein Bedienelement ohne sichtbare Wirkung und
+ *   wird deshalb ausgeblendet).
  *
  * Props:
  *   label       {string}
@@ -20,6 +26,14 @@ import { CHART_COLORS } from "../utils/hbPalette.js";
  *   onChange     {({ categoryId, subcategoryId }) => void}
  *   disabled    {boolean}
  */
+
+// Unter dieser Anzahl lohnt sich das Filterfeld nicht — es wäre nur Chrome.
+const FILTER_MIN_CATEGORIES = 6;
+
+function normalize(text) {
+  return (text || "").toLocaleLowerCase("de");
+}
+
 export function HierarchicalCategoryPicker({
   label,
   value,
@@ -36,8 +50,35 @@ export function HierarchicalCategoryPicker({
     return new Set();
   });
 
-  // Unique name for the radio group so only one can be selected
-  const radioName = "hb-hcat-radio";
+  const [filter, setFilter] = useState("");
+
+  // Eindeutiger Radio-Group-Name pro Picker-Instanz, damit zwei gleichzeitig
+  // offene Picker (z.B. Buchungsdialog + Vorlagen-Editor) sich nicht die
+  // Auswahl gegenseitig überschreiben.
+  const radioName = `hb-hcat-radio-${useId()}`;
+
+  const allCategories = categories || EMPTY_ARRAY;
+  const showFilter = allCategories.length >= FILTER_MIN_CATEGORIES;
+  const query = showFilter ? normalize(filter.trim()) : "";
+
+  // Trefferliste: Ein Parent-Treffer zeigt alle seine Unterkategorien, ein
+  // reiner Sub-Treffer nur die passenden Unterkategorien.
+  const groups = useMemo(() => {
+    if (!query) {
+      return allCategories.map((cat) => ({ cat, subs: cat.subcategories || [] }));
+    }
+    const hits = [];
+    for (const cat of allCategories) {
+      const subs = cat.subcategories || [];
+      if (normalize(cat.name).includes(query)) {
+        hits.push({ cat, subs });
+        continue;
+      }
+      const subHits = subs.filter((sub) => normalize(sub.name).includes(query));
+      if (subHits.length > 0) hits.push({ cat, subs: subHits });
+    }
+    return hits;
+  }, [allCategories, query]);
 
   // ── handlers ─────────────────────────────────────────────────────────
 
@@ -78,10 +119,30 @@ export function HierarchicalCategoryPicker({
     <div className="hb-field hb-hcat-picker">
       {label && <div className="hb-label">{label}</div>}
 
+      {showFilter && (
+        <div className="hb-search-field hb-search-field--block">
+          <span className="hb-search-icon"><IconSearch width={16} height={16} /></span>
+          <input
+            className="hb-input"
+            type="text"
+            placeholder="Kategorie filtern..."
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            disabled={disabled}
+            autoComplete="off"
+          />
+        </div>
+      )}
+
       <div className="hb-hcat-box">
-        {(categories || []).map((cat) => {
-          const hasSubs = (cat.subcategories || []).length > 0;
-          const isExpanded = expanded.has(cat.id);
+        {groups.length === 0 && (
+          <div className="hb-hcat-empty">Keine Kategorie gefunden.</div>
+        )}
+
+        {groups.map(({ cat, subs }) => {
+          const hasSubs = subs.length > 0;
+          // Während gefiltert wird, öffnet die Suche die Treffer.
+          const isExpanded = query ? hasSubs : expanded.has(cat.id);
           const parentSelected = isParentSelected(cat.id);
 
           return (
@@ -109,10 +170,10 @@ export function HierarchicalCategoryPicker({
                       flexShrink: 0,
                     }}
                   />
-                  <span className="hb-hcat-parent-name">{cat.name}</span>
+                  <span className="hb-hcat-parent-name" title={cat.name}>{cat.name}</span>
                 </label>
 
-                {hasSubs && (
+                {hasSubs && !query && (
                   <button
                     type="button"
                     className={
@@ -150,7 +211,7 @@ export function HierarchicalCategoryPicker({
               {/* Subcategory accordion */}
               {hasSubs && isExpanded && (
                 <div className="hb-hcat-sub-list">
-                  {cat.subcategories.map((sub) => {
+                  {subs.map((sub) => {
                     const subSelected = isSubSelected(cat.id, sub.id);
                     return (
                       <label
@@ -176,7 +237,7 @@ export function HierarchicalCategoryPicker({
                             flexShrink: 0,
                           }}
                         />
-                        <span className="hb-hcat-sub-name">{sub.name}</span>
+                        <span className="hb-hcat-sub-name" title={sub.name}>{sub.name}</span>
                       </label>
                     );
                   })}

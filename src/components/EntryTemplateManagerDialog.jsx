@@ -14,14 +14,7 @@ import {
   getTemplateIssues,
   getTemplateColor,
 } from "../utils/entryTemplateUtils.js";
-import { EMPTY_ARRAY } from "../utils/constants.js";
-
-const KIND_LABELS = {
-  income: "Einnahme",
-  expense: "Ausgabe",
-  withdrawal: "Entnahme",
-  transfer: "Transfer",
-};
+import { EMPTY_ARRAY, ENTRY_KIND_LABELS as KIND_LABELS } from "../utils/constants.js";
 
 export default function EntryTemplateManagerDialog({
   open,

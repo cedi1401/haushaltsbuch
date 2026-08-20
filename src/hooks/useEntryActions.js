@@ -35,6 +35,21 @@ const INITIAL_EDIT_DRAFT = {
   amount: "",
 };
 
+// Felder, deren manuelle Änderung die angewendete Vorlage entwertet — also
+// alles, was eine Vorlage strukturell festlegt. Bewusst NICHT enthalten:
+//   date   — wird von einer Vorlage nie gesetzt
+//   amount — bei „Betrag offen"-Vorlagen der vorgesehene nächste Schritt
+//   note   — wird üblicherweise pro Buchung ergänzt
+// Diese drei lassen den Aktiv-Zustand (und damit das usageCount-Hochzählen
+// beim Speichern) bestehen.
+const TEMPLATE_INVALIDATING_FIELDS = new Set([
+  "kind",
+  "categoryId",
+  "subcategoryId",
+  "potId",
+  "category",
+]);
+
 // Computes all draft fields that depend on the entry `kind`. Done in the event
 // path (see setAddField) rather than via cascading effects, so switching kind
 // updates categoryId, subcategoryId and the legacy `category` string in a single
@@ -87,9 +102,10 @@ export function useEntryActions({
   const entries = activeBook?.entries || EMPTY_ARRAY;
 
   function setAddField(field, value) {
+    // Manuelle Änderung an einem vorlagenbestimmten Feld hebt den Aktiv-Zustand
+    // der Vorlagen-Karte auf (siehe TEMPLATE_INVALIDATING_FIELDS).
+    if (TEMPLATE_INVALIDATING_FIELDS.has(field)) setAppliedTemplateId(null);
     if (field === "kind") {
-      // Manueller Wechsel der Art entwertet die angewendete Vorlage
-      setAppliedTemplateId(null);
       setAddDraft((d) => applyKindToDraft(d, value, indicateTransferCategories));
       return;
     }

@@ -1815,13 +1815,16 @@ select.hb-input option {
 }
 
 /*
-  Buchungs-Dialoge (Eintrag bearbeiten / Buchung hinzufügen): feste Fenstergröße,
-  damit das Fenster beim Wechsel der Buchungs-Art nicht springt. Der Body behält
-  overflow:visible (HbDatePicker-Popover), die Picker-Box scrollt intern. Kürzere
-  Varianten (Transfer/Entnahme) lassen unten Leerraum statt die Höhe zu ändern.
+  Buchungs-Dialoge (Eintrag bearbeiten / Buchung hinzufügen): Querformat statt
+  Hochformat, damit Formularfelder (links) und Kategorieliste (rechts) gleich-
+  zeitig sichtbar sind statt übereinander gestapelt zu werden. Der Body behält
+  overflow:visible (HbDatePicker-Popover), nur die Vorlagen-Zone und die
+  Picker-Box scrollen intern. min-height auf .hb-entry-form__panes verhindert
+  Springen beim Wechsel der Buchungs-Art — kürzere Varianten (Transfer/
+  Entnahme) lassen rechts Leerraum statt die Höhe zu ändern.
 */
 .hb-modal-panel--form:has(.hb-entry-form) {
-  height: 930px;
+  max-width: 900px;
   max-height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
@@ -1839,31 +1842,105 @@ select.hb-input option {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  gap: 16px;
+}
+
+.hb-entry-form__panes {
+  flex: 1;
+  min-height: 420px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.hb-entry-form__main,
+.hb-entry-form__aside {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Datum/Betrag im Dialog: eigener, engerer Spaltenabstand (war zuvor ein
+   Inline-style={{gap:16}} in beiden Buchungs-Dialogen). */
+.hb-entry-form .hb-two--dialog {
+  gap: 16px;
+}
+
+.hb-entry-form__aside .hb-hcat-picker {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hb-entry-form__aside .hb-hcat-box {
+  flex: 1;
+  min-height: 140px;
+  max-height: none;
 }
 
 /*
-  Picker-/Zweck-Block füllt die Resthöhe unter den Formularfeldern. Bei
-  Einnahme/Ausgabe scrollt die Kategorieliste intern (statt fixer 280px), damit
-  der Inhalt nie über den Footer hinausragt. Kürzere Varianten lassen Leerraum.
+  Abschnitts-Überschriften der beiden Dialogspalten („Vorlagen" links oben,
+  „Kategorie" rechts oben) teilen sich eine Typo-Stufe, damit die zwei Zonen
+  auf derselben Hierarchie-Ebene gelesen werden — die restlichen Feldlabels
+  bleiben auf der kleineren .hb-label-Stufe.
 */
-.hb-entry-form__tail {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+.hb-tpl-picker-title,
+.hb-entry-form__aside .hb-hcat-picker > .hb-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: var(--text);
 }
 
-.hb-entry-form__tail .hb-hcat-picker {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+.hb-entry-form__hint,
+.hb-entry-form__field-hint {
+  font-size: 12px;
+  color: var(--muted);
 }
 
-.hb-entry-form__tail .hb-hcat-box {
-  flex: 1;
-  min-height: 0;
-  max-height: none;
+.hb-entry-form__error {
+  color: var(--red);
+  font-size: 12px;
+}
+
+/* Fußzeile der linken Spalte: schiebt den tertiären Link an den unteren Rand,
+   damit der Leerraum unter dem Formular nicht als Abbruch wirkt. */
+.hb-entry-form__foot {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-height: 880px) {
+  .hb-entry-form__panes {
+    min-height: 320px;
+  }
+}
+
+@media (max-height: 720px) {
+  .hb-entry-form__panes {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 960px) {
+  .hb-modal-panel--form:has(.hb-entry-form) {
+    max-width: 640px;
+  }
+  .hb-entry-form__panes {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+  .hb-entry-form__aside .hb-hcat-box {
+    flex: none;
+    max-height: 280px;
+  }
 }
 
 @keyframes modalSlideIn {
@@ -2742,70 +2819,158 @@ select.hb-input option {
 }
 
 /* =====================================================
-   BUCHUNGSVORLAGEN — Chip-Leiste im Buchungsdialog
-   Optisch an .hb-tag-suggestion-pill angelehnt, aber eigene Klassen:
-   die Vorlagen-Chips brauchen einen Aktiv-Zustand und Ellipsis, und eine
-   spätere Änderung an den Tag-Pills soll den Buchungsdialog nicht mitziehen.
+   BUCHUNGSVORLAGEN — Karten-Grid im Buchungsdialog
+   Eigenständige, klickbare Karte (bewusst NICHT mehr auf .hb-pot-card
+   aufgesetzt): Vorlagen sind der primäre Weg eine Buchung anzulegen und
+   liegen deshalb als erhöhte --card-Ebene über dem Dialoggrund, während
+   die Kategorieliste rechts als vertiefte --bg-subtle-Ebene sitzt.
    ===================================================== */
-.hb-tpl-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+.hb-tpl-picker {
   flex-shrink: 0;
-  /* ~3 Reihen, danach scrollt die Leiste intern statt den Dialog zu strecken */
-  max-height: 72px;
-  overflow-y: auto;
-  padding-bottom: 12px;
+  padding-bottom: 16px;
   border-bottom: 1px solid var(--border-light);
-  margin-bottom: 12px;
 }
 
-.hb-tpl-bar-label {
+.hb-tpl-picker-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.hb-tpl-picker-hint {
   font-size: 12px;
-  font-weight: 600;
   color: var(--muted);
-  margin-right: 2px;
 }
 
-.hb-tpl-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 180px;
-  padding: 3px 9px;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  border: 1px solid var(--border-light);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--muted);
+/*
+  Feste Spaltenzahl statt auto-fill: EntryFormDialog kürzt die Kartenliste in
+  JS auf exakt zwei Reihen (cols * 2, letzter Platz für die Ghost-Karte).
+  Die Werte hier MÜSSEN mit TPL_GRID_BREAKPOINTS in EntryFormDialog.jsx
+  übereinstimmen — sonst entstehen Lücken oder eine dritte Reihe.
+  Der column-gap folgt dem 4px-Raster und bleibt im selben Rhythmus wie der
+  24px-Spaltenabstand der Formular-Panes darunter (halber Schritt).
+*/
+.hb-tpl-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 960px) {
+  .hb-tpl-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .hb-tpl-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.hb-tpl-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.hb-tpl-chip-name {
+.hb-tpl-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--reveal-border);
+}
+
+.hb-tpl-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.hb-tpl-card--active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.hb-tpl-card--active .hb-tpl-card-name-text {
+  color: var(--accent);
+}
+
+/* „+N weitere": bewusst ohne Fläche/Schatten, damit die Karte als Hinweis
+   und nicht als weitere Vorlage gelesen wird. */
+.hb-tpl-card--ghost {
+  justify-content: center;
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--border);
+  box-shadow: none;
+  color: var(--muted);
+}
+
+.hb-tpl-card--ghost:hover:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: var(--accent);
+}
+
+.hb-tpl-card--ghost:hover:not(:disabled) .hb-tpl-card-name-text {
+  color: var(--accent);
+}
+
+.hb-tpl-card--ghost:disabled {
+  cursor: default;
+}
+
+.hb-tpl-card--ghost .hb-tpl-card-name-text {
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+}
+
+.hb-tpl-card-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hb-tpl-card-name-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.hb-tpl-chip:hover {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: var(--reveal-border);
+.hb-tpl-card-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-.hb-tpl-chip--active {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: var(--accent);
+.hb-tpl-card-amount {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
-/* Nicht global gesetzt — muss hier mitgeliefert werden */
-.hb-tpl-chip:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--focus-ring);
+/* „Betrag offen" ist kein Zahlenwert — deshalb ohne die numerische
+   Betonung, sonst konkurriert der Platzhalter mit echten Beträgen. */
+.hb-tpl-card-amount--open {
+  font-weight: 400;
+  color: var(--muted);
 }
 
 /* Vorlagen-Manager — Zeilen analog .hb-potmgr-row */
@@ -3129,6 +3294,16 @@ select.hb-input option {
   width: 100%;
   padding-left: 32px;
   min-width: 0;
+}
+
+/*
+  Blockvariante: volle Breite statt flex:1. Nötig, wenn das Suchfeld in einem
+  vertikalen Flex-Container liegt (z.B. über der Kategorieliste im
+  HierarchicalCategoryPicker) — flex:1 würde es dort in die Höhe strecken.
+*/
+.hb-search-field--block {
+  flex: none;
+  width: 100%;
 }
 
 /* Kopfzeile: Tabs (Kategorien / Transfer-Zwecke) links, Filter (Alle / Eigene) rechts */
@@ -3688,12 +3863,24 @@ select.hb-input option {
   position: relative;
 }
 
+/*
+  Vertiefte Ebene: Die Liste ist eine Auswahlfläche innerhalb des Dialogs,
+  kein eigenes Karten-Objekt. Sie liegt deshalb bewusst UNTER dem
+  Dialoggrund (--card) — die Vorlagen-Karten darüber sind die erhöhte Ebene.
+*/
 .hb-hcat-box {
   max-height: 280px;
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--card);
+  background: var(--bg-subtle);
+}
+
+.hb-hcat-empty {
+  padding: 16px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
 }
 
 .hb-hcat-group {
@@ -3745,14 +3932,40 @@ select.hb-input option {
   white-space: nowrap;
 }
 
+/*
+  Custom-Radio im WinUI-3-Stil statt appearance:auto — der native Radio
+  ignoriert unter Windows/Chromium den Dark-Mode-Kontrast und bringt eine
+  fremde Größe/Optik mit. Ausgewählt: gefüllter Accent-Kreis mit hellem
+  Innenpunkt (als radial-gradient, damit kein Pseudo-Element auf einem
+  <input> nötig ist).
+*/
 .hb-hcat-radio {
-  appearance: auto;
+  appearance: none;
+  -webkit-appearance: none;
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-  accent-color: var(--accent);
-  cursor: pointer;
   margin: 0;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+  background: var(--input-bg);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.hb-hcat-radio:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.hb-hcat-radio:checked {
+  border-color: var(--accent);
+  background: var(--accent)
+    radial-gradient(circle at center, var(--text-on-accent) 0 3px, transparent 3.5px);
+}
+
+.hb-hcat-radio:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .hb-hcat-radio:disabled {
@@ -3760,6 +3973,11 @@ select.hb-input option {
   opacity: 0.5;
 }
 
+/*
+  Reveal-Pattern: Der Chevron steht in jeder Zeile und würde als volles
+  Steuerelement die Liste zerrauschen. Er ruht deshalb dezent und wird erst
+  bei Hover/Fokus der Zeile — oder wenn die Gruppe offen ist — voll sichtbar.
+*/
 .hb-hcat-expand-btn {
   display: flex;
   align-items: center;
@@ -3772,12 +3990,27 @@ select.hb-input option {
   border-radius: var(--radius-sm);
   color: var(--muted);
   cursor: pointer;
-  transition: background var(--transition-fast), transform 0.2s ease;
+  opacity: 0.4;
+  transition: background var(--transition-fast), opacity var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.hb-hcat-parent-row:hover .hb-hcat-expand-btn,
+.hb-hcat-parent-row:focus-within .hb-hcat-expand-btn,
+.hb-hcat-parent-row--selected .hb-hcat-expand-btn,
+.hb-hcat-expand-btn--open {
+  opacity: 1;
 }
 
 .hb-hcat-expand-btn:hover {
   background: var(--hover-bg);
   color: var(--text);
+}
+
+.hb-hcat-expand-btn:focus-visible {
+  outline: none;
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .hb-hcat-expand-btn svg {
@@ -3790,11 +4023,14 @@ select.hb-input option {
 
 .hb-hcat-expand-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.4;
+  opacity: 0.25;
 }
 
+/* Die Box liegt selbst auf --bg-subtle; die Unterkategorien setzen sich
+   deshalb über eine zusätzliche Abdunklung ab, nicht über einen zweiten
+   Flächenton. */
 .hb-hcat-sub-list {
-  background: var(--bg-subtle);
+  background: var(--hover-bg);
   border-top: 1px solid var(--border-light);
 }
 
@@ -3814,8 +4050,10 @@ select.hb-input option {
   border-bottom: none;
 }
 
+/* Kräftiger als der Parent-Hover, weil die Sub-Liste bereits auf --hover-bg
+   liegt — sonst wäre der Hover dort praktisch unsichtbar. */
 .hb-hcat-sub-row:hover {
-  background: var(--hover-bg);
+  background: var(--active-bg);
 }
 
 .hb-hcat-sub-row--selected {
@@ -4106,6 +4344,31 @@ select.hb-input option {
 }
 
 .hb-segmented--md .hb-segmented__item { padding: 8px 14px; font-size: 14px; }
+
+.hb-segmented__item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.hb-segmented__item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Formular-Variante: füllt die Feldbreite und teilt sie gleichmäßig auf —
+   dadurch stehen die Optionen an derselben Kante wie die Inputs darunter. */
+.hb-segmented--full {
+  display: flex;
+  width: 100%;
+}
+
+.hb-segmented--full .hb-segmented__item {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding-left: 8px;
+  padding-right: 8px;
+}
 
 .hb-chart-body {
   display: flex;

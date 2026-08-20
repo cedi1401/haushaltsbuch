@@ -280,6 +280,10 @@ export default function DashboardView({
           entryActions.setAddEntryOpen(false);
           setCategoryManagerOpen(true);
         }}
+        onOpenTemplateManager={() => {
+          entryActions.setAddEntryOpen(false);
+          setTemplateManagerOpen(true);
+        }}
         templates={entryTemplates}
         appliedTemplateId={entryActions.appliedTemplateId}
         onApplyTemplate={entryActions.applyTemplate}
