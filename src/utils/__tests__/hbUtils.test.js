@@ -309,7 +309,7 @@ describe('normalizeBook', () => {
           source: 'month',
           amount: 50,
           categoryId: 'cat_shopping',
-          subcategoryId: 'sub_elektronik_software',
+          subcategoryId: 'sub_bueromaterial',
         }],
       };
       const result = normalizeBook(book);
