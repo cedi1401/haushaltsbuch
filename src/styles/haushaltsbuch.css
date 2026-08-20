@@ -903,6 +903,24 @@ select.hb-input option {
   border-color: var(--red);
 }
 
+/* Deaktiviert: identische Abschwächung wie .hb-btn:disabled, und kein
+   Hover-Feedback mehr (sonst wirkt der Button trotzdem klickbar). */
+.hb-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hb-icon-btn:disabled:hover {
+  background: var(--card);
+  color: var(--muted);
+  border-color: var(--border);
+}
+
+.hb-icon-btn--subtle:disabled:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
 .hb-hamburger-btn {
   width: 40px;
   height: 40px;
