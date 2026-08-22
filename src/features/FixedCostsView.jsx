@@ -341,6 +341,9 @@ export default function FixedCostsView({
     const numericAmount = parseAmount(draft.amount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
     if (!draft.name.trim()) return;
+    // Dieselbe Regel wie in `canSave` — die Doppelung ist nicht redundant:
+    // EditDialog löst `onSave` auch per Strg+Enter aus, am Button-Zustand vorbei.
+    if (draft.kind === "transfer" && draft.turnus && !draft.faelligkeit) return;
 
     // Absicherung gegen inkonsistente Zustände: eine Gruppe der anderen Spalte
     // wird nie übernommen.
@@ -564,6 +567,11 @@ export default function FixedCostsView({
 
   const canSave = useMemo(() => {
     if (!draft.name.trim()) return false;
+    // Ein Turnus ohne Fälligkeit ist ein Halbzustand — ohne Startanker lässt sich
+    // kein Zyklus berechnen. Das `kind`-Gate ist zwingend: ohne es würde ein nach
+    // dem Artwechsel stehengebliebener Turnus das Speichern einer Ausgabe
+    // blockieren, während die Turnus-Felder gar nicht mehr sichtbar sind.
+    if (draft.kind === "transfer" && draft.turnus && !draft.faelligkeit) return false;
     const n = parseAmount(draft.amount);
     return Number.isFinite(n) && n > 0;
   }, [draft]);
@@ -1074,6 +1082,12 @@ export default function FixedCostsView({
                       ? "Wann die Rechnung das nächste Mal fällig wird — nicht die letzte Zahlung. Der laufende Zyklus wird davon rückwärts berechnet."
                       : "Wird erst mit einem Turnus benötigt."}
                   </div>
+                  {!!draft.turnus && !draft.faelligkeit && (
+                    <div className="hb-fixed-field-error">
+                      Zu einem Turnus gehört eine nächste Fälligkeit — ohne Startanker
+                      lässt sich kein Zyklus berechnen.
+                    </div>
+                  )}
                 </div>
               </div>
             </>

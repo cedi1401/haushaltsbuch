@@ -2556,6 +2556,14 @@ select.hb-input option {
   line-height: 1.4;
 }
 
+/* Fehlerzeile unter einem Dialog-Feld — gleiche Rolle wie der Hint daneben,
+   aber blockierend: solange sie steht, ist das Speichern gesperrt. */
+.hb-fixed-field-error {
+  font-size: 12px;
+  color: var(--red);
+  line-height: 1.4;
+}
+
 /* Einzelne Gruppe */
 .hb-fixed-group {
   display: flex;
