@@ -384,6 +384,11 @@ export default function FixedCostsView({
       categoryId: kind === "expense" ? (item.categoryId || null) : null,
       subcategoryId: kind === "expense" ? (item.subcategoryId || null) : null,
       kind,
+      // Herkunftskennung: die Trend-Auswertung ordnet Buchungen darüber ihrer
+      // Fixkosten-Position zu. Die Notiz bleibt die Anzeige-Beschriftung in der
+      // Eintragsliste, ist aber nicht mehr die Zuordnungsgrundlage — eine
+      // umbenannte Position behält so ihre Historie.
+      recurringId: item.id,
       note: item.name,
     };
     if (kind === "transfer") entry.potId = item.potId;
