@@ -173,10 +173,20 @@ button, input, select, textarea {
   background: var(--bg);
   padding: 24px;
   transition: background-color var(--transition-normal);
+  /* Wächst beim horizontalen Scrollen mit, damit rechts das Padding
+     und der Hintergrund erhalten bleiben. */
+  width: fit-content;
+  min-width: 100%;
+  box-sizing: border-box;
 }
 
+/* Desktop-App: Content-Breite ist auf die nutzbare Breite eines 16" MacBook Pro
+   gedeckelt (1792px logische Displaybreite − 48px Page-Padding = 1744px).
+   Dort füllt der Content damit das Display randlos, auf breiteren 16:9-Monitoren
+   bleibt es bei 1744px und wird zentriert. */
 .hb-page-container {
-  max-width: 1600px;
+  min-width: 1600px;
+  max-width: 1744px;
   margin: 0 auto;
   width: 100%;
 }

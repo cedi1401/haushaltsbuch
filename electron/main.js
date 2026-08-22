@@ -22,7 +22,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1800,
     height: 1200,
-    minWidth: 1200,
+    minWidth: 1648, // 1600px Content + 2 × 24px Page-Padding
     minHeight: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
