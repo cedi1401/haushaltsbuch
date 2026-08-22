@@ -1871,6 +1871,22 @@ select.hb-input option {
 }
 
 /*
+  Der Fixkosten-Dialog ist in der Transfer-Variante (Turnus + Fälligkeit) rund
+  850 px hoch. Zwischen 560 px und 900 px Fensterhöhe wurde er schlicht
+  abgeschnitten, ohne Scrollmöglichkeit. `overflow-y: auto` macht den Panel hier
+  zum Scroll-Container — der Preis ist, dass das Datepicker-Popover am unteren
+  Rand geklemmt wird, was gegenüber einem unbedienbaren Dialog das kleinere
+  Übel ist. Der Buchungs-Dialog ist ausgenommen: er regelt seine Höhe über
+  .hb-entry-form__panes (Breakpoints 880/720 px) selbst und soll sein Popover
+  behalten.
+*/
+@media (max-height: 900px) {
+  .hb-modal-panel--form:not(:has(.hb-entry-form)) {
+    overflow-y: auto;
+  }
+}
+
+/*
   Buchungs-Dialoge (Eintrag bearbeiten / Buchung hinzufügen): Querformat statt
   Hochformat, damit Formularfelder (links) und Kategorieliste (rechts) gleich-
   zeitig sichtbar sind statt übereinander gestapelt zu werden. Der Body behält
