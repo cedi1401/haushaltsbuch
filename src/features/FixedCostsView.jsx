@@ -3,6 +3,7 @@ import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
+import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import { generateId } from "../utils/idUtils.js";
 import {
   DEFAULT_EXPENSE_CATEGORIES,
@@ -44,6 +45,16 @@ const UNGROUPED_KEY = {
   transfer: "ungrouped:transfer",
 };
 
+// Turnus-Auswahl im Dialog. Der Wert ist bewusst ein String — das <select>
+// liefert immer Strings, die Umwandlung nach `number|null` passiert im Handler.
+const TURNUS_OPTIONS = [
+  { value: "", label: "Kein Turnus (freies Sparen)" },
+  { value: "1", label: "Monatlich" },
+  { value: "3", label: "Quartalsweise" },
+  { value: "6", label: "Halbjährlich" },
+  { value: "12", label: "Jährlich" },
+];
+
 export default function FixedCostsView({
   activeBook,
   entries: _entries,
@@ -78,6 +89,10 @@ export default function FixedCostsView({
     subcategoryId: null,
     transferCategory: transferCategories[0] || "Steuern",
     potId: pots[0]?.id || "",
+    // Nur für Transfers: Turnus als Zahl (null | 1 | 3 | 6 | 12), Fälligkeit als
+    // ISO-String. `""` ist bei HbDatePicker die Darstellung für „kein Datum".
+    turnus: null,
+    faelligkeit: "",
     groupId: null,
     showInOverview: true,
     tags: [],
@@ -225,6 +240,8 @@ export default function FixedCostsView({
       subcategoryId: null,
       transferCategory: transferCategories[0] || "Steuern",
       potId: pots[0]?.id || "",
+      turnus: null,
+      faelligkeit: "",
       groupId,
       showInOverview: false,
       tags: [],
@@ -262,6 +279,8 @@ export default function FixedCostsView({
       subcategoryId: item.subcategoryId || null,
       transferCategory: item.transferCategory || transferCategories[0] || "Steuern",
       potId: item.potId || pots[0]?.id || "",
+      turnus: item.turnus ?? null,
+      faelligkeit: item.faelligkeit || "",
       groupId: item.groupId || null,
       showInOverview: item.showInOverview !== false,
       tags: item.tags || [],
@@ -285,9 +304,25 @@ export default function FixedCostsView({
   }
 
   // Art wechseln: die Gruppe gehört fest zu einer Spalte, die Position wandert
-  // also in den „Weitere"-Bereich der anderen Spalte.
+  // also in den „Weitere"-Bereich der anderen Spalte. Turnus und Fälligkeit sind
+  // Transfer-Felder und werden beim Wechsel auf „Ausgabe" zurückgesetzt — sonst
+  // bliebe ein unsichtbarer Wert stehen, der die Speichern-Sperre auslöst.
   function handleKindChange(kind) {
-    setDraft((d) => ({ ...d, kind, groupId: null }));
+    setDraft((d) => ({
+      ...d,
+      kind,
+      groupId: null,
+      turnus: kind === "transfer" ? d.turnus : null,
+      faelligkeit: kind === "transfer" ? d.faelligkeit : "",
+    }));
+  }
+
+  // Turnus wechseln. Fällt der Turnus weg, fällt auch die Fälligkeit weg —
+  // sonst bliebe ein Datum am Draft stehen, das nichts mehr bedeutet und beim
+  // nächsten Setzen eines Turnus als vermeintlich geprüfter Wert wieder auftaucht.
+  function handleTurnusChange(value) {
+    const turnus = Number(value) || null;
+    setDraft((d) => ({ ...d, turnus, faelligkeit: turnus ? d.faelligkeit : "" }));
   }
 
   function handleTagAdd(tagText) {
@@ -312,6 +347,13 @@ export default function FixedCostsView({
     const targetGroupId =
       draft.groupId && groupKindById.get(draft.groupId) === draft.kind ? draft.groupId : null;
 
+    // Turnus und Fälligkeit gehören zusammen: ohne Turnus wird die Fälligkeit
+    // nicht mitgeschrieben, damit die Zyklusrechnung nie auf ein verwaistes
+    // Datum trifft. `normalizeBook()` erzwingt dieselbe Kopplung beim Laden.
+    const isTransfer = draft.kind === "transfer";
+    const nextTurnus = isTransfer ? (draft.turnus || null) : null;
+    const nextFaelligkeit = nextTurnus ? (draft.faelligkeit || null) : null;
+
     if (editingItem) {
       const updatedItems = recurringExpenses.map((item) =>
         item.id === editingItem.id
@@ -324,6 +366,8 @@ export default function FixedCostsView({
               subcategoryId: draft.kind === "expense" ? (draft.subcategoryId || null) : undefined,
               transferCategory: draft.kind === "transfer" ? draft.transferCategory : undefined,
               potId: draft.kind === "transfer" ? draft.potId : undefined,
+              turnus: isTransfer ? nextTurnus : undefined,
+              faelligkeit: isTransfer ? nextFaelligkeit : undefined,
               groupId: targetGroupId,
               showInOverview: draft.showInOverview === true,
               tags: draft.tags || [],
@@ -347,6 +391,8 @@ export default function FixedCostsView({
       } else if (draft.kind === "transfer") {
         newItem.transferCategory = draft.transferCategory;
         newItem.potId = draft.potId;
+        newItem.turnus = nextTurnus;
+        newItem.faelligkeit = nextFaelligkeit;
       }
       // Kopien direkt hinter dem Original einfügen, sonst ans Ende anhängen
       const idx = duplicateSourceId
@@ -831,6 +877,9 @@ export default function FixedCostsView({
         canSave={canSave}
         saveLabel={editingItem ? "Speichern" : duplicateSourceId ? "Duplizieren" : "Erstellen"}
         size="medium"
+        // Ohne das klemmt `.hb-modal-body` das Kalender-Popover des
+        // HbDatePickers ab und zeigt stattdessen eine Scrollbar.
+        bodyScroll={false}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, width: "100%" }}>
@@ -988,6 +1037,44 @@ export default function FixedCostsView({
                     <option key={pot.id} value={pot.id}>{pot.name}</option>
                   ))}
                 </select>
+              </div>
+              {/* Zweck und Topf sagen wohin, Turnus und Fälligkeit wann und wie oft. */}
+              <div className="hb-two hb-two--dialog" style={{ gap: 12, width: "100%" }}>
+                <div className="hb-field" style={{ minWidth: 0 }}>
+                  <div className="hb-label">Turnus</div>
+                  <select
+                    className="hb-input"
+                    style={{ minWidth: 0, width: "100%" }}
+                    value={draft.turnus ?? ""}
+                    onChange={(e) => handleTurnusChange(e.target.value)}
+                  >
+                    {TURNUS_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  <div className="hb-fixed-field-hint">
+                    Mit einem Turnus wird die Position als Rücklage geführt: Der Betrag
+                    gilt für den ganzen Zyklus, gebucht wird monatlich der anteilige Betrag.
+                  </div>
+                </div>
+                <div className="hb-field" style={{ minWidth: 0 }}>
+                  <div className="hb-label">Nächste Fälligkeit</div>
+                  {/* Ohne Turnus hat das Datum keine Funktion — deaktiviert statt
+                      stumm ignoriert. Der erklärende Text steht im Hint, nicht im
+                      Platzhalter: der wird bei `disabled` zu blass zum Lesen. */}
+                  <HbDatePicker
+                    clearable
+                    disabled={!draft.turnus}
+                    value={draft.faelligkeit}
+                    onChange={(v) => setDraft((d) => ({ ...d, faelligkeit: v }))}
+                    style={{ minWidth: 0, width: "100%" }}
+                  />
+                  <div className="hb-fixed-field-hint">
+                    {draft.turnus
+                      ? "Wann die Rechnung das nächste Mal fällig wird — nicht die letzte Zahlung. Der laufende Zyklus wird davon rückwärts berechnet."
+                      : "Wird erst mit einem Turnus benötigt."}
+                  </div>
+                </div>
               </div>
             </>
           )}
