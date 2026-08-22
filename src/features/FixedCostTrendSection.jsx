@@ -365,7 +365,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 <div className="hb-fct-changes-group">
                   <span className="hb-fct-changes-label hb-fct-changes-label--new">Neu seit</span>
                   {changes.newItems.map((c) => (
-                    <span key={c.name} className="hb-fct-chip hb-fct-chip--new">
+                    <span key={c.id} className="hb-fct-chip hb-fct-chip--new">
                       {c.name} · {fmtMonthDE(c.firstMonth)}
                     </span>
                   ))}
@@ -375,7 +375,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 <div className="hb-fct-changes-group">
                   <span className="hb-fct-changes-label hb-fct-changes-label--dropped">Weggefallen</span>
                   {changes.droppedItems.map((c) => (
-                    <span key={c.name} className="hb-fct-chip hb-fct-chip--dropped">
+                    <span key={c.id} className="hb-fct-chip hb-fct-chip--dropped">
                       {c.name} · bis {fmtMonthDE(c.lastMonth)}
                     </span>
                   ))}

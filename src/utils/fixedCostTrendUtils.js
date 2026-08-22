@@ -1,20 +1,29 @@
 import { getEntryFinancialMonth } from "./financialMonthUtils.js";
 
-// Matching-Strategie: entry.note === recurringExpense.name (gesetzt durch "Jetzt buchen")
-// Sekundär: entry.kind + entry.categoryId zur Bestätigung
+// Matching-Strategie: entry.recurringId === recurringExpense.id — die
+// Herkunftskennung, die "Jetzt buchen" setzt (buildEntryFromItem). Bewusst OHNE
+// Fallback auf den Notiztext: eine umbenannte Position behält so ihre Historie,
+// und ein manuell erfasster Eintrag mit passendem Namen zählt nicht mit.
 
 function buildMonthItemMap(entries, recurringExpenses, monthStartDay) {
-  const names = new Set((recurringExpenses || []).map((r) => r.name).filter(Boolean));
-  const map = new Map(); // ym → Map<name, amount>
+  const ids = new Set((recurringExpenses || []).map((r) => r.id).filter(Boolean));
+  const map = new Map(); // ym → Map<recurringId, amount>
 
   for (const e of entries || []) {
-    if (!e.note || !names.has(e.note)) continue;
-    if (e.kind !== "expense" && e.kind !== "transfer") continue;
+    if (!e.recurringId || !ids.has(e.recurringId)) continue;
+    // Ausgaben nur aus dem Monatsbudget: eine aus einem Topf bezahlte Ausgabe
+    // steckt nicht im Ausgaben-Nenner (m.expense) und würde den Anteilswert
+    // überhöhen.
+    if (e.kind === "expense") {
+      if (e.source !== "month") continue;
+    } else if (e.kind !== "transfer") {
+      continue;
+    }
     const ym = getEntryFinancialMonth(e, monthStartDay);
     if (!ym) continue;
     if (!map.has(ym)) map.set(ym, new Map());
     const inner = map.get(ym);
-    inner.set(e.note, (inner.get(e.note) || 0) + Number(e.amount || 0));
+    inner.set(e.recurringId, (inner.get(e.recurringId) || 0) + Number(e.amount || 0));
   }
 
   return map;
@@ -52,12 +61,13 @@ export function buildItemTrends(entries, recurringExpenses, monthlyAggregates, m
   }
 
   return (recurringExpenses || []).map((r) => ({
+    id: r.id,
     name: r.name,
     categoryId: r.categoryId,
     configuredAmount: Number(r.amount || 0),
     data: months.map((ym) => ({
       month: ym,
-      amount: filteredMap.get(ym)?.get(r.name) ?? null,
+      amount: filteredMap.get(ym)?.get(r.id) ?? null,
     })),
   }));
 }
@@ -83,11 +93,11 @@ export function detectFixedCostChanges(itemTrends, monthlyAggregates) {
     const lastActive = activeMonths[activeMonths.length - 1];
 
     if (firstActive > firstMonth) {
-      newItems.push({ name: item.name, firstMonth: firstActive });
+      newItems.push({ id: item.id, name: item.name, firstMonth: firstActive });
     }
 
     if (lastActive < lastMonth) {
-      droppedItems.push({ name: item.name, lastMonth: lastActive });
+      droppedItems.push({ id: item.id, name: item.name, lastMonth: lastActive });
     }
   }
 
