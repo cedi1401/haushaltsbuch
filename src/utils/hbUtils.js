@@ -6,7 +6,9 @@ import { normalizeEntryTemplate } from "./entryTemplateUtils.js";
 
 // 3 = Fixkosten-Gruppen haben ein festes `kind` ("expense" | "transfer") und
 //     damit eine feste Spalte im Fixkosten-View (siehe migrateFixedCostKinds).
-export const CURRENT_SCHEMA_VERSION = 3;
+// 4 = Einträge tragen `recurringId` — die Herkunftskennung ihrer Fixkosten-
+//     Position (siehe stampRecurringIds).
+export const CURRENT_SCHEMA_VERSION = 4;
 
 /** Returns true if the book has not yet been migrated to the current schema. */
 export function bookNeedsMigration(book) {
@@ -840,6 +842,47 @@ export function migrateFixedCostKinds(groups, items) {
 // ============================================
 
 /**
+ * Einmalige Migration (Schema 3 → 4): ordnet bestehende Einträge über ihren
+ * Notiztext der Fixkosten-Position zu, aus der sie stammen. Ab Schema 4 setzt
+ * "Jetzt buchen" die `recurringId` direkt (buildEntryFromItem), und der
+ * Notiztext ist nur noch Anzeige.
+ *
+ * Bewusste Einschränkungen:
+ * - Nur `expense` und `transfer` werden gestempelt, nie `withdrawal`: eine
+ *   Entnahme ist keine Kostenbuchung und würde die Zuordnung verfälschen.
+ * - Namensdubletten: die erste Position gewinnt. Das friert dasselbe
+ *   "irgendeine passt"-Verhalten ein, das die Trend-Auswertung bisher hatte.
+ * - Idempotent: ein bereits gesetztes `recurringId` bleibt unangetastet, weil
+ *   normalizeBook() beim Backup-Import auch auf fremde Bücher läuft.
+ *
+ * @param {Array} entries
+ * @param {Array} recurringExpenses - bereits normalisiert
+ * @returns {Array} dasselbe Array, wenn nichts zu stempeln war
+ */
+function stampRecurringIds(entries, recurringExpenses) {
+  if (!Array.isArray(entries) || entries.length === 0) return entries;
+
+  const idByName = new Map();
+  for (const r of recurringExpenses || []) {
+    if (!r?.name || !r?.id || idByName.has(r.name)) continue;
+    idByName.set(r.name, r.id);
+  }
+  if (idByName.size === 0) return entries;
+
+  let changed = false;
+  const stamped = entries.map((e) => {
+    if (!e || e.recurringId !== undefined) return e;
+    if (e.kind !== "expense" && e.kind !== "transfer") return e;
+    const recurringId = idByName.get(e.note);
+    if (!recurringId) return e;
+    changed = true;
+    return { ...e, recurringId };
+  });
+
+  return changed ? stamped : entries;
+}
+
+/**
  * Normalisiert ein komplettes Buch:
  * - Migiert altes flaches Kategorie-System → hierarchisches System
  * - Fügt categoryId + subcategoryId zu Einträgen hinzu
@@ -849,6 +892,12 @@ export function normalizeBook(book) {
   if (!book) return book;
 
   const normalized = { ...book };
+
+  // Rohwert lesen, bevor er am Ende der Funktion überschrieben wird: er
+  // entscheidet, welche einmaligen Migrationen laufen. normalizeBook() läuft
+  // bei JEDEM App-Start, nicht nur bei Migrationsbedarf — ohne dieses Gate
+  // wäre eine Migration ein Dauerverhalten.
+  const priorVersion = typeof book.schemaVersion === "number" ? book.schemaVersion : 0;
 
   // Nicht-leeren Namen erzwingen. Sonst lehnt die Electron-IPC-Validierung
   // (validateBook: name.length > 0) das GESAMTE Buch-Array ab → db:saveBooks
@@ -1027,6 +1076,16 @@ export function normalizeBook(book) {
   );
   normalized.fixedCostGroups = fixedCosts.groups;
   normalized.recurringExpenses = fixedCosts.items;
+
+  // Muss NACH der Normalisierung der recurringExpenses laufen (der Entry-
+  // Durchlauf weiter oben kennt sie noch nicht) und nur einmalig: ein später
+  // manuell erfasster Eintrag mit passendem Notiztext soll NICHT gestempelt
+  // werden — genau das ist die gewollte Verschärfung der Kostenzuordnung.
+  // Feste 4, nicht CURRENT_SCHEMA_VERSION: ein späterer Bump auf 5 darf diese
+  // Migration nicht erneut über bereits migrierte Bücher laufen lassen.
+  if (priorVersion < 4) {
+    normalized.entries = stampRecurringIds(normalized.entries, normalized.recurringExpenses);
+  }
 
   // Kostengruppen (Kostenrechner) hinzufügen, falls nicht vorhanden
   if (!Array.isArray(normalized.costGroups)) {

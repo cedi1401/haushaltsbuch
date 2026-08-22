@@ -286,6 +286,99 @@ describe('normalizeBook', () => {
     expect(result.recurringExpenses[0].faelligkeit).toBe(null);
   });
 
+  describe('recurringId migration (schema 3 → 4)', () => {
+    const recurring = [
+      { id: 'r_miete', kind: 'expense', name: 'Miete', amount: 1200 },
+      { id: 'r_versicherung', kind: 'transfer', name: 'Versicherung', amount: 600 },
+    ];
+    const bookAt = (version, entries) => ({
+      id: 'b1',
+      schemaVersion: version,
+      recurringExpenses: recurring,
+      entries,
+    });
+
+    it('stamps an entry whose note matches a recurring expense name', () => {
+      const result = normalizeBook(bookAt(3, [
+        { id: 'e1', kind: 'expense', source: 'month', date: '2026-01-05', amount: 1200, note: 'Miete', categoryId: null },
+      ]));
+      expect(result.entries[0].recurringId).toBe('r_miete');
+    });
+
+    it('stamps transfers as well', () => {
+      const result = normalizeBook(bookAt(3, [
+        { id: 'e1', kind: 'transfer', date: '2026-01-05', amount: 50, note: 'Versicherung', categoryId: null },
+      ]));
+      expect(result.entries[0].recurringId).toBe('r_versicherung');
+    });
+
+    it('leaves an entry with a different note unstamped', () => {
+      const result = normalizeBook(bookAt(3, [
+        { id: 'e1', kind: 'expense', source: 'month', date: '2026-01-05', amount: 40, note: 'Miete Garage', categoryId: null },
+      ]));
+      expect(result.entries[0].recurringId).toBeUndefined();
+    });
+
+    it('never stamps a withdrawal, even with a matching note', () => {
+      const result = normalizeBook(bookAt(3, [
+        { id: 'e1', kind: 'withdrawal', date: '2026-01-05', amount: 600, note: 'Versicherung', potId: 'reserve', categoryId: null },
+      ]));
+      expect(result.entries[0].recurringId).toBeUndefined();
+    });
+
+    it('does not stamp new entries once the book is already at schema 4 (C1)', () => {
+      const result = normalizeBook(bookAt(4, [
+        { id: 'e1', kind: 'expense', source: 'month', date: '2026-01-05', amount: 1200, note: 'Miete', categoryId: null },
+      ]));
+      expect(result.entries[0].recurringId).toBeUndefined();
+    });
+
+    it('keeps an already stamped recurringId (idempotent for backup imports)', () => {
+      const result = normalizeBook(bookAt(3, [
+        { id: 'e1', kind: 'expense', source: 'month', date: '2026-01-05', amount: 1200, note: 'Miete', recurringId: 'r_fremd', categoryId: null },
+      ]));
+      expect(result.entries[0].recurringId).toBe('r_fremd');
+    });
+
+    it('is stable across a second normalizeBook run', () => {
+      const once = normalizeBook(bookAt(3, [
+        { id: 'e1', kind: 'expense', source: 'month', date: '2026-01-05', amount: 1200, note: 'Miete', categoryId: null },
+        { id: 'e2', kind: 'expense', source: 'month', date: '2026-01-06', amount: 40, note: 'Kiosk', categoryId: null },
+      ]));
+      const twice = normalizeBook(once);
+      expect(twice.entries.map((e) => e.recurringId)).toEqual(once.entries.map((e) => e.recurringId));
+      expect(twice.entries[1].recurringId).toBeUndefined();
+    });
+
+    it('assigns the first of two identically named positions (D7)', () => {
+      const book = {
+        id: 'b1',
+        schemaVersion: 3,
+        recurringExpenses: [
+          { id: 'r_erste', kind: 'expense', name: 'Strom', amount: 80 },
+          { id: 'r_zweite', kind: 'expense', name: 'Strom', amount: 90 },
+        ],
+        entries: [
+          { id: 'e1', kind: 'expense', source: 'month', date: '2026-01-05', amount: 80, note: 'Strom', categoryId: null },
+        ],
+      };
+      expect(normalizeBook(book).entries[0].recurringId).toBe('r_erste');
+    });
+
+    it('leaves entries untouched when the book has no recurring expenses', () => {
+      const entries = [
+        { id: 'e1', kind: 'expense', source: 'month', date: '2026-01-05', amount: 40, note: 'Kiosk', categoryId: null },
+      ];
+      const result = normalizeBook({ id: 'b1', schemaVersion: 3, recurringExpenses: [], entries });
+      expect(result.entries[0].recurringId).toBeUndefined();
+    });
+
+    it('bumps schemaVersion to 4', () => {
+      expect(CURRENT_SCHEMA_VERSION).toBe(4);
+      expect(normalizeBook({ id: 'b1', schemaVersion: 3 }).schemaVersion).toBe(4);
+    });
+  });
+
   describe('old flat categories → hierarchical migration', () => {
     it('builds expenseCategories from old flat categories array', () => {
       const book = {
