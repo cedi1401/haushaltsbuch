@@ -6,6 +6,8 @@
 // pro Buchung. Was pro Monat gebucht wird, ist die Monatsrate. Alles in dieser
 // Datei ist rein funktional und kennt weder React noch Einträge.
 
+import { addMonthsISO } from "./financialMonthUtils.js";
+
 /**
  * Zykluslänge in Monaten. 1, wenn kein Turnus gesetzt ist — dadurch sind
  * monthlyRate() und annualAmount() für alle Positionen ohne Turnus
@@ -58,4 +60,55 @@ export function annualAmount(item) {
  */
 export function isSinkingFund(item) {
   return item?.kind === "transfer" && Number(item?.turnus) > 0;
+}
+
+// ── Zyklusrechnung ───────────────────────────────────────────────────────
+// Ab hier wird nicht mehr nur das Item gelesen, sondern auch die Buchungen.
+// Alle Funktionen bekommen `today` als Parameter injiziert (nie `new Date()`
+// im Funktionskörper) — sonst wäre die Logik nicht testbar.
+
+/**
+ * Bestimmt den Zyklus einer Rücklage.
+ *
+ * Zyklusbeginn ist die jüngste Entnahme für diesen Zweck — jede Entnahme zählt,
+ * ohne Schwellenwert: Ein Rücklagen-Zweck wird nicht zweckentfremdet, eine
+ * Entnahme daraus IST damit die Rechnungszahlung. Gibt es noch keine, wird der
+ * Zyklus aus der hinterlegten Fälligkeit zurückgerechnet (Mitteneinstieg).
+ *
+ * Gerechnet wird taggenau; nur der Soll-Stand in sinkingFundStatus() läuft auf
+ * Monatsebene. Bei einer Fälligkeit am Monatsende klemmt addMonthsISO() den Tag
+ * (31.03. −1M → 28.02.); nextDue wandert dadurch auf den geklemmten Tag mit.
+ *
+ * @param {object} item - Fixkosten-Position
+ * @param {Array} entries - alle Einträge des Buchs
+ * @returns {{ cycleStart: string, nextDue: string, lastPayment: string|null,
+ *             anchorSource: "withdrawal"|"faelligkeit" }|null}
+ *          null, wenn die Position keine Rücklage ist oder kein Anker existiert
+ */
+export function cycleAnchor(item, entries) {
+  if (!isSinkingFund(item)) return null;
+
+  const purpose = String(item?.transferCategory ?? "").trim();
+  let lastPayment = null;
+  for (const e of entries || []) {
+    if (e.kind !== "withdrawal") continue;
+    if (e.potId !== item.potId) continue;
+    if (String(e.category ?? "").trim() !== purpose) continue;
+    if (!e.date) continue;
+    if (lastPayment === null || e.date > lastPayment) lastPayment = e.date;
+  }
+
+  const months = turnusMonths(item);
+  // Ohne Entnahme UND ohne Fälligkeit gäbe es keinen Anker. Die Normalisierung
+  // in hbUtils schliesst diesen Halbzustand aus; hier steht der Fall nur, damit
+  // ein manipuliertes Backup keine NaN-Daten erzeugt.
+  if (!lastPayment && !item?.faelligkeit) return null;
+
+  const cycleStart = lastPayment ?? addMonthsISO(item.faelligkeit, -months);
+  return {
+    cycleStart,
+    nextDue: addMonthsISO(cycleStart, months),
+    lastPayment,
+    anchorSource: lastPayment ? "withdrawal" : "faelligkeit",
+  };
 }
