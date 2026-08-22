@@ -15,7 +15,7 @@ import {
 import { isSinkingFund, monthlyRate, turnusMonths } from "../utils/fixedCostUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
-import { IconFixed, IconPlus, IconDelete, IconDrag, IconTag } from "../components/icons.jsx";
+import { IconFixed, IconPlus, IconDelete, IconDrag, IconTag, IconWarning } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 
@@ -350,9 +350,12 @@ export default function FixedCostsView({
     const numericAmount = parseAmount(draft.amount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
     if (!draft.name.trim()) return;
-    // Dieselbe Regel wie in `canSave` — die Doppelung ist nicht redundant:
+    // Dieselben Regeln wie in `canSave` — die Doppelung ist nicht redundant:
     // EditDialog löst `onSave` auch per Strg+Enter aus, am Button-Zustand vorbei.
-    if (draft.kind === "transfer" && draft.turnus && !draft.faelligkeit) return;
+    if (draft.kind === "transfer" && draft.turnus) {
+      if (!draft.faelligkeit) return;
+      if (monthlyRate({ kind: "transfer", amount: numericAmount, turnus: draft.turnus }) < 0.01) return;
+    }
 
     // Absicherung gegen inkonsistente Zustände: eine Gruppe der anderen Spalte
     // wird nie übernommen.
@@ -576,16 +579,32 @@ export default function FixedCostsView({
     handleDragEnd();
   }
 
-  const canSave = useMemo(() => {
-    if (!draft.name.trim()) return false;
-    // Ein Turnus ohne Fälligkeit ist ein Halbzustand — ohne Startanker lässt sich
-    // kein Zyklus berechnen. Das `kind`-Gate ist zwingend: ohne es würde ein nach
-    // dem Artwechsel stehengebliebener Turnus das Speichern einer Ausgabe
-    // blockieren, während die Turnus-Felder gar nicht mehr sichtbar sind.
-    if (draft.kind === "transfer" && draft.turnus && !draft.faelligkeit) return false;
-    const n = parseAmount(draft.amount);
-    return Number.isFinite(n) && n > 0;
-  }, [draft]);
+  // Bedeutungswechsel von `amount`: mit Turnus ist der Wert der Zyklusbetrag,
+  // gebucht wird die daraus abgeleitete Monatsrate.
+  const draftAmount = parseAmount(draft.amount);
+  const draftAmountValid = Number.isFinite(draftAmount) && draftAmount > 0;
+  const hasTurnus = draft.kind === "transfer" && !!draft.turnus;
+  const draftMonthlyRate =
+    hasTurnus && draftAmountValid
+      ? monthlyRate({ kind: "transfer", amount: draftAmount, turnus: draft.turnus })
+      : null;
+  // Ein für sich gültiger Zyklusbetrag kann auf eine Rate von 0.00 herunterrunden
+  // (0.05 auf zwölf Monate). „Jetzt buchen" erzeugte dann Einträge über 0.00.
+  const rateTooSmall = draftMonthlyRate !== null && draftMonthlyRate < 0.01;
+  // Ein Turnus ohne Fälligkeit ist ein Halbzustand — ohne Startanker lässt sich
+  // kein Zyklus berechnen. Das `kind`-Gate steckt in `hasTurnus` und ist zwingend:
+  // ohne es würde ein nach dem Artwechsel stehengebliebener Turnus das Speichern
+  // einer Ausgabe blockieren, während die Turnus-Felder gar nicht sichtbar sind.
+  const missingDueDate = hasTurnus && !draft.faelligkeit;
+
+  // `editingItem` ist ein stabiler Vorher-Snapshot: gesetzt in `openEditDialog()`,
+  // bis `closeDialog()` unverändert — kein zusätzlicher State nötig. Beim Anlegen
+  // und Duplizieren ist er `null`, die Warnung erscheint dort korrekt nicht.
+  const showTurnusSwitchWarning =
+    !!editingItem && draft.kind === "transfer" && !editingItem.turnus && !!draft.turnus;
+
+  const canSave =
+    !!draft.name.trim() && draftAmountValid && !missingDueDate && !rateTooSmall;
 
   const dialogGroupOptions = useMemo(
     () => fixedCostGroups.filter((g) => fixedCostKind(g) === draft.kind),
@@ -911,31 +930,64 @@ export default function FixedCostsView({
         bodyScroll={false}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, width: "100%" }}>
-            <div className="hb-field">
-              <div className="hb-label">Name</div>
-              <input
-                className="hb-input"
-                style={{ width: "100%", minWidth: 0 }}
-                type="text"
-                placeholder="z.B. Spotify, Miete, Versicherung"
-                value={draft.name}
-                onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-                autoFocus
-              />
+          {/* Betragszeile, Warnung und Ratenhinweis lesen als eine Gruppe — der
+              engere Abstand hält sie vom 14er-Raster der übrigen Abschnitte ab. */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, width: "100%" }}>
+              <div className="hb-field">
+                <div className="hb-label">Name</div>
+                <input
+                  className="hb-input"
+                  style={{ width: "100%", minWidth: 0 }}
+                  type="text"
+                  placeholder="z.B. Spotify, Miete, Versicherung"
+                  value={draft.name}
+                  onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                  autoFocus
+                />
+              </div>
+              <div className="hb-field">
+                {/* Kurz genug, dass das Label einzeilig bleibt — ein Umbruch würde
+                    das Feld aus der Flucht mit dem Namensfeld schieben. */}
+                <div className="hb-label">
+                  {hasTurnus ? `Betrag pro Zyklus (${baseCurrency})` : `Betrag (${baseCurrency})`}
+                </div>
+                <input
+                  className="hb-input"
+                  style={{ width: "100%", minWidth: 0 }}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={hasTurnus ? "z.B. 1200.00" : "z.B. 12.90"}
+                  value={draft.amount}
+                  onChange={(e) => setDraft((d) => ({ ...d, amount: e.target.value }))}
+                />
+              </div>
             </div>
-            <div className="hb-field">
-              <div className="hb-label">Betrag ({baseCurrency})</div>
-              <input
-                className="hb-input"
-                style={{ width: "100%", minWidth: 0 }}
-                type="text"
-                inputMode="decimal"
-                placeholder="z.B. 12.90"
-                value={draft.amount}
-                onChange={(e) => setDraft((d) => ({ ...d, amount: e.target.value }))}
-              />
-            </div>
+
+            {showTurnusSwitchWarning && (
+              <div className="hb-infobar hb-infobar--dialog hb-infobar--warning" role="status">
+                <div className="hb-infobar-icon"><IconWarning /></div>
+                <div className="hb-infobar-content">
+                  <div className="hb-infobar-message">
+                    Bisher war <strong>{fmt(editingItem.amount)}</strong> der Betrag pro
+                    Buchung. Mit dem Turnus wird daraus der Betrag für den ganzen Zyklus —
+                    prüf den Wert, er wird nicht automatisch umgerechnet.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {rateTooSmall ? (
+              <div className="hb-fixed-field-error">
+                Der Betrag ergibt weniger als {fmt(0.01)} pro Monat — bei diesem Turnus
+                gäbe es nichts zu buchen. Erhöhe den Zyklusbetrag oder verkürze den Turnus.
+              </div>
+            ) : draftMonthlyRate !== null ? (
+              <div className="hb-fixed-field-hint">
+                Ergibt <strong>{fmt(draftMonthlyRate)}</strong> pro Monat — genau dieser
+                Betrag wird beim monatlichen Buchen in den Topf gelegt.
+              </div>
+            ) : null}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, width: "100%" }}>

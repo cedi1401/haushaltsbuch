@@ -47,6 +47,7 @@
   --yoy-new: #153a70;
   --yellow: #d97706;
   --yellow-soft: rgba(217, 119, 6, 0.09);
+  --yellow-border: rgba(217, 119, 6, 0.3);
   --purple: #7160e8;
   --purple-soft: rgba(113, 96, 232, 0.08);
   --orange: #ca5010;
@@ -123,6 +124,7 @@
   --yoy-new: #3070c8;
   --yellow: #fce100;
   --yellow-soft: rgba(252, 225, 0, 0.1);
+  --yellow-border: rgba(252, 225, 0, 0.32);
   --purple: #b4a0ff;
   --purple-soft: rgba(180, 160, 255, 0.12);
   --orange: #f7630c;
@@ -253,6 +255,32 @@ button, input, select, textarea {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+/*
+  Inline-Variante für Dialoge: Der Dialog-Body regelt seine Abstände über einen
+  eigenen gap — der seitenweite Banner-Abstand würde ihn verdoppeln. Etwas
+  kompakter als der Seitenbanner, weil die Box hier neben Formularfeldern steht.
+*/
+.hb-infobar--dialog {
+  margin-bottom: 0;
+  padding: 10px 12px;
+  gap: 10px;
+  font-size: 13px;
+}
+
+/*
+  Warn-Variante: enthält eine Handlungsaufforderung, nicht bloss Information.
+  Der Rahmen nutzt bewusst die Alpha-Stufe --yellow-border statt des vollen
+  --yellow — im Dark Mode wäre #fce100 als 1px-Linie eine Neonkante.
+*/
+.hb-infobar--warning {
+  background: var(--yellow-soft);
+  border-color: var(--yellow-border);
+}
+
+.hb-infobar--warning .hb-infobar-icon {
+  color: var(--yellow);
 }
 
 
@@ -2554,6 +2582,13 @@ select.hb-input option {
   font-size: 12px;
   color: var(--muted);
   line-height: 1.4;
+}
+
+/* Hervorgehobener Wert in einer Hinweiszeile (z.B. die abgeleitete Monatsrate) */
+.hb-fixed-field-hint strong {
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Fehlerzeile unter einem Dialog-Feld — gleiche Rolle wie der Hint daneben,
