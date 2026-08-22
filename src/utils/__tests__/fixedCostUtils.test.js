@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { turnusMonths, monthlyRate, annualAmount, isSinkingFund, cycleAnchor, sinkingFundStatus } from '../fixedCostUtils.js';
+import { turnusMonths, monthlyRate, annualAmount, isSinkingFund, cycleAnchor, sinkingFundStatus, buildSinkingFundRows } from '../fixedCostUtils.js';
 import { addMonthsISO } from '../financialMonthUtils.js';
 
 describe('turnusMonths', () => {
@@ -297,5 +297,75 @@ describe('sinkingFundStatus', () => {
     expect(s.elapsed).toBe(0);
     expect(s.coverage).toBeNull();
     expect(s.progress).toBe(0);
+  });
+});
+
+describe('buildSinkingFundRows', () => {
+  const opts = { monthStartDay: 1, today: '2026-05-20' };
+
+  // Zwei Positionen auf demselben Zweck: Soll 100 und 200 bei gemeinsamem Ist 150
+  const klein = { ...STEUERN, id: 'fc-klein', name: 'Steuern Bund', amount: 600 };
+  const gross = { ...STEUERN, id: 'fc-gross', name: 'Steuern Kanton', amount: 1200 };
+  const gemeinsam = [transfer('2026-04-01', 150)];
+
+  it('rechnet den Deckungsgrad gegen die Soll-Summe des geteilten Zwecks', () => {
+    const rows = buildSinkingFundRows([klein, gross], gemeinsam, opts);
+    expect(rows.map((r) => r.target)).toEqual([100, 200]);
+    // Ohne Auflösung läse jede Zeile 150 gegen ihr eigenes Soll: 150 % bzw. 75 %
+    expect(rows[0].coverage).toBe(0.5);
+    expect(rows[1].coverage).toBe(0.5);
+  });
+
+  it('markiert beide Zeilen als geteilt und zählt die anderen Positionen', () => {
+    const rows = buildSinkingFundRows([klein, gross], gemeinsam, opts);
+    expect(rows.every((r) => r.sharedPurpose)).toBe(true);
+    expect(rows.map((r) => r.sharedWith)).toEqual([1, 1]);
+  });
+
+  it('lässt eine Einzelposition unmarkiert', () => {
+    const allein = { ...STEUERN, transferCategory: 'Versicherung' };
+    const rows = buildSinkingFundRows([klein, allein], gemeinsam, opts);
+    expect(rows[1].sharedPurpose).toBe(false);
+    expect(rows[1].sharedWith).toBe(0);
+  });
+
+  it('behält je Zeile den eigenen Zyklus', () => {
+    // Nur die zweite Position hat eine Entnahme — sie verankert deren Zyklus neu.
+    const anders = { ...gross, potId: 'surplus' };
+    const rows = buildSinkingFundRows([klein, anders], [
+      ...gemeinsam,
+      withdrawal('2026-05-10', 1200, { potId: 'surplus' }),
+    ], opts);
+    expect(rows[0].cycleStart).toBe('2026-03-15');
+    expect(rows[0].nextDue).toBe('2027-03-15');
+    expect(rows[1].cycleStart).toBe('2026-05-10');
+    expect(rows[1].nextDue).toBe('2027-05-10');
+  });
+
+  it('trennt Zwecke gleichen Namens in verschiedenen Töpfen', () => {
+    const anderesTopf = { ...gross, potId: 'surplus' };
+    const rows = buildSinkingFundRows([klein, anderesTopf], gemeinsam, opts);
+    expect(rows.every((r) => r.sharedPurpose === false)).toBe(true);
+    expect(rows[0].coverage).toBe(1.5);
+    expect(rows[1].coverage).toBe(0);
+  });
+
+  it('zählt freies Sparen nicht in die Soll-Summe und markiert es nicht', () => {
+    const frei = { ...STEUERN, id: 'fc-frei', turnus: null, faelligkeit: null, amount: 50 };
+    const rows = buildSinkingFundRows([klein, frei], gemeinsam, opts);
+    expect(rows[0].sharedPurpose).toBe(false);
+    expect(rows[0].coverage).toBe(1.5); // 150 / 100, unbeeinflusst von der freien Position
+    expect(rows[1].status).toBe('free');
+    expect(rows[1].sharedWith).toBe(0);
+  });
+
+  it('reicht das Item für die Anzeige mit durch', () => {
+    const rows = buildSinkingFundRows([klein], gemeinsam, opts);
+    expect(rows[0].item).toBe(klein);
+  });
+
+  it('kommt mit einer leeren oder fehlenden Liste zurecht', () => {
+    expect(buildSinkingFundRows([], [], opts)).toEqual([]);
+    expect(buildSinkingFundRows(undefined, [], opts)).toEqual([]);
   });
 });

@@ -229,3 +229,60 @@ export function sinkingFundStatus(item, entries, opts = {}) {
     status,
   };
 }
+
+/**
+ * Schlüssel eines Zwecks: Topf + Zweck. Zwei Positionen teilen sich einen
+ * Ist-Stand genau dann, wenn beide übereinstimmen.
+ */
+function purposeKey(item) {
+  return `${item?.potId ?? ""} ${String(item?.transferCategory ?? "").trim()}`;
+}
+
+/**
+ * Die Zeilen des Rücklagen-Views: sinkingFundStatus() je Position, plus die
+ * Auflösung geteilter Zwecke.
+ *
+ * Zwei Positionen dürfen denselben Zweck im selben Topf bespielen — dann teilen
+ * sie sich zwangsläufig einen Ist-Stand. Die Zeilen bleiben getrennt (es sind
+ * zwei Verpflichtungen mit eigenen Zyklen), aber der Deckungsgrad wird gegen die
+ * SUMME der Soll-Stände dieses Zwecks gerechnet. Sonst zeigte jede Zeile den
+ * vollen Zweck-Netto als "ihren" Ist-Stand und damit einen irreführend hohen
+ * Deckungsgrad.
+ *
+ * Nur Rücklagen zählen in die Gruppierung: freies Sparen hat keinen Soll-Stand
+ * und keine Bewertung, wäre in der Summe also ein Nullsummand und trüge die
+ * Markierung ohne Aussage. (Ein freier Transfer auf denselben Zweck hebt den
+ * Ist-Stand der Rücklage trotzdem — das lässt sich über Soll-Summen nicht
+ * ausgleichen und bleibt eine bewusste Unschärfe.)
+ *
+ * @param {Array} items - Fixkosten-Positionen (bereits gefiltert, z.B. nur Transfers)
+ * @param {Array} entries - alle Einträge des Buchs
+ * @param {{ monthStartDay?: number, today?: string }} opts
+ * @returns {Array<object>} sinkingFundStatus-Objekte, erweitert um `item`,
+ *          `sharedPurpose` (teilt sich den Zweck mit mindestens einer weiteren
+ *          Rücklage) und `sharedWith` (Anzahl der ANDEREN Positionen am Zweck)
+ */
+export function buildSinkingFundRows(items, entries, opts = {}) {
+  const list = Array.isArray(items) ? items : [];
+
+  // Durchgang 1: Status ohne Kenntnis der Nachbarn — coverage wird unten ersetzt.
+  const base = list.map((item) => ({ item, status: sinkingFundStatus(item, entries, opts) }));
+
+  const groups = new Map();
+  for (const { item, status } of base) {
+    if (!status.isSinkingFund) continue;
+    const key = purposeKey(item);
+    const prev = groups.get(key) || { targetSum: 0, count: 0 };
+    prev.targetSum += status.target;
+    prev.count += 1;
+    groups.set(key, prev);
+  }
+
+  // Durchgang 2: coverage gegen die Soll-Summe des Zwecks.
+  return base.map(({ item, status }) => {
+    const group = status.isSinkingFund ? groups.get(purposeKey(item)) : null;
+    const sharedWith = group ? group.count - 1 : 0;
+    const coverage = group && group.targetSum > 0 ? status.actual / group.targetSum : status.coverage;
+    return { ...status, item, coverage, sharedPurpose: sharedWith > 0, sharedWith };
+  });
+}
