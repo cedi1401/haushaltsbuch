@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { turnusMonths, monthlyRate, annualAmount, isSinkingFund, cycleAnchor } from '../fixedCostUtils.js';
+import { turnusMonths, monthlyRate, annualAmount, isSinkingFund, cycleAnchor, sinkingFundStatus } from '../fixedCostUtils.js';
+import { addMonthsISO } from '../financialMonthUtils.js';
 
 describe('turnusMonths', () => {
   it('liefert 1 ohne Turnus', () => {
@@ -175,5 +176,126 @@ describe('cycleAnchor', () => {
 
   it('liefert null, wenn weder Entnahme noch Fälligkeit einen Anker geben', () => {
     expect(cycleAnchor({ ...STEUERN, faelligkeit: null }, [])).toBeNull();
+  });
+});
+
+describe('sinkingFundStatus', () => {
+  const opts = (over = {}) => ({ monthStartDay: 1, today: '2026-05-20', ...over });
+
+  it('zählt Finanzmonate ab dem Zyklusbeginn, der Zahlungsmonat zählt als 0', () => {
+    // Mitteneinstieg: cycleStart 2026-03-15, zwei volle Monate bis Mai
+    const s = sinkingFundStatus(STEUERN, [], opts());
+    expect(s.isSinkingFund).toBe(true);
+    expect(s.cycleStart).toBe('2026-03-15');
+    expect(s.elapsed).toBe(2);
+    expect(s.monthlyRate).toBe(50);
+    expect(s.target).toBe(100);
+  });
+
+  it('liefert im Zahlungsmonat selbst elapsed 0 und Soll 0', () => {
+    const s = sinkingFundStatus(STEUERN, [withdrawal('2026-05-10', 600)], opts());
+    expect(s.elapsed).toBe(0);
+    expect(s.target).toBe(0);
+    expect(s.anchorSource).toBe('withdrawal');
+  });
+
+  it('deckelt elapsed und target bei einer überfälligen Position', () => {
+    // cycleStart 14 Finanzmonate vor today
+    const s = sinkingFundStatus(STEUERN, [withdrawal('2025-03-15', 600)], opts());
+    expect(s.elapsed).toBe(12);
+    expect(s.target).toBe(600);
+    expect(s.status).toBe('overdue');
+  });
+
+  it('ist fällig, sobald der Zyklus durch ist', () => {
+    const s = sinkingFundStatus(STEUERN, [], opts({ today: '2027-03-20' }));
+    expect(s.elapsed).toBe(12);
+    expect(s.nextDue).toBe('2027-03-15');
+    expect(s.status).toBe('due');
+  });
+
+  it('wird erst einen Monat nach der Fälligkeit überfällig', () => {
+    expect(sinkingFundStatus(STEUERN, [], opts({ today: '2027-04-14' })).status).toBe('due');
+    expect(sinkingFundStatus(STEUERN, [], opts({ today: '2027-04-15' })).status).toBe('overdue');
+  });
+
+  it('verschiebt elapsed mit dem monthStartDay', () => {
+    // monthStartDay 24: der 20. gehört noch in den Vormonat, der 25. schon in den nächsten
+    const vorher = { ...STEUERN, faelligkeit: '2027-05-20' }; // cycleStart 2026-05-20 → FM 2026-05
+    const nachher = { ...STEUERN, faelligkeit: '2027-05-25' }; // cycleStart 2026-05-25 → FM 2026-06
+    const o = { monthStartDay: 24, today: '2026-08-10' }; // FM 2026-08
+    expect(sinkingFundStatus(vorher, [], o).elapsed).toBe(3);
+    expect(sinkingFundStatus(nachher, [], o).elapsed).toBe(2);
+  });
+
+  it('meldet freies Sparen ohne Turnus — ohne Soll-Stand und ohne Fälligkeit', () => {
+    const frei = { ...STEUERN, turnus: null, faelligkeit: null, amount: 50 };
+    const s = sinkingFundStatus(frei, [transfer('2026-04-01', 50)], opts());
+    expect(s.isSinkingFund).toBe(false);
+    expect(s.status).toBe('free');
+    expect(s.target).toBeNull();
+    expect(s.coverage).toBeNull();
+    expect(s.nextDue).toBeNull();
+    expect(s.actual).toBe(50);
+  });
+
+  it('rechnet den Ist-Stand netto über den Zweck, nicht über den Topf', () => {
+    const s = sinkingFundStatus(STEUERN, [
+      transfer('2026-04-01', 50),
+      transfer('2026-05-01', 50),
+      transfer('2026-05-01', 999, { category: 'Versicherung' }), // anderer Zweck
+      transfer('2026-05-01', 999, { potId: 'surplus' }), // anderer Topf
+      withdrawal('2026-05-02', 20),
+    ], opts());
+    expect(s.actual).toBe(80);
+    // Die Entnahme ist zugleich der neue Zyklusanker — der Soll-Stand startet
+    // damit bei 0 und die 80 stehen als Überdeckung im neuen Zyklus.
+    expect(s.cycleStart).toBe('2026-05-02');
+    expect(s.elapsed).toBe(0);
+    expect(s.delta).toBe(80);
+  });
+
+  it('bewertet Rundungsreste innerhalb der Toleranz nicht als Rückstand', () => {
+    // 1000 auf 12 Monate → Rate 83.33, zwölf Raten = 999.96 gegen Soll 999.96
+    const item = { ...STEUERN, amount: 1000, faelligkeit: '2027-03-15' };
+    const raten = Array.from({ length: 12 }, (_, i) =>
+      transfer(addMonthsISO('2026-04-01', i), 83.33));
+    const s = sinkingFundStatus(item, raten, opts({ today: '2027-03-01' }));
+    expect(s.elapsed).toBe(12);
+    expect(s.tolerance).toBeCloseTo(0.12, 10);
+    expect(s.delta).toBeCloseTo(0, 6);
+    expect(s.status).toBe('onTrack');
+  });
+
+  it('trennt onTrack und behind an der Toleranzgrenze', () => {
+    const item = { ...STEUERN, amount: 1000 };
+    // Soll nach 12 Monaten: 83.33 × 12 = 999.96
+    const knapp = sinkingFundStatus(item, [transfer('2026-04-01', 999.86)], opts({ today: '2027-03-01' }));
+    expect(knapp.delta).toBeCloseTo(-0.1, 6);
+    expect(knapp.status).toBe('onTrack');
+    const drunter = sinkingFundStatus(item, [transfer('2026-04-01', 999.81)], opts({ today: '2027-03-01' }));
+    expect(drunter.delta).toBeCloseTo(-0.15, 6);
+    expect(drunter.status).toBe('behind');
+  });
+
+  it('behandelt einen Restbetrag aus dem Vorzyklus als Überdeckung, nicht als Fehler', () => {
+    const s = sinkingFundStatus(STEUERN, [transfer('2026-04-01', 150)], opts());
+    expect(s.target).toBe(100);
+    expect(s.delta).toBe(50);
+    expect(s.coverage).toBe(1.5);
+    expect(s.status).toBe('onTrack');
+  });
+
+  it('rechnet coverage gegen die übergebene Soll-Summe eines geteilten Zwecks', () => {
+    const s = sinkingFundStatus(STEUERN, [transfer('2026-04-01', 150)], opts({ targetSum: 300 }));
+    expect(s.target).toBe(100);
+    expect(s.coverage).toBe(0.5);
+  });
+
+  it('liefert coverage null, solange der Soll-Stand 0 ist', () => {
+    const s = sinkingFundStatus(STEUERN, [], opts({ today: '2026-03-20' }));
+    expect(s.elapsed).toBe(0);
+    expect(s.coverage).toBeNull();
+    expect(s.progress).toBe(0);
   });
 });

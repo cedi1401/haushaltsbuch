@@ -4,9 +4,12 @@
 // Hintergrund: Bei einer Transfer-Position mit Turnus ("Rücklage"/Sinking Fund)
 // ist `amount` der Rechnungsbetrag für den ganzen Zyklus — nicht mehr der Betrag
 // pro Buchung. Was pro Monat gebucht wird, ist die Monatsrate. Alles in dieser
-// Datei ist rein funktional und kennt weder React noch Einträge.
+// Datei ist rein funktional und kennt kein React; die Zyklusrechnung weiter
+// unten liest zusätzlich die Buchungen des Buchs.
 
-import { addMonthsISO } from "./financialMonthUtils.js";
+import { addMonthsISO, getFinancialMonth } from "./financialMonthUtils.js";
+import { potPurposeBalance } from "./potUtils.js";
+import { todayISO } from "./hbUtils.js";
 
 /**
  * Zykluslänge in Monaten. 1, wenn kein Turnus gesetzt ist — dadurch sind
@@ -110,5 +113,119 @@ export function cycleAnchor(item, entries) {
     nextDue: addMonthsISO(cycleStart, months),
     lastPayment,
     anchorSource: lastPayment ? "withdrawal" : "faelligkeit",
+  };
+}
+
+/**
+ * Anzahl Finanzmonate von fromISO bis toISO, 0-basiert (derselbe Finanzmonat
+ * ergibt 0). Negativ, wenn toISO davor liegt.
+ *
+ * Bewusst privat: costGroupUtils.monthSpan() und goalUtils.diffMonthsInclusive()
+ * rechnen beide INKLUSIV und liefern damit eine um 1 höhere Zahl. Eine
+ * Konsolidierung der drei Varianten ist ein eigener Aufräumschritt.
+ *
+ * Beide Daten laufen durch dieselbe Finanzmonats-Funktion — würde nur eines
+ * konvertiert, entstünden Off-by-one-Fehler, die bei monthStartDay === 1
+ * unsichtbar blieben.
+ * @returns {number|null}
+ */
+function financialMonthSpan(fromISO, toISO, monthStartDay) {
+  const from = getFinancialMonth(fromISO, monthStartDay);
+  const to = getFinancialMonth(toISO, monthStartDay);
+  if (!from || !to) return null;
+  return (to.year - from.year) * 12 + (to.month - from.month);
+}
+
+/**
+ * Soll-Ist-Vergleich einer Rücklage für den Rücklagen-View.
+ *
+ * Der Soll-Stand läuft auf Monatsebene (Finanzmonate), die Fälligkeit taggenau:
+ * Gebucht wird einmal pro Monat, nicht anteilig pro Tag. Der Ist-Stand ist der
+ * Netto-Stand des ZWECKS im Topf — absolut gerechnet, nicht seit Zyklusbeginn,
+ * damit ein Rest aus dem Vorzyklus als Überdeckung sichtbar bleibt.
+ *
+ * @param {object} item - Fixkosten-Position
+ * @param {Array} entries - alle Einträge des Buchs
+ * @param {{ monthStartDay?: number, today?: string, targetSum?: number|null }} opts
+ *        targetSum: Summe der Soll-Stände aller Positionen desselben Zwecks;
+ *        gesetzt von buildSinkingFundRows() bei geteilten Zwecken (P4.3).
+ * @returns {object}
+ */
+export function sinkingFundStatus(item, entries, opts = {}) {
+  const { monthStartDay = 1, today = todayISO(), targetSum = null } = opts;
+
+  const months = turnusMonths(item);
+  const rate = monthlyRate(item);
+  const cycleAmount = Number(item?.amount || 0) || 0;
+  const actual = potPurposeBalance(entries, item?.potId, item?.transferCategory);
+  const anchor = cycleAnchor(item, entries);
+
+  // Freies Sparen: kein Turnus, keine Rechnung, keine Bewertung. Der Ist-Stand
+  // bleibt trotzdem gefüllt — das Geld liegt ja im Topf.
+  if (!anchor) {
+    return {
+      isSinkingFund: false,
+      cycleStart: null,
+      nextDue: null,
+      lastPayment: null,
+      anchorSource: null,
+      turnusMonths: months,
+      monthlyRate: rate,
+      cycleAmount,
+      elapsed: null,
+      target: null,
+      actual,
+      delta: null,
+      coverage: null,
+      progress: null,
+      tolerance: null,
+      status: "free",
+    };
+  }
+
+  const { cycleStart, nextDue, lastPayment, anchorSource } = anchor;
+
+  // Der Monat des cycleStart zählt als 0; gedeckelt auf turnusMonths, damit der
+  // Soll-Stand bei einer überfälligen Position nicht über den Rechnungsbetrag
+  // hinauswächst. Für den Rückstandsausgleich gilt diese Deckelung NICHT
+  // (buildCatchUpRates, Entscheidung D1).
+  const span = financialMonthSpan(cycleStart, today, monthStartDay) ?? 0;
+  const elapsed = Math.max(0, Math.min(span, months));
+
+  const target = Math.min(rate * elapsed, cycleAmount);
+  const delta = actual - target;
+  // Rundungstoleranz: die Monatsrate ist auf 2 NK gerundet, über turnusMonths
+  // Buchungen summiert sich der Rundungsfehler auf bis zu 0.01 × turnusMonths.
+  const tolerance = 0.01 * months;
+
+  // Deckungsgrad gegen die Soll-Summe des Zwecks, falls er geteilt wird — sonst
+  // läse jede Zeile den vollen Zweck-Netto als "ihren" Ist-Stand.
+  const coverageBase = targetSum === null ? target : targetSum;
+  const coverage = coverageBase > 0 ? actual / coverageBase : null;
+  const progress = cycleAmount > 0 ? actual / cycleAmount : null;
+
+  let status;
+  if (today >= addMonthsISO(nextDue, 1)) status = "overdue";
+  else if (today >= nextDue) status = "due";
+  else if (delta < -tolerance) status = "behind";
+  else status = "onTrack";
+
+  return {
+    isSinkingFund: true,
+    cycleStart,
+    nextDue,
+    lastPayment,
+    anchorSource,
+    turnusMonths: months,
+    monthlyRate: rate,
+    cycleAmount,
+    elapsed,
+    target,
+    actual,
+    delta,
+    coverage,
+    progress,
+    tolerance,
+    status,
   };
 }
