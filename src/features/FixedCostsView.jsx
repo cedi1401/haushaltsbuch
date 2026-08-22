@@ -12,6 +12,7 @@ import {
   parseAmount,
   todayISO,
 } from "../utils/hbUtils.js";
+import { isSinkingFund, monthlyRate, turnusMonths } from "../utils/fixedCostUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
 import { IconFixed, IconPlus, IconDelete, IconDrag, IconTag } from "../components/icons.jsx";
@@ -54,6 +55,11 @@ const TURNUS_OPTIONS = [
   { value: "6", label: "Halbjährlich" },
   { value: "12", label: "Jährlich" },
 ];
+
+// Benennung des Zyklusbetrags auf der Card. `turnus === 1` fehlt bewusst: dort
+// ist die Monatsrate identisch mit `amount`, eine Zweitzeile wäre reine
+// Wiederholung.
+const TURNUS_PERIOD_LABEL = { 3: "pro Quartal", 6: "pro Halbjahr", 12: "pro Jahr" };
 
 export default function FixedCostsView({
   activeBook,
@@ -136,7 +142,10 @@ export default function FixedCostsView({
 
     for (const item of recurringExpenses) {
       const kind = fixedCostKind(item);
-      const amount = Number(item.amount || 0);
+      // Basis aller drei Totale ist die Monatsrate, nicht das Rohfeld: bei einer
+      // Rücklage mit Turnus ist `amount` der Zyklusbetrag. Für alles ohne Turnus
+      // ist `monthlyRate()` wertidentisch mit `amount`.
+      const amount = monthlyRate(item);
       total += amount;
       colTotals[kind] += amount;
       colCounts[kind] += 1;
@@ -428,7 +437,9 @@ export default function FixedCostsView({
     const entry = {
       id: generateId("entry"),
       date,
-      amount: item.amount,
+      // Gebucht wird die Monatsrate — bei einer Rücklage also der anteilige
+      // Betrag, nicht der Zyklusbetrag aus `item.amount`.
+      amount: monthlyRate(item),
       category: kind === "transfer" ? item.transferCategory : undefined,
       categoryId: kind === "expense" ? (item.categoryId || null) : null,
       subcategoryId: kind === "expense" ? (item.subcategoryId || null) : null,
@@ -625,6 +636,9 @@ export default function FixedCostsView({
   function renderItemCard(item, sectionKind, sectionKey, groupIdOfSection) {
     const isDragging = draggingId === item.id;
     const showDropLine = dragOverKey === sectionKey && dropBeforeId === item.id;
+    // Zweitzeile nur, wenn sich Zyklus- und Monatsbetrag unterscheiden können —
+    // bei monatlichem Turnus wäre sie eine Wiederholung der Hauptzahl.
+    const cyclePeriod = isSinkingFund(item) ? TURNUS_PERIOD_LABEL[turnusMonths(item)] : null;
 
     return (
       <React.Fragment key={item.id}>
@@ -647,7 +661,14 @@ export default function FixedCostsView({
                   <div className="hb-fixed-info">
                     <div className="hb-fixed-title-row">
                       <h3 className="hb-fixed-name">{item.name}</h3>
-                      <div className="hb-fixed-amount hb-bad">-{fmt(item.amount)}</div>
+                      <div className="hb-fixed-amount-col">
+                        <div className="hb-fixed-amount hb-bad">-{fmt(monthlyRate(item))}</div>
+                        {cyclePeriod && (
+                          <div className="hb-fixed-amount-sub">
+                            {fmt(item.amount)} {cyclePeriod}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="hb-fixed-pills">
                       {renderCatPills(item)}
@@ -769,7 +790,7 @@ export default function FixedCostsView({
       {/* Toolbar */}
       <div className="hb-fixed-toolbar">
         <div className="hb-stat-pill hb-stat-pill--accent hb-fixed-toolbar-pill">
-          <span className="hb-stat-pill-label">Gesamt</span>
+          <span className="hb-stat-pill-label">Gesamt pro Monat</span>
           <span className="hb-stat-pill-value">{fmt(totalAmount)}</span>
         </div>
         <div className="hb-fixed-toolbar-actions">
