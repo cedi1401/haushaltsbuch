@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { turnusMonths, monthlyRate, annualAmount, isSinkingFund, cycleAnchor, sinkingFundStatus, buildSinkingFundRows } from '../fixedCostUtils.js';
+import { turnusMonths, monthlyRate, annualAmount, isSinkingFund, cycleAnchor, sinkingFundStatus, buildSinkingFundRows, buildCatchUpRates } from '../fixedCostUtils.js';
 import { addMonthsISO } from '../financialMonthUtils.js';
 
 describe('turnusMonths', () => {
@@ -367,5 +367,70 @@ describe('buildSinkingFundRows', () => {
   it('kommt mit einer leeren oder fehlenden Liste zurecht', () => {
     expect(buildSinkingFundRows([], [], opts)).toEqual([]);
     expect(buildSinkingFundRows(undefined, [], opts)).toEqual([]);
+  });
+});
+
+describe('buildCatchUpRates', () => {
+  it('erzeugt eine Rate je Finanzmonat nach dem Zyklusbeginn', () => {
+    const rates = buildCatchUpRates(STEUERN, {
+      cycleStart: '2026-03-15',
+      monthStartDay: 1,
+      today: '2026-05-20',
+    });
+    expect(rates).toEqual([
+      { ym: '2026-04', date: '2026-04-01', amount: 50 },
+      { ym: '2026-05', date: '2026-05-01', amount: 50 },
+    ]);
+  });
+
+  it('liefert nichts, solange der Zyklus im laufenden Finanzmonat begann', () => {
+    expect(buildCatchUpRates(STEUERN, {
+      cycleStart: '2026-05-02',
+      monthStartDay: 1,
+      today: '2026-05-20',
+    })).toEqual([]);
+  });
+
+  it('datiert auf den ersten Tag des Finanzmonats — auch bei verschobenem Monatsbeginn', () => {
+    const rates = buildCatchUpRates(STEUERN, {
+      cycleStart: '2026-03-15',
+      monthStartDay: 24,
+      today: '2026-05-20',
+    });
+    // FM des cycleStart ist 2026-03 (15. < 24.), today liegt im FM 2026-05
+    expect(rates).toEqual([
+      { ym: '2026-04', date: '2026-03-24', amount: 50 },
+      { ym: '2026-05', date: '2026-04-24', amount: 50 },
+    ]);
+  });
+
+  it('deckelt NICHT auf den Turnus — überfällige Position (D1)', () => {
+    const item = { ...STEUERN, amount: 1200 };
+    const rates = buildCatchUpRates(item, {
+      cycleStart: '2025-03-15',
+      monthStartDay: 1,
+      today: '2026-05-20',
+    });
+    expect(rates).toHaveLength(14);
+    expect(rates[0]).toEqual({ ym: '2025-04', date: '2025-04-01', amount: 100 });
+    expect(rates[13]).toEqual({ ym: '2026-05', date: '2026-05-01', amount: 100 });
+    // Bewusst über dem Soll-Stand: target ist auf 1200 gedeckelt, die Summe nicht.
+    expect(rates.reduce((sum, r) => sum + r.amount, 0)).toBe(1400);
+  });
+
+  it('läuft über den Jahreswechsel', () => {
+    const rates = buildCatchUpRates(STEUERN, {
+      cycleStart: '2026-11-15',
+      monthStartDay: 1,
+      today: '2027-02-10',
+    });
+    expect(rates.map((r) => r.ym)).toEqual(['2026-12', '2027-01', '2027-02']);
+  });
+
+  it('liefert nichts ohne Turnus, ohne cycleStart oder bei künftigem Zyklusbeginn', () => {
+    const frei = { ...STEUERN, turnus: null, faelligkeit: null };
+    expect(buildCatchUpRates(frei, { cycleStart: '2026-03-15', today: '2026-05-20' })).toEqual([]);
+    expect(buildCatchUpRates(STEUERN, { today: '2026-05-20' })).toEqual([]);
+    expect(buildCatchUpRates(STEUERN, { cycleStart: '2026-09-15', today: '2026-05-20' })).toEqual([]);
   });
 });

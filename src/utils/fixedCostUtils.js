@@ -7,7 +7,7 @@
 // Datei ist rein funktional und kennt kein React; die Zyklusrechnung weiter
 // unten liest zusätzlich die Buchungen des Buchs.
 
-import { addMonthsISO, getFinancialMonth } from "./financialMonthUtils.js";
+import { addMonthsISO, getFinancialMonth, getFinancialMonthRange } from "./financialMonthUtils.js";
 import { potPurposeBalance } from "./potUtils.js";
 import { todayISO } from "./hbUtils.js";
 
@@ -285,4 +285,52 @@ export function buildSinkingFundRows(items, entries, opts = {}) {
     const coverage = group && group.targetSum > 0 ? status.actual / group.targetSum : status.coverage;
     return { ...status, item, coverage, sharedPurpose: sharedWith > 0, sharedWith };
   });
+}
+
+/**
+ * Verschiebt einen YYYY-MM-String um delta Monate.
+ */
+function addYearMonth(yyyymm, delta) {
+  const [y, m] = String(yyyymm).split("-").map(Number);
+  const total = y * 12 + (m - 1) + delta;
+  const ny = Math.floor(total / 12);
+  const nm = (total % 12) + 1;
+  return `${ny}-${String(nm).padStart(2, "0")}`;
+}
+
+/**
+ * Die Raten, mit denen ein Rückstand ausgeglichen wird: eine Buchung je
+ * Finanzmonat von `cycleStart + 1` bis zum aktuellen Finanzmonat, jeweils auf
+ * den ersten Tag des Finanzmonats datiert.
+ *
+ * **Ungedeckelt** (Entscheidung D1): Bei einer fälligen oder überfälligen
+ * Position entstehen mehr Raten als `sinkingFundStatus().elapsed` — dieses ist
+ * für den Soll-Stand auf `turnusMonths` gedeckelt, der Ausgleich nicht. Grund:
+ * Die Einzelraten werden überhaupt nur deshalb rückdatiert erzeugt, damit die
+ * Fixkosten-Trendlinie stimmt; eine Deckelung liesse genau dort wieder Lücken.
+ * Die Rate-Summe liegt dadurch bewusst über `target` (das auf dem
+ * Rechnungsbetrag gedeckelt ist) — das Geld läge real im Topf. `elapsed` darf
+ * hier deshalb NICHT als Eingabe dienen; gezählt wird selbst.
+ *
+ * @param {object} item - Fixkosten-Position
+ * @param {{ cycleStart: string, monthStartDay?: number, today?: string }} opts
+ * @returns {Array<{ ym: string, date: string, amount: number }>}
+ */
+export function buildCatchUpRates(item, opts = {}) {
+  const { cycleStart, monthStartDay = 1, today = todayISO() } = opts;
+  if (!isSinkingFund(item) || !cycleStart) return [];
+
+  const span = financialMonthSpan(cycleStart, today, monthStartDay);
+  if (!span || span < 1) return [];
+
+  const from = getFinancialMonth(cycleStart, monthStartDay);
+  const amount = monthlyRate(item);
+  const rates = [];
+  for (let i = 1; i <= span; i++) {
+    const ym = addYearMonth(from.yyyymm, i);
+    const range = getFinancialMonthRange(ym, monthStartDay);
+    if (!range) break; // defensiv: bei ungültigem yyyymm käme null zurück
+    rates.push({ ym, date: range.startDate, amount });
+  }
+  return rates;
 }
