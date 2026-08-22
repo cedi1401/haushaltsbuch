@@ -4516,21 +4516,25 @@ select.hb-input option {
   min-height: 0;
 }
 
-@media (max-width: 860px) {
-  .hb-chart-body { flex-direction: column; align-items: center; }
-}
-
+/* Legende wächst mit der verfügbaren Card-Breite (Basis 385px, gedeckelt bei
+   480px), damit auf breiten Displays der freie Raum links/rechts genutzt wird. */
 .hb-chart-legend {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  width: 385px;
-  max-width: 400px;
+  flex: 1 1 385px;
+  min-width: 300px;
+  max-width: 480px;
   max-height: 340px;
-  flex-shrink: 0;
   align-self: center;
   min-height: 0;
   overflow: hidden;
+}
+
+@media (max-width: 860px) {
+  .hb-chart-body { flex-direction: column; align-items: center; }
+  /* In der Spalten-Richtung würde die flex-basis als Höhe wirken — zurücksetzen. */
+  .hb-chart-legend { flex: 0 0 auto; width: 100%; max-width: 400px; }
 }
 
 .hb-legend-section-title {
