@@ -100,7 +100,10 @@ export default function FixedCostsView({
     turnus: null,
     faelligkeit: "",
     groupId: null,
-    showInOverview: true,
+    // false wie in openCreateDialog() — neue Positionen erscheinen erst nach
+    // bewusster Wahl in der Trend-Übersicht. Der Wert hier wird nie gerendert
+    // (jeder Öffnungspfad setzt den Draft neu), soll aber nicht widersprechen.
+    showInOverview: false,
     tags: [],
   });
 
