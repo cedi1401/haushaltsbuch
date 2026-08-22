@@ -992,9 +992,26 @@ export function normalizeBook(book) {
       const withTags = Array.isArray(withGroup.tags) ? withGroup : { ...withGroup, tags: [] };
       // `kind` explizit setzen: der Fixkosten-View leitet daraus die Spalte ab,
       // ein fehlender Wert würde sonst als Transfer gerendert.
-      return withTags.kind === "expense" || withTags.kind === "transfer"
+      const withKind = withTags.kind === "expense" || withTags.kind === "transfer"
         ? withTags
         : { ...withTags, kind: "expense" };
+      // Turnus/Fälligkeit (Rücklagen): bewusst KEINE Ableitung aus Bestandsdaten —
+      // ein bestehender Transfer ohne Turnus bleibt ohne. Hygiene-Regel: ein Turnus
+      // gilt nur an einem Transfer und nur mit Fälligkeit als Zyklus-Anker. Ohne
+      // Anker liesse sich kein Zyklus berechnen; der Halbzustand darf auch aus
+      // einem manipulierten Backup nicht entstehen.
+      const rawTurnus = Number(withKind.turnus);
+      const rawFaelligkeit = withKind.faelligkeit || null;
+      const validTurnus =
+        withKind.kind === "transfer" &&
+        Number.isFinite(rawTurnus) &&
+        rawTurnus > 0 &&
+        !!rawFaelligkeit;
+      const turnus = validTurnus ? rawTurnus : null;
+      const faelligkeit = validTurnus ? rawFaelligkeit : null;
+      return withKind.turnus === turnus && withKind.faelligkeit === faelligkeit
+        ? withKind
+        : { ...withKind, turnus, faelligkeit };
     });
   }
 

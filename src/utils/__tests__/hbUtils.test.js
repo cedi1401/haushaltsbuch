@@ -235,6 +235,57 @@ describe('normalizeBook', () => {
     expect(result.recurringExpenses[0].groupId).toBe('g1');
   });
 
+  it('defaults turnus and faelligkeit to null when missing', () => {
+    const book = { id: 'b1', recurringExpenses: [{ id: 'r1', name: 'Miete', amount: 1200 }] };
+    const result = normalizeBook(book);
+    expect(result.recurringExpenses[0].turnus).toBe(null);
+    expect(result.recurringExpenses[0].faelligkeit).toBe(null);
+  });
+
+  it('preserves turnus and faelligkeit on a transfer that has both', () => {
+    const book = {
+      id: 'b1',
+      recurringExpenses: [
+        { id: 'r1', kind: 'transfer', name: 'Autoversicherung', amount: 1200, turnus: 12, faelligkeit: '2027-03-15' },
+      ],
+    };
+    const result = normalizeBook(book);
+    expect(result.recurringExpenses[0].turnus).toBe(12);
+    expect(result.recurringExpenses[0].faelligkeit).toBe('2027-03-15');
+  });
+
+  it('does not derive a turnus for an existing transfer without one', () => {
+    const book = {
+      id: 'b1',
+      recurringExpenses: [{ id: 'r1', kind: 'transfer', name: 'Sparen', amount: 200 }],
+    };
+    const result = normalizeBook(book);
+    expect(result.recurringExpenses[0].turnus).toBe(null);
+    expect(result.recurringExpenses[0].faelligkeit).toBe(null);
+  });
+
+  it('drops a turnus without faelligkeit (no cycle anchor)', () => {
+    const book = {
+      id: 'b1',
+      recurringExpenses: [{ id: 'r1', kind: 'transfer', name: 'Sparen', amount: 200, turnus: 6 }],
+    };
+    const result = normalizeBook(book);
+    expect(result.recurringExpenses[0].turnus).toBe(null);
+    expect(result.recurringExpenses[0].faelligkeit).toBe(null);
+  });
+
+  it('drops turnus and faelligkeit on an expense', () => {
+    const book = {
+      id: 'b1',
+      recurringExpenses: [
+        { id: 'r1', kind: 'expense', name: 'Miete', amount: 1200, turnus: 12, faelligkeit: '2027-03-15' },
+      ],
+    };
+    const result = normalizeBook(book);
+    expect(result.recurringExpenses[0].turnus).toBe(null);
+    expect(result.recurringExpenses[0].faelligkeit).toBe(null);
+  });
+
   describe('old flat categories → hierarchical migration', () => {
     it('builds expenseCategories from old flat categories array', () => {
       const book = {
