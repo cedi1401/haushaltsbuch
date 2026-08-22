@@ -66,7 +66,6 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
   fixedMonthly,
   changes,
   kpis,
-  configuredTotal,
   recurringExpenses,
   expenseCategories,
   avgMonthlyExpense = 0,
@@ -238,7 +237,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 }}
               />
               <ReferenceLine
-                y={configuredTotal}
+                y={kpis.configuredTotal}
                 stroke={themeColors.orange}
                 strokeDasharray="5 3"
                 strokeWidth={1.5}
@@ -290,7 +289,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 )}
               </div>
               <span className="hb-muted" style={{ fontSize: 12, alignSelf: "flex-start", paddingTop: 2 }}>
-                Total: {fmt(configuredTotal)} pro Monat
+                Total: {fmt(kpis.configuredTotal)} pro Monat
               </span>
             </div>
 

@@ -241,8 +241,6 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
     monthly,
     monthStartDay,
   });
-  const configuredTotal = (recurringExpenses || [])
-    .reduce((s, r) => s + Number(r.amount || 0), 0);
 
   const savingsRate = useMemo(() => {
     return avg.income > 0 ? (avg.savings / avg.income) * 100 : 0;
@@ -589,7 +587,6 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
             fixedMonthly={fixedMonthly}
             changes={changes}
             kpis={kpis}
-            configuredTotal={configuredTotal}
             recurringExpenses={recurringExpenses}
             expenseCategories={expenseCategories}
             avgMonthlyExpense={avg.expense}
