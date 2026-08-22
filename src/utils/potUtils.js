@@ -58,3 +58,46 @@ export function getWithdrawalCategoriesForPot(entries, potId, allCategories) {
   const filtered = allCategories.filter((cat) => used.has(cat));
   return filtered.length > 0 ? filtered : allCategories;
 }
+
+/**
+ * Netto-Stand eines einzelnen Zwecks in einem Topf: Σ Transfers − Σ Entnahmen.
+ * Kann negativ sein (Überentnahme). Zählt jede Buchung mit, auch manuell
+ * erfasste ohne recurringId — der Ist-Stand ist das Geld im Topf, nicht die
+ * Herkunft der Buchung.
+ * @param {Array} entries - alle Einträge
+ * @param {string} potId
+ * @param {string} purpose - Zweck (entry.category)
+ * @returns {number}
+ */
+export function potPurposeBalance(entries, potId, purpose) {
+  const key = String(purpose ?? "").trim();
+  let sum = 0;
+  for (const e of entries || []) {
+    if (e.potId !== potId) continue;
+    if (String(e.category ?? "").trim() !== key) continue;
+    if (e.kind === "transfer") sum += Number(e.amount || 0);
+    else if (e.kind === "withdrawal") sum -= Number(e.amount || 0);
+  }
+  return sum;
+}
+
+/**
+ * Alle Zweck-Netto-Stände eines Topfes in einem Durchlauf.
+ * Ein Eintrag ohne category landet unter dem leeren Schlüssel "" — die
+ * Anzeige-Beschriftung (z.B. „Sonstiges") ist Sache der View.
+ * @param {Array} entries
+ * @param {string} potId
+ * @returns {Map<string, number>}
+ */
+export function potPurposeBalances(entries, potId) {
+  const map = new Map();
+  for (const e of entries || []) {
+    if (e.potId !== potId) continue;
+    if (e.kind !== "transfer" && e.kind !== "withdrawal") continue;
+    const key = String(e.category ?? "").trim();
+    const prev = map.get(key) || 0;
+    const amount = Number(e.amount || 0);
+    map.set(key, e.kind === "transfer" ? prev + amount : prev - amount);
+  }
+  return map;
+}

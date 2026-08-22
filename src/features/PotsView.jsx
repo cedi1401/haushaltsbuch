@@ -19,7 +19,7 @@ import {
   PieChart,
   Pie,
 } from "recharts";
-import { calcPotSeries } from "../utils/potUtils.js";
+import { calcPotSeries, potPurposeBalances } from "../utils/potUtils.js";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact, formatCurrencyAxis } from "../utils/hbUtils.js";
@@ -187,25 +187,20 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
     rawOut: d.expensesOut,            // Rohwert (positiv) fürs Tooltip
   })), [barWindowData]);
 
-  // Transfer-Kategorien Auswertung (Pie Chart) — Netto: Einzahlungen minus Entnahmen je Zweck
+  // Transfer-Kategorien Auswertung (Pie Chart) — Netto: Einzahlungen minus Entnahmen je Zweck.
+  // Die Netto-Rechnung liegt in potUtils; hier bleiben nur die beiden
+  // Anzeige-Aspekte: der Fallback-Name und der Donut-Filter (nur positive Stände).
   const transfersByCategory = useMemo(() => {
     if (!selectedPot) return [];
 
-    const map = new Map();
-
-    for (const e of entries || []) {
-      if (e.potId !== selectedPot.id) continue;
-      const cat = String(e.category || "Sonstiges").trim();
-      const prev = map.get(cat) || 0;
-      if (e.kind === "transfer") {
-        map.set(cat, prev + Number(e.amount || 0));
-      } else if (e.kind === "withdrawal") {
-        map.set(cat, prev - Number(e.amount || 0));
-      }
+    const display = new Map();
+    for (const [purpose, value] of potPurposeBalances(entries, selectedPot.id)) {
+      const name = purpose || "Sonstiges";
+      display.set(name, (display.get(name) || 0) + value);
     }
 
     const result = [];
-    for (const [name, value] of map) {
+    for (const [name, value] of display) {
       if (value > 0) result.push({ name, value });
     }
     return result.toSorted((a, b) => b.value - a.value);
@@ -248,7 +243,8 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
         const da = String(a.date || "");
         const db = String(b.date || "");
         if (da !== db) return db.localeCompare(da);
-        return Number(b.id) - Number(a.id);
+        // IDs sind Strings ("entry_<timestamp>_<rand>") → Number() wäre NaN.
+        return String(b.id || "").localeCompare(String(a.id || ""));
       });
   }, [entries, selectedPot, monthFilter, monthStartDay]);
 
