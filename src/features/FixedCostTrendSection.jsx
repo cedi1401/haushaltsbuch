@@ -16,6 +16,7 @@ import { IconTag } from "../components/icons.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { getCategoryLabel, formatCurrencyAxis } from "../utils/hbUtils.js";
 import { FALLBACK_CATEGORY_COLOR } from "../utils/hbPalette.js";
+import { monthlyRate, annualAmount } from "../utils/fixedCostUtils.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { MONTHS_SHORT, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 
@@ -122,7 +123,11 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
         const cat = (expenseCategories || []).find((c) => c.id === r.categoryId);
         return {
           ...r,
-          amount: Number(r.amount || 0),
+          // `amount` ist ab hier die Monatsrate, `annual` der Jahresbetrag.
+          // Beide werden aus `r` abgeleitet, bevor `amount` überschrieben wird —
+          // sonst ginge der Zyklusbetrag der Rücklagen verloren.
+          amount: monthlyRate(r),
+          annual: annualAmount(r),
           categoryLabel: getCategoryLabel(expenseCategories || [], [], r.categoryId, null),
           color: cat?.color || FALLBACK_CATEGORY_COLOR,
         };
@@ -139,7 +144,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
 
   // Jahresbetrag-Summe aller sichtbaren Positionen
   const annualTotal = useMemo(
-    () => activeItems.reduce((s, r) => s + r.amount * 12, 0),
+    () => activeItems.reduce((s, r) => s + r.annual, 0),
     [activeItems]
   );
 
@@ -175,7 +180,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
         />
         <KpiCard
           label="Teuerste Position"
-          value={kpis.mostExpensive ? fmt(kpis.mostExpensive.amount) : "—"}
+          value={kpis.mostExpensive ? fmt(kpis.mostExpensive.monthlyAmount) : "—"}
           sub={kpis.mostExpensive?.name ?? null}
         />
       </div>
@@ -337,7 +342,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                   className="hb-fct-annual-cell"
                   style={{ gridColumn: 3, gridRow: i + 2 }}
                 >
-                  <span className="hb-fct-annual-amount">{fmt(item.amount * 12)}</span>
+                  <span className="hb-fct-annual-amount">{fmt(item.annual)}</span>
                   <span className="hb-fct-annual-label">pro Jahr</span>
                 </div>
               ))}
