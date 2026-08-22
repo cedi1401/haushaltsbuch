@@ -53,5 +53,6 @@ export function useFixedCostTrend({ entries, recurringExpenses, monthly, monthSt
     return { configuredTotal, bookedLast, momDelta, avgShare, activeCount: all.length, mostExpensive };
   }, [fixedMonthly, recurringExpenses]);
 
-  return { fixedMonthly, itemTrends, changes, kpis };
+  // itemTrends bleibt absichtlich intern — ausserhalb wird nur `changes` gebraucht.
+  return { fixedMonthly, changes, kpis };
 }

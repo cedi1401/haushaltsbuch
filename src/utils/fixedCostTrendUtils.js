@@ -63,8 +63,6 @@ export function buildItemTrends(entries, recurringExpenses, monthlyAggregates, m
   return (recurringExpenses || []).map((r) => ({
     id: r.id,
     name: r.name,
-    categoryId: r.categoryId,
-    configuredAmount: Number(r.amount || 0),
     data: months.map((ym) => ({
       month: ym,
       amount: filteredMap.get(ym)?.get(r.id) ?? null,
