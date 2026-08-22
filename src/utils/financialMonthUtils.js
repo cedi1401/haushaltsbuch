@@ -92,3 +92,20 @@ export function formatYearMonth(yyyymm) {
   if (!y || !m) return yyyymm;
   return `${MONTHS_SHORT[Number(m) - 1] || m} ${y}`;
 }
+
+/**
+ * Verschiebt ein ISO-Datum um n Monate; der Tag wird ans Monatsende geklemmt
+ * (31.01. +1M → 28.02.). Gerechnet wird in UTC, damit Sommerzeit-Sprünge keine
+ * halben Tage erzeugen.
+ * @param {string} iso - ISO-Datum (YYYY-MM-DD)
+ * @param {number} n - Anzahl Monate (negativ = rückwärts)
+ * @returns {string}
+ */
+export function addMonthsISO(iso, n) {
+  const [y, m, d] = String(iso).split("-").map(Number);
+  const total = y * 12 + (m - 1) + n;
+  const ny = Math.floor(total / 12);
+  const nm = (total % 12) + 1;
+  const lastDay = new Date(Date.UTC(ny, nm, 0)).getUTCDate();
+  return `${ny}-${String(nm).padStart(2, "0")}-${String(Math.min(d, lastDay)).padStart(2, "0")}`;
+}

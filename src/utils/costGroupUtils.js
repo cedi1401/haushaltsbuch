@@ -3,7 +3,7 @@
 // Eine Kostengruppe bündelt frei gewählte (Unter-)Kategorien (z.B. "Auto" aus
 // Benzin, Versicherung, Steuer, Reparatur) und berechnet die geglätteten
 // Monatskosten: Gesamtausgaben ÷ Anzahl Kalendermonate im Zeitraum.
-import { getEntryFinancialMonth, getFinancialMonthRange, formatYearMonth } from "./financialMonthUtils.js";
+import { getEntryFinancialMonth, getFinancialMonthRange, formatYearMonth, addMonthsISO } from "./financialMonthUtils.js";
 import { todayISO } from "./hbUtils.js";
 
 /**
@@ -51,20 +51,6 @@ function addDaysISO(iso, n) {
   const d = toUTCDate(iso);
   d.setUTCDate(d.getUTCDate() + n);
   return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
-}
-
-/**
- * Verschiebt ein ISO-Datum um n Monate; der Tag wird ans Monatsende geklemmt
- * (31.01. +1M → 28.02.). Exportiert, weil die Zeitraum-Auswahl im Kostenrechner
- * denselben Vorschlag ("heute − 11 Monate") berechnet.
- */
-export function addMonthsISO(iso, n) {
-  const [y, m, d] = String(iso).split("-").map(Number);
-  const total = y * 12 + (m - 1) + n;
-  const ny = Math.floor(total / 12);
-  const nm = (total % 12) + 1;
-  const lastDay = new Date(Date.UTC(ny, nm, 0)).getUTCDate();
-  return `${ny}-${pad2(nm)}-${pad2(Math.min(d, lastDay))}`;
 }
 
 /** Ganze Tage von isoA bis isoB (A inklusiv, B exklusiv). */

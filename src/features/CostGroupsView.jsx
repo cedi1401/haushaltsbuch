@@ -27,7 +27,8 @@ import { generateId } from "../utils/idUtils.js";
 import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, formatCurrencyAxis, formatDateDE, todayISO } from "../utils/hbUtils.js";
 import { EMPTY_ARRAY, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 import { CUSTOM_CATEGORY_PALETTE } from "../utils/hbPalette.js";
-import { calcCostGroupStats, calcExpectedMonthly, formatMonthCount, addMonthsISO } from "../utils/costGroupUtils.js";
+import { calcCostGroupStats, calcExpectedMonthly, formatMonthCount } from "../utils/costGroupUtils.js";
+import { addMonthsISO } from "../utils/financialMonthUtils.js";
 
 const INTERVAL_OPTIONS = [
   { months: 1, label: "Monatlich" },
