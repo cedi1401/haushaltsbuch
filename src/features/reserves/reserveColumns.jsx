@@ -56,6 +56,9 @@ export function buildReserveColumns({ fmt, potNameById, groupNameById }) {
       alwaysVisible: true,
       sortValue: (row) => String(row.item?.name ?? "").toLowerCase(),
       render: (row) => row.item?.name,
+      // Kein Betrag, aber die Summenzelle, die am weitesten links steht — dort
+      // liest sich die Anzahl als Beschriftung des Totals.
+      summarize: (rows) => `${rows.length} Position${rows.length === 1 ? "" : "en"}`,
     },
     {
       id: "purpose",

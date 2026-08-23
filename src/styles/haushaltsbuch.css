@@ -1805,8 +1805,14 @@ select.hb-input option {
 
 .hb-dt-scroll {
   /* Desktop-App: die Tabelle darf horizontal scrollen, es gibt bewusst kein
-     responsives Umschalten. In P6.3 kommen hier max-height + overflow-y dazu. */
-  overflow-x: auto;
+     responsives Umschalten.
+
+     Die Höhenbegrenzung ist zugleich die Voraussetzung für den sticky Kopf:
+     .hb-table-wrap taugt dafür nicht, weil dort zwar overflow-y per Spec auf
+     auto rechnet, der Kasten aber nie vertikal scrollt — ein sticky <th> hätte
+     nichts, woran es kleben könnte. */
+  overflow: auto;
+  max-height: calc(100vh - 260px);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -1825,6 +1831,13 @@ select.hb-input option {
 
 /* Kopfzeile — Typografie identisch zu .hb-table th */
 .hb-dt-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  /* Ohne eigenen Hintergrund scheinen die Zeilen beim Scrollen durch den Kopf.
+     Und weil .hb-dt-table border-collapse: separate setzt, wandert der
+     Unterstrich mit — bei collapse gehört er der Tabelle und bliebe stehen. */
+  background: var(--card);
   text-align: left;
   padding: 10px 10px;
   border-bottom: 1px solid var(--border);
@@ -1857,6 +1870,27 @@ select.hb-input option {
    Detailzeile (P6.3/P7) sind keine Datenzeilen und sollen nicht hovern. */
 .hb-dt-row:hover td {
   background: var(--hover-bg);
+}
+
+/* Summenzeile am Tabellenfuss. Spaltenweise ausgerichtet — am Fuss liest sich
+   eine ausgerichtete Zahl als Total, und versteckte Spalten fallen von selbst
+   heraus, weil die Komponente summarize() nur für sichtbare Spalten aufruft.
+   Der Trennstrich sitzt oben, weil die letzte Datenzeile ihren verliert. */
+.hb-dt-table tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding: 10px 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Die Anzahl links ist Beschriftung, kein Wert — sie tritt zurück. */
+.hb-dt-summary td:first-child {
+  color: var(--muted);
+  font-weight: 500;
 }
 
 /* Zahlenspalte — greift auf th und td */

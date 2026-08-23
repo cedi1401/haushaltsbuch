@@ -29,6 +29,10 @@ import React from "react";
 export default function DataTable({ columns, sections }) {
   const visible = columns.filter((c) => c.defaultVisible);
 
+  // Die Summenzeile liest alle Zeilen der Tabelle, nicht die einer Sektion —
+  // sie beantwortet die Frage „wie viel muss insgesamt in den Töpfen liegen".
+  const allRows = sections.flatMap((s) => s.rows);
+
   return (
     <div className="hb-dt">
       <div className="hb-dt-scroll">
@@ -62,6 +66,18 @@ export default function DataTable({ columns, sections }) {
               ))}
             </tbody>
           ))}
+          <tfoot>
+            <tr className="hb-dt-summary">
+              {visible.map((col) => (
+                <td
+                  key={col.id}
+                  className={col.align === "right" ? "hb-dt-num" : undefined}
+                >
+                  {col.summarize ? col.summarize(allRows) : null}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
