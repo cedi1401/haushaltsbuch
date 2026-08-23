@@ -1439,6 +1439,38 @@ select.hb-input option {
   text-overflow: ellipsis;
 }
 
+/* Pillen-Zeile unter dem Namen. Horizontal statt im Spaltenfluss von
+   .hb-fct-name-block: Eine zweite Pille darf die Zeilenhöhe der Übersicht
+   nicht verändern — die Grid-Rows sind `auto` und würden sonst je Zeile
+   unterschiedlich hoch. */
+.hb-fct-name-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Nur die Kategorie-/Zweck-Pille kürzt; der Marker bleibt immer vollständig
+   lesbar. min-width: 0 ist nötig, weil Flex-Items sonst nicht unter ihre
+   Inhaltsbreite schrumpfen und text-overflow nie greift. */
+.hb-fct-name-pills > .hb-fct-overview-cat {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.hb-fct-name-pills > .hb-fct-overview-cat--free {
+  flex: 0 0 auto;
+}
+
+/* Marker „Freies Sparen": die Position zählt in keiner Kennzahl mit —
+   zurückhaltend statt semantisch eingefärbt. Gleiche Metrik wie die
+   Basisklasse, damit die Zeilenhoehe identisch bleibt. */
+.hb-fct-overview-cat--free {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+
 /* Spalte 2: Balken-Zellen */
 .hb-fct-bar-cell {
   display: flex;

@@ -14,9 +14,9 @@ import HbTooltip from "../components/HbTooltip.jsx";
 import HbSparklineHover from "../components/HbSparklineHover.jsx";
 import { IconTag } from "../components/icons.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
-import { getCategoryLabel, formatCurrencyAxis } from "../utils/hbUtils.js";
+import { getCategoryLabel, formatCurrencyAxis, fixedCostKind } from "../utils/hbUtils.js";
 import { FALLBACK_CATEGORY_COLOR } from "../utils/hbPalette.js";
-import { monthlyRate, annualAmount } from "../utils/fixedCostUtils.js";
+import { monthlyRate, annualAmount, isSinkingFund } from "../utils/fixedCostUtils.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { MONTHS_SHORT, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 
@@ -69,6 +69,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
   kpis,
   recurringExpenses,
   expenseCategories,
+  pots = [],
   avgMonthlyExpense = 0,
 }) {
   const fmt = useFmt();
@@ -115,12 +116,19 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
     [recurringExpenses]
   );
 
-  // Items nach Betrag sortiert — nur mit showInOverview, nur Hauptkategorie
+  // Items nach Betrag sortiert — nur mit showInOverview, nur Hauptkategorie.
+  // Transfer-Positionen tragen kein `categoryId`; ihr Label ist Zweck → Topf
+  // (dasselbe Muster wie die Fixkosten-Card) und ihre Farbe eine feste,
+  // vom Chart-Akzent unterscheidbare (D8).
   const activeItems = useMemo(() => {
     const allOverviewItems = (recurringExpenses || [])
       .filter((r) => r.showInOverview !== false)
       .map((r) => {
-        const cat = (expenseCategories || []).find((c) => c.id === r.categoryId);
+        const isTransfer = fixedCostKind(r) === "transfer";
+        const cat = isTransfer ? null : (expenseCategories || []).find((c) => c.id === r.categoryId);
+        const potName = isTransfer
+          ? ((pots || []).find((p) => p.id === r.potId)?.name || r.potId)
+          : null;
         return {
           ...r,
           // `amount` ist ab hier die Monatsrate, `annual` der Jahresbetrag.
@@ -128,8 +136,14 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
           // sonst ginge der Zyklusbetrag der Rücklagen verloren.
           amount: monthlyRate(r),
           annual: annualAmount(r),
-          categoryLabel: getCategoryLabel(expenseCategories || [], [], r.categoryId, null),
-          color: cat?.color || FALLBACK_CATEGORY_COLOR,
+          isTransfer,
+          // Freies Sparen: bleibt sichtbar, zählt aber in keine Kennzahl der
+          // Karte (D6). Die Pille ist der sichtbare Träger der Kostenregel.
+          isFreeSaving: isTransfer && !isSinkingFund(r),
+          categoryLabel: isTransfer
+            ? `${r.transferCategory || "Transfer"} → ${potName}`
+            : getCategoryLabel(expenseCategories || [], [], r.categoryId, null),
+          color: isTransfer ? themeColors.teal : (cat?.color || FALLBACK_CATEGORY_COLOR),
         };
       })
       .sort((a, b) => b.amount - a.amount);
@@ -140,7 +154,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
 
     const base = avgMonthlyExpense > 0 ? avgMonthlyExpense : (items.reduce((s, r) => s + r.amount, 0) || 1);
     return items.map((r) => ({ ...r, pct: (r.amount / base) * 100 }));
-  }, [recurringExpenses, expenseCategories, avgMonthlyExpense, selectedTags]);
+  }, [recurringExpenses, expenseCategories, pots, themeColors, avgMonthlyExpense, selectedTags]);
 
   // Jahresbetrag-Summe aller sichtbaren Positionen
   const annualTotal = useMemo(
@@ -318,7 +332,17 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                   <span className="hb-fct-item-dot" style={{ background: item.color, flexShrink: 0 }} />
                   <div className="hb-fct-name-block">
                     <span className="hb-fct-overview-name">{item.name}</span>
-                    <span className="hb-fct-overview-cat">{item.categoryLabel}</span>
+                    <div className="hb-fct-name-pills">
+                      <span className="hb-fct-overview-cat">{item.categoryLabel}</span>
+                      {item.isFreeSaving && (
+                        <span
+                          className="hb-fct-overview-cat hb-fct-overview-cat--free"
+                          title="Ohne Turnus — zählt nicht in die Fixkostenbelastung"
+                        >
+                          Freies Sparen
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>,
 

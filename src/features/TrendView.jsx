@@ -589,6 +589,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
             kpis={kpis}
             recurringExpenses={recurringExpenses}
             expenseCategories={expenseCategories}
+            pots={pots}
             avgMonthlyExpense={avg.expense}
           />
         </>
