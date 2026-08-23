@@ -1848,6 +1848,51 @@ select.hb-input option {
   white-space: nowrap;
 }
 
+/* Der Spaltenkopf ist ein Button — er füllt die Zelle aus, damit die ganze
+   Kopfzelle klickbar bleibt, und erbt ihre Typografie. */
+.hb-dt-th-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.hb-dt-th-btn:hover { color: var(--text); }
+
+.hb-dt-th-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Zahlenspalten: Beschriftung und Pfeil rücken nach rechts. */
+.hb-dt-num .hb-dt-th-btn { justify-content: flex-end; }
+
+/* Der Pfeil steht nur an der aktiven Spalte; an der überfahrenen erscheint er
+   halbtransparent als Hinweis darauf, dass die Spalte sortierbar ist. Er
+   belegt seinen Platz immer, sonst springt die Beschriftung beim Hover. */
+.hb-dt-sort-arrow {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.hb-dt-th-btn:hover .hb-dt-sort-arrow { opacity: 0.45; }
+
+.hb-dt-sort-arrow--active,
+.hb-dt-th-btn:hover .hb-dt-sort-arrow--active {
+  opacity: 1;
+  color: var(--accent);
+}
+
 /* Datenzeilen. height wirkt in Tabellen als Mindesthöhe: 40 px WinUI-Mass,
    auch wenn eine Zelle nur Text enthält. Umbruch ist überall unterdrückt —
    eine umbrechende Zelle würde genau diese einheitliche Höhe sprengen; zu

@@ -109,7 +109,11 @@ export default function ReservesView({
             </div>
           </div>
         )}
-        <DataTable columns={columns} sections={sections} />
+        <DataTable
+          columns={columns}
+          sections={sections}
+          defaultSort={{ columnId: "nextDue", dir: "asc" }}
+        />
       </CardContent>
     </Card>
   );
