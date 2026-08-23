@@ -1,9 +1,13 @@
 import React, { useMemo } from "react";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 import { Card, CardContent, Button } from "../components/ui.jsx";
+import DataTable from "../components/DataTable.jsx";
 import { IconReserves, IconInfo } from "../components/icons.jsx";
-import { fixedCostKind } from "../utils/hbUtils.js";
-import { isSinkingFund } from "../utils/fixedCostUtils.js";
+import { fixedCostKind, todayISO } from "../utils/hbUtils.js";
+import { isSinkingFund, buildSinkingFundRows } from "../utils/fixedCostUtils.js";
+import { getFinancialMonth } from "../utils/financialMonthUtils.js";
+import { useFmt } from "../contexts/CurrencyContext.jsx";
+import { buildReserveColumns } from "./reserves/reserveColumns.jsx";
 
 /**
  * Rücklagen-View — Überwachung der Transfer-Fixkosten mit Turnus.
@@ -14,9 +18,14 @@ import { isSinkingFund } from "../utils/fixedCostUtils.js";
  */
 export default function ReservesView({
   activeBook,
+  entries,
+  monthStartDay = 1,
   onNavigateToFixed,
 }) {
+  const fmt = useFmt();
   const recurringExpenses = activeBook?.recurringExpenses || EMPTY_ARRAY;
+  const pots = activeBook?.pots || EMPTY_ARRAY;
+  const fixedCostGroups = activeBook?.fixedCostGroups || EMPTY_ARRAY;
 
   const items = useMemo(
     () => recurringExpenses.filter((r) => fixedCostKind(r) === "transfer"),
@@ -27,6 +36,43 @@ export default function ReservesView({
   // erzeugt: Positionen vorhanden, aber keine einzige mit Zyklus. Er
   // verschwindet mit der ersten nachgepflegten Position von selbst.
   const hasAnyTurnus = useMemo(() => items.some(isSinkingFund), [items]);
+
+  // Gebuchte Beträge des laufenden Finanzmonats je Position. Zugeordnet wird
+  // über `recurringId` — der Notiztext ist seit P2 nicht mehr die Grundlage,
+  // eine umbenannte Position behält so ihre Historie.
+  const bookedByRecurringId = useMemo(() => {
+    const currentMonth = getFinancialMonth(todayISO(), monthStartDay)?.yyyymm;
+    const map = new Map();
+    if (!currentMonth) return map;
+    for (const e of entries || []) {
+      if (e.kind !== "transfer" || !e.recurringId) continue;
+      if (getFinancialMonth(e.date, monthStartDay)?.yyyymm !== currentMonth) continue;
+      map.set(e.recurringId, (map.get(e.recurringId) || 0) + Number(e.amount || 0));
+    }
+    return map;
+  }, [entries, monthStartDay]);
+
+  const rows = useMemo(
+    () =>
+      buildSinkingFundRows(items, entries, { monthStartDay }).map((row) => ({
+        ...row,
+        id: row.item.id,
+        bookedThisMonth: bookedByRecurringId.get(row.item.id) ?? null,
+      })),
+    [items, entries, monthStartDay, bookedByRecurringId]
+  );
+
+  const columns = useMemo(() => {
+    const potNameById = new Map(pots.map((p) => [p.id, p.name]));
+    const groupNameById = new Map(fixedCostGroups.map((g) => [g.id, g.name]));
+    return buildReserveColumns({ fmt, potNameById, groupNameById });
+  }, [fmt, pots, fixedCostGroups]);
+
+  // Eine einzige Sektion ohne Band — die Gliederung nach Gruppen kommt in P7.1.
+  const sections = useMemo(
+    () => [{ key: "__ungrouped", label: null, accent: null, meta: null, rows }],
+    [rows]
+  );
 
   if (items.length === 0) {
     return (
@@ -63,7 +109,7 @@ export default function ReservesView({
             </div>
           </div>
         )}
-        <h3 className="hb-card-title">Rücklagen</h3>
+        <DataTable columns={columns} sections={sections} />
       </CardContent>
     </Card>
   );
