@@ -1801,6 +1801,11 @@ select.hb-input option {
      Flex-/Grid-Container hängt. Ohne min-width: 0 wüchse ein auto-Layout-
      Tisch am Container vorbei, statt zu scrollen. */
   min-width: 0;
+  /* Was unter dem Scrollkasten noch Platz braucht, bis das Fenster zu Ende
+     ist: 20 px Karten-Padding + 1 px Karten-Rahmen + 24 px Seiten-Padding.
+     Steht die Tabelle einmal in einer anderen Umgebung, ist das die eine
+     Zahl, die der View überschreibt. */
+  --hb-dt-gap: 45px;
 }
 
 .hb-dt-scroll {
@@ -1810,9 +1815,20 @@ select.hb-input option {
      Die Höhenbegrenzung ist zugleich die Voraussetzung für den sticky Kopf:
      .hb-table-wrap taugt dafür nicht, weil dort zwar overflow-y per Spec auf
      auto rechnet, der Kasten aber nie vertikal scrollt — ein sticky <th> hätte
-     nichts, woran es kleben könnte. */
+     nichts, woran es kleben könnte.
+
+     --hb-dt-room ist der Abstand von der Oberkante des Kastens bis zur
+     Unterkante des Fensters; `DataTable` misst ihn und schreibt ihn hier
+     hinein. Raten lässt er sich nicht: über dem Kasten stehen je nach Zustand
+     Toolbar, Hinweisstreifen und Karten-Padding. Ein zu grosser Wert schiebt
+     die Summenzeile unter den Fensterrand (und die Seite bekommt eine zweite
+     Bildlaufleiste), ein zu kleiner lässt unter der Karte Luft und erzeugt die
+     innere Leiste früher als nötig. Der Fallback greift nur im allerersten
+     Layout-Durchgang; die Untergrenze verhindert, dass der Kasten in einem
+     niedrigen Fenster auf ein paar Zeilen zusammenfällt — dann scrollt
+     lieber die Seite. */
   overflow: auto;
-  max-height: calc(100vh - 260px);
+  max-height: max(280px, calc(var(--hb-dt-room, 60vh) - var(--hb-dt-gap)));
   -webkit-overflow-scrolling: touch;
 }
 
@@ -1867,9 +1883,11 @@ select.hb-input option {
 
 .hb-dt-th-btn:hover { color: var(--text); }
 
+/* Kein eigenes outline: der projektweite Fokusring (:focus-visible mit
+   box-shadow und --focus-ring) greift hier bereits. Ein zusätzliches Outline
+   ergäbe zwei ineinanderliegende Ringe. Der Radius sorgt nur dafür, dass der
+   geerbte Ring nicht mit scharfen Ecken um die Kopfzelle läuft. */
 .hb-dt-th-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
   border-radius: var(--radius-xs);
 }
 
@@ -1906,8 +1924,14 @@ select.hb-input option {
 }
 
 /* Nur die letzte Zeile der letzten Sektion verliert den Strich — zwischen
-   zwei Sektionen bleibt er als Trenner stehen. */
-.hb-dt-table tbody:last-child .hb-dt-row:last-child td {
+   zwei Sektionen bleibt er als Trenner stehen.
+
+   `last-of-type` statt `last-child`: im Markup folgt auf das letzte <tbody>
+   noch das <tfoot> (Browser rendern es unten, im DOM steht es hinten).
+   `tbody:last-child` trifft deshalb nie — die letzte Datenzeile behielte
+   ihren Strich und stünde zusammen mit dem border-top der Summenzeile als
+   Doppellinie da. */
+.hb-dt-table tbody:last-of-type .hb-dt-row:last-child td {
   border-bottom: 0;
 }
 
@@ -1981,15 +2005,19 @@ select.hb-input option {
 }
 
 /* Elevation/Schatten wie .hb-overflow-menu. Rechts verankert, weil der
-   Auslöser am rechten Rand des Streifens sitzt. */
+   Auslöser am rechten Rand des Streifens sitzt.
+
+   Anders als .hb-cg-group-list scrollt nicht die ganze Liste, sondern nur der
+   Spaltenteil (.hb-dt-columns-scroll): der Katalog hat 17 Einträge, und
+   „Standard wiederherstellen" rutschte sonst unter den unteren Rand — die
+   Aktion, die man gerade dann sucht, wenn man sich verklickt hat. */
 .hb-dt-columns-list {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
   z-index: 80;
   min-width: 240px;
-  max-height: 380px;
-  overflow-y: auto;
+  max-height: min(420px, calc(100vh - 180px));
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -2001,12 +2029,30 @@ select.hb-input option {
 }
 
 .hb-dt-columns-title {
+  flex-shrink: 0;
   padding: 6px 12px 8px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+/* Nur dieser Teil scrollt. min-height: 0 ist Pflicht — ohne sie schrumpft ein
+   Flex-Kind nicht unter seine Inhaltshöhe und die Liste wüchse über ihre
+   max-height hinaus, statt innen zu scrollen. */
+.hb-dt-columns-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Der Scrollport schneidet an seiner Padding-Kante ab. Ohne die
+     ausgeglichene Innen-/Aussenkante läge sie genau auf der Kante der
+     Einträge und stutzte den Fokusring (2 px box-shadow) links und rechts.
+     Die Einträge stehen dadurch weiterhin bündig unter dem Titel. */
+  margin: 0 -6px;
+  padding: 0 6px;
 }
 
 .hb-dt-columns-item {
@@ -2061,12 +2107,14 @@ select.hb-input option {
 }
 
 .hb-dt-columns-divider {
+  flex-shrink: 0;
   height: 1px;
   background: var(--border-light);
   margin: 6px 4px;
 }
 
 .hb-dt-columns-item--reset {
+  flex-shrink: 0;
   color: var(--accent);
   font-weight: 600;
 }

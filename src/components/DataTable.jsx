@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTableColumns } from "../hooks/useTableColumns.js";
 import ColumnsFlyout from "./ColumnsFlyout.jsx";
 
@@ -63,6 +63,8 @@ export default function DataTable({ columns, sections, storageKey, defaultSort }
   // sie beantwortet die Frage „wie viel muss insgesamt in den Töpfen liegen".
   const allRows = useMemo(() => sections.flatMap((s) => s.rows), [sections]);
 
+  const scrollRef = useScrollRoom();
+
   return (
     <div className="hb-dt">
       {/* Ausserhalb von .hb-dt-scroll: innerhalb wanderte der Streifen beim
@@ -76,7 +78,7 @@ export default function DataTable({ columns, sections, storageKey, defaultSort }
           onReset={reset}
         />
       </div>
-      <div className="hb-dt-scroll">
+      <div className="hb-dt-scroll" ref={scrollRef}>
         <table className="hb-dt-table">
           <thead>
             <tr>
@@ -134,6 +136,54 @@ export default function DataTable({ columns, sections, storageKey, defaultSort }
       </div>
     </div>
   );
+}
+
+/**
+ * Misst, wie viel Fensterhöhe unterhalb der Oberkante des Scrollkastens noch
+ * übrig ist, und legt das Ergebnis als `--hb-dt-room` auf dem Kasten ab. Das
+ * CSS zieht davon `--hb-dt-gap` ab (was unter der Tabelle noch folgt) und macht
+ * daraus die `max-height`.
+ *
+ * Warum überhaupt gemessen wird: Über der Tabelle stehen je nach Zustand
+ * Toolbar-Streifen, Hinweisstreifen und Karten-Padding. Ein fester
+ * `calc(100vh - X)` ist deshalb entweder zu gross — dann steht die Summenzeile
+ * unter dem Fensterrand und die Seite bekommt eine zweite Bildlaufleiste neben
+ * der des Kastens — oder zu klein, dann bleibt unter der Karte Luft und die
+ * innere Leiste erscheint früher als nötig. Sitzt der Wert dagegen genau,
+ * scrollt ausschliesslich die Tabelle, und Kopf- wie Summenzeile bleiben
+ * stehen: das ist der eigentliche Zweck von P6.3.
+ *
+ * Gemessen wird der Abstand zum *Dokumentanfang* (`+ scrollY`), nicht der
+ * aktuelle Abstand zum Fensterrand — sonst schrumpfte der Kasten mit jedem
+ * Scrollen weiter. `clientHeight` statt `innerHeight`, weil eine waagrechte
+ * Bildlaufleiste des Dokuments (schmales Fenster, `.hb-page-container` hat
+ * 1600 px Mindestbreite) sonst nicht abgezogen würde.
+ *
+ * Bewusst ohne ResizeObserver: Der Effekt läuft nach jedem Render und damit
+ * auch dann, wenn der Hinweisstreifen des Views auf- oder zugeht; für alles
+ * Übrige genügt `resize`. Der Vergleich mit dem zuletzt geschriebenen Wert
+ * hält die Schreibzugriffe aus dem Layout-Pfad heraus.
+ */
+function useScrollRoom() {
+  const ref = useRef(null);
+  const lastRoom = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      const room = Math.round(document.documentElement.clientHeight - top);
+      if (room === lastRoom.current) return;
+      lastRoom.current = room;
+      el.style.setProperty("--hb-dt-room", `${room}px`);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  });
+
+  return ref;
 }
 
 /**

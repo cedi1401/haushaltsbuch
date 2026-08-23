@@ -86,24 +86,30 @@ export default function ColumnsFlyout({ columns, visibleIds, onToggle, onReset }
           onKeyDown={handleMenuKeyDown}
         >
           <div className="hb-dt-columns-title">Spalten</div>
-          {columns.map((col) => {
-            const checked = col.alwaysVisible || visible.has(col.id);
-            return (
-              <button
-                key={col.id}
-                type="button"
-                role="menuitemcheckbox"
-                aria-checked={checked}
-                disabled={col.alwaysVisible}
-                title={col.alwaysVisible ? `${col.label} bleibt immer sichtbar.` : undefined}
-                className={"hb-dt-columns-item" + (checked ? " hb-dt-columns-item--active" : "")}
-                onClick={() => onToggle(col.id)}
-              >
-                <span className="hb-dt-columns-item-name">{col.label}</span>
-                {checked && <IconCheck width={16} height={16} className="hb-dt-columns-item-check" />}
-              </button>
-            );
-          })}
+          {/* Nur die Spaltenliste scrollt — „Standard wiederherstellen" bleibt
+              sichtbar. role="none" hält die Menü-Beziehung intakt: ein <div>
+              zwischen role="menu" und den menuitemcheckbox-Kindern würde sie
+              sonst kappen. */}
+          <div className="hb-dt-columns-scroll" role="none">
+            {columns.map((col) => {
+              const checked = col.alwaysVisible || visible.has(col.id);
+              return (
+                <button
+                  key={col.id}
+                  type="button"
+                  role="menuitemcheckbox"
+                  aria-checked={checked}
+                  disabled={col.alwaysVisible}
+                  title={col.alwaysVisible ? `${col.label} bleibt immer sichtbar.` : undefined}
+                  className={"hb-dt-columns-item" + (checked ? " hb-dt-columns-item--active" : "")}
+                  onClick={() => onToggle(col.id)}
+                >
+                  <span className="hb-dt-columns-item-name">{col.label}</span>
+                  {checked && <IconCheck width={16} height={16} className="hb-dt-columns-item-check" />}
+                </button>
+              );
+            })}
+          </div>
           <div className="hb-dt-columns-divider" />
           <button
             type="button"

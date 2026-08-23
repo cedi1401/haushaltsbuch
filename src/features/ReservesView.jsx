@@ -102,7 +102,7 @@ export default function ReservesView({
             <div className="hb-infobar-content">
               <div className="hb-infobar-title">Noch keine Position mit Turnus</div>
               <div className="hb-infobar-message">
-                Trag bei einer Transfer-Fixkosten Turnus und nächste Fälligkeit nach — erst
+                Trag bei einer Transfer-Position Turnus und nächste Fälligkeit nach — erst
                 dann berechnet diese Ansicht Soll-Stand, Zyklus und Status. Ohne Turnus gilt
                 eine Position als freies Sparen und zählt nicht als Fixkostenbelastung.
               </div>

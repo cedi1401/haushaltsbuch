@@ -14,6 +14,13 @@ const STATUS_LABEL = {
   free: "Freies Sparen",
 };
 
+// Sortierrang nach Handlungsbedarf, nicht alphabetisch. Alphabetisch stünde
+// „Fällig" vor „Im Plan" vor „Rückstand" — eine Reihenfolge, die nichts
+// bedeutet. Aufsteigend gelesen steht hier oben, was zuerst Aufmerksamkeit
+// braucht; dieselbe Leserichtung wie in der Differenz-Spalte, wo der erste
+// Klick den grössten Fehlbetrag nach oben holt.
+const STATUS_ORDER = { overdue: 0, due: 1, behind: 2, onTrack: 3, free: 4 };
+
 /**
  * Vorbelegung: die Kernaussage des Views in acht Spalten. Alles Übrige ist über
  * die Spaltenauswahl zuschaltbar. „Letzte Zahlung" ist bewusst dabei — sie macht
@@ -100,9 +107,11 @@ export function buildReserveColumns({ fmt, potNameById, groupNameById }) {
       id: "turnus",
       label: "Turnus",
       sortValue: (row) => (row.isSinkingFund ? row.turnusMonths : null),
+      // Gross geschrieben wie die Werte aus TURNUS_LABEL — in einer Zelle steht
+      // die Angabe für sich und nicht im Satz.
       render: (row) =>
         row.isSinkingFund
-          ? TURNUS_LABEL[row.turnusMonths] || `alle ${row.turnusMonths} Monate`
+          ? TURNUS_LABEL[row.turnusMonths] || `Alle ${row.turnusMonths} Monate`
           : null,
     },
     {
@@ -200,13 +209,19 @@ export function buildReserveColumns({ fmt, potNameById, groupNameById }) {
       label: "Diesen Monat gebucht",
       align: "right",
       sortValue: (row) => row.bookedThisMonth,
-      render: (row) => (row.bookedThisMonth ? fmt(row.bookedThisMonth) : null),
+      // Nicht auf Wahrheitswert prüfen: eine Position, auf die gebucht und im
+      // selben Monat wieder zurückgebucht wurde, steht auf 0 — und 0 ist eine
+      // Aussage („diesen Monat unter dem Strich nichts"), „—" wäre falsch.
+      render: (row) =>
+        row.bookedThisMonth === null || row.bookedThisMonth === undefined
+          ? null
+          : fmt(row.bookedThisMonth),
       summarize: (rows) => fmt(sumBy(rows, (r) => r.bookedThisMonth)),
     },
     {
       id: "status",
       label: "Status",
-      sortValue: (row) => STATUS_LABEL[row.status] ?? null,
+      sortValue: (row) => STATUS_ORDER[row.status] ?? null,
       render: (row) => STATUS_LABEL[row.status] ?? null,
     },
   ];

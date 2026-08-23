@@ -75,15 +75,21 @@ export function IconFixed(props) {
 }
 
 // Münzstapel — Rücklagen-View. Deckel-Ellipse, Zylinder-Silhouette, ein
-// Trennbogen: zwei Münzen. Drei Bögen liefen bei 18px und strokeWidth 1.6
-// ineinander. Vertikale Ausdehnung y 4.3–19.3, optischer Mittelpunkt 11.8 —
-// dasselbe Raster wie IconPots und IconGoals.
+// Trennbogen: zwei Münzen (D10). Ein zweiter Trennbogen liesse bei 18 px und
+// 1.6 Strichstärke nur ~1.5 px Luft zwischen den Bögen — auf einem Windows-
+// Display ohne Skalierung verschmieren die drei Bögen dann zu einem Block.
+//
+// Ausdehnung y 4.0–20.0 (16 Einheiten) mit optischem Mittelpunkt exakt 12:
+// vorher waren es 15 Einheiten um 11.8, das Icon sass damit sichtbar tiefer
+// und kleiner als IconFixed (16) und IconCostGroups (18) daneben. Der
+// Münzkörper misst 5.2 Einheiten, der Abstand zwischen Trenn- und Bodenbogen
+// bleibt bei 18 px damit ~2.7 px — deutlich getrennt.
 export function IconReserves(props) {
   return (
     <svg {...baseProps} {...props}>
-      <ellipse cx="12" cy="7.2" rx="7" ry="2.9" />
-      <path d="M5 7.2v9.2a7 2.9 0 0 0 14 0V7.2" />
-      <path d="M5 11.8a7 2.9 0 0 0 14 0" />
+      <ellipse cx="12" cy="6.8" rx="7" ry="2.8" />
+      <path d="M5 6.8v10.4a7 2.8 0 0 0 14 0V6.8" />
+      <path d="M5 12a7 2.8 0 0 0 14 0" />
     </svg>
   );
 }
