@@ -235,7 +235,7 @@ export function sinkingFundStatus(item, entries, opts = {}) {
  * Ist-Stand genau dann, wenn beide übereinstimmen.
  */
 function purposeKey(item) {
-  return `${item?.potId ?? ""} ${String(item?.transferCategory ?? "").trim()}`;
+  return `${item?.potId ?? ""}\u0000${String(item?.transferCategory ?? "").trim()}`;
 }
 
 /**
