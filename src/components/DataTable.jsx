@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from "react";
+import { useTableColumns } from "../hooks/useTableColumns.js";
+import ColumnsFlyout from "./ColumnsFlyout.jsx";
 
 /**
  * Generische Tabelle. Fachfrei: sie kennt weder Rücklagen noch Währungen.
@@ -14,7 +16,7 @@ import React, { useMemo, useState } from "react";
  *     label,
  *     align,                    // "right" ⇒ rechtsbündig + tabular-nums
  *     alwaysVisible,            // true ⇒ im Flyout ausgegraut + angehakt
- *     defaultVisible,           // Teil der Vorbelegung
+ *     defaultVisible,           // Teil der Vorbelegung (Ausgangszustand)
  *     sortValue: (row) => …,    // null sortiert immer ans Ende
  *     render: (row) => node,    // null/undefined/"" ⇒ „—"
  *     summarize: (rows) => node // fehlt ⇒ Summenzelle bleibt leer
@@ -26,8 +28,12 @@ import React, { useMemo, useState } from "react";
  * Bewusst nicht vorgesehen: Zeilen-Auswahl, Filter, Paginierung, onRowClick,
  * Dichte-Option, renderEmpty (Leerzustände liegen im View), getRowId.
  */
-export default function DataTable({ columns, sections, defaultSort }) {
-  const visible = useMemo(() => columns.filter((c) => c.defaultVisible), [columns]);
+export default function DataTable({ columns, sections, storageKey, defaultSort }) {
+  const { visibleIds, toggle, reset } = useTableColumns(storageKey, columns);
+  const visible = useMemo(() => {
+    const chosen = new Set(visibleIds);
+    return columns.filter((c) => chosen.has(c.id));
+  }, [columns, visibleIds]);
 
   const [sort, setSort] = useState(defaultSort ?? null);
   const sortCol = useMemo(
@@ -59,6 +65,17 @@ export default function DataTable({ columns, sections, defaultSort }) {
 
   return (
     <div className="hb-dt">
+      {/* Ausserhalb von .hb-dt-scroll: innerhalb wanderte der Streifen beim
+          horizontalen Scrollen mit den Spalten nach links aus und der
+          Spalten-Button verschwände. */}
+      <div className="hb-dt-toolbar">
+        <ColumnsFlyout
+          columns={columns}
+          visibleIds={visibleIds}
+          onToggle={toggle}
+          onReset={reset}
+        />
+      </div>
       <div className="hb-dt-scroll">
         <table className="hb-dt-table">
           <thead>

@@ -141,6 +141,19 @@ export function IconCheck(props) {
   );
 }
 
+// Spaltenauswahl — Tabellenrahmen mit zwei senkrechten Trennern. Anders als
+// IconFixed und IconCostGroups liegen die Linien hier vertikal; das Icon sitzt
+// ohnehin auf einem beschrifteten Button und nicht im NavDrawer.
+export function IconColumns(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <line x1="9" y1="5" x2="9" y2="19" />
+      <line x1="15" y1="5" x2="15" y2="19" />
+    </svg>
+  );
+}
+
 export function IconInfo(props) {
   return (
     <svg {...baseProps} {...props}>

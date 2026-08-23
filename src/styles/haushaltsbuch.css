@@ -1938,6 +1938,144 @@ select.hb-input option {
   font-weight: 500;
 }
 
+/* Toolbar-Streifen über der Tabelle. Sitzt bewusst AUSSERHALB von
+   .hb-dt-scroll — innerhalb wanderte er beim horizontalen Scrollen mit den
+   Spalten nach links aus. */
+.hb-dt-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* Spaltenauswahl. Mechanik und Optik folgen dem Gruppen-Flyout im
+   Kostenrechner (.hb-cg-group-list) — Häkchen statt Checkbox-Kasten. */
+.hb-dt-columns {
+  position: relative;
+}
+
+.hb-dt-columns-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.hb-dt-columns-trigger:hover {
+  background: var(--hover-bg);
+  color: var(--text);
+}
+
+.hb-dt-columns-trigger:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Elevation/Schatten wie .hb-overflow-menu. Rechts verankert, weil der
+   Auslöser am rechten Rand des Streifens sitzt. */
+.hb-dt-columns-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 80;
+  min-width: 240px;
+  max-height: 380px;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hb-dt-columns-title {
+  padding: 6px 12px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hb-dt-columns-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.hb-dt-columns-item:hover:not(:disabled),
+.hb-dt-columns-item:focus-visible {
+  outline: none;
+  background: var(--hover-bg);
+}
+
+/* Nicht abwählbare Spalten erscheinen ausgegraut UND angehakt statt zu
+   fehlen — sonst sähe der Katalog unvollständig aus. */
+.hb-dt-columns-item:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.hb-dt-columns-item:disabled .hb-dt-columns-item-check {
+  color: var(--muted);
+}
+
+.hb-dt-columns-item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-dt-columns-item--active {
+  font-weight: 600;
+}
+
+.hb-dt-columns-item-check {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.hb-dt-columns-divider {
+  height: 1px;
+  background: var(--border-light);
+  margin: 6px 4px;
+}
+
+.hb-dt-columns-item--reset {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.hb-dt-columns-item--reset:hover,
+.hb-dt-columns-item--reset:focus-visible {
+  background: var(--accent-soft);
+}
+
 /* Zahlenspalte — greift auf th und td */
 .hb-dt-table .hb-dt-num {
   text-align: right;
