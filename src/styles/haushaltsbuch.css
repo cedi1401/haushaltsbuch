@@ -1471,6 +1471,12 @@ select.hb-input option {
   font-weight: 500;
 }
 
+/* Der Turnus-Hinweisstreifen ist Flex-Kind der Sektion; deren gap regelt den
+   Abstand, der eigene margin-bottom des Streifens würde ihn verdoppeln. */
+.hb-fct-section > .hb-infobar {
+  margin-bottom: 0;
+}
+
 /* Spalte 2: Balken-Zellen */
 .hb-fct-bar-cell {
   display: flex;
@@ -2920,6 +2926,16 @@ select.hb-input option {
   font-size: 12px;
   font-weight: 600;
   color: var(--text);
+}
+
+/* Marker „Freies Sparen": Transfer ohne Turnus — zählt in keiner
+   Fixkosten-Kennzahl mit. Zurückhaltend statt semantisch eingefärbt, gleiche
+   Metrik wie die Basisklasse. Dasselbe Idiom trägt die Trend-Übersichtsliste
+   in .hb-fct-overview-cat--free. */
+.hb-fixed-cat-pill--free {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
 }
 
 .hb-fixed-cat-dot {

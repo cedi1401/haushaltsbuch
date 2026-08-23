@@ -12,13 +12,22 @@ import {
 import { Card, CardContent, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
 import HbSparklineHover from "../components/HbSparklineHover.jsx";
-import { IconTag } from "../components/icons.jsx";
+import { IconTag, IconInfo } from "../components/icons.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { getCategoryLabel, formatCurrencyAxis, fixedCostKind } from "../utils/hbUtils.js";
 import { FALLBACK_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { monthlyRate, annualAmount, isSinkingFund } from "../utils/fixedCostUtils.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { MONTHS_SHORT, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
+
+// Der zentrale Erklärtext der Kostenregel. Der letzte Satz löst auf, warum
+// in der Übersichtsliste Zeilen stehen, die in keiner Summe auftauchen (D6).
+const HELP_FCT =
+  'Gebuchte Fixkosten über den gewählten Zeitraum (via „Jetzt buchen") und Übersicht aller ' +
+  'konfigurierten Positionen. Als Belastung zählen Ausgaben-Fixkosten und Rücklagen: Transfers ' +
+  'mit Turnus gehen mit ihrer Monatsrate ein, nicht mit dem Rechnungsbetrag des ganzen Zyklus. ' +
+  'Ein Transfer ohne Turnus ist freies Sparen — er bleibt in der Übersicht, zählt aber in keiner ' +
+  'Kennzahl mit.';
 
 function fmtMonthDE(ym) {
   if (!ym) return "";
@@ -70,7 +79,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
   recurringExpenses,
   expenseCategories,
   pots = [],
-  avgMonthlyExpense = 0,
+  avgMonthlyBasis = 0,
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
@@ -152,24 +161,59 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
       ? allOverviewItems
       : allOverviewItems.filter((r) => (r.tags || []).some((t) => selectedTags.has(t)));
 
-    const base = avgMonthlyExpense > 0 ? avgMonthlyExpense : (items.reduce((s, r) => s + r.amount, 0) || 1);
-    return items.map((r) => ({ ...r, pct: (r.amount / base) * 100 }));
-  }, [recurringExpenses, expenseCategories, pots, themeColors, avgMonthlyExpense, selectedTags]);
+    const base = avgMonthlyBasis > 0 ? avgMonthlyBasis : (items.reduce((s, r) => s + r.amount, 0) || 1);
+    // Freies Sparen steckt nicht in `base` — ein Anteil daran wäre eine Zahl
+    // ohne Bezugsgröße. Die Zeile zeigt statt Balken und Prozent ein „—".
+    return items.map((r) => ({ ...r, pct: r.isFreeSaving ? null : (r.amount / base) * 100 }));
+  }, [recurringExpenses, expenseCategories, pots, themeColors, avgMonthlyBasis, selectedTags]);
 
-  // Jahresbetrag-Summe aller sichtbaren Positionen
+  // Beide Summen beziehen sich auf dieselbe Menge — die sichtbaren Zeilen der
+  // Liste (showInOverview plus Tag-Filter). `annualTotal` ist per Konstruktion
+  // das Zwölffache von `visibleMonthlyTotal`, weil annualAmount() über die
+  // gerundete Monatsrate rechnet. Die buchweite Fixkostenbelastung steht
+  // weiterhin in der KPI-Kachel "Konfiguriert pro Monat", die als einzige
+  // Kennzahl die Kostenregel anwendet.
+  const visibleMonthlyTotal = useMemo(
+    () => activeItems.reduce((s, r) => s + r.amount, 0),
+    [activeItems]
+  );
+
   const annualTotal = useMemo(
     () => activeItems.reduce((s, r) => s + r.annual, 0),
     [activeItems]
   );
+
+  // Der Hinweisstreifen hängt an der ungefilterten Liste: Die Kostenregel gilt
+  // buchweit, der Streifen darf nicht durch einen Filterklick verschwinden.
+  const showTurnusHint = useMemo(() => {
+    const list = recurringExpenses || [];
+    return list.some((r) => fixedCostKind(r) === "transfer") && !list.some(isSinkingFund);
+  }, [recurringExpenses]);
 
   return (
     <div className="hb-fct-section">
       <div className="hb-fct-header">
         <div className="hb-title-with-help">
           <h3 className="hb-fct-title">Fixkosten-Entwicklung</h3>
-          <HbTooltip text='Gebuchte Fixkosten über den gewählten Zeitraum (via „Jetzt buchen") und Übersicht aller konfigurierten Positionen.' />
+          <HbTooltip text={HELP_FCT} />
         </div>
       </div>
+
+      {showTurnusHint && (
+        <div className="hb-infobar" role="status">
+          <div className="hb-infobar-icon"><IconInfo /></div>
+          <div className="hb-infobar-content">
+            <div className="hb-infobar-title">Noch keine Position mit Turnus</div>
+            <div className="hb-infobar-message">
+              Transfer-Fixkosten zählen nur dann als Belastung, wenn ein Turnus hinterlegt ist —
+              die Gebucht-Linie und der Anteil an der Gesamtbelastung fallen deshalb niedriger aus
+              als bisher. Trag in der Fixkosten-Ansicht bei einer Transfer-Position Turnus und
+              nächste Fälligkeit nach, dann fließt ihre Monatsrate wieder in Kurve und Kennzahlen
+              ein. Ohne Turnus gilt eine Position als freies Sparen.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPI Strip */}
       <div className="hb-fct-kpis">
@@ -187,7 +231,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
           spark={{ data: fctWindowData, dataKey: "fixedTotal", color: themeColors.accent, caption: fctWindowLabel }}
         />
         <KpiCard
-          label="Ø Anteil an Ausgaben"
+          label="Ø Anteil an der Gesamtbelastung"
           value={kpis.avgShare != null ? `${kpis.avgShare.toFixed(1)} %` : "—"}
           sub="über den Zeitraum"
           spark={{ data: fctWindowData, dataKey: "share", color: themeColors.purple, caption: fctWindowLabel }}
@@ -195,7 +239,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
         <KpiCard
           label="Teuerste Position"
           value={kpis.mostExpensive ? fmt(kpis.mostExpensive.monthlyAmount) : "—"}
-          sub={kpis.mostExpensive?.name ?? null}
+          sub={kpis.mostExpensive ? `${kpis.mostExpensive.name} · pro Monat` : null}
         />
       </div>
 
@@ -308,7 +352,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 )}
               </div>
               <span className="hb-muted" style={{ fontSize: 12, alignSelf: "flex-start", paddingTop: 2 }}>
-                Total: {fmt(kpis.configuredTotal)} pro Monat
+                Summe der Liste: {fmt(visibleMonthlyTotal)} pro Monat
               </span>
             </div>
 
@@ -319,7 +363,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
             >
               {/* Spalten-Header */}
               <div className="hb-fct-col-head" style={{ gridColumn: 1, gridRow: 1 }}>Position</div>
-              <div className="hb-fct-col-head" style={{ gridColumn: 2, gridRow: 1 }}>Anteil Ø-Ausgaben</div>
+              <div className="hb-fct-col-head" style={{ gridColumn: 2, gridRow: 1 }}>Anteil Ø-Belastung</div>
               <div className="hb-fct-col-head hb-fct-col-head--right" style={{ gridColumn: 3, gridRow: 1 }}>Jahresbetrag</div>
 
               {/* Spalte 1 + 2: Items */}
@@ -351,10 +395,19 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                   className="hb-fct-bar-cell"
                   style={{ gridColumn: 2, gridRow: i + 2 }}
                 >
-                  <ProportionBar pct={item.pct} color={item.color} />
+                  {item.isFreeSaving ? (
+                    <div className="hb-fct-prop-track" />
+                  ) : (
+                    <ProportionBar pct={item.pct} color={item.color} />
+                  )}
                   <div className="hb-fct-bar-meta">
                     <span className="hb-fct-overview-amount">{fmt(item.amount)}</span>
-                    <span className="hb-fct-overview-pct">{item.pct.toFixed(1)} %</span>
+                    <span
+                      className="hb-fct-overview-pct"
+                      title={item.isFreeSaving ? "Zählt nicht in die Fixkostenbelastung" : undefined}
+                    >
+                      {item.isFreeSaving ? "—" : `${item.pct.toFixed(1)} %`}
+                    </span>
                   </div>
                 </div>,
               ])}

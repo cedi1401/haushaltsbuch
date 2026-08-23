@@ -618,9 +618,22 @@ export default function FixedCostsView({
     if (fixedCostKind(item) === "transfer") {
       const potName = pots.find((p) => p.id === item.potId)?.name || item.potId;
       return (
-        <span className="hb-fixed-cat-pill">
-          {item.transferCategory || "Transfer"} → {potName}
-        </span>
+        <>
+          <span className="hb-fixed-cat-pill">
+            {item.transferCategory || "Transfer"} → {potName}
+          </span>
+          {/* Ohne Turnus ist die Position freies Sparen und zählt seit der
+              Kostenregel (P5.3) in keiner Fixkosten-Kennzahl mit. Dasselbe
+              Merkmal trägt die Trend-Übersichtsliste. */}
+          {!isSinkingFund(item) && (
+            <span
+              className="hb-fixed-cat-pill hb-fixed-cat-pill--free"
+              title="Ohne Turnus — zählt nicht in die Fixkostenbelastung"
+            >
+              Freies Sparen
+            </span>
+          )}
+        </>
       );
     }
     const cat = expenseCategories.find((c) => c.id === item.categoryId);

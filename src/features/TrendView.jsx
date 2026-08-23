@@ -242,6 +242,15 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
     monthStartDay,
   });
 
+  // Bezugsgrösse der Anteilsbalken in der Fixkosten-Übersicht: die
+  // durchschnittliche Gesamtbelastung (Ausgaben + gebuchte Rücklagen), nicht
+  // mehr `avg.expense`. Sonst rechnete der Balken auf der alten Ausgaben-Basis,
+  // während die KPI-Kachel darüber schon auf der Gesamtbelastung rechnet.
+  const avgMonthlyBasis = useMemo(() => {
+    if (!fixedMonthly.length) return 0;
+    return fixedMonthly.reduce((s, m) => s + (m.basis || 0), 0) / fixedMonthly.length;
+  }, [fixedMonthly]);
+
   const savingsRate = useMemo(() => {
     return avg.income > 0 ? (avg.savings / avg.income) * 100 : 0;
   }, [avg]);
@@ -590,7 +599,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
             recurringExpenses={recurringExpenses}
             expenseCategories={expenseCategories}
             pots={pots}
-            avgMonthlyExpense={avg.expense}
+            avgMonthlyBasis={avgMonthlyBasis}
           />
         </>
       )}

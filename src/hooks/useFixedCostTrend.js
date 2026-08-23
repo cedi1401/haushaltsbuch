@@ -4,7 +4,8 @@ import {
   buildItemTrends,
   detectFixedCostChanges,
 } from "../utils/fixedCostTrendUtils.js";
-import { monthlyRate } from "../utils/fixedCostUtils.js";
+import { monthlyRate, isSinkingFund } from "../utils/fixedCostUtils.js";
+import { fixedCostKind } from "../utils/hbUtils.js";
 
 export function useFixedCostTrend({ entries, recurringExpenses, monthly, monthStartDay }) {
   const fixedMonthly = useMemo(
@@ -23,7 +24,14 @@ export function useFixedCostTrend({ entries, recurringExpenses, monthly, monthSt
   );
 
   const kpis = useMemo(() => {
-    const all = [...(recurringExpenses || [])];
+    // Die Kostenregel bestimmt die Grundmenge aller Kennzahlen dieser Karte:
+    // Ausgaben-Fixkosten und Rücklagen (Transfer MIT Turnus) zählen, freies
+    // Sparen (Transfer OHNE Turnus) zählt nicht. Die Positionen bleiben in der
+    // Übersichtsliste sichtbar und tragen dort eine eigene Pille — nur in die
+    // Kennzahlen gehen sie nicht ein.
+    const all = (recurringExpenses || []).filter(
+      (r) => fixedCostKind(r) === "expense" || isSinkingFund(r)
+    );
     // monthlyRate() statt r.amount: Bei einer Rücklage mit Turnus ist `amount`
     // der Rechnungsbetrag des ganzen Zyklus, nicht der Monatsbetrag.
     const configuredTotal = all.reduce((s, r) => s + monthlyRate(r), 0);
@@ -45,6 +53,8 @@ export function useFixedCostTrend({ entries, recurringExpenses, monthly, monthSt
     // Der Hook liefert bewusst ein aufbereitetes Objekt statt des Roh-Items:
     // Läse der Renderer weiterhin `.amount`, zeigte die Kachel bei einer
     // Jahresrechnung stumm den zwölffachen Wert (Befund C3).
+    // Ebenfalls aus der gefilterten Menge: Eine Position, die in keine Kennzahl
+    // eingeht, darf nicht als teuerste Belastung ausgewiesen werden.
     const topItem = [...all].sort((a, b) => monthlyRate(b) - monthlyRate(a))[0] ?? null;
     const mostExpensive = topItem
       ? { name: topItem.name, monthlyAmount: monthlyRate(topItem) }

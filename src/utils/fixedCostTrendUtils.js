@@ -1,22 +1,35 @@
 import { getEntryFinancialMonth } from "./financialMonthUtils.js";
+import { isSinkingFund } from "./fixedCostUtils.js";
 
 // Matching-Strategie: entry.recurringId === recurringExpense.id — die
 // Herkunftskennung, die "Jetzt buchen" setzt (buildEntryFromItem). Bewusst OHNE
 // Fallback auf den Notiztext: eine umbenannte Position behält so ihre Historie,
 // und ein manuell erfasster Eintrag mit passendem Namen zählt nicht mit.
 
-function buildMonthItemMap(entries, recurringExpenses, monthStartDay) {
-  const ids = new Set((recurringExpenses || []).map((r) => r.id).filter(Boolean));
+// Index über die Positionen: die Kostenregel braucht nicht nur die ID, sondern
+// das Item selbst (Turnus).
+function buildItemById(recurringExpenses) {
+  return new Map((recurringExpenses || []).filter((r) => r?.id).map((r) => [r.id, r]));
+}
+
+function buildMonthItemMap(entries, itemById, monthStartDay) {
   const map = new Map(); // ym → Map<recurringId, amount>
 
   for (const e of entries || []) {
-    if (!e.recurringId || !ids.has(e.recurringId)) continue;
+    if (!e.recurringId) continue;
+    const item = itemById.get(e.recurringId);
+    if (!item) continue;
     // Ausgaben nur aus dem Monatsbudget: eine aus einem Topf bezahlte Ausgabe
     // steckt nicht im Ausgaben-Nenner (m.expense) und würde den Anteilswert
     // überhöhen.
     if (e.kind === "expense") {
       if (e.source !== "month") continue;
-    } else if (e.kind !== "transfer") {
+    } else if (e.kind === "transfer") {
+      // Die Kostenregel: Nur eine Rücklage (Transfer MIT Turnus) ist eine
+      // Belastung. Ein Transfer ohne Turnus ist freies Sparen — er zählt weder
+      // in die Gebucht-Linie noch in den Anteilswert.
+      if (!isSinkingFund(item)) continue;
+    } else {
       continue;
     }
     const ym = getEntryFinancialMonth(e, monthStartDay);
@@ -29,20 +42,48 @@ function buildMonthItemMap(entries, recurringExpenses, monthStartDay) {
   return map;
 }
 
-// Gibt pro Monat: fixedTotal (tatsächlich gebucht), share (% der Gesamtausgaben)
+/**
+ * Gibt pro Monat die gebuchte Fixkostenbelastung und ihren Anteil zurück.
+ *
+ * Die Bezugsgrösse des Anteils ist die **Gesamtbelastung** des Monats, nicht
+ * mehr allein die Ausgaben: `basis = m.expense + sinkingTotal`. Vorher stand im
+ * Zähler die Rücklage, im Nenner aber nur die Ausgaben — der Anteil war
+ * systematisch überhöht und konnte 100 % überschreiten. Eine Rücklage ist ein
+ * Transfer, keine Ausgabe; sie muss in beiden Seiten des Bruchs stehen.
+ *
+ * Die spätere Rechnungszahlung erzeugt dabei keine Doppelzählung: Sie wird als
+ * Entnahme aus dem Topf gebucht (`kind: "expense", source: "pot"`) und fällt
+ * damit aus Zähler wie Nenner heraus.
+ *
+ * @returns {Array<{month: string, label: string, fixedTotal: number,
+ *   expenseFixedTotal: number, sinkingTotal: number, basis: number,
+ *   share: number|null}>}
+ */
 export function buildFixedCostMonthlyData(entries, recurringExpenses, monthlyAggregates, monthStartDay) {
-  const monthItemMap = buildMonthItemMap(entries, recurringExpenses, monthStartDay);
+  const itemById = buildItemById(recurringExpenses);
+  const monthItemMap = buildMonthItemMap(entries, itemById, monthStartDay);
 
   return (monthlyAggregates || []).map((m) => {
     const inner = monthItemMap.get(m.month);
-    const fixedTotal = inner ? Array.from(inner.values()).reduce((s, v) => s + v, 0) : 0;
-    const totalExpense = m.expense || 0;
-    const share = totalExpense > 0 ? (fixedTotal / totalExpense) * 100 : null;
+    let expenseFixedTotal = 0;
+    let sinkingTotal = 0;
+    if (inner) {
+      for (const [id, amount] of inner) {
+        if (isSinkingFund(itemById.get(id))) sinkingTotal += amount;
+        else expenseFixedTotal += amount;
+      }
+    }
+    // fixedTotal behält seinen Namen: Chart-Linie und Sparkline lesen ihn.
+    const fixedTotal = expenseFixedTotal + sinkingTotal;
+    const basis = (m.expense || 0) + sinkingTotal;
+    const share = basis > 0 ? (fixedTotal / basis) * 100 : null;
     return {
       month: m.month,
       label: m.label,
       fixedTotal,
-      totalExpense,
+      expenseFixedTotal,
+      sinkingTotal,
+      basis,
       share,
     };
   });
@@ -52,7 +93,7 @@ export function buildFixedCostMonthlyData(entries, recurringExpenses, monthlyAgg
 export function buildItemTrends(entries, recurringExpenses, monthlyAggregates, monthStartDay) {
   const months = (monthlyAggregates || []).map((m) => m.month);
   const monthSet = new Set(months);
-  const monthItemMap = buildMonthItemMap(entries, recurringExpenses, monthStartDay);
+  const monthItemMap = buildMonthItemMap(entries, buildItemById(recurringExpenses), monthStartDay);
 
   // Nur Monate im sichtbaren Bereich berücksichtigen
   const filteredMap = new Map();
