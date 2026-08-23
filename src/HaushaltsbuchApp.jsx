@@ -12,6 +12,7 @@ import TrendView from "./features/TrendView.jsx";
 import PotsView from "./features/PotsView.jsx";
 import GoalsView from "./features/GoalsView.jsx";
 import FixedCostsView from "./features/FixedCostsView.jsx";
+import ReservesView from "./features/ReservesView.jsx";
 import CostGroupsView from "./features/CostGroupsView.jsx";
 import NavDrawer from "./features/NavDrawer.jsx";
 import EditEntryDialog from "./features/EditEntryDialog.jsx";
@@ -37,7 +38,7 @@ import { useEntryActions } from "./hooks/useEntryActions.js";
 
 // Ansichten ohne Monatsbezug — dort ist der Monatsfilter in der Toolbar deaktiviert.
 // "pots" fehlt bewusst: Die Buchungsliste im Töpfe-View filtert nach Monat.
-const VIEW_LABELS = { trend: "Trend", goals: "Sparziele", fixed: "Fixkosten", costgroups: "Kostenrechner" };
+const VIEW_LABELS = { trend: "Trend", goals: "Sparziele", fixed: "Fixkosten", reserves: "Rücklagen", costgroups: "Kostenrechner" };
 
 export default function HaushaltsbuchApp() {
   const toast = useToast();
@@ -259,7 +260,7 @@ export default function HaushaltsbuchApp() {
             isViewWithoutMonth={isViewWithoutMonth}
           />
 
-          <ErrorBoundary context={view === "book" ? "Dashboard" : view === "trend" ? "Trend" : view === "pots" ? "Töpfe" : view === "goals" ? "Sparziele" : view === "costgroups" ? "Kostenrechner" : "Fixkosten"}>
+          <ErrorBoundary context={view === "book" ? "Dashboard" : view === "trend" ? "Trend" : view === "pots" ? "Töpfe" : view === "goals" ? "Sparziele" : view === "costgroups" ? "Kostenrechner" : view === "reserves" ? "Rücklagen" : "Fixkosten"}>
             {view === "trend" ? (
               <TrendView
                 entries={entries}
@@ -295,6 +296,15 @@ export default function HaushaltsbuchApp() {
                 onUpdateBook={updateBook}
                 onAddEntry={entryActions.addTransferEntry}
                 onAddEntries={entryActions.addEntries}
+              />
+            ) : view === "reserves" ? (
+              <ReservesView
+                activeBook={activeBook}
+                entries={entries}
+                monthStartDay={monthStartDay}
+                onAddEntry={entryActions.addTransferEntry}
+                onAddEntries={entryActions.addEntries}
+                onNavigateToFixed={() => setView("fixed")}
               />
             ) : view === "costgroups" ? (
               <CostGroupsView
