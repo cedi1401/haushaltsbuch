@@ -5,7 +5,7 @@ import DataTable from "../components/DataTable.jsx";
 import { IconReserves, IconInfo } from "../components/icons.jsx";
 import { fixedCostKind, todayISO } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
-import { isSinkingFund, buildSinkingFundRows } from "../utils/fixedCostUtils.js";
+import { isSinkingFund, buildSinkingFundRows, buildCatchUpRates } from "../utils/fixedCostUtils.js";
 import { getFinancialMonth } from "../utils/financialMonthUtils.js";
 import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
@@ -13,6 +13,7 @@ import { useToast } from "../components/toastContext.js";
 import { buildReserveColumns } from "./reserves/reserveColumns.jsx";
 import ReserveDetail from "./reserves/ReserveDetail.jsx";
 import BillPaidDialog from "./reserves/BillPaidDialog.jsx";
+import BacklogCatchUpDialog from "./reserves/BacklogCatchUpDialog.jsx";
 
 // Sammelschlüssel für Positionen ohne (gültige) Gruppe. Anders als in der
 // Fixkosten-View braucht es hier keinen Schlüssel je Spalte — dieser View zeigt
@@ -31,6 +32,7 @@ export default function ReservesView({
   entries,
   monthStartDay = 1,
   onAddEntry,
+  onAddEntries,
   onNavigateToFixed,
 }) {
   const fmt = useFmt();
@@ -96,14 +98,16 @@ export default function ReservesView({
     return set;
   }, [entries]);
 
-  // Die Aktion schreibt genau einmal. `EditDialog` löst `onSave` auch per
+  // Beide Aktionen schreiben genau einmal. `EditDialog` löst `onSave` auch per
   // Strg+Enter aus und `canSave` bleibt bis zum Unmount wahr — eine zweite
-  // Auslösung erzeugte einen doppelten Eintrag. Der Riegel steht hier und nicht
-  // im Dialog, damit der Dialog seiteneffektfrei bleibt.
+  // Auslösung erzeugte doppelte Einträge, und die Verfügbarkeitsprüfung des
+  // Ausgleichs griffe erst beim nächsten Render. Der Riegel steht deshalb hier
+  // und nicht im Dialog.
   const writingRef = useRef(false);
 
   const [billTarget, setBillTarget] = useState(null);
   const [billDraft, setBillDraft] = useState(null);
+  const [catchUpTarget, setCatchUpTarget] = useState(null);
 
   const openBillPaid = useCallback((row) => {
     writingRef.current = false;
@@ -118,6 +122,11 @@ export default function ReservesView({
     });
   }, []);
 
+  const openCatchUp = useCallback((row) => {
+    writingRef.current = false;
+    setCatchUpTarget(row);
+  }, []);
+
   const renderDetail = useCallback(
     (row, hiddenColumns) => (
       <ReserveDetail
@@ -127,10 +136,24 @@ export default function ReservesView({
         pot={potById.get(row.item?.potId)}
         canCatchUp={row.elapsed > 0 && !bookedRecurringIds.has(row.item?.id)}
         onBillPaid={openBillPaid}
+        onCatchUp={openCatchUp}
         onEdit={onNavigateToFixed}
       />
     ),
-    [fmt, potById, bookedRecurringIds, openBillPaid, onNavigateToFixed]
+    [fmt, potById, bookedRecurringIds, openBillPaid, openCatchUp, onNavigateToFixed]
+  );
+
+  // Die Raten werden hier berechnet und dem Dialog fertig gereicht: dieselbe
+  // Liste, die er anzeigt, ist die, die gebucht wird.
+  const catchUpRates = useMemo(
+    () =>
+      catchUpTarget
+        ? buildCatchUpRates(catchUpTarget.item, {
+            cycleStart: catchUpTarget.cycleStart,
+            monthStartDay,
+          })
+        : EMPTY_ARRAY,
+    [catchUpTarget, monthStartDay]
   );
 
   function confirmBillPaid(entry) {
@@ -142,6 +165,36 @@ export default function ReservesView({
     // rein, und unter StrictMode ruft React Updater in der Entwicklung doppelt auf.
     onAddEntry?.({ id: generateId("entry"), ...entry });
     toast.success(`Zahlung für „${item?.name ?? ""}“ gebucht.`);
+  }
+
+  function confirmCatchUp(rates) {
+    if (writingRef.current) return;
+    writingRef.current = true;
+    const item = catchUpTarget?.item;
+    setCatchUpTarget(null);
+    if (!item || rates.length === 0) return;
+    const newEntries = rates.map((r) => ({
+      id: generateId("entry"),
+      date: r.date,
+      amount: r.amount,
+      category: item.transferCategory,
+      categoryId: null,
+      subcategoryId: null,
+      kind: "transfer",
+      potId: item.potId,
+      note: item.name,
+      // Die Herkunftskennung macht diese Raten für die Trend-Zuordnung zu
+      // regulären Monatsraten — und verbraucht damit die einmalige
+      // Verfügbarkeit dieser Aktion.
+      recurringId: item.id,
+    }));
+    // Eine Batch-Buchung: ein patchActiveBook, ein Commit, ein Save.
+    onAddEntries?.(newEntries);
+    toast.success(
+      rates.length === 1
+        ? `1 Rate für „${item.name}“ gebucht.`
+        : `${rates.length} Raten für „${item.name}“ gebucht.`
+    );
   }
 
   // Gliederung nach den Transfer-Gruppen der Fixkosten-View. Die Reihenfolge ist
@@ -261,6 +314,18 @@ export default function ReservesView({
         onDraftChange={setBillDraft}
         onClose={() => setBillTarget(null)}
         onConfirm={confirmBillPaid}
+      />
+
+      <BacklogCatchUpDialog
+        open={Boolean(catchUpTarget)}
+        item={catchUpTarget?.item}
+        potName={potById.get(catchUpTarget?.item?.potId)?.name}
+        cycleStart={catchUpTarget?.cycleStart}
+        rates={catchUpRates}
+        actual={catchUpTarget?.actual ?? 0}
+        target={catchUpTarget?.target ?? null}
+        onClose={() => setCatchUpTarget(null)}
+        onConfirm={confirmCatchUp}
       />
     </>
   );

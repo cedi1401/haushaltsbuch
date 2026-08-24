@@ -21,6 +21,7 @@ export default function ReserveDetail({
   pot,
   canCatchUp,
   onBillPaid,
+  onCatchUp,
   onEdit,
 }) {
   const purpose = String(row.item?.transferCategory ?? "").trim();
@@ -107,7 +108,7 @@ export default function ReserveDetail({
           </Button>
         )}
         {canCatchUp && (
-          <Button size="sm" variant="outline" disabled>
+          <Button size="sm" variant="outline" onClick={() => onCatchUp?.(row)}>
             Rückstand ausgleichen
           </Button>
         )}
