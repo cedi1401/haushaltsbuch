@@ -2347,6 +2347,12 @@ select.hb-input option {
   transform: rotate(180deg);
 }
 
+/* Der Pfeil dreht sich, der Zustand bleibt derselbe — wer Bewegung reduziert
+   haben will, bekommt ihn direkt gedreht. Muster: .hb-insight-bar-fill. */
+@media (prefers-reduced-motion: reduce) {
+  .hb-dt-chevron svg { transition: none; }
+}
+
 /* Die offene Zeile behält die Hover-Fläche, auch wenn der Zeiger weiterzieht:
    sie und ihr Detailbereich sollen als ein Block lesen. */
 .hb-dt-table tbody .hb-dt-row--open td {
