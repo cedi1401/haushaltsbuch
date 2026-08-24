@@ -1,15 +1,18 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import DataTable from "../components/DataTable.jsx";
 import { IconReserves, IconInfo } from "../components/icons.jsx";
 import { fixedCostKind, todayISO } from "../utils/hbUtils.js";
+import { generateId } from "../utils/idUtils.js";
 import { isSinkingFund, buildSinkingFundRows } from "../utils/fixedCostUtils.js";
 import { getFinancialMonth } from "../utils/financialMonthUtils.js";
 import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
+import { useToast } from "../components/toastContext.js";
 import { buildReserveColumns } from "./reserves/reserveColumns.jsx";
 import ReserveDetail from "./reserves/ReserveDetail.jsx";
+import BillPaidDialog from "./reserves/BillPaidDialog.jsx";
 
 // Sammelschlüssel für Positionen ohne (gültige) Gruppe. Anders als in der
 // Fixkosten-View braucht es hier keinen Schlüssel je Spalte — dieser View zeigt
@@ -27,9 +30,11 @@ export default function ReservesView({
   activeBook,
   entries,
   monthStartDay = 1,
+  onAddEntry,
   onNavigateToFixed,
 }) {
   const fmt = useFmt();
+  const toast = useToast();
   const recurringExpenses = activeBook?.recurringExpenses || EMPTY_ARRAY;
   const pots = activeBook?.pots || EMPTY_ARRAY;
   const fixedCostGroups = activeBook?.fixedCostGroups || EMPTY_ARRAY;
@@ -91,6 +96,28 @@ export default function ReservesView({
     return set;
   }, [entries]);
 
+  // Die Aktion schreibt genau einmal. `EditDialog` löst `onSave` auch per
+  // Strg+Enter aus und `canSave` bleibt bis zum Unmount wahr — eine zweite
+  // Auslösung erzeugte einen doppelten Eintrag. Der Riegel steht hier und nicht
+  // im Dialog, damit der Dialog seiteneffektfrei bleibt.
+  const writingRef = useRef(false);
+
+  const [billTarget, setBillTarget] = useState(null);
+  const [billDraft, setBillDraft] = useState(null);
+
+  const openBillPaid = useCallback((row) => {
+    writingRef.current = false;
+    setBillTarget(row);
+    // Vorbelegt ist der Betrag pro Zyklus — die Rechnung, nicht die Monatsrate.
+    // Die Notiz steht nicht im Konzept, aber ohne sie erscheint die Zahlung in
+    // der Buchungsliste des Töpfe-Views als „—".
+    setBillDraft({
+      date: todayISO(),
+      amount: String(row.item?.amount ?? ""),
+      note: String(row.item?.name ?? ""),
+    });
+  }, []);
+
   const renderDetail = useCallback(
     (row, hiddenColumns) => (
       <ReserveDetail
@@ -99,10 +126,23 @@ export default function ReservesView({
         fmt={fmt}
         pot={potById.get(row.item?.potId)}
         canCatchUp={row.elapsed > 0 && !bookedRecurringIds.has(row.item?.id)}
+        onBillPaid={openBillPaid}
+        onEdit={onNavigateToFixed}
       />
     ),
-    [fmt, potById, bookedRecurringIds]
+    [fmt, potById, bookedRecurringIds, openBillPaid, onNavigateToFixed]
   );
+
+  function confirmBillPaid(entry) {
+    if (writingRef.current) return;
+    writingRef.current = true;
+    const item = billTarget?.item;
+    setBillTarget(null);
+    // Die ID entsteht ausserhalb des State-Updaters: `generateId()` ist nicht
+    // rein, und unter StrictMode ruft React Updater in der Entwicklung doppelt auf.
+    onAddEntry?.({ id: generateId("entry"), ...entry });
+    toast.success(`Zahlung für „${item?.name ?? ""}“ gebucht.`);
+  }
 
   // Gliederung nach den Transfer-Gruppen der Fixkosten-View. Die Reihenfolge ist
   // deren `order` — der Nutzer hat sie dort per Drag festgelegt, eine zweite
@@ -185,31 +225,44 @@ export default function ReservesView({
   }
 
   return (
-    <Card>
-      <CardContent>
-        {!hasAnyTurnus && (
-          <div className="hb-infobar" role="status">
-            <div className="hb-infobar-icon"><IconInfo /></div>
-            <div className="hb-infobar-content">
-              <div className="hb-infobar-title">Noch keine Position mit Turnus</div>
-              <div className="hb-infobar-message">
-                Trag bei einer Transfer-Position Turnus und nächste Fälligkeit nach — erst
-                dann berechnet diese Ansicht Soll-Stand, Zyklus und Status. Ohne Turnus gilt
-                eine Position als freies Sparen und zählt nicht als Fixkostenbelastung.
+    <>
+      <Card>
+        <CardContent>
+          {!hasAnyTurnus && (
+            <div className="hb-infobar" role="status">
+              <div className="hb-infobar-icon"><IconInfo /></div>
+              <div className="hb-infobar-content">
+                <div className="hb-infobar-title">Noch keine Position mit Turnus</div>
+                <div className="hb-infobar-message">
+                  Trag bei einer Transfer-Position Turnus und nächste Fälligkeit nach — erst
+                  dann berechnet diese Ansicht Soll-Stand, Zyklus und Status. Ohne Turnus gilt
+                  eine Position als freies Sparen und zählt nicht als Fixkostenbelastung.
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        <DataTable
-          columns={columns}
-          sections={sections}
-          storageKey="reserves"
-          defaultSort={{ columnId: "nextDue", dir: "asc" }}
-          renderDetail={renderDetail}
-          label="Rücklagen"
-        />
-      </CardContent>
-    </Card>
+          )}
+          <DataTable
+            columns={columns}
+            sections={sections}
+            storageKey="reserves"
+            defaultSort={{ columnId: "nextDue", dir: "asc" }}
+            renderDetail={renderDetail}
+            label="Rücklagen"
+          />
+        </CardContent>
+      </Card>
+
+      <BillPaidDialog
+        open={Boolean(billTarget)}
+        item={billTarget?.item}
+        potName={potById.get(billTarget?.item?.potId)?.name}
+        actual={billTarget?.actual ?? 0}
+        draft={billDraft}
+        onDraftChange={setBillDraft}
+        onClose={() => setBillTarget(null)}
+        onConfirm={confirmBillPaid}
+      />
+    </>
   );
 }
 

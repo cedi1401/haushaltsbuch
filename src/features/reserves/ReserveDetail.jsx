@@ -20,6 +20,8 @@ export default function ReserveDetail({
   fmt,
   pot,
   canCatchUp,
+  onBillPaid,
+  onEdit,
 }) {
   const purpose = String(row.item?.transferCategory ?? "").trim();
   const potName = pot?.name ?? "—";
@@ -96,13 +98,25 @@ export default function ReserveDetail({
         </div>
       )}
 
+      {/* Die Buttons liegen in einer klickbaren Zeile — `DataTable` lässt Klicks
+          auf Bedienelemente bewusst durch, ohne den Bereich mit zuzuklappen. */}
       <div className="hb-res-detail-actions">
-        {canPay && <Button size="sm" disabled>Rechnung bezahlt</Button>}
-        {canCatchUp && (
-          <Button size="sm" variant="outline" disabled>Rückstand ausgleichen</Button>
+        {canPay && (
+          <Button size="sm" onClick={() => onBillPaid?.(row)}>
+            Rechnung bezahlt
+          </Button>
         )}
-        <Button size="sm" variant="outline" disabled>Bearbeiten</Button>
-        <span className="hb-res-detail-note">Die Aktionen folgen im nächsten Schritt.</span>
+        {canCatchUp && (
+          <Button size="sm" variant="outline" disabled>
+            Rückstand ausgleichen
+          </Button>
+        )}
+        {/* Bearbeitet wird die Position dort, wo sie angelegt wurde. Ein zweiter
+            Bearbeiten-Dialog neben dem der Fixkosten-View wäre eine zweite
+            Wahrheit über dieselben Felder. */}
+        <Button size="sm" variant="outline" onClick={() => onEdit?.()}>
+          In Fixkosten bearbeiten
+        </Button>
       </div>
     </div>
   );
