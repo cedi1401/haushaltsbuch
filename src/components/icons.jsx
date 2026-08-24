@@ -147,6 +147,31 @@ export function IconCheck(props) {
   );
 }
 
+// Aufklapp-Pfeil (zeigt nach unten; die Drehung übernimmt CSS). Als einziges
+// Icon hier NICHT auf baseProps: es hat ein 16er-Viewbox und ist bei 16–18 px
+// gedacht. Aus baseProps (24er-Viewbox, strokeWidth 1.6) käme bei 18 px ein
+// 1.2-px-Strich heraus und der Pfeil wäre sichtbar dünner als seine
+// Nachbarschaft — die drei Stellen, die ihn benutzen, zeichneten ihn bisher
+// genau deshalb inline mit 1.5–1.6 auf 16er-Viewbox.
+export function IconChevron({ width = 16, height = 16, ...props }) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M4.5 6L8 9.5L11.5 6" />
+    </svg>
+  );
+}
+
 // Spaltenauswahl — Tabellenrahmen mit zwei senkrechten Trennern. Anders als
 // IconFixed und IconCostGroups liegen die Linien hier vertikal; das Icon sitzt
 // ohnehin auf einem beschrifteten Button und nicht im NavDrawer.

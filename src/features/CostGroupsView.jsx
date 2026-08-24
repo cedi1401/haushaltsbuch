@@ -19,7 +19,7 @@ import HbTooltip from "../components/HbTooltip.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
-import { IconCostGroups, IconPlus, IconEdit, IconDelete, IconCheck, IconInbox, IconFixed, IconTrend } from "../components/icons.jsx";
+import { IconCostGroups, IconPlus, IconEdit, IconDelete, IconCheck, IconChevron, IconInbox, IconFixed, IconTrend } from "../components/icons.jsx";
 import { useClickOutside } from "../hooks/useClickOutside.js";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
@@ -545,12 +545,11 @@ export default function CostGroupsView({
               >
                 <span className="hb-cat-dot" style={{ background: activeGroup.color || "var(--accent)" }} />
                 <span className="hb-cg-group-trigger-name">{activeGroup.name}</span>
-                <svg
+                <IconChevron
                   className={"hb-cg-group-chevron" + (menuOpen ? " hb-cg-group-chevron--open" : "")}
-                  width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true"
-                >
-                  <path d="M4.5 6L8 9.5L11.5 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                  width={18}
+                  height={18}
+                />
               </button>
               {menuOpen && (
                 <div
@@ -1160,9 +1159,7 @@ export default function CostGroupsView({
                           aria-expanded={isExpanded}
                           aria-label={isExpanded ? `${cat.name} zuklappen` : `${cat.name} aufklappen`}
                         >
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                            <path d="M4.5 6L8 9.5L11.5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
+                          <IconChevron />
                         </button>
                       )}
                     </div>

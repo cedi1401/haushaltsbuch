@@ -1963,8 +1963,10 @@ select.hb-input option {
    noch das <tfoot> (Browser rendern es unten, im DOM steht es hinten).
    `tbody:last-child` trifft deshalb nie — die letzte Datenzeile behielte
    ihren Strich und stünde zusammen mit dem border-top der Summenzeile als
-   Doppellinie da. */
-.hb-dt-table tbody:last-of-type .hb-dt-row:last-child td {
+   Doppellinie da. Und `tr` statt `.hb-dt-row`, weil die letzte Zeile einer
+   Sektion auch eine aufgeklappte Detailzeile sein kann — dann sässe deren
+   Strich direkt über dem der Summenzeile. */
+.hb-dt-table tbody:last-of-type tr:last-child td {
   border-bottom: 0;
 }
 
@@ -2056,8 +2058,16 @@ select.hb-input option {
   white-space: nowrap;
 }
 
-/* Die Anzahl links ist Beschriftung, kein Wert — sie tritt zurück. */
-.hb-dt-summary td:first-child {
+/* Die Anzahl links ist Beschriftung, kein Wert — sie tritt zurück.
+
+   Bewusst eine eigene Klasse und nicht td:first-child: die Beschriftung sitzt
+   in der ersten SICHTBAREN Spalte, und das muss nicht die erste Zelle der
+   Zeile sein. Bekommt die Tabelle links je eine Spalte ohne Spaltendefinition
+   (etwa eine Aufklapp-Spalte), wäre td:first-child deren leerer Platzhalter —
+   die Beschriftung stünde dann fett und in --text zwischen den Summen. Die
+   Klasse setzt DataTable.jsx. Zwei Klassen schlagen das .hb-dt-table tfoot td
+   mit seinem font-weight: 600. */
+.hb-dt-summary .hb-dt-summary-label {
   color: var(--muted);
   font-weight: 500;
 }
@@ -2289,6 +2299,143 @@ select.hb-input option {
   color: var(--text-secondary);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+}
+
+/* Die ganze Zeile schaltet den Detailbereich — der Zeiger sagt das an. Nur
+   dort, wo es einen gibt: ohne `renderDetail` fehlt die Klasse. */
+.hb-dt-table--expandable .hb-dt-row {
+  cursor: pointer;
+}
+
+/* Chevron-Spalte. Sie erscheint nur, wenn der View `renderDetail` bedient, und
+   trägt deshalb auch keine Kopfzeilen-Beschriftung — nur ein aria-label. */
+.hb-dt-table .hb-dt-chevron-col {
+  width: 34px;
+  padding-right: 0;
+}
+
+/* Muster: .hb-hcat-expand-btn (Kategorie-Picker). Gedreht wird das SVG und
+   nicht der Button — sonst wanderte auch sein Hover-Feld mit. */
+.hb-dt-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.hb-dt-chevron:hover {
+  background: var(--active-bg);
+  color: var(--text);
+}
+
+.hb-dt-chevron svg {
+  transition: transform 0.2s ease;
+}
+
+.hb-dt-chevron--open {
+  color: var(--text);
+}
+
+.hb-dt-chevron--open svg {
+  transform: rotate(180deg);
+}
+
+/* Die offene Zeile behält die Hover-Fläche, auch wenn der Zeiger weiterzieht:
+   sie und ihr Detailbereich sollen als ein Block lesen. */
+.hb-dt-table tbody .hb-dt-row--open td {
+  background: var(--hover-bg);
+}
+
+/* Detailzeile. Erbt von `tbody td` das nowrap — das muss hier weg, sonst
+   liefe der Fliesstext in einer einzigen Zeile aus der Tabelle heraus. Die
+   Farbkante der Gruppe läuft weiter, damit der Bereich sichtbar zur Zeile
+   darüber gehört. */
+.hb-dt-table tbody .hb-dt-detail-row td {
+  white-space: normal;
+  background: var(--hover-bg);
+  padding: 4px 10px 14px;
+  height: auto;
+  box-shadow: inset 3px 0 0 var(--hb-dt-accent, transparent);
+}
+
+/* Inhalt des Detailbereichs (ReserveDetail.jsx). Die Breite ist gedeckelt: der
+   Bereich spannt über die volle Tabellenbreite, Fliesstext über 1200 px wäre
+   aber nicht mehr lesbar. */
+.hb-res-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 900px;
+  padding-left: 34px;
+}
+
+/* Werte-Raster der abgewählten Spalten. auto-fill statt fester Spaltenzahl:
+   je nach Spaltenauswahl stehen hier 0 bis 16 Paare. */
+.hb-res-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 4px 24px;
+}
+
+.hb-res-detail-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.hb-res-detail-label {
+  flex-shrink: 0;
+  min-width: 130px;
+  color: var(--muted);
+}
+
+.hb-res-detail-value {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.hb-res-detail-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hb-res-detail-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.hb-res-detail-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Die Hinweis-Pillen tragen ihre Erklärung im title. */
+.hb-res-hint {
+  cursor: help;
+}
+
+.hb-res-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.hb-res-detail-note {
+  font-size: 12px;
+  color: var(--muted);
 }
 
 /* =====================================================

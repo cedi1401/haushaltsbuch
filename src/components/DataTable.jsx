@@ -1,6 +1,11 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTableColumns } from "../hooks/useTableColumns.js";
 import ColumnsFlyout from "./ColumnsFlyout.jsx";
+import { IconChevron } from "./icons.jsx";
+
+// Stabile Identität für den Ausgangszustand — ein Literal im useState-Aufruf
+// wäre bei jedem Render ein neues Set.
+const EMPTY_SET = new Set();
 
 /**
  * Generische Tabelle. Fachfrei: sie kennt weder Rücklagen noch Währungen.
@@ -30,6 +35,13 @@ import ColumnsFlyout from "./ColumnsFlyout.jsx";
  * 3-px-Kante; `meta` ist ein fertiger Knoten für die rechte Seite des Bandes —
  * was dort steht, weiss nur der View.
  *
+ * `renderDetail(row, hiddenColumns)` ist optional. Wird es übergeben, bekommt
+ * die Tabelle links eine Chevron-Spalte und jede Zeile lässt sich aufklappen;
+ * fehlt es, gibt es die Spalte nicht. `hiddenColumns` sind die gerade
+ * abgewählten Spalten in Katalogreihenfolge — der Detailbereich kann damit
+ * genau das nachliefern, was in der Tabelle nicht steht, ohne dass der View die
+ * Spaltenauswahl selbst kennen müsste.
+ *
  * `label` wird zum `aria-label` der Tabelle. Ohne Beschriftung kündigt ein
  * Screenreader nur „Tabelle" an; ein <caption> wäre die Alternative, würde aber
  * die sichtbare Überschrift des Views doppeln.
@@ -37,12 +49,53 @@ import ColumnsFlyout from "./ColumnsFlyout.jsx";
  * Bewusst nicht vorgesehen: Zeilen-Auswahl, Filter, Paginierung, onRowClick,
  * Dichte-Option, renderEmpty (Leerzustände liegen im View), getRowId.
  */
-export default function DataTable({ columns, sections, storageKey, defaultSort, label }) {
+export default function DataTable({
+  columns,
+  sections,
+  storageKey,
+  defaultSort,
+  renderDetail,
+  label,
+}) {
   const { visibleIds, toggle, reset } = useTableColumns(storageKey, columns);
   const visible = useMemo(() => {
     const chosen = new Set(visibleIds);
     return columns.filter((c) => chosen.has(c.id));
   }, [columns, visibleIds]);
+
+  // Katalogreihenfolge, nicht Auswahlreihenfolge — der Detailbereich liest sich
+  // dadurch immer gleich, egal in welcher Reihenfolge Spalten abgewählt wurden.
+  const hiddenColumns = useMemo(() => {
+    const chosen = new Set(visibleIds);
+    return columns.filter((c) => !chosen.has(c.id));
+  }, [columns, visibleIds]);
+
+  // Mehrere Zeilen dürfen offen sein: ein Klick schliesst nie etwas anderes,
+  // und zwei Positionen lassen sich nebeneinander lesen.
+  const [expanded, setExpanded] = useState(EMPTY_SET);
+  function toggleDetail(id) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  }
+
+  // Ein Klick irgendwo in der Zeile klappt auf — ausser er galt einem
+  // Bedienelement. Ohne diese Ausnahme schaltete der Chevron-Button zweimal
+  // (einmal selbst, einmal über die Zeile) und bliebe damit wirkungslos, und
+  // eine Aktion in einer Zelle klappte nebenbei den Detailbereich mit auf.
+  function handleRowClick(e, id) {
+    if (e.target.closest("button, a, input, select, textarea, label")) return;
+    // Wer einen Betrag mit der Maus markiert, lässt am Ende in der Zeile los —
+    // das ist kein Klick auf die Zeile. Ein gewöhnlicher Klick hebt eine
+    // bestehende Markierung vorher auf, die Prüfung greift also nur beim Ziehen.
+    if (window.getSelection?.()?.toString()) return;
+    toggleDetail(id);
+  }
+
+  // Die Chevron-Spalte zählt bei jedem colSpan mit (Band, Detailzeile).
+  const colCount = visible.length + (renderDetail ? 1 : 0);
 
   const [sort, setSort] = useState(defaultSort ?? null);
   const sortCol = useMemo(
@@ -88,9 +141,13 @@ export default function DataTable({ columns, sections, storageKey, defaultSort, 
         />
       </div>
       <div className="hb-dt-scroll" ref={scrollRef}>
-        <table className="hb-dt-table" aria-label={label}>
+        <table
+          className={"hb-dt-table" + (renderDetail ? " hb-dt-table--expandable" : "")}
+          aria-label={label}
+        >
           <thead>
             <tr>
+              {renderDetail && <th scope="col" className="hb-dt-chevron-col" aria-label="Details" />}
               {visible.map((col) => {
                 const active = sort?.columnId === col.id;
                 return (
@@ -122,7 +179,7 @@ export default function DataTable({ columns, sections, storageKey, defaultSort, 
             >
               {section.label !== null && section.label !== undefined && (
                 <tr className="hb-dt-band">
-                  <td colSpan={visible.length}>
+                  <td colSpan={colCount}>
                     <div className="hb-dt-band-inner">
                       {section.accent && (
                         <span className="hb-cat-dot" style={{ background: section.accent }} />
@@ -136,26 +193,63 @@ export default function DataTable({ columns, sections, storageKey, defaultSort, 
                   </td>
                 </tr>
               )}
-              {section.rows.map((row) => (
-                <tr key={row.id} className="hb-dt-row">
-                  {visible.map((col) => (
-                    <td
-                      key={col.id}
-                      className={col.align === "right" ? "hb-dt-num" : undefined}
+              {section.rows.map((row) => {
+                const isOpen = expanded.has(row.id);
+                return (
+                  <React.Fragment key={row.id}>
+                    <tr
+                      className={"hb-dt-row" + (isOpen ? " hb-dt-row--open" : "")}
+                      onClick={renderDetail ? (e) => handleRowClick(e, row.id) : undefined}
                     >
-                      <Cell col={col} row={row} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
+                      {renderDetail && (
+                        <td className="hb-dt-chevron-col">
+                          <button
+                            type="button"
+                            className={"hb-dt-chevron" + (isOpen ? " hb-dt-chevron--open" : "")}
+                            onClick={() => toggleDetail(row.id)}
+                            aria-expanded={isOpen}
+                            aria-label={isOpen ? "Details zuklappen" : "Details aufklappen"}
+                          >
+                            <IconChevron />
+                          </button>
+                        </td>
+                      )}
+                      {visible.map((col) => (
+                        <td
+                          key={col.id}
+                          className={col.align === "right" ? "hb-dt-num" : undefined}
+                        >
+                          <Cell col={col} row={row} />
+                        </td>
+                      ))}
+                    </tr>
+                    {isOpen && (
+                      <tr className="hb-dt-detail-row">
+                        <td colSpan={colCount}>{renderDetail(row, hiddenColumns)}</td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           ))}
           <tfoot>
             <tr className="hb-dt-summary">
-              {visible.map((col) => (
+              {renderDetail && <td className="hb-dt-chevron-col" />}
+              {visible.map((col, i) => (
                 <td
                   key={col.id}
-                  className={col.align === "right" ? "hb-dt-num" : undefined}
+                  // Die erste sichtbare Spalte trägt die Beschriftung der
+                  // Summenzeile („N Positionen"), nicht einen Wert. Sie bekommt
+                  // dafür eine eigene Klasse statt sich im CSS auf
+                  // `td:first-child` zu verlassen: das ist bei aufklappbarer
+                  // Tabelle die leere Chevron-Zelle, und die Beschriftung
+                  // stünde dann fett zwischen den Summen.
+                  className={
+                    [col.align === "right" ? "hb-dt-num" : null, i === 0 ? "hb-dt-summary-label" : null]
+                      .filter(Boolean)
+                      .join(" ") || undefined
+                  }
                 >
                   {col.summarize ? col.summarize(allRows) : null}
                 </td>

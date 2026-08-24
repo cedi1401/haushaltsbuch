@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import DataTable from "../components/DataTable.jsx";
@@ -9,6 +9,7 @@ import { getFinancialMonth } from "../utils/financialMonthUtils.js";
 import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { buildReserveColumns } from "./reserves/reserveColumns.jsx";
+import ReserveDetail from "./reserves/ReserveDetail.jsx";
 
 // Sammelschlüssel für Positionen ohne (gültige) Gruppe. Anders als in der
 // Fixkosten-View braucht es hier keinen Schlüssel je Spalte — dieser View zeigt
@@ -68,11 +69,40 @@ export default function ReservesView({
     [items, entries, monthStartDay, bookedByRecurringId]
   );
 
+  const potById = useMemo(() => new Map(pots.map((p) => [p.id, p])), [pots]);
+
   const columns = useMemo(() => {
     const potNameById = new Map(pots.map((p) => [p.id, p.name]));
     const groupNameById = new Map(fixedCostGroups.map((g) => [g.id, g.name]));
     return buildReserveColumns({ fmt, potNameById, groupNameById });
   }, [fmt, pots, fixedCostGroups]);
+
+  // „Rückstand ausgleichen" ist eine Einstiegshilfe und genau einmal je Position
+  // verfügbar: sobald eine Monatsrate gebucht ist, gibt es nichts mehr
+  // nachzuholen, was nicht auch von Hand gebucht werden könnte. Ein Set über
+  // alle Einträge statt `entries.some(...)` je Zeile — sonst wäre die Prüfung
+  // quadratisch. `kind === "transfer"` grenzt bewusst auf Monatsraten ein: eine
+  // Entnahme aus „Rechnung bezahlt" darf die Verfügbarkeit nicht verbrauchen.
+  const bookedRecurringIds = useMemo(() => {
+    const set = new Set();
+    for (const e of entries || []) {
+      if (e.recurringId && e.kind === "transfer") set.add(e.recurringId);
+    }
+    return set;
+  }, [entries]);
+
+  const renderDetail = useCallback(
+    (row, hiddenColumns) => (
+      <ReserveDetail
+        row={row}
+        hiddenColumns={hiddenColumns}
+        fmt={fmt}
+        pot={potById.get(row.item?.potId)}
+        canCatchUp={row.elapsed > 0 && !bookedRecurringIds.has(row.item?.id)}
+      />
+    ),
+    [fmt, potById, bookedRecurringIds]
+  );
 
   // Gliederung nach den Transfer-Gruppen der Fixkosten-View. Die Reihenfolge ist
   // deren `order` — der Nutzer hat sie dort per Drag festgelegt, eine zweite
@@ -175,6 +205,7 @@ export default function ReservesView({
           sections={sections}
           storageKey="reserves"
           defaultSort={{ columnId: "nextDue", dir: "asc" }}
+          renderDetail={renderDetail}
           label="Rücklagen"
         />
       </CardContent>
