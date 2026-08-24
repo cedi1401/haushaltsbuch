@@ -2304,6 +2304,62 @@ select.hb-input option {
   font-weight: 600;
 }
 
+/* Status-Pille der Rücklagen-Tabelle. Geometrie, Neutralfarbe und Rahmen kommen
+   von .hb-badge — „Freies Sparen" ist genau diese Neutralform: die Zeile trägt
+   zwar wie jede andere einen Modifier (--free), er bleibt aber bewusst ohne
+   eigene Regel. Die vier gefärbten Stufen stehen direkt hier, damit die
+   Quellreihenfolge sie über .hb-badge gewinnen lässt (gleiche Spezifität).
+
+   Der Statustext steht in der Pille: die Farbe ist redundante Kodierung, nicht
+   der einzige Träger der Information. */
+.hb-res-pill {
+  display: inline-block;
+  white-space: nowrap;
+  /* Es hängt ein title-Tooltip daran — der Zeiger kündigt ihn an. */
+  cursor: help;
+}
+
+.hb-res-pill--onTrack {
+  color: var(--green);
+  background: var(--green-soft);
+  border-color: var(--green-border);
+}
+
+/* --yellow (#d97706) auf --yellow-soft über --card ergibt 2.90:1 und fällt
+   damit durch WCAG AA. 75 % Schwarzanteil heben das auf 4.80:1. Im Dunkelmodus
+   steht --yellow (#fce100) weit über der Schwelle und bleibt unverändert —
+   abgedunkelt verlöre es dort seine Warnwirkung. */
+.hb-res-pill--behind {
+  color: color-mix(in srgb, var(--yellow) 75%, #000);
+  background: var(--yellow-soft);
+  border-color: var(--yellow-border);
+}
+
+:root.dark .hb-res-pill--behind {
+  color: var(--yellow);
+}
+
+/* „Fällig" ist Akzentblau und nicht Rot: am Zyklusende ist die Rechnung der
+   Normalfall, kein Fehler — die Pille fordert zum Handeln auf, sie meldet
+   keinen Defekt. --accent (#0078d4) käme auf --accent-soft nur auf 4.07:1,
+   --accent-active (#005a9e) auf 6.39:1; der Token existiert bereits. */
+.hb-res-pill--due {
+  color: var(--accent-active);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+:root.dark .hb-res-pill--due {
+  color: var(--accent);
+}
+
+.hb-res-pill--overdue {
+  color: var(--red);
+  background: var(--red-soft);
+  /* --red-border gibt es nicht; 30 % entsprechen --green-border/--yellow-border. */
+  border-color: color-mix(in srgb, var(--red) 30%, transparent);
+}
+
 /* =====================================================
    MODAL/DIALOG - FLUENT OVERLAY
    ===================================================== */

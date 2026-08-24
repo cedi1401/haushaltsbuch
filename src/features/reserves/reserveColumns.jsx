@@ -1,6 +1,7 @@
 import React from "react";
 import { formatDateDE } from "../../utils/hbUtils.js";
 import { IconTag } from "../../components/icons.jsx";
+import { formatRateCount } from "./reserveFormat.js";
 
 // Turnus im Klartext. Deckt genau die Werte ab, die der Fixkosten-Dialog
 // anbietet; alles andere fällt auf „alle N Monate" zurück.
@@ -44,6 +45,48 @@ function sumBy(rows, pick) {
 function pct(value) {
   if (value === null || value === undefined || !Number.isFinite(value)) return null;
   return `${(value * 100).toFixed(0)}%`;
+}
+
+/**
+ * Der Tooltip an der Status-Pille (`ausarbeitung.md:856-862`). Er sagt, was die
+ * Farbe nur andeutet — und bei „Fällig"/„Überfällig", was als Nächstes zu tun
+ * ist. Bewusst als `title` und nicht über `HbTooltip`: dessen Auslöser ist ein
+ * fest verdrahtetes Fragezeichen-Icon, ein zweites Symbol neben jeder Pille
+ * wäre in einer Tabellenspalte zu viel.
+ */
+function statusTooltip(row, fmt) {
+  const due = row.nextDue ? formatDateDE(row.nextDue) : "—";
+  switch (row.status) {
+    case "onTrack":
+      return (
+        "Für diesen Zweck liegt im Topf mindestens so viel, wie zum jetzigen " +
+        "Zeitpunkt im Zyklus zurückgelegt sein müsste."
+      );
+    case "behind": {
+      const short = -row.delta;
+      // Ohne Monatsrate liesse sich der Fehlbetrag nicht in Raten ausdrücken —
+      // der Betrag allein ist dann die ganze Aussage.
+      const rates = row.monthlyRate > 0 ? ` (${formatRateCount(short / row.monthlyRate)})` : "";
+      return `Es fehlen ${fmt(short)}${rates} bis zum Soll-Stand. Die Rechnung ist erst am ${due} fällig.`;
+    }
+    case "due":
+      return (
+        `Die Rechnung ist seit ${due} fällig. Über „Rechnung bezahlt" erfasst du die ` +
+        "Zahlung als Entnahme aus dem Topf — damit beginnt der nächste Zyklus."
+      );
+    case "overdue":
+      return (
+        `Die Rechnung war am ${due} fällig — das ist über einen Monat her. Solange die ` +
+        "Zahlung nicht als Entnahme erfasst ist, startet der nächste Zyklus nicht."
+      );
+    case "free":
+      return (
+        "Für diese Position ist kein Turnus hinterlegt. Es gibt keine Rechnung und damit " +
+        "keinen Soll-Stand — die Position zählt nicht als Fixkostenbelastung."
+      );
+    default:
+      return undefined;
+  }
 }
 
 /**
@@ -222,7 +265,18 @@ export function buildReserveColumns({ fmt, potNameById, groupNameById }) {
       id: "status",
       label: "Status",
       sortValue: (row) => STATUS_ORDER[row.status] ?? null,
-      render: (row) => STATUS_LABEL[row.status] ?? null,
+      render: (row) => {
+        const label = STATUS_LABEL[row.status];
+        if (!label) return null;
+        return (
+          <span
+            className={`hb-badge hb-res-pill hb-res-pill--${row.status}`}
+            title={statusTooltip(row, fmt)}
+          >
+            {label}
+          </span>
+        );
+      },
     },
   ];
 
