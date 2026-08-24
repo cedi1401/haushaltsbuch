@@ -6,8 +6,14 @@ import { IconReserves, IconInfo } from "../components/icons.jsx";
 import { fixedCostKind, todayISO } from "../utils/hbUtils.js";
 import { isSinkingFund, buildSinkingFundRows } from "../utils/fixedCostUtils.js";
 import { getFinancialMonth } from "../utils/financialMonthUtils.js";
+import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { buildReserveColumns } from "./reserves/reserveColumns.jsx";
+
+// Sammelschlüssel für Positionen ohne (gültige) Gruppe. Anders als in der
+// Fixkosten-View braucht es hier keinen Schlüssel je Spalte — dieser View zeigt
+// ausschliesslich Transfers.
+const UNGROUPED_KEY = "ungrouped";
 
 /**
  * Rücklagen-View — Überwachung der Transfer-Fixkosten mit Turnus.
@@ -68,11 +74,66 @@ export default function ReservesView({
     return buildReserveColumns({ fmt, potNameById, groupNameById });
   }, [fmt, pots, fixedCostGroups]);
 
-  // Eine einzige Sektion ohne Band — die Gliederung nach Gruppen kommt in P7.1.
-  const sections = useMemo(
-    () => [{ key: "__ungrouped", label: null, accent: null, meta: null, rows }],
-    [rows]
+  // Gliederung nach den Transfer-Gruppen der Fixkosten-View. Die Reihenfolge ist
+  // deren `order` — der Nutzer hat sie dort per Drag festgelegt, eine zweite
+  // abweichende Ordnung wäre unnötige Kopfarbeit.
+  const transferGroups = useMemo(
+    () =>
+      fixedCostGroups
+        .filter((g) => fixedCostKind(g) === "transfer")
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [fixedCostGroups]
   );
+
+  const sections = useMemo(() => {
+    // Zuordnungsregel identisch zur Fixkosten-View: eine Gruppe zählt nur, wenn
+    // es sie gibt UND sie dieselbe Art hat. Sonst landet die Position unter
+    // „Ohne Gruppe" — genau wie sie dort unter „Weitere" landet.
+    const validIds = new Set(transferGroups.map((g) => g.id));
+    const byKey = new Map();
+    for (const row of rows) {
+      const gid = row.item?.groupId || null;
+      const key = gid && validIds.has(gid) ? gid : UNGROUPED_KEY;
+      if (!byKey.has(key)) byKey.set(key, []);
+      byKey.get(key).push(row);
+    }
+
+    // Ohne jede Gruppe bleibt es bei der einen Sektion ohne Band. Ein einzelnes
+    // Band „Ohne Gruppe" über der gesamten Tabelle wäre reine Dekoration.
+    if (byKey.size === 1 && byKey.has(UNGROUPED_KEY)) {
+      return [{ key: UNGROUPED_KEY, label: null, accent: null, meta: null, rows }];
+    }
+
+    // Die Farbe hängt an der Position in der Gruppenliste, nicht an den Zeilen —
+    // eine vorübergehend leere Gruppe verschiebt die Farben der übrigen nicht.
+    const result = [];
+    transferGroups.forEach((group, index) => {
+      const groupRows = byKey.get(group.id);
+      if (!groupRows) return;
+      const accent = GROUP_ACCENT_PALETTE[index % GROUP_ACCENT_PALETTE.length];
+      result.push({
+        key: group.id,
+        label: group.name,
+        accent,
+        meta: <BandMeta rows={groupRows} fmt={fmt} />,
+        rows: groupRows,
+      });
+    });
+
+    // „Ohne Gruppe" immer ans Ende und ohne Farbe — es ist keine Gruppe, sondern
+    // ihr Fehlen.
+    const ungrouped = byKey.get(UNGROUPED_KEY);
+    if (ungrouped) {
+      result.push({
+        key: UNGROUPED_KEY,
+        label: "Ohne Gruppe",
+        accent: null,
+        meta: <BandMeta rows={ungrouped} fmt={fmt} />,
+        rows: ungrouped,
+      });
+    }
+    return result;
+  }, [rows, transferGroups, fmt]);
 
   if (items.length === 0) {
     return (
@@ -114,8 +175,47 @@ export default function ReservesView({
           sections={sections}
           storageKey="reserves"
           defaultSort={{ columnId: "nextDue", dir: "asc" }}
+          label="Rücklagen"
         />
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Die rechte Seite eines Gliederungsbandes: `Soll · Ist · Δ` der Gruppe.
+ *
+ * Freies Sparen hat keinen Soll-Stand (`target === null`) und geht deshalb nur
+ * mit seinem Ist-Stand ein — die Differenz der Gruppe bewertet ausschliesslich
+ * das, was auch bewertbar ist.
+ */
+function BandMeta({ rows, fmt }) {
+  let target = 0;
+  let actual = 0;
+  let delta = 0;
+  let tolerance = 0;
+  for (const row of rows) {
+    if (Number.isFinite(row.target)) target += row.target;
+    if (Number.isFinite(row.actual)) actual += row.actual;
+    if (Number.isFinite(row.delta)) delta += row.delta;
+    if (Number.isFinite(row.tolerance)) tolerance += row.tolerance;
+  }
+  // Dieselbe Regel wie in der Differenz-Spalte: gefärbt wird erst jenseits der
+  // aufsummierten Rundungstoleranz, sonst stünde bei exakter Deckung ein rotes
+  // „−0.00" im Band.
+  const deltaClass =
+    delta < -tolerance ? "hb-dt-delta--neg" : delta > tolerance ? "hb-dt-delta--pos" : undefined;
+
+  return (
+    <>
+      <span className="hb-dt-band-meta-label">Soll</span>
+      {fmt(target)}
+      <span className="hb-dt-band-meta-sep">·</span>
+      <span className="hb-dt-band-meta-label">Ist</span>
+      {fmt(actual)}
+      <span className="hb-dt-band-meta-sep">·</span>
+      <span className="hb-dt-band-meta-label">Δ</span>
+      <span className={deltaClass}>{fmt(delta)}</span>
+    </>
   );
 }

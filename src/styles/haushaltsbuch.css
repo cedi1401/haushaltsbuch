@@ -53,6 +53,26 @@
   --orange: #ca5010;
   --orange-soft: rgba(202, 80, 16, 0.08);
 
+  /* Gruppenfarben der Rücklagen-Tabelle (Gliederungsband + 3-px-Kante links an
+     der Zeile). Rein unterscheidend, ohne Semantik — die Zuweisung ist zyklisch
+     nach Position der Gruppe (siehe GROUP_ACCENT_PALETTE in hbPalette.js).
+     Konstruktion:
+     - Hue-Band 190°–268° ausgespart: dort liegt TRANSFER_PALETTE (Zweck-Farben
+       im Topf-Donut). Keine Gruppenfarbe kollidiert mit einer Zweck-Farbe
+     - Reihenfolge gegen Nachbarschaft optimiert statt entlang des Farbkreises:
+       aufeinanderfolgende Indizes liegen ≥ 58° auseinander, damit zwei
+       untereinanderliegende Bänder nie ähnlich aussehen
+     - Helligkeit im Zickzack wie in TRANSFER_PALETTE
+     - alle Töne ≥ 3.4:1 gegen --card und --bg-subtle (WCAG 1.4.11, Nicht-Text) */
+  --group-accent-1: #a12b52;  /* Beere       H340 */
+  --group-accent-2: #5b8217;  /* Olivgrün    H82  */
+  --group-accent-3: #913aa6;  /* Violett     H288 */
+  --group-accent-4: #bf5122;  /* Terrakotta  H18  */
+  --group-accent-5: #0b846c;  /* Petrolgrün  H168 */
+  --group-accent-6: #a92d84;  /* Magenta     H318 */
+  --group-accent-7: #15843e;  /* Smaragd     H142 */
+  --group-accent-8: #a0740d;  /* Ocker       H42  */
+
   /* Interactive states */
   --input-bg: #ffffff;
   --hover-bg: rgba(0, 0, 0, 0.03);
@@ -129,6 +149,19 @@
   --purple-soft: rgba(180, 160, 255, 0.12);
   --orange: #f7630c;
   --orange-soft: rgba(247, 99, 12, 0.12);
+
+  /* Gruppenfarben — hell und klar gesättigt, wie das Projekt es für Akzente im
+     Dunkelmodus tut (--green, --red, --accent). Die dezent blaugrauen Flächen
+     (--bg, --card) bleiben davon unberührt; ein entsättigter Akzent verschwände
+     auf ihnen. */
+  --group-accent-1: #e07b9d;
+  --group-accent-2: #a6d651;
+  --group-accent-3: #d28be4;
+  --group-accent-4: #e78f6a;
+  --group-accent-5: #49d4b9;
+  --group-accent-6: #e887cb;
+  --group-accent-7: #5cd689;
+  --group-accent-8: #ecbd51;
 
   /* Interactive states */
   --input-bg: #1c1f28;
@@ -1939,6 +1972,73 @@ select.hb-input option {
    Detailzeile (P6.3/P7) sind keine Datenzeilen und sollen nicht hovern. */
 .hb-dt-row:hover td {
   background: var(--hover-bg);
+}
+
+/* Gliederungsband einer Sektion — eine Zeile über die volle Tabellenbreite.
+   Bewusst NICHT sticky: das wäre eine zweite klebende Ebene unter dem
+   Spaltenkopf, und die Zuordnung übernimmt ohnehin die Farbkante an der Zeile,
+   sobald das Band nach oben herausgelaufen ist. */
+.hb-dt-table tbody .hb-dt-band td {
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+  padding: 7px 10px;
+  /* `tbody td` setzt 40 px Mindesthöhe für die einheitliche Zeilenhöhe — ein
+     Band ist keine Datenzeile und darf kompakter sein. */
+  height: auto;
+}
+
+.hb-dt-band-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.hb-dt-band-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hb-dt-band-count {
+  color: var(--muted);
+}
+
+/* Die Kennzahlen rücken nach rechts und stehen in Zahlenschrift — sie fluchten
+   damit untereinander, auch wenn die Bänder unterschiedlich breite Namen haben. */
+.hb-dt-band-meta {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* --border ist ein Flächen-Token für --card und löst sich auf --bg-subtle
+   praktisch auf (1.08:1 hell, 1.45:1 dunkel) — der Punkt wäre schlicht nicht
+   da. --muted trägt auf beiden Flächen (4.9:1 / 6.0:1) und hält den Trenner
+   trotzdem hinter den Werten zurück, die in --text-secondary stehen. */
+.hb-dt-band-meta-sep {
+  color: var(--muted);
+}
+
+.hb-dt-band-meta-label {
+  color: var(--muted);
+}
+
+/* Farbkante der Gruppe, 3 px an der ersten Zelle jeder Datenzeile.
+
+   Als inset box-shadow und nicht als border-left: ein Rahmen zählt zur
+   Zellbreite, die erste Spalte spränge also je nach Gruppe um 3 px; ausserdem
+   liegt der Schatten über dem Zellhintergrund und bleibt damit beim Hover
+   sichtbar, während ein border-left vom --hover-bg der Zelle nicht überdeckt,
+   aber auch nicht mitgefärbt würde.
+
+   --hb-dt-accent setzt der View am <tbody> der Sektion; ohne Gruppe ist die
+   Variable nicht gesetzt und der Fallback macht die Kante unsichtbar. */
+.hb-dt-row td:first-child {
+  box-shadow: inset 3px 0 0 var(--hb-dt-accent, transparent);
 }
 
 /* Summenzeile am Tabellenfuss. Spaltenweise ausgerichtet — am Fuss liest sich

@@ -59,6 +59,29 @@ export const TRANSFER_PALETTE = [
   "#7f43c4", // Purpur      H268 L52%
 ];
 
+// Gruppenfarben der Rücklagen-Tabelle: Gliederungsband (12-px-Punkt) und die
+// 3-px-Kante links an jeder Zeile der Gruppe. Die Farbe unterscheidet nur, sie
+// bedeutet nichts — zugewiesen wird zyklisch nach der Position der Gruppe in der
+// Liste der Transfer-Gruppen, nicht über ein Feld am Gruppen-Modell.
+//
+// Anders als alle übrigen Paletten hier stehen die Werte NICHT als Hex-Codes in
+// dieser Datei, sondern als CSS-Variablen in `haushaltsbuch.css` (Muster: --yoy-*).
+// Grund: Die Farbe geht nie an Recharts, sie wird ausschliesslich in CSS gebraucht.
+// Damit schaltet das Stylesheet den Dunkelmodus um, ohne dass eine Komponente vom
+// Theme wissen muss — sonst müsste `darkMode` von HaushaltsbuchApp bis in die
+// Spaltendefinition durchgereicht oder readColors() um acht Einträge erweitert
+// werden. Die Konstruktionsregeln der Töne stehen bei den Variablen.
+export const GROUP_ACCENT_PALETTE = [
+  "var(--group-accent-1)",
+  "var(--group-accent-2)",
+  "var(--group-accent-3)",
+  "var(--group-accent-4)",
+  "var(--group-accent-5)",
+  "var(--group-accent-6)",
+  "var(--group-accent-7)",
+  "var(--group-accent-8)",
+];
+
 // Specific colors for income/expense charts
 export const CHART_COLORS = {
   income: "#0f7b0f",      // Green

@@ -25,10 +25,19 @@ import ColumnsFlyout from "./ColumnsFlyout.jsx";
  * Sektion (vom View vorbereitet):
  *   { key, label, accent, meta, rows }   // rows brauchen je eine `id`
  *
+ * `label === null` heisst: kein Gliederungsband. `accent` ist eine beliebige
+ * CSS-Farbe (im Rücklagen-View eine var(--group-accent-N)) und färbt Punkt und
+ * 3-px-Kante; `meta` ist ein fertiger Knoten für die rechte Seite des Bandes —
+ * was dort steht, weiss nur der View.
+ *
+ * `label` wird zum `aria-label` der Tabelle. Ohne Beschriftung kündigt ein
+ * Screenreader nur „Tabelle" an; ein <caption> wäre die Alternative, würde aber
+ * die sichtbare Überschrift des Views doppeln.
+ *
  * Bewusst nicht vorgesehen: Zeilen-Auswahl, Filter, Paginierung, onRowClick,
  * Dichte-Option, renderEmpty (Leerzustände liegen im View), getRowId.
  */
-export default function DataTable({ columns, sections, storageKey, defaultSort }) {
+export default function DataTable({ columns, sections, storageKey, defaultSort, label }) {
   const { visibleIds, toggle, reset } = useTableColumns(storageKey, columns);
   const visible = useMemo(() => {
     const chosen = new Set(visibleIds);
@@ -79,7 +88,7 @@ export default function DataTable({ columns, sections, storageKey, defaultSort }
         />
       </div>
       <div className="hb-dt-scroll" ref={scrollRef}>
-        <table className="hb-dt-table">
+        <table className="hb-dt-table" aria-label={label}>
           <thead>
             <tr>
               {visible.map((col) => {
@@ -105,7 +114,28 @@ export default function DataTable({ columns, sections, storageKey, defaultSort }
             </tr>
           </thead>
           {sortedSections.map((section) => (
-            <tbody key={section.key}>
+            <tbody
+              key={section.key}
+              // Die Gruppenfarbe steht einmal an der Sektion statt an jeder
+              // Zeile; die Kante an td:first-child liest sie von hier.
+              style={section.accent ? { "--hb-dt-accent": section.accent } : undefined}
+            >
+              {section.label !== null && section.label !== undefined && (
+                <tr className="hb-dt-band">
+                  <td colSpan={visible.length}>
+                    <div className="hb-dt-band-inner">
+                      {section.accent && (
+                        <span className="hb-cat-dot" style={{ background: section.accent }} />
+                      )}
+                      <span className="hb-dt-band-name">{section.label}</span>
+                      <span className="hb-dt-band-count">
+                        {section.rows.length} Position{section.rows.length === 1 ? "" : "en"}
+                      </span>
+                      {section.meta && <span className="hb-dt-band-meta">{section.meta}</span>}
+                    </div>
+                  </td>
+                </tr>
+              )}
               {section.rows.map((row) => (
                 <tr key={row.id} className="hb-dt-row">
                   {visible.map((col) => (
