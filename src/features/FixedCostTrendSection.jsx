@@ -6,7 +6,6 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  ReferenceLine,
   CartesianGrid,
 } from "recharts";
 import { Card, CardContent, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
@@ -253,10 +252,6 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.accent} strokeWidth="2" /></svg>
                 Gebucht
               </span>
-              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.orange} strokeWidth="1.5" strokeDasharray="5 3" /></svg>
-                Konfiguriert
-              </span>
             </div>
             <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <ChartScrollNav
@@ -298,13 +293,6 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                     </div>
                   );
                 }}
-              />
-              <ReferenceLine
-                y={kpis.configuredTotal}
-                stroke={themeColors.orange}
-                strokeDasharray="5 3"
-                strokeWidth={1.5}
-                label={{ value: "Soll", position: "insideTopRight", fill: themeColors.orange, fontSize: 11 }}
               />
               <Line type="monotone" dataKey="fixedTotal" stroke={themeColors.accent} strokeWidth={2.5} dot={false} connectNulls={false} />
             </LineChart>
