@@ -1839,6 +1839,11 @@ select.hb-input option {
      Steht die Tabelle einmal in einer anderen Umgebung, ist das die eine
      Zahl, die der View überschreibt. */
   --hb-dt-gap: 45px;
+  /* Breite der Chevron-Spalte. Als Variable, weil der Detailbereich sich um
+     genau diesen Betrag einrücken muss, damit sein erstes Label unter der
+     Bezeichnung der Zeile darüber steht. Zwei getrennte Zahlen wären früher
+     oder später zwei verschiedene. */
+  --hb-dt-chevron-w: 34px;
 }
 
 .hb-dt-scroll {
@@ -2298,7 +2303,7 @@ select.hb-input option {
 /* Chevron-Spalte. Sie erscheint nur, wenn der View `renderDetail` bedient, und
    trägt deshalb auch keine Kopfzeilen-Beschriftung — nur ein aria-label. */
 .hb-dt-table .hb-dt-chevron-col {
-  width: 34px;
+  width: var(--hb-dt-chevron-w);
   padding-right: 0;
 }
 
@@ -2347,6 +2352,14 @@ select.hb-input option {
   background: var(--hover-bg);
 }
 
+/* Damit bleibt sie beim Überfahren aber ohne Rückmeldung, obwohl sie klickbar
+   ist (der Klick klappt zu) — die Hover-Farbe ist ja schon ihr Ruhezustand.
+   Eine Stufe höher stellt die Rückmeldung wieder her, ohne den Blockeindruck
+   zu brechen. */
+.hb-dt-table tbody .hb-dt-row--open:hover td {
+  background: var(--active-bg);
+}
+
 /* Detailzeile. Erbt von `tbody td` das nowrap — das muss hier weg, sonst
    liefe der Fliesstext in einer einzigen Zeile aus der Tabelle heraus. Die
    Farbkante der Gruppe läuft weiter, damit der Bereich sichtbar zur Zeile
@@ -2359,47 +2372,88 @@ select.hb-input option {
   box-shadow: inset 3px 0 0 var(--hb-dt-accent, transparent);
 }
 
-/* Inhalt des Detailbereichs (ReserveDetail.jsx). Die Breite ist gedeckelt: der
-   Bereich spannt über die volle Tabellenbreite, Fliesstext über 1200 px wäre
-   aber nicht mehr lesbar. */
+/* Inhalt des Detailbereichs (ReserveDetail.jsx). Die Einrückung hält das erste
+   Label unter der Bezeichnung der Zeile darüber — der Bereich gehört sichtbar
+   zu ihr und steht nicht daneben.
+
+   Der Deckel sitzt bewusst NICHT hier, sondern am Fliesstext-Block: nur der
+   braucht ein Lesemass. Lag er am Container, endete auch das Werte-Raster bei
+   900 px, während die Zeile darüber bis 1700 px lief — die rechten 40 % der
+   Fläche blieben leer und der Bereich las sich als linksbündiger Klumpen. */
 .hb-res-detail {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-width: 900px;
-  padding-left: 34px;
+  gap: 12px;
+  max-width: 1360px;
+  padding-left: var(--hb-dt-chevron-w);
+  padding-right: 24px;
 }
 
-/* Werte-Raster der abgewählten Spalten. auto-fill statt fester Spaltenzahl:
-   je nach Spaltenauswahl stehen hier 0 bis 16 Paare. */
+/* Werte-Raster der abgewählten Spalten: drei Paar-Spuren, jeweils Label +
+   Wert. Die Label-Spur ist `max-content` — sie misst sich am längsten Label
+   IHRER Spalte. Eine feste min-width tat das nicht: sie war entweder zu klein
+   (dann sprengte „Diesen Monat gebucht" sie und der Wert daneben verlor die
+   Flucht) oder zu gross (dann klaffte hinter „Tags" ein Loch von 100 px).
+   Beides zugleich richtig zu treffen geht mit einer Zahl nicht, weil die Zahl
+   von Schriftart und -grösse abhängt und mit jedem neuen Spaltenlabel kippt.
+
+   Preis der Paar-Spuren: die Spaltenzahl ist fest statt auto-fill. Bei sehr
+   wenigen abgewählten Spalten bleiben rechts leere Spuren stehen — harmlos,
+   und bei der Vorbelegung (9 abgewählte Spalten) füllt das Raster exakt 3x3. */
 .hb-res-detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 4px 24px;
-}
-
-.hb-res-detail-item {
-  display: flex;
+  grid-template-columns: repeat(3, max-content minmax(0, 1fr));
   align-items: baseline;
-  gap: 8px;
+  column-gap: 12px;
+  row-gap: 8px;
   font-size: 13px;
 }
 
+/* Das Paar löst sich auf: Label und Wert werden direkte Rasterzellen und
+   können damit spaltenweise fluchten. Reine <span> ohne eigene Semantik —
+   `display: contents` ist hier unkritisch. */
+.hb-res-detail-item {
+  display: contents;
+}
+
 .hb-res-detail-label {
-  flex-shrink: 0;
-  min-width: 130px;
   color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Der Detailbereich liegt auf --hover-bg, also --card um 5 % aufgehellt. Auf
+   der Karte selbst erreicht --muted 4.99:1 und damit AA — die Aufhellung
+   kostet genau den Rest und drückt es auf 4.29:1. Die Beimischung von --text
+   bringt es auf ~5.1:1, ohne das Label auf die Stufe des Werts zu heben.
+   Nur im Dark Mode: hell ist der Kontrast auch auf der Fläche ausreichend. */
+:root.dark .hb-res-detail-label,
+:root.dark .hb-res-detail .hb-dt-dash {
+  color: color-mix(in srgb, var(--muted) 82%, var(--text));
 }
 
 .hb-res-detail-value {
   color: var(--text);
   font-variant-numeric: tabular-nums;
+  /* 12 px column-gap + 28 px = 40 px Luft bis zum nächsten Label. Als Padding
+     der Zelle und nicht als grösserer column-gap, weil der auch zwischen Label
+     und Wert läge und das Paar auseinanderrisse. */
+  padding-right: 28px;
 }
 
+/* Der Fortschrittsbalken füllt seine Zelle (`flex: 1`). In einer 400 px
+   breiten Wertspur würde er zum dominierenden Element des Bereichs — hier
+   bekommt er eine Wunschbreite in der Grössenordnung der Tabellenspalte. */
+.hb-res-detail-value .hb-dt-progress-track {
+  flex: 0 1 180px;
+}
+
+/* Hier greift das Lesemass: Fliesstext jenseits von ~80 Zeichen pro Zeile
+   verliert beim Zeilenwechsel den Anschluss. */
 .hb-res-detail-block {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  max-width: 78ch;
 }
 
 .hb-res-detail-text {

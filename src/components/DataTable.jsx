@@ -207,6 +207,11 @@ export default function DataTable({
                             className={"hb-dt-chevron" + (isOpen ? " hb-dt-chevron--open" : "")}
                             onClick={() => toggleDetail(row.id)}
                             aria-expanded={isOpen}
+                            // Nur im offenen Zustand: aria-controls darf laut
+                            // Spec nur auf ein Element zeigen, das es im DOM
+                            // auch gibt — die Detailzeile wird zugeklappt
+                            // ausgehängt, nicht versteckt.
+                            aria-controls={isOpen ? `hb-dt-detail-${row.id}` : undefined}
                             aria-label={isOpen ? "Details zuklappen" : "Details aufklappen"}
                           >
                             <IconChevron />
@@ -218,7 +223,7 @@ export default function DataTable({
                       ))}
                     </tr>
                     {isOpen && (
-                      <tr className="hb-dt-detail-row">
+                      <tr className="hb-dt-detail-row" id={`hb-dt-detail-${row.id}`}>
                         <td colSpan={colCount}>{renderDetail(row, hiddenColumns)}</td>
                       </tr>
                     )}
