@@ -303,7 +303,7 @@ button, input, select, textarea {
 }
 
 /*
-  Warn-Variante: enthält eine Handlungsaufforderung, nicht bloss Information.
+  Warn-Variante: enthält eine Handlungsaufforderung, nicht bloß Information.
   Der Rahmen nutzt bewusst die Alpha-Stufe --yellow-border statt des vollen
   --yellow — im Dark Mode wäre #fce100 als 1px-Linie eine Neonkante.
 */
@@ -404,7 +404,7 @@ button, input, select, textarea {
   overflow: visible;
 }
 
-/* Cards sind standardmässig reine Container (nicht klickbar) → nur ein sehr
+/* Cards sind standardmäßig reine Container (nicht klickbar) → nur ein sehr
    dezenter Border-Wechsel beim Hover, damit sie NICHT interaktiv wirken. */
 .hb-card:hover {
   border-color: var(--border);
@@ -1858,7 +1858,7 @@ select.hb-input option {
      --hb-dt-room ist der Abstand von der Oberkante des Kastens bis zur
      Unterkante des Fensters; `DataTable` misst ihn und schreibt ihn hier
      hinein. Raten lässt er sich nicht: über dem Kasten stehen je nach Zustand
-     Toolbar, Hinweisstreifen und Karten-Padding. Ein zu grosser Wert schiebt
+     Toolbar, Hinweisstreifen und Karten-Padding. Ein zu großer Wert schiebt
      die Summenzeile unter den Fensterrand (und die Seite bekommt eine zweite
      Bildlaufleiste), ein zu kleiner lässt unter der Karte Luft und erzeugt die
      innere Leiste früher als nötig. Der Fallback greift nur im allerersten
@@ -1949,7 +1949,7 @@ select.hb-input option {
   color: var(--accent);
 }
 
-/* Datenzeilen. height wirkt in Tabellen als Mindesthöhe: 40 px WinUI-Mass,
+/* Datenzeilen. height wirkt in Tabellen als Mindesthöhe: 40 px WinUI-Maß,
    auch wenn eine Zelle nur Text enthält. Umbruch ist überall unterdrückt —
    eine umbrechende Zelle würde genau diese einheitliche Höhe sprengen; zu
    breite Inhalte fängt stattdessen der horizontale Scroll ab. */
@@ -1979,7 +1979,7 @@ select.hb-input option {
    `tbody:last-child` trifft deshalb nie — die letzte Datenzeile behielte
    ihren Strich und stünde zusammen mit dem border-top der Summenzeile als
    Doppellinie da. Und `tr` statt `.hb-dt-row`, weil die letzte Zeile einer
-   Sektion auch eine aufgeklappte Detailzeile sein kann — dann sässe deren
+   Sektion auch eine aufgeklappte Detailzeile sein kann — dann säße deren
    Strich direkt über dem der Summenzeile. */
 .hb-dt-table tbody:last-of-type tr:last-child td {
   border-bottom: 0;
@@ -2023,7 +2023,7 @@ select.hb-input option {
 /* Farbkante der Gruppe, 3 px an der ersten Zelle jeder Datenzeile.
 
    Als inset box-shadow und nicht als border-left: ein Rahmen zählt zur
-   Zellbreite, die erste Spalte spränge also je nach Gruppe um 3 px; ausserdem
+   Zellbreite, die erste Spalte spränge also je nach Gruppe um 3 px; außerdem
    liegt der Schatten über dem Zellhintergrund und bleibt damit beim Hover
    sichtbar, während ein border-left vom --hover-bg der Zelle nicht überdeckt,
    aber auch nicht mitgefärbt würde.
@@ -2034,7 +2034,7 @@ select.hb-input option {
   box-shadow: inset 3px 0 0 var(--hb-dt-accent, transparent);
 }
 
-/* Summenzeile am Tabellenfuss. Spaltenweise ausgerichtet — am Fuss liest sich
+/* Summenzeile am Tabellenfuß. Spaltenweise ausgerichtet — am Fuß liest sich
    eine ausgerichtete Zahl als Total, und versteckte Spalten fallen von selbst
    heraus, weil die Komponente summarize() nur für sichtbare Spalten aufruft.
    Der Trennstrich sitzt oben, weil die letzte Datenzeile ihren verliert. */
@@ -2149,7 +2149,7 @@ select.hb-input option {
   flex-direction: column;
   gap: 2px;
   /* Der Scrollport schneidet an seiner Padding-Kante ab. Ohne die
-     ausgeglichene Innen-/Aussenkante läge sie genau auf der Kante der
+     ausgeglichene Innen-/Außenkante läge sie genau auf der Kante der
      Einträge und stutzte den Fokusring (2 px box-shadow) links und rechts.
      Die Einträge stehen dadurch weiterhin bündig unter dem Titel. */
   margin: 0 -6px;
@@ -2227,7 +2227,7 @@ select.hb-input option {
 
 /* Rechtsbündige Spalte (`col.align === "right"`) — greift auf th und td.
    tabular-nums trifft die Beträge, für die die Klasse gedacht ist; an der
-   Status-Spalte, die nur rechts anschliessen soll, läuft es ins Leere. */
+   Status-Spalte, die nur rechts anschließen soll, läuft es ins Leere. */
 .hb-dt-table .hb-dt-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -2361,7 +2361,7 @@ select.hb-input option {
 }
 
 /* Detailzeile. Erbt von `tbody td` das nowrap — das muss hier weg, sonst
-   liefe der Fliesstext in einer einzigen Zeile aus der Tabelle heraus. Die
+   liefe der Fließtext in einer einzigen Zeile aus der Tabelle heraus. Die
    Farbkante der Gruppe läuft weiter, damit der Bereich sichtbar zur Zeile
    darüber gehört. */
 .hb-dt-table tbody .hb-dt-detail-row td {
@@ -2372,118 +2372,329 @@ select.hb-input option {
   box-shadow: inset 3px 0 0 var(--hb-dt-accent, transparent);
 }
 
-/* Inhalt des Detailbereichs (ReserveDetail.jsx). Die Einrückung hält das erste
-   Label unter der Bezeichnung der Zeile darüber — der Bereich gehört sichtbar
-   zu ihr und steht nicht daneben.
+/* Inhalt des Detailbereichs (ReserveDetail.jsx). Drei Zonen über die volle
+   Tabellenbreite: links die Fakten der abgewählten Spalten als Kacheln, rechts
+   Zyklus und Bewertung als Textblöcke, darunter die Aktionsleiste.
 
-   Der Deckel sitzt bewusst NICHT hier, sondern am Fliesstext-Block: nur der
-   braucht ein Lesemass. Lag er am Container, endete auch das Werte-Raster bei
-   900 px, während die Zeile darüber bis 1700 px lief — die rechten 40 % der
-   Fläche blieben leer und der Bereich las sich als linksbündiger Klumpen. */
+   Kein max-width mehr am Container: der frühere Deckel ließ rechts 40 % der
+   Zeilenbreite leer. Das Lesemaß, das er schützen sollte, entsteht jetzt aus
+   der Zonenbreite — die rechte Spalte ist bei voller Seitenbreite ~590 px, also
+   ~68 Zeichen. Der ch-Deckel steht nur noch als Sicherung am Textblock, für den
+   Fall, dass die Zonen bei schmalem Fenster untereinander rutschen.
+
+   Die Einrückung links hält die erste Kachel unter der Bezeichnung der Zeile
+   darüber; rechts derselbe Wert, damit der Streifen als Panel liest. */
 .hb-res-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 1360px;
-  padding-left: var(--hb-dt-chevron-w);
-  padding-right: 24px;
-}
-
-/* Werte-Raster der abgewählten Spalten: drei Paar-Spuren, jeweils Label +
-   Wert. Die Label-Spur ist `max-content` — sie misst sich am längsten Label
-   IHRER Spalte. Eine feste min-width tat das nicht: sie war entweder zu klein
-   (dann sprengte „Diesen Monat gebucht" sie und der Wert daneben verlor die
-   Flucht) oder zu gross (dann klaffte hinter „Tags" ein Loch von 100 px).
-   Beides zugleich richtig zu treffen geht mit einer Zahl nicht, weil die Zahl
-   von Schriftart und -grösse abhängt und mit jedem neuen Spaltenlabel kippt.
-
-   Preis der Paar-Spuren: die Spaltenzahl ist fest statt auto-fill. Bei sehr
-   wenigen abgewählten Spalten bleiben rechts leere Spuren stehen — harmlos,
-   und bei der Vorbelegung (9 abgewählte Spalten) füllt das Raster exakt 3x3. */
-.hb-res-detail-grid {
   display: grid;
-  grid-template-columns: repeat(3, max-content minmax(0, 1fr));
-  align-items: baseline;
-  column-gap: 12px;
-  row-gap: 8px;
-  font-size: 13px;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.85fr);
+  align-items: start;
+  column-gap: 20px;
+  row-gap: 14px;
+  padding: 8px var(--hb-dt-chevron-w) 4px;
+
+  /* Statuston. Drei Rollen, weil sie unterschiedliche Kontrastschwellen haben:
+     -tone ist Textfarbe (AA, deshalb im hellen Theme zweimal korrigiert wie an
+     den Status-Pillen), -tone-mark ist Nicht-Text (WCAG 1.4.11, 3:1) und darf
+     den rohen Token nehmen, -tone-soft ist die Tönungsfläche. */
+  --hb-res-tone: var(--muted);
+  --hb-res-tone-mark: var(--border);
+  --hb-res-tone-soft: transparent;
 }
 
-/* Das Paar löst sich auf: Label und Wert werden direkte Rasterzellen und
-   können damit spaltenweise fluchten. Reine <span> ohne eigene Semantik —
-   `display: contents` ist hier unkritisch. */
-.hb-res-detail-item {
-  display: contents;
+.hb-res-facts {
+  grid-column: 1;
 }
 
-.hb-res-detail-label {
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-/* Der Detailbereich liegt auf --hover-bg, also --card um 5 % aufgehellt. Auf
-   der Karte selbst erreicht --muted 4.99:1 und damit AA — die Aufhellung
-   kostet genau den Rest und drückt es auf 4.29:1. Die Beimischung von --text
-   bringt es auf ~5.1:1, ohne das Label auf die Stufe des Werts zu heben.
-   Nur im Dark Mode: hell ist der Kontrast auch auf der Fläche ausreichend. */
-:root.dark .hb-res-detail-label,
-:root.dark .hb-res-detail .hb-dt-dash {
-  color: color-mix(in srgb, var(--muted) 82%, var(--text));
-}
-
-.hb-res-detail-value {
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-  /* 12 px column-gap + 28 px = 40 px Luft bis zum nächsten Label. Als Padding
-     der Zelle und nicht als grösserer column-gap, weil der auch zwischen Label
-     und Wert läge und das Paar auseinanderrisse. */
-  padding-right: 28px;
-}
-
-/* Der Fortschrittsbalken füllt seine Zelle (`flex: 1`). In einer 400 px
-   breiten Wertspur würde er zum dominierenden Element des Bereichs — hier
-   bekommt er eine Wunschbreite in der Grössenordnung der Tabellenspalte. */
-.hb-res-detail-value .hb-dt-progress-track {
-  flex: 0 1 180px;
-}
-
-/* Hier greift das Lesemass: Fliesstext jenseits von ~80 Zeichen pro Zeile
-   verliert beim Zeilenwechsel den Anschluss. */
-.hb-res-detail-block {
+.hb-res-side {
+  grid-column: 2;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Sind alle Spalten sichtbar, gibt es keine linke Zone. Die Erklärung allein
+   über 1650 px wäre unlesbar — hier greift der ch-Deckel. */
+.hb-res-detail--nofacts {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.hb-res-detail--nofacts .hb-res-side {
+  grid-column: 1;
   max-width: 78ch;
 }
 
-.hb-res-detail-text {
-  font-size: 13px;
-  line-height: 1.5;
+/* Bis drei Kacheln füllt die linke Zone ihre 1.45fr nicht — die Breite geht an
+   den Text, statt dass beide Zonen halb leer stehen. */
+.hb-res-detail--sparse {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+}
+
+/* Freies Sparen: ein Erklärsatz, kein Zyklus, keine Bewertung. Neben den
+   Kacheln sähe er wie ein Restposten aus — als Streifen darunter hat er die
+   Form, die die App für genau diese Aussage schon kennt (hb-infobar). Steht
+   nach --sparse, weil beide Modifier zugleich gesetzt sein können und hier
+   die einspaltige Form gewinnen muss. */
+.hb-res-detail--free {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.hb-res-detail--free .hb-res-facts,
+.hb-res-detail--free .hb-res-side {
+  grid-column: 1;
+}
+
+/* ---------- Zone A: Faktenkacheln ---------- */
+/* auto-fill statt fester Spurenzahl: die Zahl der abgewählten Spalten reicht von
+   0 bis 16. Das frühere Raster hatte drei feste Paar-Spuren und damit beide
+   Fehler gleichzeitig — leere Spuren bei wenigen, keine Breitennutzung bei
+   vielen. Nebeneffekt: die max-content-Labelspur entfällt und mit ihr das
+   Problem, dass ein langes Label die Wertflucht der ganzen Spalte verschiebt. */
+.hb-res-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+/* Kein Schatten: neun Kacheln mit --shadow-sm wären Rauschen. Die Stufe von
+   --hover-bg (Streifen) auf --card (Kachel) trägt die Trennung allein. Sie geht
+   im dunklen Theme nach unten und im hellen nach oben — in beiden Fällen die
+   Standardpaarung „Surface auf Hover-Overlay" der App. */
+.hb-res-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.hb-res-fact-label {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--muted);
+}
+
+/* margin-top: auto — Kacheln einer Rasterzeile sind gleich hoch (stretch), der
+   Wert sitzt damit auf einer gemeinsamen Unterkante, auch wenn ein Label wie
+   „Diesen Monat gebucht" zweizeilig umbricht. */
+.hb-res-fact-value {
+  margin-top: auto;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Ohne Wert keine Fläche: bei freiem Sparen liefern bis zu sieben Spalten „—".
+   Die Kachel behält ihren Rasterplatz, tritt aber hinter die gefüllten zurück. */
+.hb-res-fact--empty {
+  background: transparent;
+}
+
+.hb-res-fact--empty .hb-res-fact-value {
+  font-weight: 500;
+}
+
+/* Fortschritt-Spalte im Kachelkontext. Der Spaltenrenderer liefert Balken und
+   Zahl nebeneinander — in der Kachel wird daraus Zahl oben, Balken als Sockel,
+   also die Anatomie von .hb-stat-pill mit Gauge. column-reverse dreht das ohne
+   Eingriff in reserveColumns.jsx; die Kachel ist die einzige Stelle, die das
+   braucht, und sie ist die einzige, die es überschreibt. */
+.hb-res-fact .hb-dt-progress {
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.hb-res-fact .hb-dt-progress-value {
+  min-width: 0;
+  text-align: left;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Track in der Hue der Füllung statt neutralem Grau — dieselbe Regel wie an
+   .hb-stat-pill--accent .hb-stat-pill-gauge-track. In column-Richtung ist die
+   flex-basis die Höhe. */
+.hb-res-fact .hb-dt-progress-track {
+  flex: 0 0 4px;
+  height: 4px;
+  background: color-mix(in srgb, var(--accent) 20%, var(--border-light));
+}
+
+.hb-res-fact .hb-dt-tags {
+  flex-wrap: wrap;
+}
+
+/* ---------- Zone B: Textblöcke ---------- */
+/* Die 3-px-Kante links ist das Rezept der .hb-stat-pill-Modifier und wiederholt
+   vertikal die Gruppenkante der Zeile. Das linke Padding ist um die Kantenbreite
+   reduziert, damit der Text auf beiden Seiten gleich weit vom Rahmen steht. */
+.hb-res-note {
+  padding: 12px 14px 12px 13px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+/* Der neutrale Block: Zyklus und freies Sparen erklären, sie bewerten nicht. */
+.hb-res-note--plain {
+  background: var(--bg-subtle);
+  border-left: 3px solid var(--border);
+}
+
+/* Der getönte Block: die Bewertung. Bei „Im Plan" bleibt --tone-soft
+   transparent — die Kante allein reicht, der Regelfall soll ruhig aussehen. */
+.hb-res-note--tone {
+  background: var(--hb-res-tone-soft);
+  border-left: 3px solid var(--hb-res-tone-mark);
+}
+
+.hb-res-note-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hb-res-note--tone .hb-res-note-title {
+  color: var(--hb-res-tone);
+}
+
+/* Der Deckel bindet nur, wenn die Zonen untereinander rutschen — in der
+   zweispaltigen Form ist die Zone selbst schon das Lesemaß. */
+.hb-res-note-text {
+  margin: 0;
+  max-width: 78ch;
+  font-size: 14.5px;
+  line-height: 1.55;
   color: var(--text-secondary);
 }
 
+/* Der Ankerhinweis bleibt klein und wird damit erstmals als das lesbar, was er
+   ist: die Erklärung, woran der Zyklus hängt — nicht die Aussage des Blocks. */
+.hb-res-note-hint {
+  margin: 6px 0 0;
+  max-width: 78ch;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Zyklus-Meter: ein Verhältnis gegen eine Grenze (verstrichene von turnusMonths).
+   Ohne Übergang — wie .hb-dt-progress-fill, das aus demselben Grund keinen hat:
+   bei vielen offenen Zeilen flimmerte er bei jedem Re-Render. */
+.hb-res-meter {
+  display: block;
+  height: 6px;
+  margin: 2px 0 10px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--hb-res-tone-mark) 20%, var(--border-light));
+  overflow: hidden;
+}
+
+.hb-res-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-xs);
+  background: var(--hb-res-tone-mark);
+}
+
+/* ---------- Statustöne ---------- */
+/* Nur was Aufmerksamkeit braucht, bekommt eine Fläche. „Im Plan" behält die
+   Kante und bleibt ungetönt: der Regelfall soll ruhig aussehen. Damit trägt der
+   Streifen nie mehr als zwei Farben — die Gruppenkante und einen Ton. Die Farbe
+   ist überall von einem Titelwort begleitet, sie kodiert also redundant. */
+.hb-res-detail--onTrack {
+  --hb-res-tone: var(--green);
+  --hb-res-tone-mark: var(--green);
+}
+
+.hb-res-detail--behind {
+  --hb-res-tone: color-mix(in srgb, var(--yellow) 75%, #000);
+  --hb-res-tone-mark: var(--yellow);
+  --hb-res-tone-soft: var(--yellow-soft);
+}
+
+.hb-res-detail--due {
+  --hb-res-tone: var(--accent-active);
+  --hb-res-tone-mark: var(--accent);
+  --hb-res-tone-soft: var(--accent-soft);
+}
+
+.hb-res-detail--overdue {
+  --hb-res-tone: var(--red);
+  --hb-res-tone-mark: var(--red);
+  --hb-res-tone-soft: var(--red-soft);
+}
+
+/* Wörtlich die Korrekturen von .hb-res-pill--behind / --due: --yellow auf
+   --yellow-soft und --accent auf --accent-soft fallen im hellen Theme unter AA,
+   im dunklen stehen die Rohtöne weit darüber. */
+:root.dark .hb-res-detail--behind {
+  --hb-res-tone: var(--yellow);
+}
+
+:root.dark .hb-res-detail--due {
+  --hb-res-tone: var(--accent);
+}
+
+/* ---------- Hinweise & Aktionen ---------- */
 .hb-res-detail-hints {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  margin-top: 2px;
 }
 
 /* Die Hinweis-Pillen tragen ihre Erklärung im title. */
 .hb-res-hint {
+  font-size: 12px;
+  padding: 3px 9px;
   cursor: help;
 }
 
+/* Die Linie über die volle Breite schließt den Streifen ab — dieselbe Geste wie
+   der Fuß eines Dialogs. */
 .hb-res-detail-actions {
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 2px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
 }
 
-.hb-res-detail-note {
-  font-size: 12px;
-  color: var(--muted);
+/* Die Seite hat eine Mindestbreite und der Tisch scrollt horizontal statt
+   umzubrechen — diese Stufen greifen deshalb praktisch nie und stehen als
+   Sicherung für den Fall, dass der Bereich einmal woanders landet. */
+@media (max-width: 1500px) {
+  .hb-res-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hb-res-detail .hb-res-facts,
+  .hb-res-detail .hb-res-side {
+    grid-column: 1;
+  }
+
+  .hb-res-side {
+    max-width: 78ch;
+  }
+}
+
+@media (max-width: 900px) {
+  .hb-res-facts {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
 }
 
 /* =====================================================
@@ -3293,7 +3504,7 @@ select.hb-input option {
 }
 
 
-/* Semantische Spalten: links ausschliesslich Ausgaben, rechts ausschliesslich
+/* Semantische Spalten: links ausschließlich Ausgaben, rechts ausschließlich
    Transfers/Rücklagen. Jede Spalte ist ein eigenständiger vertikaler Stapel —
    eine Gruppe wandert nie über die Spaltengrenze (früher: ein zeilenweise
    befülltes Grid ohne semantische Bedeutung der Spalte).
@@ -3627,7 +3838,7 @@ select.hb-input option {
   Betragsspalte: Monatsrate als Hauptzahl, darunter — nur bei Rücklagen mit mehr
   als einem Monat Zyklus — der Zyklusbetrag als leise Zweitzeile. Sie beantwortet
   die einzige Frage, die die Hauptzahl offenlässt: warum dort 100 steht und nicht
-  1200. Der äussere align-items: baseline der Titelzeile greift auf die erste
+  1200. Der äußere align-items: baseline der Titelzeile greift auf die erste
   Zeile dieser Spalte, Name und Monatsrate bleiben also in Flucht.
 */
 .hb-fixed-amount-col {
@@ -4239,7 +4450,7 @@ select.hb-input option {
 }
 
 /* Recharts markiert beim Maus-Klick das SVG/Segment mit dem Browser-Default-
-   Outline (weisser Kasten). Keyboard-Fokus deckt weiterhin :focus-visible ab. */
+   Outline (weißer Kasten). Keyboard-Fokus deckt weiterhin :focus-visible ab. */
 .recharts-wrapper:focus,
 .recharts-surface:focus,
 .recharts-wrapper svg:focus,
@@ -6662,7 +6873,7 @@ select.hb-input option {
   pointer-events: none;
 }
 
-/* Fussbereich innerhalb der Kostengruppen-Cards etwas weiter abgesetzt */
+/* Fußbereich innerhalb der Kostengruppen-Cards etwas weiter abgesetzt */
 .hb-cg-card .hb-pot-card-foot {
   margin-top: 16px;
   padding-top: 12px;
@@ -6733,7 +6944,7 @@ select.hb-input option {
   align-items: center;
   gap: 12px;
   /* Kein Hover-Highlight: die Zeile selbst ist nicht klickbar, die Aktionen
-     liegen ausschliesslich im Kebab-Menü. Ein Streifen würde eine
+     liegen ausschließlich im Kebab-Menü. Ein Streifen würde eine
      Klickfläche suggerieren, die es nicht gibt. */
   padding: 8px 0;
   border-bottom: 1px solid var(--border-light);
@@ -6780,7 +6991,7 @@ select.hb-input option {
   gap: 12px;
   /* gleiche Innenpolsterung wie die Zeilen darüber, damit die Kanten fluchten */
   padding: 14px 0 0;
-  /* etwas grösser als die Postenzeilen (15px): die Summe ist der Abschluss
+  /* etwas größer als die Postenzeilen (15px): die Summe ist der Abschluss
      der Liste und darf sich davon abheben */
   font-size: 18px;
   font-weight: 700;
