@@ -242,7 +242,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
     monthStartDay,
   });
 
-  // Bezugsgrösse der Anteilsbalken in der Fixkosten-Übersicht: die
+  // Bezugsgröße der Anteilsbalken in der Fixkosten-Übersicht: die
   // durchschnittliche Gesamtbelastung (Ausgaben + gebuchte Rücklagen), nicht
   // mehr `avg.expense`. Sonst rechnete der Balken auf der alten Ausgaben-Basis,
   // während die KPI-Kachel darüber schon auf der Gesamtbelastung rechnet.

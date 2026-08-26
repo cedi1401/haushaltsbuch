@@ -103,7 +103,7 @@ export function cycleAnchor(item, entries) {
 
   const months = turnusMonths(item);
   // Ohne Entnahme UND ohne Fälligkeit gäbe es keinen Anker. Die Normalisierung
-  // in hbUtils schliesst diesen Halbzustand aus; hier steht der Fall nur, damit
+  // in hbUtils schließt diesen Halbzustand aus; hier steht der Fall nur, damit
   // ein manipuliertes Backup keine NaN-Daten erzeugt.
   if (!lastPayment && !item?.faelligkeit) return null;
 
@@ -307,7 +307,7 @@ function addYearMonth(yyyymm, delta) {
  * Position entstehen mehr Raten als `sinkingFundStatus().elapsed` — dieses ist
  * für den Soll-Stand auf `turnusMonths` gedeckelt, der Ausgleich nicht. Grund:
  * Die Einzelraten werden überhaupt nur deshalb rückdatiert erzeugt, damit die
- * Fixkosten-Trendlinie stimmt; eine Deckelung liesse genau dort wieder Lücken.
+ * Fixkosten-Trendlinie stimmt; eine Deckelung ließe genau dort wieder Lücken.
  * Die Rate-Summe liegt dadurch bewusst über `target` (das auf dem
  * Rechnungsbetrag gedeckelt ist) — das Geld läge real im Topf. `elapsed` darf
  * hier deshalb NICHT als Eingabe dienen; gezählt wird selbst.

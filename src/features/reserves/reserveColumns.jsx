@@ -19,7 +19,7 @@ const STATUS_LABEL = {
 // „Fällig" vor „Im Plan" vor „Rückstand" — eine Reihenfolge, die nichts
 // bedeutet. Aufsteigend gelesen steht hier oben, was zuerst Aufmerksamkeit
 // braucht; dieselbe Leserichtung wie in der Differenz-Spalte, wo der erste
-// Klick den grössten Fehlbetrag nach oben holt.
+// Klick den größten Fehlbetrag nach oben holt.
 const STATUS_ORDER = { overdue: 0, due: 1, behind: 2, onTrack: 3, free: 4 };
 
 /**
@@ -64,7 +64,7 @@ function statusTooltip(row, fmt) {
       );
     case "behind": {
       const short = -row.delta;
-      // Ohne Monatsrate liesse sich der Fehlbetrag nicht in Raten ausdrücken —
+      // Ohne Monatsrate ließe sich der Fehlbetrag nicht in Raten ausdrücken —
       // der Betrag allein ist dann die ganze Aussage.
       const rates = row.monthlyRate > 0 ? ` (${formatRateCount(short / row.monthlyRate)})` : "";
       return `Es fehlen ${fmt(short)}${rates} bis zum Soll-Stand. Die Rechnung ist erst am ${due} fällig.`;
@@ -155,7 +155,7 @@ export function buildReserveColumns({ fmt, potNameById, groupNameById }) {
       id: "turnus",
       label: "Turnus",
       sortValue: (row) => (row.isSinkingFund ? row.turnusMonths : null),
-      // Gross geschrieben wie die Werte aus TURNUS_LABEL — in einer Zelle steht
+      // Groß geschrieben wie die Werte aus TURNUS_LABEL — in einer Zelle steht
       // die Angabe für sich und nicht im Satz.
       render: (row) =>
         row.isSinkingFund
@@ -215,7 +215,7 @@ export function buildReserveColumns({ fmt, potNameById, groupNameById }) {
       align: "right",
       sortValue: (row) => row.delta,
       // Immer über fmt: `delta` ist ungerundet (D5), roh ausgegeben stünden bei
-      // exakter Deckung Fliesskomma-Reste — und damit „−0.00" — in der Zelle.
+      // exakter Deckung Fließkomma-Reste — und damit „−0.00" — in der Zelle.
       render: (row) => {
         if (row.delta === null) return null;
         const cls =

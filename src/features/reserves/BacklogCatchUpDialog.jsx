@@ -13,7 +13,7 @@ import { useFmt } from "../../contexts/CurrencyContext.jsx";
  * Der Dialog **ist** die Bestätigung; ein `ConfirmDialog` davor gäbe es nicht
  * zweimal, und der könnte ohnehin nur Text rendern, keine Ratenliste.
  *
- * `rates` wird ausserhalb berechnet und fertig hereingereicht — dieselbe Liste,
+ * `rates` wird außerhalb berechnet und fertig hereingereicht — dieselbe Liste,
  * die hier steht, wird auch gebucht. Anzeige und Buchung können dadurch
  * konstruktiv nicht auseinanderlaufen. Die Frage, **ob** die Aktion verfügbar
  * ist, entscheidet ebenfalls der View: der Dialog führt aus, er entscheidet

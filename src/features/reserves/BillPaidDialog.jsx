@@ -19,7 +19,7 @@ import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
  * Der Dialog rechnet nichts und schreibt nichts: `actual` kommt fertig herein,
  * der Draft liegt beim Aufrufer (das Projekt vermeidet set-state-in-effect und
  * setzt den Draft vor dem Öffnen), und `onConfirm` bekommt den fertigen Eintrag.
- * Toast und Schliessen macht der Aufrufer — so bleibt der Dialog frei von
+ * Toast und Schließen macht der Aufrufer — so bleibt der Dialog frei von
  * Seiteneffekten.
  */
 export default function BillPaidDialog({

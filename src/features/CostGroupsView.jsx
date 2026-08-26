@@ -105,7 +105,7 @@ export default function CostGroupsView({
   const [viewMode, setViewMode] = useState("overview");
   const [selectedGroupId, setSelectedGroupId] = useState(costGroups[0]?.id || null);
   // Default "all" (Gesamt): beim Zurückkehren in den Kostenrechner immer der
-  // gesamte Verlauf — ausser ein eigener Zeitraum war zuletzt aktiv, der bleibt
+  // gesamte Verlauf — außer ein eigener Zeitraum war zuletzt aktiv, der bleibt
   // bis zum Beenden des Programms bestehen.
   const [rangeOption, setRangeOption] = useState(customRange.active ? "custom" : "all");
   // Scrollfenster des Verlaufscharts (0 = neueste 12 Monate)
@@ -833,7 +833,7 @@ export default function CostGroupsView({
               </CardContent>
             </Card>
 
-            {/* Planung (Soll) — reine Vorschau, fliesst nicht ins Ist ein */}
+            {/* Planung (Soll) — reine Vorschau, fließt nicht ins Ist ein */}
             <Card>
               <CardContent>
                 <div className="hb-cg-section-head">

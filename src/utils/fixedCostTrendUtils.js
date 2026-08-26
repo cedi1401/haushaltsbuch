@@ -45,7 +45,7 @@ function buildMonthItemMap(entries, itemById, monthStartDay) {
 /**
  * Gibt pro Monat die gebuchte Fixkostenbelastung und ihren Anteil zurück.
  *
- * Die Bezugsgrösse des Anteils ist die **Gesamtbelastung** des Monats, nicht
+ * Die Bezugsgröße des Anteils ist die **Gesamtbelastung** des Monats, nicht
  * mehr allein die Ausgaben: `basis = m.expense + sinkingTotal`. Vorher stand im
  * Zähler die Rücklage, im Nenner aber nur die Ausgaben — der Anteil war
  * systematisch überhöht und konnte 100 % überschreiten. Eine Rücklage ist ein

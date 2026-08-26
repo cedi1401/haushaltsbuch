@@ -66,7 +66,7 @@ export const TRANSFER_PALETTE = [
 //
 // Anders als alle übrigen Paletten hier stehen die Werte NICHT als Hex-Codes in
 // dieser Datei, sondern als CSS-Variablen in `haushaltsbuch.css` (Muster: --yoy-*).
-// Grund: Die Farbe geht nie an Recharts, sie wird ausschliesslich in CSS gebraucht.
+// Grund: Die Farbe geht nie an Recharts, sie wird ausschließlich in CSS gebraucht.
 // Damit schaltet das Stylesheet den Dunkelmodus um, ohne dass eine Komponente vom
 // Theme wissen muss — sonst müsste `darkMode` von HaushaltsbuchApp bis in die
 // Spaltendefinition durchgereicht oder readColors() um acht Einträge erweitert

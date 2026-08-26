@@ -31,7 +31,7 @@ const EMPTY_SET = new Set();
  * Sektion (vom View vorbereitet):
  *   { key, label, accent, rows }         // rows brauchen je eine `id`
  *
- * `label === null` heisst: kein Gliederungsband. `accent` ist eine beliebige
+ * `label === null` heißt: kein Gliederungsband. `accent` ist eine beliebige
  * CSS-Farbe (im Rücklagen-View eine var(--group-accent-N)) und färbt Punkt und
  * 3-px-Kante.
  *
@@ -70,7 +70,7 @@ export default function DataTable({
     return columns.filter((c) => !chosen.has(c.id));
   }, [columns, visibleIds]);
 
-  // Mehrere Zeilen dürfen offen sein: ein Klick schliesst nie etwas anderes,
+  // Mehrere Zeilen dürfen offen sein: ein Klick schließt nie etwas anderes,
   // und zwei Positionen lassen sich nebeneinander lesen.
   const [expanded, setExpanded] = useState(EMPTY_SET);
   function toggleDetail(id) {
@@ -81,7 +81,7 @@ export default function DataTable({
     });
   }
 
-  // Ein Klick irgendwo in der Zeile klappt auf — ausser er galt einem
+  // Ein Klick irgendwo in der Zeile klappt auf — außer er galt einem
   // Bedienelement. Ohne diese Ausnahme schaltete der Chevron-Button zweimal
   // (einmal selbst, einmal über die Zeile) und bliebe damit wirkungslos, und
   // eine Aktion in einer Zelle klappte nebenbei den Detailbereich mit auf.
@@ -105,7 +105,7 @@ export default function DataTable({
 
   // Erster Klick immer aufsteigend, zweiter absteigend — keine typabhängige
   // Startrichtung. Die wäre für eine Differenz-Spalte ohnehin nicht eindeutig:
-  // der schlimmste Fall ist dort der kleinste Wert, nicht der grösste.
+  // der schlimmste Fall ist dort der kleinste Wert, nicht der größte.
   function toggleSort(id) {
     setSort((prev) =>
       prev?.columnId === id && prev.dir === "asc"
@@ -115,7 +115,7 @@ export default function DataTable({
   }
 
   // Sortiert wird INNERHALB jeder Sektion — die Gliederung nach Gruppen ist die
-  // äussere Ordnung und bleibt bestehen.
+  // äußere Ordnung und bleibt bestehen.
   const sortedSections = useMemo(
     () => sections.map((s) => ({ ...s, rows: sortRows(s.rows, sortCol, sort?.dir) })),
     [sections, sortCol, sort?.dir]
@@ -129,7 +129,7 @@ export default function DataTable({
 
   return (
     <div className="hb-dt">
-      {/* Ausserhalb von .hb-dt-scroll: innerhalb wanderte der Streifen beim
+      {/* Außerhalb von .hb-dt-scroll: innerhalb wanderte der Streifen beim
           horizontalen Scrollen mit den Spalten nach links aus und der
           Spalten-Button verschwände. */}
       <div className="hb-dt-toolbar">
@@ -269,11 +269,11 @@ export default function DataTable({
  *
  * Warum überhaupt gemessen wird: Über der Tabelle stehen je nach Zustand
  * Toolbar-Streifen, Hinweisstreifen und Karten-Padding. Ein fester
- * `calc(100vh - X)` ist deshalb entweder zu gross — dann steht die Summenzeile
+ * `calc(100vh - X)` ist deshalb entweder zu groß — dann steht die Summenzeile
  * unter dem Fensterrand und die Seite bekommt eine zweite Bildlaufleiste neben
  * der des Kastens — oder zu klein, dann bleibt unter der Karte Luft und die
  * innere Leiste erscheint früher als nötig. Sitzt der Wert dagegen genau,
- * scrollt ausschliesslich die Tabelle, und Kopf- wie Summenzeile bleiben
+ * scrollt ausschließlich die Tabelle, und Kopf- wie Summenzeile bleiben
  * stehen: das ist der eigentliche Zweck von P6.3.
  *
  * Gemessen wird der Abstand zum *Dokumentanfang* (`+ scrollY`), nicht der
@@ -378,9 +378,9 @@ function SortArrow({ active, dir }) {
  */
 /**
  * Setzt den Tooltip einer gedeckelten Zelle — aber nur, wenn der Text wirklich
- * gekürzt ist. Ein pauschaler `title` liesse bei jedem kurzen Namen einen
+ * gekürzt ist. Ein pauschaler `title` ließe bei jedem kurzen Namen einen
  * Tooltip aufgehen, der nichts nachliefert, was nicht schon dasteht. Ob gekürzt
- * wurde, weiss erst das Layout, deshalb wird beim Überfahren gemessen.
+ * wurde, weiß erst das Layout, deshalb wird beim Überfahren gemessen.
  */
 function setClampTitle(e) {
   const el = e.currentTarget;

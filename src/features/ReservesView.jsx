@@ -17,7 +17,7 @@ import BacklogCatchUpDialog from "./reserves/BacklogCatchUpDialog.jsx";
 
 // Sammelschlüssel für Positionen ohne (gültige) Gruppe. Anders als in der
 // Fixkosten-View braucht es hier keinen Schlüssel je Spalte — dieser View zeigt
-// ausschliesslich Transfers.
+// ausschließlich Transfers.
 const UNGROUPED_KEY = "ungrouped";
 
 /**
@@ -25,7 +25,7 @@ const UNGROUPED_KEY = "ungrouped";
  *
  * Rollenteilung zur Fixkosten-View: dort wird angelegt und monatlich gebucht,
  * hier wird überwacht und der Zyklus abgeschlossen. Beide Views lesen dieselben
- * `recurringExpenses`; dieser hier zeigt ausschliesslich die Transfer-Positionen.
+ * `recurringExpenses`; dieser hier zeigt ausschließlich die Transfer-Positionen.
  */
 export default function ReservesView({
   activeBook,
@@ -161,7 +161,7 @@ export default function ReservesView({
     writingRef.current = true;
     const item = billTarget?.item;
     setBillTarget(null);
-    // Die ID entsteht ausserhalb des State-Updaters: `generateId()` ist nicht
+    // Die ID entsteht außerhalb des State-Updaters: `generateId()` ist nicht
     // rein, und unter StrictMode ruft React Updater in der Entwicklung doppelt auf.
     onAddEntry?.({ id: generateId("entry"), ...entry });
     toast.success(`Zahlung für „${item?.name ?? ""}“ gebucht.`);

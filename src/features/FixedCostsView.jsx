@@ -558,7 +558,7 @@ export default function FixedCostsView({
     const dragged = recurringExpenses.find((r) => r.id === dragId);
     if (!dragged) return handleDragEnd();
     // Spaltenwechsel per Drag ist nicht vorgesehen — die Art einer Position
-    // wird ausschliesslich im Dialog geändert.
+    // wird ausschließlich im Dialog geändert.
     if (fixedCostKind(dragged) !== sectionKind) return handleDragEnd();
 
     const rest = recurringExpenses.filter((r) => r.id !== dragId);

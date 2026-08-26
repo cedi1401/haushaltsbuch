@@ -75,12 +75,12 @@ export function IconFixed(props) {
 }
 
 // Münzstapel — Rücklagen-View. Deckel-Ellipse, Zylinder-Silhouette, ein
-// Trennbogen: zwei Münzen (D10). Ein zweiter Trennbogen liesse bei 18 px und
+// Trennbogen: zwei Münzen (D10). Ein zweiter Trennbogen ließe bei 18 px und
 // 1.6 Strichstärke nur ~1.5 px Luft zwischen den Bögen — auf einem Windows-
 // Display ohne Skalierung verschmieren die drei Bögen dann zu einem Block.
 //
 // Ausdehnung y 4.0–20.0 (16 Einheiten) mit optischem Mittelpunkt exakt 12:
-// vorher waren es 15 Einheiten um 11.8, das Icon sass damit sichtbar tiefer
+// vorher waren es 15 Einheiten um 11.8, das Icon saß damit sichtbar tiefer
 // und kleiner als IconFixed (16) und IconCostGroups (18) daneben. Der
 // Münzkörper misst 5.2 Einheiten, der Abstand zwischen Trenn- und Bodenbogen
 // bleibt bei 18 px damit ~2.7 px — deutlich getrennt.

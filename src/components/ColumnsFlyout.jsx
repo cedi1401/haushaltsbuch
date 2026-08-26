@@ -6,7 +6,7 @@ import { IconCheck, IconColumns } from "./icons.jsx";
  * Spaltenauswahl einer DataTable.
  *
  * Mechanik und Optik folgen dem Gruppen-Flyout im Kostenrechner
- * (`CostGroupsView`): Häkchen statt Checkbox-Kasten, Klick ausserhalb, Escape,
+ * (`CostGroupsView`): Häkchen statt Checkbox-Kasten, Klick außerhalb, Escape,
  * Pfeiltasten-Navigation. Rolle ist hier `menuitemcheckbox` — mehrere Spalten
  * sind gleichzeitig aktiv.
  *

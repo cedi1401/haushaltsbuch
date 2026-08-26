@@ -42,7 +42,7 @@ describe('buildFixedCostMonthlyData — Kostenregel im Zähler', () => {
     expect(r.fixedTotal).toBe(100);
   });
 
-  it('lässt freies Sparen (Transfer ohne Turnus) vollständig aussen vor', () => {
+  it('lässt freies Sparen (Transfer ohne Turnus) vollständig außen vor', () => {
     const r = data([booked('r-ferien', 200, { kind: 'transfer', potId: 'pot-ferien' })]);
     expect(r.fixedTotal).toBe(0);
     expect(r.sinkingTotal).toBe(0);
