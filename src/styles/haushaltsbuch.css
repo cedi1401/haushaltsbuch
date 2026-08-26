@@ -1956,6 +1956,16 @@ select.hb-input option {
   white-space: nowrap;
 }
 
+/* Gedeckelte Zelle (`col.maxWidth`). Der Block trägt die Breite, nicht das
+   <td> — siehe Kommentar an `Cell` in DataTable.jsx. Die max-width kommt als
+   Inline-Style aus der Spaltendefinition. */
+.hb-dt-clamp {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Nur die letzte Zeile der letzten Sektion verliert den Strich — zwischen
    zwei Sektionen bleibt er als Trenner stehen.
 
@@ -2210,7 +2220,9 @@ select.hb-input option {
   background: var(--accent-soft);
 }
 
-/* Zahlenspalte — greift auf th und td */
+/* Rechtsbündige Spalte (`col.align === "right"`) — greift auf th und td.
+   tabular-nums trifft die Beträge, für die die Klasse gedacht ist; an der
+   Status-Spalte, die nur rechts anschliessen soll, läuft es ins Leere. */
 .hb-dt-table .hb-dt-num {
   text-align: right;
   font-variant-numeric: tabular-nums;

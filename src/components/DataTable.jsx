@@ -20,6 +20,7 @@ const EMPTY_SET = new Set();
  *     id,                       // Persistenz- und Sortierschlüssel
  *     label,
  *     align,                    // "right" ⇒ rechtsbündig + tabular-nums
+ *     maxWidth,                 // px ⇒ Text wird gedeckelt und mit … gekürzt
  *     alwaysVisible,            // true ⇒ im Flyout ausgegraut + angehakt
  *     defaultVisible,           // Teil der Vorbelegung (Ausgangszustand)
  *     sortValue: (row) => …,    // null sortiert immer ans Ende
@@ -213,12 +214,7 @@ export default function DataTable({
                         </td>
                       )}
                       {visible.map((col) => (
-                        <td
-                          key={col.id}
-                          className={col.align === "right" ? "hb-dt-num" : undefined}
-                        >
-                          <Cell col={col} row={row} />
-                        </td>
+                        <Cell key={col.id} col={col} row={row} />
                       ))}
                     </tr>
                     {isOpen && (
@@ -367,11 +363,43 @@ function SortArrow({ active, dir }) {
 /**
  * Eine Zelle. Leere Werte bekommen ein „—" statt leer zu bleiben — sonst sieht
  * eine Position ohne Turnus aus wie ein Darstellungsfehler.
+ *
+ * `col.maxWidth` deckelt die Spalte. Nötig, weil alle Zellen `nowrap` tragen:
+ * ohne Deckel dehnt ein einziger langer Wert die Tabelle über die Fensterbreite
+ * hinaus, und dann verschwinden die rechten Spalten für ALLE Zeilen hinter der
+ * waagrechten Bildlaufleiste. Der Deckel sitzt am inneren Block und nicht am
+ * <td>: bei `table-layout: auto` ist eine max-width auf der Zelle für den
+ * Browser nur ein Hinweis, den er zugunsten des Inhalts überstimmen darf.
  */
+/**
+ * Setzt den Tooltip einer gedeckelten Zelle — aber nur, wenn der Text wirklich
+ * gekürzt ist. Ein pauschaler `title` liesse bei jedem kurzen Namen einen
+ * Tooltip aufgehen, der nichts nachliefert, was nicht schon dasteht. Ob gekürzt
+ * wurde, weiss erst das Layout, deshalb wird beim Überfahren gemessen.
+ */
+function setClampTitle(e) {
+  const el = e.currentTarget;
+  if (el.scrollWidth > el.clientWidth) el.title = el.textContent;
+  else el.removeAttribute("title");
+}
+
 function Cell({ col, row }) {
   const value = col.render(row);
-  if (value === null || value === undefined || value === "") {
-    return <span className="hb-dt-dash">—</span>;
-  }
-  return value;
+  const empty = value === null || value === undefined || value === "";
+  const content = empty ? <span className="hb-dt-dash">—</span> : value;
+  return (
+    <td className={col.align === "right" ? "hb-dt-num" : undefined}>
+      {col.maxWidth ? (
+        <span
+          className="hb-dt-clamp"
+          style={{ maxWidth: col.maxWidth }}
+          onMouseEnter={setClampTitle}
+        >
+          {content}
+        </span>
+      ) : (
+        content
+      )}
+    </td>
+  );
 }

@@ -104,6 +104,11 @@ export function buildReserveColumns({ fmt, potNameById, groupNameById }) {
       id: "name",
       label: "Bezeichnung",
       alwaysVisible: true,
+      // Die Spalte lässt sich nicht abwählen und steht ganz links — eine lange
+      // Bezeichnung wie „Gebäudeversicherung Wohnung Erdgeschoss" schöbe sonst
+      // die Status-Spalte für alle Zeilen aus dem Sichtfeld. Der volle Name
+      // steht im Tooltip.
+      maxWidth: 320,
       sortValue: (row) => String(row.item?.name ?? "").toLowerCase(),
       render: (row) => row.item?.name,
       // Kein Betrag, aber die Summenzelle, die am weitesten links steht — dort
@@ -264,6 +269,10 @@ export function buildReserveColumns({ fmt, potNameById, groupNameById }) {
     {
       id: "status",
       label: "Status",
+      // Rechtsbündig, obwohl kein Betrag: als letzte Spalte des Katalogs fällt
+      // ihr der Überschuss zu, den das auto-Layout verteilt. Linksbündig stünde
+      // das Badge mitten in der Spalte und die Tabelle sähe rechts unfertig aus.
+      align: "right",
       sortValue: (row) => STATUS_ORDER[row.status] ?? null,
       render: (row) => {
         const label = STATUS_LABEL[row.status];
