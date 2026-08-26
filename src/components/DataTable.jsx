@@ -28,12 +28,11 @@ const EMPTY_SET = new Set();
  *   }
  *
  * Sektion (vom View vorbereitet):
- *   { key, label, accent, meta, rows }   // rows brauchen je eine `id`
+ *   { key, label, accent, rows }         // rows brauchen je eine `id`
  *
  * `label === null` heisst: kein Gliederungsband. `accent` ist eine beliebige
  * CSS-Farbe (im Rücklagen-View eine var(--group-accent-N)) und färbt Punkt und
- * 3-px-Kante; `meta` ist ein fertiger Knoten für die rechte Seite des Bandes —
- * was dort steht, weiss nur der View.
+ * 3-px-Kante.
  *
  * `renderDetail(row, hiddenColumns)` ist optional. Wird es übergeben, bekommt
  * die Tabelle links eine Chevron-Spalte und jede Zeile lässt sich aufklappen;
@@ -188,7 +187,6 @@ export default function DataTable({
                       <span className="hb-dt-band-count">
                         {section.rows.length} Position{section.rows.length === 1 ? "" : "en"}
                       </span>
-                      {section.meta && <span className="hb-dt-band-meta">{section.meta}</span>}
                     </div>
                   </td>
                 </tr>

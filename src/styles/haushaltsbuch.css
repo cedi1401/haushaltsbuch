@@ -2005,30 +2005,6 @@ select.hb-input option {
   color: var(--muted);
 }
 
-/* Die Kennzahlen rücken nach rechts und stehen in Zahlenschrift — sie fluchten
-   damit untereinander, auch wenn die Bänder unterschiedlich breite Namen haben. */
-.hb-dt-band-meta {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* --border ist ein Flächen-Token für --card und löst sich auf --bg-subtle
-   praktisch auf (1.08:1 hell, 1.45:1 dunkel) — der Punkt wäre schlicht nicht
-   da. --muted trägt auf beiden Flächen (4.9:1 / 6.0:1) und hält den Trenner
-   trotzdem hinter den Werten zurück, die in --text-secondary stehen. */
-.hb-dt-band-meta-sep {
-  color: var(--muted);
-}
-
-.hb-dt-band-meta-label {
-  color: var(--muted);
-}
-
 /* Farbkante der Gruppe, 3 px an der ersten Zelle jeder Datenzeile.
 
    Als inset box-shadow und nicht als border-left: ein Rahmen zählt zur

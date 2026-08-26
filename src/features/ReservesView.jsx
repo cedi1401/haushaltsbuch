@@ -224,7 +224,7 @@ export default function ReservesView({
     // Ohne jede Gruppe bleibt es bei der einen Sektion ohne Band. Ein einzelnes
     // Band „Ohne Gruppe" über der gesamten Tabelle wäre reine Dekoration.
     if (byKey.size === 1 && byKey.has(UNGROUPED_KEY)) {
-      return [{ key: UNGROUPED_KEY, label: null, accent: null, meta: null, rows }];
+      return [{ key: UNGROUPED_KEY, label: null, accent: null, rows }];
     }
 
     // Die Farbe hängt an der Position in der Gruppenliste, nicht an den Zeilen —
@@ -238,7 +238,6 @@ export default function ReservesView({
         key: group.id,
         label: group.name,
         accent,
-        meta: <BandMeta rows={groupRows} fmt={fmt} />,
         rows: groupRows,
       });
     });
@@ -251,12 +250,11 @@ export default function ReservesView({
         key: UNGROUPED_KEY,
         label: "Ohne Gruppe",
         accent: null,
-        meta: <BandMeta rows={ungrouped} fmt={fmt} />,
         rows: ungrouped,
       });
     }
     return result;
-  }, [rows, transferGroups, fmt]);
+  }, [rows, transferGroups]);
 
   if (items.length === 0) {
     return (
@@ -327,44 +325,6 @@ export default function ReservesView({
         onClose={() => setCatchUpTarget(null)}
         onConfirm={confirmCatchUp}
       />
-    </>
-  );
-}
-
-/**
- * Die rechte Seite eines Gliederungsbandes: `Soll · Ist · Δ` der Gruppe.
- *
- * Freies Sparen hat keinen Soll-Stand (`target === null`) und geht deshalb nur
- * mit seinem Ist-Stand ein — die Differenz der Gruppe bewertet ausschliesslich
- * das, was auch bewertbar ist.
- */
-function BandMeta({ rows, fmt }) {
-  let target = 0;
-  let actual = 0;
-  let delta = 0;
-  let tolerance = 0;
-  for (const row of rows) {
-    if (Number.isFinite(row.target)) target += row.target;
-    if (Number.isFinite(row.actual)) actual += row.actual;
-    if (Number.isFinite(row.delta)) delta += row.delta;
-    if (Number.isFinite(row.tolerance)) tolerance += row.tolerance;
-  }
-  // Dieselbe Regel wie in der Differenz-Spalte: gefärbt wird erst jenseits der
-  // aufsummierten Rundungstoleranz, sonst stünde bei exakter Deckung ein rotes
-  // „−0.00" im Band.
-  const deltaClass =
-    delta < -tolerance ? "hb-dt-delta--neg" : delta > tolerance ? "hb-dt-delta--pos" : undefined;
-
-  return (
-    <>
-      <span className="hb-dt-band-meta-label">Soll</span>
-      {fmt(target)}
-      <span className="hb-dt-band-meta-sep">·</span>
-      <span className="hb-dt-band-meta-label">Ist</span>
-      {fmt(actual)}
-      <span className="hb-dt-band-meta-sep">·</span>
-      <span className="hb-dt-band-meta-label">Δ</span>
-      <span className={deltaClass}>{fmt(delta)}</span>
     </>
   );
 }
