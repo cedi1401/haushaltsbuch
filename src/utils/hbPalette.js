@@ -40,14 +40,21 @@ export const CUSTOM_CATEGORY_PALETTE = [
   "#455a64", // Blaugrau
 ];
 
-// Palette für Transfer-Kategorien im Topf-Donut-Chart. Kühle, analoge Farbfamilie
+// Palette für Transfer-Kategorien in der Topf-Zusammensetzung. Kühle, analoge Farbfamilie
 // (Teal → Cyan → Blau → Indigo → Violett, Hue 190°→268°) → kommuniziert weiterhin
 // visuell „alle Transfers derselben Natur", während benachbarte Zwecke sich nun in
 // mehreren Dimensionen unterscheiden. Eine reine Mono-Hue-Helligkeitsrampe war in
 // der Legende (kleine Farbquadrate) praktisch nicht auseinanderzuhalten; daher hier
 // zusätzlich zur Lightness eine Hue-Progression plus alternierende Helligkeit
-// (Zickzack), damit direkt benachbarte Stufen maximal kontrastieren. Zuweisung
-// erfolgt stabil nach Zweck-Key (siehe PotsView), nicht nach Wert-Rang.
+// (Zickzack), damit direkt benachbarte Stufen maximal kontrastieren.
+//
+// HARTE REGEL: diese Palette darf NIE zyklisch (`i % length`) auf eine
+// unbegrenzte Zweckliste angewendet werden. Ein Topf kann beliebig viele Zwecke
+// haben; bei 21 Zwecken trug dann jede Farbe drei davon und das Farbfeld in der
+// Legende identifizierte nichts mehr. Wer mehr Klassen darstellen muss, deckelt
+// die farbcodierten Klassen auf ≤ 8 (Rest neutral als „Sonstige“, siehe
+// PotsView) oder gibt Farbe als Identitätsträger ganz auf — eine neunte Farbe
+// zu erfinden ist nicht die Lösung.
 export const TRANSFER_PALETTE = [
   "#267e8f", // Teal        H190 L36%
   "#338aba", // Cyan-Blau   H201 L46%

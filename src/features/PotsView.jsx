@@ -13,11 +13,8 @@ import {
   Tooltip,
   BarChart,
   Bar,
-  Cell,
   CartesianGrid,
   ReferenceLine,
-  PieChart,
-  Pie,
 } from "recharts";
 import { calcPotSeries, potPurposeBalances } from "../utils/potUtils.js";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
@@ -26,7 +23,6 @@ import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact, formatCurre
 import { formatYearMonth, getEntryFinancialMonth } from "../utils/financialMonthUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useThemeColors } from "../hooks/themeColors.js";
-import { useCardBg } from "../hooks/useCardBg.js";
 import { useClickOutside } from "../hooks/useClickOutside.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import {
@@ -40,16 +36,54 @@ import {
 
 const fmtYearMonth = formatYearMonth;
 
+// Zusammensetzung: so viele Zwecke bekommen eine eigene Farbe im Stapelbalken.
+// Der Rest wird zu „Sonstige“ zusammengefasst. 8 farbige Klassen schöpfen
+// TRANSFER_PALETTE genau aus; „Sonstige“ läuft neutral in REST_COLOR und
+// verbraucht keine neunte Farbe — die Palette wird nie zyklisch
+// wiederverwendet (siehe Kommentar am composition-Memo).
+const COMPOSITION_TOP_N = 8;
+// Neutraler Ton für „Sonstige“ und für alle Zeilen jenseits der Top N. Bewusst
+// keine Palettenfarbe: Grau heißt hier „gehört zum Sonstige-Segment".
+const REST_COLOR = "var(--muted)";
+// Ab dieser Zahl wird die Rangliste eingeklappt (zweispaltig also 12 je Spalte).
+const COMPOSITION_VISIBLE = 24;
+// Ab so vielen Zwecken lohnt der zweispaltige Satz der Rangliste.
+const COMPOSITION_COLS_MIN = 7;
+
+// Prozentlabel der Zusammensetzung. Unter 1 % wird nicht auf „0 %" gerundet —
+// ein Betrag mit „0 %" daneben liest sich wie ein Fehler.
+const sharePct = (share) => (share > 0 && share < 1 ? "< 1" : String(Math.round(share)));
+
+// Halbe angenommene Breite der Tooltip-Blase — nur zum Klemmen an den
+// Viewport-Rand. Die Blase ist per translate(-50%) am Cursor zentriert; ohne
+// Klemmung liefe sie bei einem Segment ganz links/rechts aus dem Bild.
+const COMP_TIP_HALF_W = 130;
+
+// Cursorposition für den Zusammensetzungs-Tooltip: horizontal dem Zeiger folgen
+// (geklemmt), vertikal an der Oberkante des Balkens ankern, damit die Blase
+// beim Wandern über den Balken nicht auf und ab springt.
+function tipCoords(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = Math.max(
+    COMP_TIP_HALF_W + 8,
+    Math.min(e.clientX, window.innerWidth - COMP_TIP_HALF_W - 8)
+  );
+  return { x, y: rect.top };
+}
+
 export default function PotsView({ activeBook, entries, onAddTransferEntry, onUpdateBook, transferCategories, onEditEntry, onRemoveEntry, monthStartDay = 1, monthFilter, monthLabel }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const pots = useMemo(() => activeBook?.pots || [], [activeBook?.pots]);
   const [selectedPotId, setSelectedPotId] = useState(pots[0]?.id || "");
   const themeColors = useThemeColors();
-  const cardBg = useCardBg();
   const [addEntryOpen, setAddEntryOpen] = useState(false);
   const [managePotsOpen, setManagePotsOpen] = useState(false);
   const [showAllEntries, setShowAllEntries] = useState(false);
+  const [showAllPurposes, setShowAllPurposes] = useState(false);
+  // Hover-Tooltip über dem Zusammensetzungsbalken: { seg, x, y } in
+  // Viewport-Koordinaten (das Panel liegt fixed, siehe .hb-potcomp-tip).
+  const [compTip, setCompTip] = useState(null);
   const [lineRangeOption, setLineRangeOption] = useState("12");
   const [lineScrollOffset, setLineScrollOffset] = useState(0);
   const [barRangeOption, setBarRangeOption] = useState("12");
@@ -206,28 +240,41 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
     return result.toSorted((a, b) => b.value - a.value);
   }, [entries, selectedPot]);
 
-  // Farbe folgt dem Zweck (Entität), nicht dem aktuellen Wert-Rang. Sonst
-  // repainten sich die Donut-Segmente, sobald sich die Zusammensetzung (und
-  // damit die Sortierung) ändert (recolor-on-filter). Stabile Reihenfolge:
-  // zuerst die kanonische Transfer-Kategorienliste des Buchs, danach unbekannte
-  // Zwecke (z.B. „Sonstiges") alphabetisch angehängt. So behält ein Zweck über
-  // Zeit dieselbe Farbe aus dem Blau-Ramp („alle Transfers eine Familie").
-  const transferCatColor = useMemo(() => {
-    const order = [];
-    const seen = new Set();
-    for (const cat of transferCategories || []) {
-      const name = String(cat).trim();
-      if (name && !seen.has(name)) { seen.add(name); order.push(name); }
+  // Zusammensetzung des Topfs: 100-%-Stapelbalken + Rangliste.
+  //
+  // Farbe wird NUR an die COMPOSITION_TOP_N größten Zwecke vergeben, alles
+  // darunter läuft neutral als „Sonstige“. Grund: TRANSFER_PALETTE hat acht
+  // Farben; ein Topf kann beliebig viele Zwecke haben. Die frühere zyklische
+  // Zuweisung (`i % length`) gab bei 21 Zwecken jeder Farbe drei Zwecke — das
+  // Farbfeld identifizierte dann nichts mehr. Regel: die Zahl der farbcodierten
+  // Klassen bleibt ≤ 8, sonst trägt die Farbe keine Identität. Die Identität
+  // liegt hier ohnehin im Namen der Zeile, die Reihenfolge kodiert den Rang.
+  const composition = useMemo(() => {
+    const total = transfersByCategory.reduce((sum, d) => sum + d.value, 0);
+    if (total <= 0) return null;
+
+    const rows = transfersByCategory.map((d, i) => ({
+      name: d.name,
+      value: d.value,
+      share: (d.value / total) * 100,
+      color: i < COMPOSITION_TOP_N ? TRANSFER_PALETTE[i] : REST_COLOR,
+    }));
+
+    const segments = rows.slice(0, COMPOSITION_TOP_N).map((r) => ({ ...r, restCount: 0 }));
+    const rest = rows.slice(COMPOSITION_TOP_N);
+    if (rest.length) {
+      const restValue = rest.reduce((sum, r) => sum + r.value, 0);
+      segments.push({
+        name: "Sonstige",
+        value: restValue,
+        share: (restValue / total) * 100,
+        color: REST_COLOR,
+        restCount: rest.length,
+      });
     }
-    for (const d of [...transfersByCategory].sort((a, b) => a.name.localeCompare(b.name))) {
-      if (!seen.has(d.name)) { seen.add(d.name); order.push(d.name); }
-    }
-    const map = new Map();
-    order.forEach((name, i) => {
-      map.set(name, TRANSFER_PALETTE[i % TRANSFER_PALETTE.length]);
-    });
-    return map;
-  }, [transferCategories, transfersByCategory]);
+
+    return { total, rows, segments, restCount: rest.length };
+  }, [transfersByCategory]);
 
   // Alle Einzelbuchungen (Transfers + Entnahmen) für den gewählten Topf, optional nach Monat gefiltert
   const potEntries = useMemo(() => {
@@ -448,16 +495,18 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
       ) : (
         <>
           {/*
-            Analyse-Layout: 2-Spalten (Charts links 2fr · Zusammensetzung rechts 1fr).
-            Bricht unter 900px (hb-two-Breakpoint) auf eine Spalte um.
-            Der Donut nimmt damit nie mehr die volle Seitenbreite ein.
+            Analyse-Layout: die beiden Zeitreihen (gleiche X-Achse, Monate) stehen
+            nebeneinander, die Zusammensetzung vollbreit darunter. Vorher stand die
+            Zusammensetzung als schmale Spalte rechts — mit vielen Zwecken wurde ihre
+            Legende doppelt so hoch wie die Chart-Spalte daneben. Vollbreit gibt es
+            keine ungleich langen Spalten mehr, und die Rangliste kann zweispaltig
+            gesetzt werden. Bricht unter 900px (hb-two-Breakpoint) auf eine Spalte um.
           */}
-          <div
-            className="hb-two"
-            style={{ gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)", alignItems: "stretch" }}
-          >
-            {/* Linke Spalte: LineChart (Hero) über BarChart */}
-            <div className="hb-stack hb-stack--lg" style={{ minWidth: 0 }}>
+          <div className="hb-stack hb-stack--lg">
+            <div
+              className="hb-two"
+              style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", alignItems: "stretch" }}
+            >
               {/* LineChart: Stand über Zeit */}
               <Card>
                 <CardContent>
@@ -499,9 +548,9 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                           dataKey="name"
                           tick={{ fontSize: 11 }}
                           interval={0}
-                          angle={-20}
+                          angle={-35}
                           textAnchor="end"
-                          height={60}
+                          height={62}
                         />
                         <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)} width={64} />
                         <Tooltip
@@ -579,9 +628,9 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                           dataKey="name"
                           tick={{ fontSize: 11 }}
                           interval={0}
-                          angle={-20}
+                          angle={-35}
                           textAnchor="end"
-                          height={60}
+                          height={62}
                         />
                         <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} />
                         <Tooltip
@@ -626,75 +675,105 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
               </Card>
             </div>
 
-            {/* Rechte Spalte: Zusammensetzung nach Zweck (Donut + Legende, schmal) */}
-            {transfersByCategory.length > 0 ? (
-              <Card style={{ display: "flex", flexDirection: "column" }}>
-                <CardContent style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-                  <h3 className="hb-card-title" style={{ marginBottom: 8 }}>Zusammensetzung</h3>
-
-                  {/* Donut mit fixer Maximalbreite, zentriert — geht nicht auf volle Breite auf */}
-                  <div style={{ width: "100%", maxWidth: 280, height: 240, margin: "8px auto 0" }}>
-                    <ResponsiveContainer width="100%" height={240}>
-                      <PieChart>
-                        <Pie
-                          data={transfersByCategory}
-                          dataKey="value"
-                          nameKey="name"
-                          innerRadius={55}
-                          outerRadius={95}
-                          paddingAngle={0}
-                          cornerRadius={4}
-                          stroke={cardBg}
-                          strokeWidth={3}
-                          strokeLinejoin="round"
-                          startAngle={90}
-                          endAngle={-270}
-                        >
-                          {transfersByCategory.map((d) => (
-                            <Cell key={d.name} fill={transferCatColor.get(d.name)} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          wrapperStyle={{ zIndex: 10 }}
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null;
-                            const p = payload[0];
-                            return (
-                              <div className="hb-chart-tooltip">
-                                <span className="hb-chart-tooltip-label">
-                                  <span className="hb-tooltip-dot" style={{ background: p.fill }} />
-                                  {p.name}
-                                </span>
-                                <span>{fmt(p.value)}</span>
-                              </div>
-                            );
-                          }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
+            {/* Zusammensetzung nach Zweck: 100-%-Stapelbalken + Rangliste, volle Breite */}
+            {composition ? (
+              <Card>
+                <CardContent>
+                  <div className="hb-row" style={{ alignItems: "center", marginBottom: 14 }}>
+                    <div className="hb-title-group">
+                      <h3 className="hb-card-title">Zusammensetzung</h3>
+                      <span className="hb-info-pill hb-info-pill--title">
+                        {composition.rows.length} {composition.rows.length === 1 ? "Zweck" : "Zwecke"}
+                      </span>
+                    </div>
+                    <span className="hb-cg-catlist-total">{fmt(composition.total)}</span>
                   </div>
 
-                  <div className="hb-legend" style={{ marginTop: 12 }}>
-                    <div className="hb-legend-title">Legende</div>
-                    {transfersByCategory.map((d) => (
-                      <div key={d.name} className="hb-legend-row">
-                        <div className="hb-legend-left">
-                          <span
-                            className="hb-dot"
-                            style={{ background: transferCatColor.get(d.name) }}
-                          />
-                          <span className="hb-small">{d.name}</span>
+                  {/*
+                    Anteil am Ganzen als ein einzelner horizontaler Stapelbalken statt
+                    als Donut: ein 0,6-%-Posten ist hier auch bei 1100px noch ~7px breit,
+                    im Donut wäre er bei 40px Ringdicke eine Haarlinie. Trennung der
+                    Segmente über eine 2px-Kante in Kartenfarbe (dieselbe Technik wie
+                    strokeWidth am Donut, nur linear) — kein paddingAngle-Äquivalent,
+                    die Breiten bleiben exakt proportional.
+                  */}
+                  <div
+                    className="hb-potcomp-bar"
+                    role="img"
+                    aria-label={`Anteile am Topfstand: ${composition.segments
+                      .map((seg) => `${seg.name} ${sharePct(seg.share)} Prozent`)
+                      .join(", ")}`}
+                    onMouseLeave={() => setCompTip(null)}
+                  >
+                    {composition.segments.map((seg) => (
+                      <div
+                        key={seg.name}
+                        className="hb-potcomp-seg"
+                        style={{ width: `${seg.share}%`, background: seg.color }}
+                        onMouseEnter={(e) => setCompTip({ seg, ...tipCoords(e) })}
+                        onMouseMove={(e) => setCompTip({ seg, ...tipCoords(e) })}
+                      />
+                    ))}
+                  </div>
+                  {compTip && (
+                    <div
+                      className="hb-chart-tooltip hb-potcomp-tip"
+                      style={{ left: compTip.x, top: compTip.y }}
+                      aria-hidden="true"
+                    >
+                      <span className="hb-chart-tooltip-label">
+                        <span className="hb-tooltip-dot" style={{ background: compTip.seg.color }} />
+                        {compTip.seg.restCount > 0
+                          ? `${compTip.seg.name} (${compTip.seg.restCount} Zwecke)`
+                          : compTip.seg.name}
+                      </span>
+                      <span>{fmt(compTip.seg.value)} · {sharePct(compTip.seg.share)} %</span>
+                    </div>
+                  )}
+
+                  <div
+                    className={`hb-cg-breakdown hb-cg-breakdown--compact${
+                      composition.rows.length >= COMPOSITION_COLS_MIN ? " hb-cg-breakdown--cols" : ""
+                    }`}
+                    style={{ marginTop: 20 }}
+                  >
+                    {(showAllPurposes ? composition.rows : composition.rows.slice(0, COMPOSITION_VISIBLE)).map((r) => (
+                      <div key={r.name} className="hb-cg-breakdown-row">
+                        <div className="hb-cg-breakdown-top">
+                          <div className="hb-cg-breakdown-info">
+                            <div className="hb-cg-breakdown-names">
+                              <span className="hb-cg-breakdown-name">{r.name}</span>
+                            </div>
+                          </div>
+                          <div className="hb-cg-breakdown-values">
+                            <span className="hb-cg-breakdown-amount">{fmt(r.value)}</span>
+                            <span className="hb-cg-breakdown-share">{sharePct(r.share)} %</span>
+                          </div>
                         </div>
-                        <span className="hb-muted">{fmt(d.value)}</span>
+                        <div className="hb-cg-breakdown-bar">
+                          <div
+                            className="hb-cg-breakdown-bar-fill"
+                            style={{ width: `${r.share}%`, background: r.color }}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
 
+                  {composition.rows.length > COMPOSITION_VISIBLE && (
+                    <div style={{ marginTop: 16, textAlign: "center" }}>
+                      <Button variant="outline" onClick={() => setShowAllPurposes((v) => !v)}>
+                        {showAllPurposes
+                          ? "Weniger anzeigen"
+                          : `Weitere ${composition.rows.length - COMPOSITION_VISIBLE} anzeigen`}
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ) : (
-              <Card style={{ display: "flex", flexDirection: "column" }}>
-                <CardContent style={{ display: "flex", flexDirection: "column", justifyContent: "center", height: "100%" }}>
+              <Card>
+                <CardContent>
                   <h3 className="hb-card-title" style={{ marginBottom: 8 }}>Zusammensetzung</h3>
                   <div className="hb-muted" style={{ textAlign: "center", padding: "32px 8px" }}>
                     Noch keine positiven Netto-Beträge je Zweck vorhanden.

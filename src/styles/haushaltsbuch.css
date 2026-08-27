@@ -7130,6 +7130,85 @@ select.hb-input option {
   transition: width 0.4s ease;
 }
 
+/* Zusammensetzung eines Topfs (PotsView) — Stapelbalken + Rangliste.
+   Der frühere Donut mit vollständiger Legende skalierte ab ~10 Zwecken nicht:
+   kleine Segmente wurden vom 3px-Stroke geometrisch aufgezehrt und die Legende
+   streckte die Karte auf die doppelte Höhe der Chart-Spalte daneben. */
+
+/* Ein einzelner 100-%-Balken: Top-N-Zwecke farbig, Rest als „Sonstige".
+   Segmenttrennung über eine Kante in Kartenfarbe statt über einen Flex-Gap —
+   ein Gap käme zu den Prozentbreiten hinzu und würde die Summe über 100 %
+   treiben; die Kante liegt dank border-box innerhalb der Segmentbreite. */
+.hb-potcomp-bar {
+  display: flex;
+  width: 100%;
+  height: 25px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-subtle);
+}
+
+.hb-potcomp-seg {
+  height: 100%;
+  min-width: 3px;
+  box-sizing: border-box;
+  border-right: 2px solid var(--card);
+  transition: width 0.4s ease, filter 0.15s ease;
+}
+
+.hb-potcomp-seg:last-child {
+  border-right: 0;
+}
+
+/* Hover-Affordanz: das Segment unter dem Cursor hellt leicht auf, damit sichtbar
+   ist, worauf sich der Tooltip bezieht. */
+.hb-potcomp-seg:hover {
+  filter: brightness(1.15);
+}
+
+/* Hover-Tooltip über einem Segment. `position: fixed` (Viewport-Koordinaten)
+   wie bei .hb-spark-panel, damit weder das overflow:hidden des Balkens noch das
+   der Karte die Blase abschneidet. Der Pfeil entfällt bewusst — die Blase sitzt
+   direkt über dem Cursor und folgt ihm. */
+.hb-potcomp-tip {
+  position: fixed;
+  z-index: 9999;
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Kompakte Variante der Aufschlüsselung: mehr Zeilen auf gleicher Höhe. */
+.hb-cg-breakdown--compact {
+  gap: 14px;
+}
+
+.hb-cg-breakdown--compact .hb-cg-breakdown-bar {
+  height: 8px;
+}
+
+/* Zweispaltiger Satz ab ausreichender Breite. Bewusst `columns` statt Grid:
+   die Liste ist nach Betrag sortiert, mit Spaltensatz läuft Rang 1..n die
+   linke Spalte hinunter und erst dann die rechte (Zeitungssatz). Ein Grid
+   würde zeilenweise füllen und Rang 1 neben Rang 2 setzen. */
+@media (min-width: 1100px) {
+  .hb-cg-breakdown--cols {
+    display: block;
+    columns: 2;
+    column-gap: 36px;
+  }
+
+  .hb-cg-breakdown--cols > .hb-cg-breakdown-row {
+    break-inside: avoid;
+    margin-bottom: 14px;
+  }
+
+  .hb-cg-breakdown--cols > .hb-cg-breakdown-row:last-child {
+    margin-bottom: 0;
+  }
+}
+
 /* Vorschau des Rücklagenbedarfs im Posten-Dialog */
 .hb-cg-plan-expected {
   font-size: 13px;
