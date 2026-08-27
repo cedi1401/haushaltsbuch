@@ -4459,6 +4459,34 @@ select.hb-input option {
 }
 
 /* =====================================================
+   CHART-HOVER (Recharts)
+   ===================================================== */
+
+/* Dasselbe Detail wie beim Zusammensetzungsbalken in PotsView
+   (.hb-potcomp-seg): die Form unter dem Cursor hellt leicht auf, damit sichtbar
+   ist, worauf sich der Tooltip bezieht. Beide Klassen sind <g>-Layer, die
+   Recharts um die eigentliche Form legt — der Filter greift daher auch bei
+   Custom-Shapes (IncomeBarShape/OutflowBarShape) und bei <Cell>-Balken mit
+   eigener Farbe, ohne dass eine Komponente Hover-State halten muss. */
+.recharts-bar-rectangle,
+.recharts-pie-sector {
+  transition: filter 0.15s ease;
+}
+
+.recharts-bar-rectangle:hover,
+.recharts-pie-sector:hover {
+  filter: brightness(1.15);
+}
+
+/* Der Tooltip-Cursor (die eingefärbte Fläche hinter der Kategorie, TrendView)
+   wird nach den Balken gezeichnet und läge sonst als Fangfläche darüber — der
+   Balken bekäme nie :hover. Der Tooltip hängt an den Maus-Handlern des Charts,
+   nicht an diesem Rechteck; pointer-events: none ändert also nichts an ihm. */
+.recharts-tooltip-cursor {
+  pointer-events: none;
+}
+
+/* =====================================================
    PRINT STYLES
    ===================================================== */
 @media print {
