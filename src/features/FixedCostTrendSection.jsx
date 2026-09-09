@@ -23,10 +23,10 @@ import { MONTHS_SHORT, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 // in der Übersichtsliste Zeilen stehen, die in keiner Summe auftauchen (D6).
 const HELP_FCT =
   'Gebuchte Fixkosten über den gewählten Zeitraum (via „Jetzt buchen") und Übersicht aller ' +
-  'konfigurierten Positionen. Als Belastung zählen Ausgaben-Fixkosten und Rücklagen: Transfers ' +
-  'mit Turnus gehen mit ihrer Monatsrate ein, nicht mit dem Rechnungsbetrag des ganzen Zyklus. ' +
-  'Ein Transfer ohne Turnus ist freies Sparen — er bleibt in der Übersicht, zählt aber in keiner ' +
-  'Kennzahl mit.';
+  'konfigurierten Positionen. Als Belastung zählen Ausgaben-Fixkosten und Rückstellungen: ' +
+  'Transfers mit Turnus gehen mit ihrer Monatsrate ein, nicht mit dem Rechnungsbetrag des ganzen ' +
+  'Zyklus. Ein Transfer ohne Turnus ist eine Rücklage — er bleibt in der Übersicht, zählt aber ' +
+  'in keiner Kennzahl mit.';
 
 function fmtMonthDE(ym) {
   if (!ym) return "";
@@ -141,11 +141,11 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
           ...r,
           // `amount` ist ab hier die Monatsrate, `annual` der Jahresbetrag.
           // Beide werden aus `r` abgeleitet, bevor `amount` überschrieben wird —
-          // sonst ginge der Zyklusbetrag der Rücklagen verloren.
+          // sonst ginge der Zyklusbetrag der Rückstellungen verloren.
           amount: monthlyRate(r),
           annual: annualAmount(r),
           isTransfer,
-          // Freies Sparen: bleibt sichtbar, zählt aber in keine Kennzahl der
+          // Rücklage (freies Sparen): bleibt sichtbar, zählt aber in keine Kennzahl der
           // Karte (D6). Die Pille ist der sichtbare Träger der Kostenregel.
           isFreeSaving: isTransfer && !isSinkingFund(r),
           categoryLabel: isTransfer

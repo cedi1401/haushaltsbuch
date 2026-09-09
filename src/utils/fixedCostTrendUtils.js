@@ -25,7 +25,7 @@ function buildMonthItemMap(entries, itemById, monthStartDay) {
     if (e.kind === "expense") {
       if (e.source !== "month") continue;
     } else if (e.kind === "transfer") {
-      // Die Kostenregel: Nur eine Rücklage (Transfer MIT Turnus) ist eine
+      // Die Kostenregel: Nur eine Rückstellung (Transfer MIT Turnus) ist eine
       // Belastung. Ein Transfer ohne Turnus ist freies Sparen — er zählt weder
       // in die Gebucht-Linie noch in den Anteilswert.
       if (!isSinkingFund(item)) continue;
@@ -47,8 +47,8 @@ function buildMonthItemMap(entries, itemById, monthStartDay) {
  *
  * Die Bezugsgröße des Anteils ist die **Gesamtbelastung** des Monats, nicht
  * mehr allein die Ausgaben: `basis = m.expense + sinkingTotal`. Vorher stand im
- * Zähler die Rücklage, im Nenner aber nur die Ausgaben — der Anteil war
- * systematisch überhöht und konnte 100 % überschreiten. Eine Rücklage ist ein
+ * Zähler die Rückstellung, im Nenner aber nur die Ausgaben — der Anteil war
+ * systematisch überhöht und konnte 100 % überschreiten. Eine Rückstellung ist ein
  * Transfer, keine Ausgabe; sie muss in beiden Seiten des Bruchs stehen.
  *
  * Die spätere Rechnungszahlung erzeugt dabei keine Doppelzählung: Sie wird als

@@ -53,7 +53,7 @@
   --orange: #ca5010;
   --orange-soft: rgba(202, 80, 16, 0.08);
 
-  /* Gruppenfarben der Rücklagen-Tabelle (Gliederungsband + 3-px-Kante links an
+  /* Gruppenfarben der Rückstellungs-Tabellen (Gliederungsband + 3-px-Kante links an
      der Zeile). Rein unterscheidend, ohne Semantik — die Zuweisung ist zyklisch
      nach Position der Gruppe (siehe GROUP_ACCENT_PALETTE in hbPalette.js).
      Konstruktion:
@@ -2710,7 +2710,7 @@ select.hb-input option {
   font-weight: 600;
 }
 
-/* Status-Pille der Rücklagen-Tabelle. Geometrie, Neutralfarbe und Rahmen kommen
+/* Status-Pille der Rückstellungs-Tabelle. Geometrie, Neutralfarbe und Rahmen kommen
    von .hb-badge — „Freies Sparen" ist genau diese Neutralform: die Zeile trägt
    zwar wie jede andere einen Modifier (--free), er bleibt aber bewusst ohne
    eigene Regel. Die vier gefärbten Stufen stehen direkt hier, damit die
@@ -3505,7 +3505,7 @@ select.hb-input option {
 
 
 /* Semantische Spalten: links ausschließlich Ausgaben, rechts ausschließlich
-   Transfers/Rücklagen. Jede Spalte ist ein eigenständiger vertikaler Stapel —
+   Rücklagen/Rückstellungen. Jede Spalte ist ein eigenständiger vertikaler Stapel —
    eine Gruppe wandert nie über die Spaltengrenze (früher: ein zeilenweise
    befülltes Grid ohne semantische Bedeutung der Spalte).
    align-items: start → jede Spalte behält ihre Eigenhöhe. */
@@ -3694,7 +3694,7 @@ select.hb-input option {
 
 .hb-fixed-group-total {
   margin-left: auto;
-  /* +5px Luft zum „Alle buchen"-Button, sonst klebt der Betrag daran */
+  /* +5px Luft zum „Gruppe buchen"-Button, sonst klebt der Betrag daran */
   margin-right: 5px;
   font-weight: 700;
   color: var(--text);
@@ -3835,7 +3835,7 @@ select.hb-input option {
 }
 
 /*
-  Betragsspalte: Monatsrate als Hauptzahl, darunter — nur bei Rücklagen mit mehr
+  Betragsspalte: Monatsrate als Hauptzahl, darunter — nur bei Rückstellungen mit mehr
   als einem Monat Zyklus — der Zyklusbetrag als leise Zweitzeile. Sie beantwortet
   die einzige Frage, die die Hauptzahl offenlässt: warum dort 100 steht und nicht
   1200. Der äußere align-items: baseline der Titelzeile greift auf die erste

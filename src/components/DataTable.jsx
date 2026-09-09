@@ -8,7 +8,7 @@ import { IconChevron } from "./icons.jsx";
 const EMPTY_SET = new Set();
 
 /**
- * Generische Tabelle. Fachfrei: sie kennt weder Rücklagen noch Währungen.
+ * Generische Tabelle. Fachfrei: sie kennt weder Rückstellungen noch Währungen.
  *
  * Leitentscheidung: Die Tabelle kennt **keine Gruppierung**, sie bekommt fertige
  * Sektionen. Damit bleibt die fachliche Ordnung (Reihenfolge der Gruppen, „Ohne
@@ -32,7 +32,7 @@ const EMPTY_SET = new Set();
  *   { key, label, accent, rows }         // rows brauchen je eine `id`
  *
  * `label === null` heißt: kein Gliederungsband. `accent` ist eine beliebige
- * CSS-Farbe (im Rücklagen-View eine var(--group-accent-N)) und färbt Punkt und
+ * CSS-Farbe (im Rückstellungs-View eine var(--group-accent-N)) und färbt Punkt und
  * 3-px-Kante.
  *
  * `renderDetail(row, hiddenColumns)` ist optional. Wird es übergeben, bekommt

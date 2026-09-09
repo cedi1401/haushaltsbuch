@@ -38,7 +38,7 @@ import { useEntryActions } from "./hooks/useEntryActions.js";
 
 // Ansichten ohne Monatsbezug — dort ist der Monatsfilter in der Toolbar deaktiviert.
 // "pots" fehlt bewusst: Die Buchungsliste im Töpfe-View filtert nach Monat.
-const VIEW_LABELS = { trend: "Trend", goals: "Sparziele", fixed: "Fixkosten", reserves: "Rücklagen", costgroups: "Kostenrechner" };
+const VIEW_LABELS = { trend: "Trend", goals: "Sparziele", fixed: "Fixkosten", reserves: "Rückstellungen", costgroups: "Kostenrechner" };
 
 export default function HaushaltsbuchApp() {
   const toast = useToast();
@@ -260,7 +260,7 @@ export default function HaushaltsbuchApp() {
             isViewWithoutMonth={isViewWithoutMonth}
           />
 
-          <ErrorBoundary context={view === "book" ? "Dashboard" : view === "trend" ? "Trend" : view === "pots" ? "Töpfe" : view === "goals" ? "Sparziele" : view === "costgroups" ? "Kostenrechner" : view === "reserves" ? "Rücklagen" : "Fixkosten"}>
+          <ErrorBoundary context={view === "book" ? "Dashboard" : view === "trend" ? "Trend" : view === "pots" ? "Töpfe" : view === "goals" ? "Sparziele" : view === "costgroups" ? "Kostenrechner" : view === "reserves" ? "Rückstellungen" : "Fixkosten"}>
             {view === "trend" ? (
               <TrendView
                 entries={entries}

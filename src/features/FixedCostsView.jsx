@@ -31,10 +31,11 @@ const COLUMNS = [
   },
   {
     kind: "transfer",
-    title: "Transfers & Rücklagen",
+    title: "Rücklagen & Rückstellungen",
     addLabel: "Neuer Transfer",
     emptyText:
-      "Noch keine wiederkehrenden Transfers — z.B. monatliche Rücklagen in einen Topf.",
+      "Noch keine wiederkehrenden Transfers — z.B. eine Rückstellung für die Jahresrechnung "
+      + "oder eine monatliche Rücklage in einen Topf.",
   },
 ];
 
@@ -48,18 +49,44 @@ const UNGROUPED_KEY = {
 
 // Turnus-Auswahl im Dialog. Der Wert ist bewusst ein String — das <select>
 // liefert immer Strings, die Umwandlung nach `number|null` passiert im Handler.
+//
+// „Monatlich" fehlt bewusst: Bei Turnus 1 ist die Monatsrate der volle
+// Rechnungsbetrag, angespart wird also nie. Was monatlich in einen Topf geht,
+// ist eine Rücklage ohne Turnus — keine Rückstellung für einen Termin.
 const TURNUS_OPTIONS = [
-  { value: "", label: "Kein Turnus (freies Sparen)" },
-  { value: "1", label: "Monatlich" },
+  { value: "", label: "Kein Turnus (Rücklage)" },
   { value: "3", label: "Quartalsweise" },
   { value: "6", label: "Halbjährlich" },
   { value: "12", label: "Jährlich" },
+  { value: "24", label: "Alle 2 Jahre" },
+  { value: "36", label: "Alle 3 Jahre" },
 ];
 
-// Benennung des Zyklusbetrags auf der Card. `turnus === 1` fehlt bewusst: dort
-// ist die Monatsrate identisch mit `amount`, eine Zweitzeile wäre reine
-// Wiederholung.
-const TURNUS_PERIOD_LABEL = { 3: "pro Quartal", 6: "pro Halbjahr", 12: "pro Jahr" };
+/**
+ * Der Katalog, ergänzt um einen Bestandswert, den er nicht (mehr) führt.
+ *
+ * Ohne die Ergänzung fällt das <select> stumm auf seinen ersten Eintrag zurück:
+ * Die Position zeigte „Kein Turnus" und daneben ein aktives Fälligkeitsfeld mit
+ * Datum — ein sichtbarer Widerspruch, der beim nächsten Speichern zur stillen
+ * Änderung würde. Die Normalisierung lässt jeden Turnus > 0 durch, der Katalog
+ * kann also nie alle vorkommenden Werte kennen.
+ */
+function turnusOptionsFor(turnus) {
+  if (!turnus || TURNUS_OPTIONS.some((o) => o.value === String(turnus))) return TURNUS_OPTIONS;
+  const label = turnus === 1 ? "Monatlich" : `Alle ${turnus} Monate`;
+  return [...TURNUS_OPTIONS, { value: String(turnus), label: `${label} (Bestandswert)` }];
+}
+
+// Benennung des Zyklusbetrags auf der Card. `turnus === 1` fehlt bewusst — der
+// Katalog bietet ihn nicht mehr an, als Bestandswert kommt er aber vor: Dort ist
+// die Monatsrate identisch mit `amount`, eine Zweitzeile wäre reine Wiederholung.
+const TURNUS_PERIOD_LABEL = {
+  3: "pro Quartal",
+  6: "pro Halbjahr",
+  12: "pro Jahr",
+  24: "pro 2 Jahre",
+  36: "pro 3 Jahre",
+};
 
 export default function FixedCostsView({
   activeBook,
@@ -146,7 +173,7 @@ export default function FixedCostsView({
     for (const item of recurringExpenses) {
       const kind = fixedCostKind(item);
       // Basis aller drei Totale ist die Monatsrate, nicht das Rohfeld: bei einer
-      // Rücklage mit Turnus ist `amount` der Zyklusbetrag. Für alles ohne Turnus
+      // Rückstellung mit Turnus ist `amount` der Zyklusbetrag. Für alles ohne Turnus
       // ist `monthlyRate()` wertidentisch mit `amount`.
       const amount = monthlyRate(item);
       total += amount;
@@ -443,7 +470,7 @@ export default function FixedCostsView({
     const entry = {
       id: generateId("entry"),
       date,
-      // Gebucht wird die Monatsrate — bei einer Rücklage also der anteilige
+      // Gebucht wird die Monatsrate — bei einer Rückstellung also der anteilige
       // Betrag, nicht der Zyklusbetrag aus `item.amount`.
       amount: monthlyRate(item),
       category: kind === "transfer" ? item.transferCategory : undefined,
@@ -622,15 +649,15 @@ export default function FixedCostsView({
           <span className="hb-fixed-cat-pill">
             {item.transferCategory || "Transfer"} → {potName}
           </span>
-          {/* Ohne Turnus ist die Position freies Sparen und zählt seit der
-              Kostenregel (P5.3) in keiner Fixkosten-Kennzahl mit. Dasselbe
-              Merkmal trägt die Trend-Übersichtsliste. */}
+          {/* Ohne Turnus ist die Position eine Rücklage (freies Sparen) und
+              zählt seit der Kostenregel (P5.3) in keiner Fixkosten-Kennzahl mit.
+              Dasselbe Merkmal trägt die Trend-Übersichtsliste. */}
           {!isSinkingFund(item) && (
             <span
               className="hb-fixed-cat-pill hb-fixed-cat-pill--free"
-              title="Ohne Turnus — zählt nicht in die Fixkostenbelastung"
+              title="Rücklage ohne Turnus — freies Sparen, zählt nicht in die Fixkostenbelastung"
             >
-              Freies Sparen
+              Rücklage
             </span>
           )}
         </>
@@ -782,7 +809,7 @@ export default function FixedCostsView({
             onClick={() => bookSection(label, items, isGroup)}
             disabled={items.length === 0}
           >
-            Alle buchen
+            Gruppe buchen
           </Button>
           <button
             className="hb-icon-btn hb-icon-btn--sm"
@@ -850,7 +877,7 @@ export default function FixedCostsView({
             className="hb-input"
             style={{ width: "100%", minWidth: 0 }}
             type="text"
-            placeholder={groupDialogKind === "expense" ? "z.B. Wohnen, Abos" : "z.B. Steuern, Rücklagen"}
+            placeholder={groupDialogKind === "expense" ? "z.B. Wohnen, Abos" : "z.B. Steuern, Versicherungen"}
             value={groupNameDraft}
             onChange={(e) => setGroupNameDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && groupNameDraft.trim()) createGroup(); }}
@@ -1016,7 +1043,7 @@ export default function FixedCostsView({
                 onChange={(e) => handleKindChange(e.target.value)}
               >
                 <option value="expense">Ausgabe</option>
-                <option value="transfer">Transfer/Rücklage</option>
+                <option value="transfer">Transfer</option>
               </select>
               {kindLocked && (
                 <div className="hb-fixed-field-hint">
@@ -1145,13 +1172,14 @@ export default function FixedCostsView({
                     value={draft.turnus ?? ""}
                     onChange={(e) => handleTurnusChange(e.target.value)}
                   >
-                    {TURNUS_OPTIONS.map((opt) => (
+                    {turnusOptionsFor(draft.turnus).map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
                   <div className="hb-fixed-field-hint">
-                    Mit einem Turnus wird die Position als Rücklage geführt: Der Betrag
+                    Mit einem Turnus wird die Position als Rückstellung geführt: Der Betrag
                     gilt für den ganzen Zyklus, gebucht wird monatlich der anteilige Betrag.
+                    Ohne Turnus ist es eine Rücklage — freies Sparen ohne festen Termin.
                   </div>
                 </div>
                 <div className="hb-field" style={{ minWidth: 0 }}>
@@ -1168,13 +1196,13 @@ export default function FixedCostsView({
                   />
                   <div className="hb-fixed-field-hint">
                     {draft.turnus
-                      ? "Wann die Rechnung das nächste Mal fällig wird — nicht die letzte Zahlung. Der laufende Zyklus wird davon rückwärts berechnet."
+                      ? "Wann die Rechnung das nächste Mal fällig wird — nicht die letzte Zahlung. Das Datum gibt den dauerhaften Rhythmus vor: Der Termin wiederholt sich im Turnus, auch wenn eine Rechnung einmal verspätet kommt."
                       : "Wird erst mit einem Turnus benötigt."}
                   </div>
                   {!!draft.turnus && !draft.faelligkeit && (
                     <div className="hb-fixed-field-error">
-                      Zu einem Turnus gehört eine nächste Fälligkeit — ohne Startanker
-                      lässt sich kein Zyklus berechnen.
+                      Zu einem Turnus gehört eine nächste Fälligkeit — daraus ergibt sich
+                      der Rhythmus der Zyklen.
                     </div>
                   )}
                 </div>

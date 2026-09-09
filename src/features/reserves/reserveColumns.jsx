@@ -3,16 +3,24 @@ import { formatDateDE } from "../../utils/hbUtils.js";
 import { IconTag } from "../../components/icons.jsx";
 import { formatRateCount } from "./reserveFormat.js";
 
-// Turnus im Klartext. Deckt genau die Werte ab, die der Fixkosten-Dialog
-// anbietet; alles andere fällt auf „alle N Monate" zurück.
-const TURNUS_LABEL = { 1: "Monatlich", 3: "Quartalsweise", 6: "Halbjährlich", 12: "Jährlich" };
+// Turnus im Klartext. Deckt die Werte ab, die der Fixkosten-Dialog anbietet,
+// plus den Bestandswert 1; alles andere fällt auf „Alle N Monate" zurück.
+const TURNUS_LABEL = {
+  1: "Monatlich",
+  3: "Quartalsweise",
+  6: "Halbjährlich",
+  12: "Jährlich",
+  24: "Alle 2 Jahre",
+  36: "Alle 3 Jahre",
+};
 
+// „free" fehlt bewusst: Positionen ohne Turnus erscheinen im Rückstellungs-View
+// gar nicht — ihnen fehlt der Maßstab, an dem ein Status etwas bedeuten würde.
 const STATUS_LABEL = {
   onTrack: "Im Plan",
   behind: "Rückstand",
   due: "Fällig",
   overdue: "Überfällig",
-  free: "Freies Sparen",
 };
 
 // Sortierrang nach Handlungsbedarf, nicht alphabetisch. Alphabetisch stünde
@@ -20,13 +28,13 @@ const STATUS_LABEL = {
 // bedeutet. Aufsteigend gelesen steht hier oben, was zuerst Aufmerksamkeit
 // braucht; dieselbe Leserichtung wie in der Differenz-Spalte, wo der erste
 // Klick den größten Fehlbetrag nach oben holt.
-const STATUS_ORDER = { overdue: 0, due: 1, behind: 2, onTrack: 3, free: 4 };
+const STATUS_ORDER = { overdue: 0, due: 1, behind: 2, onTrack: 3 };
 
 /**
  * Vorbelegung: die Kernaussage des Views in acht Spalten. Alles Übrige ist über
- * die Spaltenauswahl zuschaltbar. „Letzte Zahlung" ist bewusst dabei — sie macht
- * den Zyklusanker sichtbar und ist damit die Gegenleistung für die einfache
- * Reset-Regel („jede Entnahme startet den Zyklus").
+ * die Spaltenauswahl zuschaltbar. „Letzte Zahlung" ist bewusst dabei — neben der
+ * Fälligkeit zeigt sie die zweite Hälfte der Zyklusregel: welcher Termin des
+ * Rasters zuletzt abgeschlossen wurde.
  */
 export const DEFAULT_RESERVE_COLUMNS = [
   "name", "turnus", "lastPayment", "nextDue", "target", "actual", "delta", "status",
@@ -72,17 +80,12 @@ function statusTooltip(row, fmt) {
     case "due":
       return (
         `Die Rechnung ist seit ${due} fällig. Über „Rechnung bezahlt" erfasst du die ` +
-        "Zahlung als Entnahme aus dem Topf — damit beginnt der nächste Zyklus."
+        "Zahlung als Entnahme aus dem Topf — damit ist dieser Zyklus abgeschlossen."
       );
     case "overdue":
       return (
         `Die Rechnung war am ${due} fällig — das ist über einen Monat her. Solange die ` +
-        "Zahlung nicht als Entnahme erfasst ist, startet der nächste Zyklus nicht."
-      );
-    case "free":
-      return (
-        "Für diese Position ist kein Turnus hinterlegt. Es gibt keine Rechnung und damit " +
-        "keinen Soll-Stand — die Position zählt nicht als Fixkostenbelastung."
+        "Zahlung nicht als Entnahme erfasst ist, rückt die Fälligkeit nicht weiter."
       );
     default:
       return undefined;
@@ -90,16 +93,16 @@ function statusTooltip(row, fmt) {
 }
 
 /**
- * Der Spaltenkatalog des Rücklagen-Views.
+ * Alle Spaltendefinitionen der beiden Tabellen des Views.
  *
  * Zeilen sind die Objekte aus `buildSinkingFundRows()`, erweitert um `id` und
  * `bookedThisMonth` (beides setzt der View). Beträge laufen ausnahmslos über
  * `fmt` — deshalb ist der Katalog eine Fabrik und keine Konstante.
  *
- * @param {{ fmt: Function, potNameById: Map, groupNameById: Map }} ctx
+ * Privat: Nach außen gehen die beiden fertig zugeschnittenen Sätze unten.
  */
-export function buildReserveColumns({ fmt, potNameById, groupNameById }) {
-  const columns = [
+function reserveColumnCatalog({ fmt, potNameById, groupNameById }) {
+  return [
     {
       id: "name",
       label: "Bezeichnung",
@@ -288,7 +291,17 @@ export function buildReserveColumns({ fmt, potNameById, groupNameById }) {
       },
     },
   ];
+}
 
+/**
+ * Der Spaltenkatalog der Rückstellungs-Tabelle — der volle Satz.
+ *
+ * @param {{ fmt: Function, potNameById: Map, groupNameById: Map }} ctx
+ */
+export function buildReserveColumns(ctx) {
   const defaults = new Set(DEFAULT_RESERVE_COLUMNS);
-  return columns.map((col) => ({ ...col, defaultVisible: defaults.has(col.id) }));
+  return reserveColumnCatalog(ctx).map((col) => ({
+    ...col,
+    defaultVisible: defaults.has(col.id),
+  }));
 }

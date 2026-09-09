@@ -1,7 +1,7 @@
 // src/utils/fixedCostUtils.js
 // Feldableitungen für Fixkosten-Positionen (recurringExpenses).
 //
-// Hintergrund: Bei einer Transfer-Position mit Turnus ("Rücklage"/Sinking Fund)
+// Hintergrund: Bei einer Transfer-Position mit Turnus ("Rückstellung"/Sinking Fund)
 // ist `amount` der Rechnungsbetrag für den ganzen Zyklus — nicht mehr der Betrag
 // pro Buchung. Was pro Monat gebucht wird, ist die Monatsrate. Alles in dieser
 // Datei ist rein funktional und kennt kein React; die Zyklusrechnung weiter
@@ -55,9 +55,9 @@ export function annualAmount(item) {
 }
 
 /**
- * Ist die Position eine Rücklage? Zugleich die Kostenregel: nur Positionen mit
- * Turnus zählen in die Fixkosten-Belastung, Transfers ohne Turnus sind "freies
- * Sparen".
+ * Ist die Position eine Rückstellung? Zugleich die Kostenregel: nur Positionen
+ * mit Turnus zählen in die Fixkosten-Belastung. Ein Transfer ohne Turnus ist
+ * eine "Rücklage" — freies Sparen ohne Termin und ohne Rechnung dahinter.
  * @param {{ kind?: string, turnus?: number|null }} item
  * @returns {boolean}
  */
@@ -219,7 +219,7 @@ function financialMonthSpan(fromISO, toISO, monthStartDay) {
 }
 
 /**
- * Soll-Ist-Vergleich einer Rücklage für den Rücklagen-View.
+ * Soll-Ist-Vergleich einer Rückstellung für den Rückstellungs-View.
  *
  * Der Soll-Stand läuft auf Monatsebene (Finanzmonate), die Fälligkeit taggenau:
  * Gebucht wird einmal pro Monat, nicht anteilig pro Tag. Der Ist-Stand ist der
@@ -242,7 +242,7 @@ export function sinkingFundStatus(item, entries, opts = {}) {
   const actual = potPurposeBalance(entries, item?.potId, item?.transferCategory);
   const anchor = cycleAnchor(item, entries);
 
-  // Freies Sparen: kein Turnus, keine Rechnung, keine Bewertung. Der Ist-Stand
+  // Rücklage: kein Turnus, keine Rechnung, keine Bewertung. Der Ist-Stand
   // bleibt trotzdem gefüllt — das Geld liegt ja im Topf.
   if (!anchor) {
     return {
@@ -321,7 +321,7 @@ function purposeKey(item) {
 }
 
 /**
- * Die Zeilen des Rücklagen-Views: sinkingFundStatus() je Position, plus die
+ * Die Zeilen des Rückstellungs-Views: sinkingFundStatus() je Position, plus die
  * Auflösung geteilter Zwecke.
  *
  * Zwei Positionen dürfen denselben Zweck im selben Topf bespielen — dann teilen
@@ -331,18 +331,18 @@ function purposeKey(item) {
  * vollen Zweck-Netto als "ihren" Ist-Stand und damit einen irreführend hohen
  * Deckungsgrad.
  *
- * Nur Rücklagen zählen in die Gruppierung: freies Sparen hat keinen Soll-Stand
- * und keine Bewertung, wäre in der Summe also ein Nullsummand und trüge die
- * Markierung ohne Aussage. (Ein freier Transfer auf denselben Zweck hebt den
- * Ist-Stand der Rücklage trotzdem — das lässt sich über Soll-Summen nicht
- * ausgleichen und bleibt eine bewusste Unschärfe.)
+ * Nur Rückstellungen zählen in die Gruppierung: eine Rücklage hat keinen
+ * Soll-Stand und keine Bewertung, wäre in der Summe also ein Nullsummand und
+ * trüge die Markierung ohne Aussage. (Ein freier Transfer auf denselben Zweck
+ * hebt den Ist-Stand der Rückstellung trotzdem — das lässt sich über
+ * Soll-Summen nicht ausgleichen und bleibt eine bewusste Unschärfe.)
  *
  * @param {Array} items - Fixkosten-Positionen (bereits gefiltert, z.B. nur Transfers)
  * @param {Array} entries - alle Einträge des Buchs
  * @param {{ monthStartDay?: number, today?: string }} opts
  * @returns {Array<object>} sinkingFundStatus-Objekte, erweitert um `item`,
  *          `sharedPurpose` (teilt sich den Zweck mit mindestens einer weiteren
- *          Rücklage) und `sharedWith` (Anzahl der ANDEREN Positionen am Zweck)
+ *          Rückstellung) und `sharedWith` (Anzahl der ANDEREN Positionen am Zweck)
  */
 export function buildSinkingFundRows(items, entries, opts = {}) {
   const list = Array.isArray(items) ? items : [];

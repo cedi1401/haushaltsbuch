@@ -25,14 +25,14 @@ export function useFixedCostTrend({ entries, recurringExpenses, monthly, monthSt
 
   const kpis = useMemo(() => {
     // Die Kostenregel bestimmt die Grundmenge aller Kennzahlen dieser Karte:
-    // Ausgaben-Fixkosten und Rücklagen (Transfer MIT Turnus) zählen, freies
+    // Ausgaben-Fixkosten und Rückstellungen (Transfer MIT Turnus) zählen, freies
     // Sparen (Transfer OHNE Turnus) zählt nicht. Die Positionen bleiben in der
     // Übersichtsliste sichtbar und tragen dort eine eigene Pille — nur in die
     // Kennzahlen gehen sie nicht ein.
     const all = (recurringExpenses || []).filter(
       (r) => fixedCostKind(r) === "expense" || isSinkingFund(r)
     );
-    // monthlyRate() statt r.amount: Bei einer Rücklage mit Turnus ist `amount`
+    // monthlyRate() statt r.amount: Bei einer Rückstellung ist `amount`
     // der Rechnungsbetrag des ganzen Zyklus, nicht der Monatsbetrag.
     const configuredTotal = all.reduce((s, r) => s + monthlyRate(r), 0);
 

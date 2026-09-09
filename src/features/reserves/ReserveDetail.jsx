@@ -4,7 +4,8 @@ import { formatDateDE } from "../../utils/hbUtils.js";
 import { formatRateCount } from "./reserveFormat.js";
 
 /**
- * Der aufklappbare Detailbereich einer Zeile im Rücklagen-View.
+ * Der aufklappbare Detailbereich einer Zeile im Rückstellungs-View — in beiden
+ * Tabellen, der für Rückstellungen wie der für Rücklagen.
  *
  * Er löst drei Dinge auf einmal, die in einer Tabellenzelle keinen Platz haben:
  * die abgewählten Spalten, die Erklärung des Zyklus (wo der Anker herkommt) und
@@ -38,7 +39,7 @@ export default function ReserveDetail({
   // gibt es keine linke Zone, mit sehr wenigen bekäme sie mehr Breite, als sie
   // füllen kann. Beides hängt an einer Zahl, die nur hier bekannt ist.
   // Der Status trägt zusätzlich den Ton — "free" schaltet dabei zugleich die
-  // einspaltige Form, weil freies Sparen weder Zyklus noch Bewertung hat.
+  // einspaltige Form, weil eine Rücklage weder Zyklus noch Bewertung hat.
   const facts = hiddenColumns.length;
   const cls = [
     "hb-res-detail",
@@ -68,15 +69,16 @@ export default function ReserveDetail({
                 Seit {formatDateDE(row.cycleStart)} · {row.elapsed} von {row.turnusMonths}{" "}
                 Monaten · nächste Fälligkeit {formatDateDE(row.nextDue)}
               </p>
-              {/* Der Satz macht die bewusst einfache Reset-Regel transparent:
-                  jede Entnahme für diesen Zweck startet den Zyklus neu. Ohne ihn
-                  wäre ein „falscher" Zyklus nicht erklärbar — und nicht
-                  korrigierbar, weil unklar bliebe, woran er hängt. Er steht eine
-                  Stufe kleiner als der Rest des Blocks: relevant, aber nicht
-                  das, was beim Aufklappen zuerst gelesen werden soll. */}
+              {/* Der Satz macht die Zyklusregel transparent: Die Fälligkeit ist
+                  ein dauerhaftes Raster, die Entnahme sagt nur, welcher Termin
+                  davon bezahlt ist. Ohne ihn wäre ein „falscher" Zyklus nicht
+                  erklärbar — und nicht korrigierbar, weil unklar bliebe, woran
+                  er hängt. Er steht eine Stufe kleiner als der Rest des Blocks:
+                  relevant, aber nicht das, was beim Aufklappen zuerst gelesen
+                  werden soll. */}
               <p className="hb-res-note-hint">
                 {row.anchorSource === "withdrawal"
-                  ? `Zyklusbeginn ist die jüngste Entnahme für diesen Zweck (${formatDateDE(row.lastPayment)}). Stimmt der Zyklus nicht, korrigiere diese Entnahme.`
+                  ? `Die Entnahme vom ${formatDateDE(row.lastPayment)} hat den Zyklus davor abgeschlossen. Der Rhythmus bleibt an der hinterlegten Fälligkeit — verschiebt der Rechnungssteller ihn dauerhaft, passe die Fälligkeit der Position an.`
                   : "Für diesen Zweck ist noch keine Entnahme erfasst. Der Zyklusbeginn ist aus der nächsten Fälligkeit zurückgerechnet."}
               </p>
             </section>
@@ -90,10 +92,15 @@ export default function ReserveDetail({
           </>
         ) : (
           <section className="hb-res-note hb-res-note--plain">
-            <h4 className="hb-res-note-title">Freies Sparen</h4>
+            <h4 className="hb-res-note-title">Rücklage</h4>
             <p className="hb-res-note-text">
-              Kein Turnus hinterlegt. Es gibt keine Rechnung, keinen Zyklus und keinen
-              Soll-Stand.
+              Freies Sparen ohne Turnus: keine Rechnung, kein Zyklus, kein Soll-Stand. Der
+              monatliche Betrag geht in den Topf und bleibt dort, bis du ihn brauchst.
+            </p>
+            <p className="hb-res-note-hint">
+              Steht hinter dem Geld doch eine Rechnung zu einem festen Termin, mach über
+              Turnus und Fälligkeit eine Rückstellung daraus — dann bewertet diese Ansicht
+              den Sparstand.
             </p>
           </section>
         )}
@@ -116,7 +123,7 @@ export default function ReserveDetail({
               <span
                 className="hb-badge hb-res-hint"
                 title={
-                  `Der Topf „${potName}" ist als Spartopf markiert. Diese Rücklage erscheint ` +
+                  `Der Topf „${potName}" ist als Spartopf markiert. Diese Position erscheint ` +
                   `deshalb im Dashboard unter „Gespart" und gleichzeitig im Trend als ` +
                   `Fixkostenbelastung. Beides ist gewollt: Das Dashboard zeigt, wohin das Geld ` +
                   `fließt, der Trend, was es monatlich kostet.`

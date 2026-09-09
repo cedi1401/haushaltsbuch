@@ -1044,7 +1044,7 @@ export function normalizeBook(book) {
       const withKind = withTags.kind === "expense" || withTags.kind === "transfer"
         ? withTags
         : { ...withTags, kind: "expense" };
-      // Turnus/Fälligkeit (Rücklagen): bewusst KEINE Ableitung aus Bestandsdaten —
+      // Turnus/Fälligkeit (Rückstellungen): bewusst KEINE Ableitung aus Bestandsdaten —
       // ein bestehender Transfer ohne Turnus bleibt ohne. Hygiene-Regel: ein Turnus
       // gilt nur an einem Transfer und nur mit Fälligkeit als Zyklus-Anker. Ohne
       // Anker ließe sich kein Zyklus berechnen; der Halbzustand darf auch aus

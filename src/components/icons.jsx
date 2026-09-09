@@ -74,7 +74,7 @@ export function IconFixed(props) {
   );
 }
 
-// Münzstapel — Rücklagen-View. Deckel-Ellipse, Zylinder-Silhouette, ein
+// Münzstapel — Rückstellungs-View. Deckel-Ellipse, Zylinder-Silhouette, ein
 // Trennbogen: zwei Münzen (D10). Ein zweiter Trennbogen ließe bei 18 px und
 // 1.6 Strichstärke nur ~1.5 px Luft zwischen den Bögen — auf einem Windows-
 // Display ohne Skalierung verschmieren die drei Bögen dann zu einem Block.

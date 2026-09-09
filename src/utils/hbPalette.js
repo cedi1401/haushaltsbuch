@@ -66,7 +66,7 @@ export const TRANSFER_PALETTE = [
   "#7f43c4", // Purpur      H268 L52%
 ];
 
-// Gruppenfarben der Rücklagen-Tabelle: Gliederungsband (12-px-Punkt) und die
+// Gruppenfarben der Rückstellungs-Tabellen: Gliederungsband (12-px-Punkt) und die
 // 3-px-Kante links an jeder Zeile der Gruppe. Die Farbe unterscheidet nur, sie
 // bedeutet nichts — zugewiesen wird zyklisch nach der Position der Gruppe in der
 // Liste der Transfer-Gruppen, nicht über ein Feld am Gruppen-Modell.

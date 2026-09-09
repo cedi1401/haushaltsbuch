@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { id: "pots", label: "Töpfe", Icon: IconPots },
   { id: "goals", label: "Sparziele", Icon: IconGoals },
   { id: "fixed", label: "Fixkosten", Icon: IconFixed },
-  { id: "reserves", label: "Rücklagen", Icon: IconReserves },
+  { id: "reserves", label: "Rückstellungen", Icon: IconReserves },
   { id: "costgroups", label: "Kostenrechner", Icon: IconCostGroups },
   { id: "trend", label: "Trend", Icon: IconTrend },
 ];
