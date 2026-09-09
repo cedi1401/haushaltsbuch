@@ -71,22 +71,84 @@ export function isSinkingFund(item) {
 // im Funktionskörper) — sonst wäre die Logik nicht testbar.
 
 /**
- * Bestimmt den Zyklus einer Rücklage.
+ * Absolute Tagesdistanz zwischen zwei ISO-Daten. In UTC gerechnet, damit
+ * Sommerzeit-Sprünge keine halben Tage erzeugen.
+ */
+function dayDistance(isoA, isoB) {
+  const [ya, ma, da] = String(isoA).split("-").map(Number);
+  const [yb, mb, db] = String(isoB).split("-").map(Number);
+  return Math.abs(Date.UTC(yb, mb - 1, db) - Date.UTC(ya, ma - 1, da)) / 86400000;
+}
+
+/**
+ * Der Rasterpunkt, der einer Zahlung am nächsten liegt — als Index k relativ zur
+ * hinterlegten Fälligkeit (k = 0 ist die Fälligkeit selbst, k = -1 der Termin
+ * davor).
  *
- * Zyklusbeginn ist die jüngste Entnahme für diesen Zweck — jede Entnahme zählt,
- * ohne Schwellenwert: Ein Rücklagen-Zweck wird nicht zweckentfremdet, eine
- * Entnahme daraus IST damit die Rechnungszahlung. Gibt es noch keine, wird der
- * Zyklus aus der hinterlegten Fälligkeit zurückgerechnet (Mitteneinstieg).
+ * Bewusst "nächstgelegen" und nicht "letzter Termin davor": Kommt eine Rechnung
+ * einmal drei Wochen früher als sonst, wäre der letzte Rasterpunkt davor der
+ * vorletzte Termin — die Position stünde direkt nach der Zahlung wieder auf
+ * `due`, obwohl gerade bezahlt wurde.
+ *
+ * Gesucht wird nicht über das ganze Raster, sondern um den aus der
+ * Monatsdifferenz geschätzten Index herum: Durch die Tagesklemmung von
+ * addMonthsISO() kann die Schätzung um einen Schritt danebenliegen, mehr nicht.
+ *
+ * Bei exakt gleicher Distanz zu zwei Rasterpunkten gewinnt der frühere (die
+ * Schleife läuft aufsteigend, `<` behält den ersten Treffer). Die Zahlung liegt
+ * dann genau zwischen zwei Terminen; so rückt die nächste Fälligkeit näher statt
+ * weiter weg, und es wird eher zu früh als zu spät gewarnt.
+ */
+function nearestGridIndex(faelligkeit, months, payment) {
+  const [fy, fm] = String(faelligkeit).split("-").map(Number);
+  const [py, pm] = String(payment).split("-").map(Number);
+  const estimate = Math.round(((py - fy) * 12 + (pm - fm)) / months);
+
+  let best = estimate;
+  let bestDist = Infinity;
+  for (let k = estimate - 1; k <= estimate + 1; k++) {
+    const dist = dayDistance(addMonthsISO(faelligkeit, k * months), payment);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = k;
+    }
+  }
+  return best;
+}
+
+/**
+ * Bestimmt den Zyklus einer Rückstellung.
+ *
+ * `faelligkeit` ist kein einmaliger Startwert, sondern ein dauerhaftes Raster:
+ * Die Rechnung ist an `faelligkeit + k · turnus` fällig, beim Steueramt also
+ * jedes Jahr im selben Monat. Die jüngste Entnahme für den Zweck sagt nur, WELCHER
+ * Rasterpunkt bereits bezahlt ist — nicht, wo das Raster liegt.
+ *
+ * Der Grund ist der verspätete Rechnungssteller: Mit dem Zahlungsdatum als Anker
+ * würde eine einmal zwei Monate zu spät gestellte Steuerrechnung auch jeden
+ * Folgezyklus um zwei Monate verschieben, und die Verschiebung bliebe dauerhaft
+ * bestehen. Über das Raster verkürzt eine verspätete Zahlung nur den laufenden
+ * Zyklus: Die seit dem Rasterpunkt verstrichenen Monate erscheinen als
+ * Rückstand — was sie real auch sind, denn in dieser Zeit wurde nicht gespart.
+ * Verschiebt ein Rechnungssteller seinen Rhythmus dauerhaft, wird die Fälligkeit
+ * in der Position bearbeitet; das ist der bewusste Eingriff.
+ *
+ * Jede Entnahme für den Zweck zählt, ohne Schwellenwert: Ein Rückstellungs-Zweck
+ * wird nicht zweckentfremdet, eine Entnahme daraus IST damit die
+ * Rechnungszahlung. Ohne Entnahme wird der Zyklus aus der hinterlegten
+ * Fälligkeit zurückgerechnet (Mitteneinstieg).
  *
  * Gerechnet wird taggenau; nur der Soll-Stand in sinkingFundStatus() läuft auf
  * Monatsebene. Bei einer Fälligkeit am Monatsende klemmt addMonthsISO() den Tag
- * (31.03. −1M → 28.02.); nextDue wandert dadurch auf den geklemmten Tag mit.
+ * (31.03. −1M → 28.02.). Weil jeder Rasterpunkt von `faelligkeit` aus gerechnet
+ * wird und nicht vom vorherigen, summiert sich die Klemmung nicht auf.
  *
  * @param {object} item - Fixkosten-Position
  * @param {Array} entries - alle Einträge des Buchs
  * @returns {{ cycleStart: string, nextDue: string, lastPayment: string|null,
  *             anchorSource: "withdrawal"|"faelligkeit" }|null}
- *          null, wenn die Position keine Rücklage ist oder kein Anker existiert
+ *          null, wenn die Position keine Rückstellung ist oder kein Anker existiert.
+ *          anchorSource sagt, ob für den Zweck schon einmal entnommen wurde.
  */
 export function cycleAnchor(item, entries) {
   if (!isSinkingFund(item)) return null;
@@ -102,17 +164,37 @@ export function cycleAnchor(item, entries) {
   }
 
   const months = turnusMonths(item);
-  // Ohne Entnahme UND ohne Fälligkeit gäbe es keinen Anker. Die Normalisierung
-  // in hbUtils schließt diesen Halbzustand aus; hier steht der Fall nur, damit
-  // ein manipuliertes Backup keine NaN-Daten erzeugt.
-  if (!lastPayment && !item?.faelligkeit) return null;
+  const faelligkeit = item?.faelligkeit || null;
 
-  const cycleStart = lastPayment ?? addMonthsISO(item.faelligkeit, -months);
+  // Ohne Fälligkeit gibt es kein Raster. Die Normalisierung in hbUtils schließt
+  // diesen Halbzustand aus; der Zweig steht hier nur, damit ein manipuliertes
+  // Backup keine NaN-Daten erzeugt — dann trägt ersatzweise die Zahlung selbst.
+  if (!faelligkeit) {
+    if (!lastPayment) return null;
+    return {
+      cycleStart: lastPayment,
+      nextDue: addMonthsISO(lastPayment, months),
+      lastPayment,
+      anchorSource: "withdrawal",
+    };
+  }
+
+  // Noch keine Entnahme: Der laufende Zyklus endet an der hinterlegten Fälligkeit.
+  if (!lastPayment) {
+    return {
+      cycleStart: addMonthsISO(faelligkeit, -months),
+      nextDue: faelligkeit,
+      lastPayment: null,
+      anchorSource: "faelligkeit",
+    };
+  }
+
+  const k = nearestGridIndex(faelligkeit, months, lastPayment);
   return {
-    cycleStart,
-    nextDue: addMonthsISO(cycleStart, months),
+    cycleStart: addMonthsISO(faelligkeit, k * months),
+    nextDue: addMonthsISO(faelligkeit, (k + 1) * months),
     lastPayment,
-    anchorSource: lastPayment ? "withdrawal" : "faelligkeit",
+    anchorSource: "withdrawal",
   };
 }
 

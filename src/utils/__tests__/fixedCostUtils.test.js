@@ -128,19 +128,36 @@ describe('cycleAnchor', () => {
     });
   });
 
-  it('verankert den Zyklus an der Entnahme, sobald es eine gibt', () => {
+  it('hält das Raster, wenn die Rechnung verspätet kommt', () => {
+    // Der Kernfall: Die Steuerrechnung kommt zwei Monate zu spät. Bezahlt ist
+    // damit der Rasterpunkt 15.03. — der nächste bleibt der 15.03. des
+    // Folgejahres, sonst wanderte der Zyklus dauerhaft mit.
     const anchor = cycleAnchor(STEUERN, [withdrawal('2026-05-10', 600)]);
     expect(anchor).toEqual({
-      cycleStart: '2026-05-10',
-      nextDue: '2027-05-10',
+      cycleStart: '2026-03-15',
+      nextDue: '2027-03-15',
       lastPayment: '2026-05-10',
       anchorSource: 'withdrawal',
     });
   });
 
-  it('kennt keinen Schwellenwert: jede Entnahme setzt den Zyklus zurück', () => {
-    const anchor = cycleAnchor(STEUERN, [withdrawal('2026-05-10', 5)]);
-    expect(anchor.cycleStart).toBe('2026-05-10');
+  it('überspringt keinen Termin, wenn die Rechnung früher kommt', () => {
+    // Drei Wochen vor dem Rasterpunkt: bezahlt ist der 15.03.2026, nicht der von
+    // 2025 — sonst stünde die Position direkt nach der Zahlung wieder auf fällig.
+    const anchor = cycleAnchor(STEUERN, [withdrawal('2026-02-20', 600)]);
+    expect(anchor.cycleStart).toBe('2026-03-15');
+    expect(anchor.nextDue).toBe('2027-03-15');
+  });
+
+  it('findet auch einen weit zurückliegenden Rasterpunkt', () => {
+    const anchor = cycleAnchor(STEUERN, [withdrawal('2024-04-02', 600)]);
+    expect(anchor.cycleStart).toBe('2024-03-15');
+    expect(anchor.nextDue).toBe('2025-03-15');
+  });
+
+  it('kennt keinen Schwellenwert: jede Entnahme schließt den Zyklus ab', () => {
+    const anchor = cycleAnchor(STEUERN, [withdrawal('2027-03-20', 5)]);
+    expect(anchor.nextDue).toBe('2028-03-15');
     expect(anchor.anchorSource).toBe('withdrawal');
   });
 
@@ -150,7 +167,8 @@ describe('cycleAnchor', () => {
       withdrawal('2026-05-10', 600),
       withdrawal('2025-05-10', 600),
     ]);
-    expect(anchor.cycleStart).toBe('2026-05-10');
+    expect(anchor.cycleStart).toBe('2026-03-15');
+    expect(anchor.nextDue).toBe('2027-03-15');
   });
 
   it('ignoriert einen anderen Zweck im selben Topf', () => {
@@ -174,8 +192,23 @@ describe('cycleAnchor', () => {
     expect(cycleAnchor(item, []).cycleStart).toBe('2027-02-28');
   });
 
+  it('rechnet jeden Rasterpunkt von der Fälligkeit aus, ohne Klemmung aufzusummieren', () => {
+    const item = { ...STEUERN, turnus: 1, faelligkeit: '2026-03-31' };
+    const anchor = cycleAnchor(item, [withdrawal('2026-01-30', 50)]);
+    expect(anchor.cycleStart).toBe('2026-01-31');
+    expect(anchor.nextDue).toBe('2026-02-28');
+  });
+
   it('liefert null, wenn weder Entnahme noch Fälligkeit einen Anker geben', () => {
     expect(cycleAnchor({ ...STEUERN, faelligkeit: null }, [])).toBeNull();
+  });
+
+  it('fällt ohne Fälligkeit auf die Zahlung selbst zurück', () => {
+    // Halbzustand, den die Normalisierung ausschließt — hier nur als Absicherung
+    // gegen ein manipuliertes Backup.
+    const anchor = cycleAnchor({ ...STEUERN, faelligkeit: null }, [withdrawal('2026-05-10', 600)]);
+    expect(anchor.cycleStart).toBe('2026-05-10');
+    expect(anchor.nextDue).toBe('2027-05-10');
   });
 });
 
@@ -192,11 +225,22 @@ describe('sinkingFundStatus', () => {
     expect(s.target).toBe(100);
   });
 
-  it('liefert im Zahlungsmonat selbst elapsed 0 und Soll 0', () => {
-    const s = sinkingFundStatus(STEUERN, [withdrawal('2026-05-10', 600)], opts());
+  it('liefert nach einer pünktlichen Zahlung elapsed 0 und Soll 0', () => {
+    const s = sinkingFundStatus(STEUERN, [withdrawal('2026-03-15', 600)], opts({ today: '2026-03-20' }));
     expect(s.elapsed).toBe(0);
     expect(s.target).toBe(0);
     expect(s.anchorSource).toBe('withdrawal');
+  });
+
+  it('zeigt nach einer verspäteten Zahlung die verstrichenen Monate als Rückstand', () => {
+    // Zahlung am 10.05. für den Rasterpunkt 15.03.: Zwei Monate des neuen Zyklus
+    // sind schon verstrichen, ohne dass gespart wurde — genau das soll der
+    // Rückstand zeigen, statt still zwei Monate Sparzeit zu verschenken.
+    const s = sinkingFundStatus(STEUERN, [withdrawal('2026-05-10', 600)], opts());
+    expect(s.cycleStart).toBe('2026-03-15');
+    expect(s.elapsed).toBe(2);
+    expect(s.target).toBe(100);
+    expect(s.status).toBe('behind');
   });
 
   it('deckelt elapsed und target bei einer überfälligen Position', () => {
@@ -248,11 +292,11 @@ describe('sinkingFundStatus', () => {
       withdrawal('2026-05-02', 20),
     ], opts());
     expect(s.actual).toBe(80);
-    // Die Entnahme ist zugleich der neue Zyklusanker — der Soll-Stand startet
-    // damit bei 0 und die 80 stehen als Überdeckung im neuen Zyklus.
-    expect(s.cycleStart).toBe('2026-05-02');
-    expect(s.elapsed).toBe(0);
-    expect(s.delta).toBe(80);
+    // Die Entnahme schließt den Rasterpunkt 15.03. ab; der neue Zyklus läuft
+    // seitdem, also stehen zwei Monatsraten im Soll.
+    expect(s.cycleStart).toBe('2026-03-15');
+    expect(s.elapsed).toBe(2);
+    expect(s.delta).toBe(-20);
   });
 
   it('bewertet Rundungsreste innerhalb der Toleranz nicht als Rückstand', () => {
@@ -330,16 +374,17 @@ describe('buildSinkingFundRows', () => {
   });
 
   it('behält je Zeile den eigenen Zyklus', () => {
-    // Nur die zweite Position hat eine Entnahme — sie verankert deren Zyklus neu.
-    const anders = { ...gross, potId: 'surplus' };
+    // Die zweite Position hängt an einem eigenen Fälligkeitsraster und hat als
+    // einzige eine Entnahme.
+    const anders = { ...gross, potId: 'surplus', faelligkeit: '2026-11-15' };
     const rows = buildSinkingFundRows([klein, anders], [
       ...gemeinsam,
-      withdrawal('2026-05-10', 1200, { potId: 'surplus' }),
+      withdrawal('2025-11-20', 1200, { potId: 'surplus' }),
     ], opts);
     expect(rows[0].cycleStart).toBe('2026-03-15');
     expect(rows[0].nextDue).toBe('2027-03-15');
-    expect(rows[1].cycleStart).toBe('2026-05-10');
-    expect(rows[1].nextDue).toBe('2027-05-10');
+    expect(rows[1].cycleStart).toBe('2025-11-15');
+    expect(rows[1].nextDue).toBe('2026-11-15');
   });
 
   it('trennt Zwecke gleichen Namens in verschiedenen Töpfen', () => {
