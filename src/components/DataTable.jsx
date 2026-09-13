@@ -29,11 +29,23 @@ const EMPTY_SET = new Set();
  *   }
  *
  * Sektion (vom View vorbereitet):
- *   { key, label, accent, rows }         // rows brauchen je eine `id`
+ *   { key, label, accent, rows, aside }  // rows brauchen je eine `id`
  *
  * `label === null` heißt: kein Gliederungsband. `accent` ist eine beliebige
  * CSS-Farbe (im Rückstellungs-View eine var(--group-accent-N)) und färbt Punkt und
- * 3-px-Kante.
+ * 3-px-Kante. `aside` ist optional und steht rechtsbündig im Band — dort sitzen
+ * Kennzahl und Aktionen, die der ganzen Sektion gelten (z.B. „Gruppe buchen").
+ * Eine Sektion ohne Zeilen wird trotzdem mit ihrem Band gezeigt: eine leere
+ * Gruppe muss sichtbar bleiben, damit sie sich verwalten lässt.
+ *
+ * Optionale Erweiterungen, alle rückwärtskompatibel (ohne sie rendert die
+ * Tabelle exakt wie zuvor):
+ *   toolbar              // Knoten links im Toolbar-Streifen (Titel, Aktionen)
+ *   renderRowActions(row)// Aktionszelle am Zeilenende; nicht sortier- und
+ *                        // nicht abwählbar, eingeblendet beim Überfahren
+ *   bounded = true       // false ⇒ keine Höhenbegrenzung, kein Innen-Scroll.
+ *                        // Nötig, sobald mehrere Tabellen untereinander stehen
+ *                        // — sonst scrollte jede in sich und die Seite dazu.
  *
  * `renderDetail(row, hiddenColumns)` ist optional. Wird es übergeben, bekommt
  * die Tabelle links eine Chevron-Spalte und jede Zeile lässt sich aufklappen;
@@ -56,6 +68,9 @@ export default function DataTable({
   defaultSort,
   renderDetail,
   label,
+  toolbar,
+  renderRowActions,
+  bounded = true,
 }) {
   const { visibleIds, toggle, reset } = useTableColumns(storageKey, columns);
   const visible = useMemo(() => {
@@ -94,8 +109,8 @@ export default function DataTable({
     toggleDetail(id);
   }
 
-  // Die Chevron-Spalte zählt bei jedem colSpan mit (Band, Detailzeile).
-  const colCount = visible.length + (renderDetail ? 1 : 0);
+  // Chevron- und Aktionsspalte zählen bei jedem colSpan mit (Band, Detailzeile).
+  const colCount = visible.length + (renderDetail ? 1 : 0) + (renderRowActions ? 1 : 0);
 
   const [sort, setSort] = useState(defaultSort ?? null);
   const sortCol = useMemo(
@@ -125,7 +140,7 @@ export default function DataTable({
   // sie beantwortet die Frage „wie viel muss insgesamt in den Töpfen liegen".
   const allRows = useMemo(() => sections.flatMap((s) => s.rows), [sections]);
 
-  const scrollRef = useScrollRoom();
+  const scrollRef = useScrollRoom(bounded);
 
   return (
     <div className="hb-dt">
@@ -133,6 +148,7 @@ export default function DataTable({
           horizontalen Scrollen mit den Spalten nach links aus und der
           Spalten-Button verschwände. */}
       <div className="hb-dt-toolbar">
+        {toolbar && <div className="hb-dt-toolbar-start">{toolbar}</div>}
         <ColumnsFlyout
           columns={columns}
           visibleIds={visibleIds}
@@ -140,7 +156,10 @@ export default function DataTable({
           onReset={reset}
         />
       </div>
-      <div className="hb-dt-scroll" ref={scrollRef}>
+      <div
+        className={"hb-dt-scroll" + (bounded ? "" : " hb-dt-scroll--unbounded")}
+        ref={scrollRef}
+      >
         <table
           className={"hb-dt-table" + (renderDetail ? " hb-dt-table--expandable" : "")}
           aria-label={label}
@@ -168,6 +187,9 @@ export default function DataTable({
                   </th>
                 );
               })}
+              {renderRowActions && (
+                <th scope="col" className="hb-dt-actions-col" aria-label="Aktionen" />
+              )}
             </tr>
           </thead>
           {sortedSections.map((section) => (
@@ -188,6 +210,7 @@ export default function DataTable({
                       <span className="hb-dt-band-count">
                         {section.rows.length} Position{section.rows.length === 1 ? "" : "en"}
                       </span>
+                      {section.aside && <div className="hb-dt-band-aside">{section.aside}</div>}
                     </div>
                   </td>
                 </tr>
@@ -221,6 +244,11 @@ export default function DataTable({
                       {visible.map((col) => (
                         <Cell key={col.id} col={col} row={row} />
                       ))}
+                      {renderRowActions && (
+                        <td className="hb-dt-actions-col">
+                          <div className="hb-dt-row-actions">{renderRowActions(row)}</div>
+                        </td>
+                      )}
                     </tr>
                     {isOpen && (
                       <tr className="hb-dt-detail-row" id={`hb-dt-detail-${row.id}`}>
@@ -253,6 +281,7 @@ export default function DataTable({
                   {col.summarize ? col.summarize(allRows) : null}
                 </td>
               ))}
+              {renderRowActions && <td className="hb-dt-actions-col" />}
             </tr>
           </tfoot>
         </table>
@@ -287,13 +316,15 @@ export default function DataTable({
  * Übrige genügt `resize`. Der Vergleich mit dem zuletzt geschriebenen Wert
  * hält die Schreibzugriffe aus dem Layout-Pfad heraus.
  */
-function useScrollRoom() {
+function useScrollRoom(enabled = true) {
   const ref = useRef(null);
   const lastRoom = useRef(null);
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el) return undefined;
+    // Ohne Höhenbegrenzung (`bounded={false}`) liest das CSS die Variable nicht
+    // — dann gibt es nichts zu messen.
+    if (!el || !enabled) return undefined;
     const measure = () => {
       const top = el.getBoundingClientRect().top + window.scrollY;
       const room = Math.round(document.documentElement.clientHeight - top);

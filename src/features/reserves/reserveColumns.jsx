@@ -5,7 +5,8 @@ import { formatRateCount } from "./reserveFormat.js";
 
 // Turnus im Klartext. Deckt die Werte ab, die der Fixkosten-Dialog anbietet,
 // plus den Bestandswert 1; alles andere fällt auf „Alle N Monate" zurück.
-const TURNUS_LABEL = {
+// Exportiert, weil die Fixkosten-Tabelle dieselbe Beschriftung braucht.
+export const TURNUS_LABEL = {
   1: "Monatlich",
   3: "Quartalsweise",
   6: "Halbjährlich",
