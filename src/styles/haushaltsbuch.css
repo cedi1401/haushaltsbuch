@@ -1986,7 +1986,7 @@ select.hb-input option {
 }
 
 /* Bewusst auf .hb-dt-row und nicht auf tr: Gliederungsband, Summen- und
-   Detailzeile (P6.3/P7) sind keine Datenzeilen und sollen nicht hovern. */
+   Detailzeile sind keine Datenzeilen und sollen nicht hovern. */
 .hb-dt-row:hover td {
   background: var(--hover-bg);
 }

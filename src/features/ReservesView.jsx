@@ -123,8 +123,8 @@ export default function ReservesView({
     writingRef.current = false;
     setBillTarget(row);
     // Vorbelegt ist der Betrag pro Zyklus — die Rechnung, nicht die Monatsrate.
-    // Die Notiz steht nicht im Konzept, aber ohne sie erscheint die Zahlung in
-    // der Buchungsliste des Töpfe-Views als „—".
+    // Die Notiz wird mit dem Positionsnamen vorbelegt, weil die Zahlung sonst in
+    // der Buchungsliste des Töpfe-Views als „—" erscheint.
     setBillDraft({
       date: todayISO(),
       amount: String(row.item?.amount ?? ""),

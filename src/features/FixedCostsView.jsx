@@ -78,7 +78,7 @@ function turnusOptionsFor(turnus) {
 }
 
 /**
- * Kostenregel (P5.3): Als Fixkosten zählen Ausgaben und Rückstellungen mit
+ * Kostenregel: Als Fixkosten zählen Ausgaben und Rückstellungen mit
  * Turnus. Ein Transfer ohne Turnus ist eine Rücklage — freies Sparen ohne
  * Rechnung dahinter. Dieselbe Regel wie in `useFixedCostTrend`.
  */
@@ -802,7 +802,7 @@ export default function FixedCostsView({
           {/* Gesamtzeile unter beiden Tabellen. Sie liest sich als Abschluss der
               beiden Summenzeilen darüber — und sagt dazu, warum sie kleiner ist
               als deren Summe: freie Rücklagen stehen in der Transfer-Tabelle,
-              zählen nach der Kostenregel (P5.3) aber nicht als Fixkosten. */}
+              zählen nach der Kostenregel aber nicht als Fixkosten. */}
           {/* Bewusst ohne CardContent: dessen 20 px Innenabstand machten aus der
               schmalen Abschlusszeile eine weitere volle Karte. */}
           {recurringExpenses.length > 0 && (

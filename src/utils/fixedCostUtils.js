@@ -230,7 +230,7 @@ function financialMonthSpan(fromISO, toISO, monthStartDay) {
  * @param {Array} entries - alle Einträge des Buchs
  * @param {{ monthStartDay?: number, today?: string, targetSum?: number|null }} opts
  *        targetSum: Summe der Soll-Stände aller Positionen desselben Zwecks;
- *        gesetzt von buildSinkingFundRows() bei geteilten Zwecken (P4.3).
+ *        gesetzt von buildSinkingFundRows() bei geteilten Zwecken.
  * @returns {object}
  */
 export function sinkingFundStatus(item, entries, opts = {}) {

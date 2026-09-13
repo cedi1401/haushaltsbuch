@@ -344,7 +344,7 @@ export default function DataTable({
  * der des Kastens — oder zu klein, dann bleibt unter der Karte Luft und die
  * innere Leiste erscheint früher als nötig. Sitzt der Wert dagegen genau,
  * scrollt ausschließlich die Tabelle, und Kopf- wie Summenzeile bleiben
- * stehen: das ist der eigentliche Zweck von P6.3.
+ * stehen: das ist der eigentliche Zweck der Messung.
  *
  * Gemessen wird der Abstand zum *Dokumentanfang* (`+ scrollY`), nicht der
  * aktuelle Abstand zum Fensterrand — sonst schrumpfte der Kasten mit jedem

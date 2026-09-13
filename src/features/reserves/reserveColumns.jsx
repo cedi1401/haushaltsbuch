@@ -57,7 +57,7 @@ function pct(value) {
 }
 
 /**
- * Der Tooltip an der Status-Pille (`ausarbeitung.md:856-862`). Er sagt, was die
+ * Der Tooltip an der Status-Pille. Er sagt, was die
  * Farbe nur andeutet — und bei „Fällig"/„Überfällig", was als Nächstes zu tun
  * ist. Bewusst als `title` und nicht über `HbTooltip`: dessen Auslöser ist ein
  * fest verdrahtetes Fragezeichen-Icon, ein zweites Symbol neben jeder Pille
