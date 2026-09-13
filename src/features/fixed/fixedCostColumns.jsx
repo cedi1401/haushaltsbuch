@@ -203,12 +203,14 @@ function catalog(kind, { fmt, categoryById, potNameById, groupNameById }) {
     {
       id: "purpose",
       label: "Zweck",
+      shrink: true,
       sortValue: (row) => String(row.item?.transferCategory ?? "").toLowerCase(),
       render: (row) => row.item?.transferCategory,
     },
     {
       id: "pot",
       label: "Topf",
+      shrink: true,
       sortValue: (row) => String(potNameById.get(row.item?.potId) ?? "").toLowerCase(),
       render: (row) => potNameById.get(row.item?.potId) ?? row.item?.potId,
     },
@@ -217,6 +219,7 @@ function catalog(kind, { fmt, categoryById, potNameById, groupNameById }) {
     {
       id: "turnus",
       label: "Turnus",
+      shrink: true,
       sortValue: (row) => (isSinkingFund(row.item) ? turnusMonths(row.item) : null),
       // Ohne Turnus ist die Position eine Rücklage (freies Sparen) — das steht
       // hier statt eines „—", weil genau das die Position von einer
