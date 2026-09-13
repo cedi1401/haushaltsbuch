@@ -3740,8 +3740,10 @@ select.hb-input option {
   cursor: help;
 }
 
-/* Status „Diesen Monat": Häkchen + Datum oder „Offen" mit leerem Kreis.
-   Die Form trägt die Aussage, nicht die Farbe allein. */
+/* Status „Diesen Monat": gefüllter grüner Kreis mit ausgespartem Haken
+   (gebucht) oder leerer Kreis (offen). Beide als SVG mit identischer
+   Geometrie, damit sie exakt gleich groß wirken. Die Form trägt die Aussage,
+   nicht die Farbe allein. */
 .hb-fixed-state {
   display: inline-flex;
   align-items: center;
@@ -3750,27 +3752,30 @@ select.hb-input option {
   font-variant-numeric: tabular-nums;
 }
 
+.hb-fixed-state-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 .hb-fixed-state--done {
   color: var(--text-secondary);
 }
 
-.hb-fixed-state--done svg {
-  flex-shrink: 0;
+.hb-fixed-state--done .hb-fixed-state-icon {
   color: var(--green);
+}
+
+/* Der Haken ist mit der Kartenfarbe gestrichen — eine echte Aussparung in
+   beiden Themes. Kontrast Haken zu Kreis: hell #ffffff auf #0f7b0f 5.4:1,
+   dunkel #272b35 auf #58cf49 7.1:1 (Grafik-Minimum 3:1). */
+.hb-fixed-state-check {
+  stroke: var(--card);
 }
 
 .hb-fixed-state--open {
   color: var(--muted);
-}
-
-.hb-fixed-state--open::before {
-  content: "";
-  box-sizing: border-box;
-  width: 12px;
-  height: 12px;
-  border: 1.5px solid currentColor;
-  border-radius: 50%;
-  flex-shrink: 0;
 }
 
 /* Nur für Screenreader („Gebucht am") */

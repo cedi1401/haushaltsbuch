@@ -1,5 +1,5 @@
 import React from "react";
-import { IconCheck, IconTag } from "../../components/icons.jsx";
+import { IconTag } from "../../components/icons.jsx";
 import { formatDateDE } from "../../utils/hbUtils.js";
 import { annualAmount, isSinkingFund, monthlyRate, turnusMonths } from "../../utils/fixedCostUtils.js";
 import { TURNUS_LABEL } from "../reserves/reserveColumns.jsx";
@@ -27,6 +27,47 @@ function sumBy(rows, pick) {
     if (typeof v === "number" && Number.isFinite(v)) sum += v;
   }
   return sum;
+}
+
+/**
+ * Status-Symbol der Spalte „Diesen Monat". Beide Zustände teilen exakt dieselbe
+ * Kreisgeometrie (r 7.25, Strich 1.5 im 16er-Raster), damit gefüllt und leer
+ * gleich groß wirken. Gebucht: gefüllter Kreis mit ausgespartem Haken — der
+ * Haken ist mit der Kartenfarbe gestrichen (CSS), nicht mit Weiß, damit die
+ * Aussparung auch im dunklen Theme eine Aussparung bleibt.
+ */
+// Bewusst eine Render-Funktion und keine Komponente: Diese Datei exportiert
+// eine Fabrik, und react-refresh verbietet Komponenten neben Nicht-Komponenten.
+function stateIcon(booked) {
+  return (
+    <svg
+      className="hb-fixed-state-icon"
+      viewBox="0 0 16 16"
+      width="14"
+      height="14"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle
+        cx="8"
+        cy="8"
+        r="7.25"
+        fill={booked ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      {booked && (
+        <path
+          className="hb-fixed-state-check"
+          d="M4.75 8.25l2.1 2.1 4.4-4.6"
+          fill="none"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+    </svg>
+  );
 }
 
 function statusTitle(booked, fmt) {
@@ -110,18 +151,22 @@ function catalog(kind, { fmt, categoryById, potNameById, groupNameById }) {
   const status = {
     id: "status",
     label: "Diesen Monat",
+    // Nur so breit wie der Inhalt: linksbündig (die Kreise fluchten
+    // untereinander) würde sie sonst weit vor dem Tabellenrand enden.
+    shrink: true,
     // Das Datum der letzten Buchung sortiert; offene Positionen landen dank
     // der null-Regel von DataTable immer am Ende.
     sortValue: (row) => row.booked?.lastDate ?? null,
     render: (row) =>
       row.booked ? (
         <span className="hb-fixed-state hb-fixed-state--done" title={statusTitle(row.booked, fmt)}>
-          <IconCheck width={14} height={14} aria-hidden="true" />
+          {stateIcon(true)}
           <span className="hb-fixed-sr">Gebucht am </span>
           {formatDateDE(row.booked.lastDate)}
         </span>
       ) : (
         <span className="hb-fixed-state hb-fixed-state--open" title={statusTitle(null, fmt)}>
+          {stateIcon(false)}
           Offen
         </span>
       ),
