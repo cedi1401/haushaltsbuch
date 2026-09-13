@@ -34,7 +34,6 @@ docs/
 .vscode/*
 !.vscode/extensions.json
 .idea
-CODE_AUDIT_2026-07-21.md
 .DS_Store
 *.suo
 *.ntvs*
