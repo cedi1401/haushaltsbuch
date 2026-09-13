@@ -2008,7 +2008,9 @@ select.hb-input option {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  /* Gleich groß wie die Datenzeilen (.hb-dt-table: 14 px) — die Hierarchie
+     trägt das Gewicht des Namens, nicht eine kleinere Schrift. */
+  font-size: 14px;
 }
 
 .hb-dt-band-name {
@@ -2018,6 +2020,7 @@ select.hb-input option {
 
 .hb-dt-band-count {
   color: var(--muted);
+  font-size: 13px;
 }
 
 /* Rechter Teil des Bands (`section.aside`): Kennzahl und Aktionen, die der
