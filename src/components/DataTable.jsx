@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTableColumns } from "../hooks/useTableColumns.js";
 import ColumnsFlyout from "./ColumnsFlyout.jsx";
 import { IconChevron } from "./icons.jsx";
@@ -6,6 +6,10 @@ import { IconChevron } from "./icons.jsx";
 // Stabile Identität für den Ausgangszustand — ein Literal im useState-Aufruf
 // wäre bei jedem Render ein neues Set.
 const EMPTY_SET = new Set();
+
+// Wie lange die Zeilenaktionen nach einem Mausklick sichtbar bleiben, bevor sie
+// ausblenden (sofern die Maus die Zeile verlassen hat).
+const ACTIONS_LINGER_MS = 2500;
 
 /**
  * Generische Tabelle. Fachfrei: sie kennt weder Rückstellungen noch Währungen.
@@ -21,6 +25,8 @@ const EMPTY_SET = new Set();
  *     label,
  *     align,                    // "right" ⇒ rechtsbündig + tabular-nums
  *     maxWidth,                 // px ⇒ Text wird gedeckelt und mit … gekürzt
+ *     shrink,                   // true ⇒ Spalte nur so breit wie ihr Inhalt;
+ *                               // die übrige Breite geht an die anderen Spalten
  *     alwaysVisible,            // true ⇒ im Flyout ausgegraut + angehakt
  *     defaultVisible,           // Teil der Vorbelegung (Ausgangszustand)
  *     sortValue: (row) => …,    // null sortiert immer ans Ende
@@ -41,8 +47,11 @@ const EMPTY_SET = new Set();
  * Optionale Erweiterungen, alle rückwärtskompatibel (ohne sie rendert die
  * Tabelle exakt wie zuvor):
  *   toolbar              // Knoten links im Toolbar-Streifen (Titel, Aktionen)
- *   renderRowActions(row)// Aktionszelle am Zeilenende; nicht sortier- und
- *                        // nicht abwählbar, eingeblendet beim Überfahren
+ *   renderRowActions(row)// Zeilenaktionen als Overlay am rechten Ende der
+ *                        // letzten sichtbaren Zelle, eingeblendet beim
+ *                        // Überfahren oder bei Tastaturfokus. Bewusst keine
+ *                        // eigene Spalte: die reservierte sonst dauerhaft die
+ *                        // Breite der unsichtbaren Buttons als Leerstreifen.
  *   bounded = true       // false ⇒ keine Höhenbegrenzung, kein Innen-Scroll.
  *                        // Nötig, sobald mehrere Tabellen untereinander stehen
  *                        // — sonst scrollte jede in sich und die Seite dazu.
@@ -109,8 +118,24 @@ export default function DataTable({
     toggleDetail(id);
   }
 
-  // Chevron- und Aktionsspalte zählen bei jedem colSpan mit (Band, Detailzeile).
-  const colCount = visible.length + (renderDetail ? 1 : 0) + (renderRowActions ? 1 : 0);
+  // Nach einem Mausklick in die Zeilenaktionen bleibt die Leiste noch kurz
+  // sichtbar und blendet dann aus — auch wenn der geklickte Button den Fokus
+  // behält. Tastaturfokus hält sie unabhängig davon über :focus-visible (CSS)
+  // sichtbar, ein offenes Kebab-Menü über aria-expanded.
+  const [lingerId, setLingerId] = useState(null);
+  const lingerTimer = useRef(null);
+  function lingerActions(id) {
+    clearTimeout(lingerTimer.current);
+    setLingerId(id);
+    lingerTimer.current = setTimeout(() => setLingerId(null), ACTIONS_LINGER_MS);
+  }
+  useEffect(() => {
+    const timer = lingerTimer;
+    return () => clearTimeout(timer.current);
+  }, []);
+
+  // Die Chevron-Spalte zählt bei jedem colSpan mit (Band, Detailzeile).
+  const colCount = visible.length + (renderDetail ? 1 : 0);
 
   const [sort, setSort] = useState(defaultSort ?? null);
   const sortCol = useMemo(
@@ -174,7 +199,11 @@ export default function DataTable({
                     key={col.id}
                     scope="col"
                     aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
-                    className={col.align === "right" ? "hb-dt-num" : undefined}
+                    className={
+                      [col.align === "right" ? "hb-dt-num" : null, col.shrink ? "hb-dt-shrink" : null]
+                        .filter(Boolean)
+                        .join(" ") || undefined
+                    }
                   >
                     <button
                       type="button"
@@ -187,9 +216,6 @@ export default function DataTable({
                   </th>
                 );
               })}
-              {renderRowActions && (
-                <th scope="col" className="hb-dt-actions-col" aria-label="Aktionen" />
-              )}
             </tr>
           </thead>
           {sortedSections.map((section) => (
@@ -241,14 +267,20 @@ export default function DataTable({
                           </button>
                         </td>
                       )}
-                      {visible.map((col) => (
-                        <Cell key={col.id} col={col} row={row} />
+                      {visible.map((col, i) => (
+                        <Cell
+                          key={col.id}
+                          col={col}
+                          row={row}
+                          actions={
+                            renderRowActions && i === visible.length - 1
+                              ? renderRowActions(row)
+                              : null
+                          }
+                          lingering={lingerId === row.id}
+                          onActionsClick={() => lingerActions(row.id)}
+                        />
                       ))}
-                      {renderRowActions && (
-                        <td className="hb-dt-actions-col">
-                          <div className="hb-dt-row-actions">{renderRowActions(row)}</div>
-                        </td>
-                      )}
                     </tr>
                     {isOpen && (
                       <tr className="hb-dt-detail-row" id={`hb-dt-detail-${row.id}`}>
@@ -273,7 +305,11 @@ export default function DataTable({
                   // Tabelle die leere Chevron-Zelle, und die Beschriftung
                   // stünde dann fett zwischen den Summen.
                   className={
-                    [col.align === "right" ? "hb-dt-num" : null, i === 0 ? "hb-dt-summary-label" : null]
+                    [
+                      col.align === "right" ? "hb-dt-num" : null,
+                      i === 0 ? "hb-dt-summary-label" : null,
+                      col.shrink ? "hb-dt-shrink" : null,
+                    ]
                       .filter(Boolean)
                       .join(" ") || undefined
                   }
@@ -281,7 +317,6 @@ export default function DataTable({
                   {col.summarize ? col.summarize(allRows) : null}
                 </td>
               ))}
-              {renderRowActions && <td className="hb-dt-actions-col" />}
             </tr>
           </tfoot>
         </table>
@@ -419,12 +454,21 @@ function setClampTitle(e) {
   else el.removeAttribute("title");
 }
 
-function Cell({ col, row }) {
+function Cell({ col, row, actions, lingering, onActionsClick }) {
   const value = col.render(row);
   const empty = value === null || value === undefined || value === "";
   const content = empty ? <span className="hb-dt-dash">—</span> : value;
+  // `actions` bekommt nur die letzte sichtbare Zelle (renderRowActions). Die
+  // Zelle wird zum Positionsanker des Overlays.
+  const cls = [
+    col.align === "right" ? "hb-dt-num" : null,
+    col.shrink ? "hb-dt-shrink" : null,
+    actions ? "hb-dt-actions-host" : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <td className={col.align === "right" ? "hb-dt-num" : undefined}>
+    <td className={cls || undefined}>
       {col.maxWidth ? (
         <span
           className="hb-dt-clamp"
@@ -435,6 +479,16 @@ function Cell({ col, row }) {
         </span>
       ) : (
         content
+      )}
+      {actions && (
+        // Klicks auf die Buttons bubbeln hierher — auch die aus dem inline
+        // gerenderten Kebab-Menü — und starten die kurze Nachlaufzeit.
+        <div
+          className={"hb-dt-row-actions" + (lingering ? " hb-dt-row-actions--linger" : "")}
+          onClick={onActionsClick}
+        >
+          {actions}
+        </div>
       )}
     </td>
   );

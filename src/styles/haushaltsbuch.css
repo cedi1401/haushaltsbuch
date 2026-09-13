@@ -2050,36 +2050,98 @@ select.hb-input option {
   min-width: 0;
 }
 
-/* Aktionszelle am Zeilenende (`renderRowActions`). width: 1 % schrumpft die
-   Spalte auf ihren Inhalt. Die Aktionen erscheinen erst beim Überfahren oder
-   bei Tastaturfokus — dauerhaft sichtbar wären sie lauter als die Daten. */
-.hb-dt-table .hb-dt-actions-col {
+/* Spalte schrumpft auf ihren Inhalt (`col.shrink`). width: 1 % auf th, td und
+   tfoot: Bei table-layout: auto wird die Spalte nie schmaler als ihr Inhalt
+   (alle Zellen sind nowrap), bekommt aber keinen Anteil an der übrigen
+   Breite — die geht an die anderen Spalten. Gedacht für eine linksbündige
+   letzte Spalte, deren Inhalt sonst weit vor dem rechten Tabellenrand endet. */
+.hb-dt-table .hb-dt-shrink {
   width: 1%;
-  text-align: right;
 }
 
-.hb-dt-table tbody td.hb-dt-actions-col {
-  padding-block: 4px;
+/* Zeilenaktionen (`renderRowActions`) als Overlay am rechten Ende der letzten
+   sichtbaren Zelle. Früher eine eigene Spalte — die reservierte dauerhaft die
+   Breite der Buttons, denn opacity: 0 belegt weiter Platz, und width: 1 %
+   schrumpft eine Spalte nie unter ihren Inhalt. Rechts neben der letzten
+   Datenspalte blieb so ein leerer Streifen. Als Overlay nutzen die
+   Datenspalten die volle Breite; beim Überfahren oder Fokus verdeckt die
+   Leiste den rechten Rand der letzten Zelle. */
+.hb-dt-table tbody td.hb-dt-actions-host {
+  position: relative;
 }
 
 .hb-dt-row-actions {
-  display: inline-flex;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  /* Über den folgenden Zeilen, damit ein offenes Kebab-Menü nicht von deren
+     Zellen überdeckt wird. */
+  z-index: 1;
+  display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 4px;
+  /* Die Leiste ist oft breiter als ihre Zelle (z.B. eine geschrumpfte
+     Status-Spalte) und ragt dann nach links über die Nachbarzellen. Ohne
+     max-content würde die absolut positionierte Leiste auf die Zellbreite
+     zusammengedrückt, und die Buttons brächen um. */
+  width: max-content;
+  white-space: nowrap;
+  padding: 0 10px 0 12px;
+  /* Deckend: --hover-bg ist halbtransparent und läge allein nur als Schleier
+     über dem Zellinhalt. Kartenfarbe plus dieselbe Tönung ergibt exakt die
+     Hover-Fläche der Zeile. */
+  background-color: var(--card);
+  background-image: linear-gradient(var(--hover-bg), var(--hover-bg));
   opacity: 0;
+  /* Unsichtbar darf die Leiste keine Klicks auf den Zellinhalt abfangen. Die
+     Buttons bleiben trotzdem per Tab erreichbar — der Fokus blendet sie ein. */
+  pointer-events: none;
   transition: opacity var(--transition-fast);
 }
 
+/* Weicher Übergang links, damit verdeckter Zellinhalt nicht an einer harten
+   Kante abreißt. Zwei Verläufe, damit das rechte Ende exakt der deckenden
+   Fläche entspricht und das linke nahtlos in die Zeile übergeht. */
+.hb-dt-row-actions::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 100%;
+  width: 24px;
+  background:
+    linear-gradient(to right, transparent, var(--hover-bg)),
+    linear-gradient(to right, transparent, var(--card));
+  pointer-events: none;
+}
+
+.hb-dt-row-actions > * {
+  flex-shrink: 0;
+}
+
+/* Sichtbar, solange
+   - die Maus über der Zeile steht,
+   - der Tastaturfokus in der Leiste liegt (:focus-visible statt
+     :focus-within: ein Mausklick hielte die Leiste sonst fest, solange der
+     geklickte Button den Fokus behält),
+   - ein Kebab-Menü der Leiste offen ist (es wird inline gerendert, kein
+     Portal; der Auslöser trägt dann aria-expanded="true"),
+   - kurz nach einem Mausklick (--linger, von DataTable nach 2,5 s entfernt).
+   Beim Ausblenden greift die Transition oben. */
 .hb-dt-row:hover .hb-dt-row-actions,
-.hb-dt-row:focus-within .hb-dt-row-actions {
+.hb-dt-row-actions:has(:focus-visible),
+.hb-dt-row-actions:has([aria-expanded="true"]),
+.hb-dt-row-actions--linger {
   opacity: 1;
+  pointer-events: auto;
 }
 
 /* Ohne Hover (Touch) gäbe es keinen Weg zu den Aktionen. */
 @media (hover: none) {
   .hb-dt-row-actions {
     opacity: 1;
+    pointer-events: auto;
   }
 }
 
