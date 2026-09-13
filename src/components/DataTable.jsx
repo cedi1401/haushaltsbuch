@@ -27,6 +27,8 @@ const ACTIONS_LINGER_MS = 2500;
  *     maxWidth,                 // px ⇒ Text wird gedeckelt und mit … gekürzt
  *     shrink,                   // true ⇒ Spalte nur so breit wie ihr Inhalt;
  *                               // die übrige Breite geht an die anderen Spalten
+ *     width,                    // px ⇒ feste Spaltenbreite; breiterer Inhalt
+ *                               // setzt sich durch (nowrap). Schlägt `shrink`.
  *     alwaysVisible,            // true ⇒ im Flyout ausgegraut + angehakt
  *     defaultVisible,           // Teil der Vorbelegung (Ausgangszustand)
  *     sortValue: (row) => …,    // null sortiert immer ans Ende
@@ -204,6 +206,10 @@ export default function DataTable({
                         .filter(Boolean)
                         .join(" ") || undefined
                     }
+                    // Bei `table-layout: auto` bestimmt die Kopfzelle die Breite
+                    // der ganzen Spalte. Inline, damit sie das width: 1 % von
+                    // .hb-dt-shrink überstimmt.
+                    style={col.width ? { width: col.width } : undefined}
                   >
                     <button
                       type="button"
