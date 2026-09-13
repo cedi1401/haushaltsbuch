@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
+import DataTable from "../components/DataTable.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import { generateId } from "../utils/idUtils.js";
@@ -12,40 +13,39 @@ import {
   parseAmount,
   todayISO,
 } from "../utils/hbUtils.js";
-import { isSinkingFund, monthlyRate, turnusMonths } from "../utils/fixedCostUtils.js";
+import { isSinkingFund, monthlyRate } from "../utils/fixedCostUtils.js";
+import { getFinancialMonth } from "../utils/financialMonthUtils.js";
+import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
-import { IconFixed, IconPlus, IconDelete, IconDrag, IconTag, IconWarning } from "../components/icons.jsx";
+import { IconEdit, IconFixed, IconPlus, IconTag, IconWarning } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { EMPTY_ARRAY } from "../utils/constants.js";
+import { buildFixedCostColumns } from "./fixed/fixedCostColumns.jsx";
 
-// Die beiden semantischen Spalten des Views. Die Reihenfolge ist zugleich die
-// Layout- und (auf schmalen Breiten) die Stapel-Reihenfolge.
-const COLUMNS = [
+// Die beiden Tabellen des Views, untereinander. Die Reihenfolge ist zugleich
+// die Darstellungsreihenfolge.
+const TABLES = [
   {
     kind: "expense",
     title: "Ausgaben",
-    addLabel: "Neue Ausgabe",
+    addLabel: "Ausgabe",
     emptyText:
       "Noch keine wiederkehrenden Ausgaben — z.B. Miete, Abos oder Versicherungen.",
   },
   {
     kind: "transfer",
     title: "Rücklagen & Rückstellungen",
-    addLabel: "Neuer Transfer",
+    addLabel: "Transfer",
     emptyText:
       "Noch keine wiederkehrenden Transfers — z.B. eine Rückstellung für die Jahresrechnung "
       + "oder eine monatliche Rücklage in einen Topf.",
   },
 ];
 
-// Sektions-Schlüssel für Drag & Drop: eine Gruppe wird über ihre id
-// adressiert, die beiden „Weitere"-Bereiche über je einen eigenen Schlüssel.
-// Ein gemeinsamer null-Schlüssel würde die beiden Spalten verwechseln.
-const UNGROUPED_KEY = {
-  expense: "ungrouped:expense",
-  transfer: "ungrouped:transfer",
-};
+// Sektions-Schlüssel für Positionen ohne (gültige) Gruppe. Jede Tabelle hat
+// ihre eigenen Sektionen, ein gemeinsamer Schlüssel ist daher eindeutig.
+const UNGROUPED_KEY = "ungrouped";
 
 // Turnus-Auswahl im Dialog. Der Wert ist bewusst ein String — das <select>
 // liefert immer Strings, die Umwandlung nach `number|null` passiert im Handler.
@@ -77,20 +77,25 @@ function turnusOptionsFor(turnus) {
   return [...TURNUS_OPTIONS, { value: String(turnus), label: `${label} (Bestandswert)` }];
 }
 
-// Benennung des Zyklusbetrags auf der Card. `turnus === 1` fehlt bewusst — der
-// Katalog bietet ihn nicht mehr an, als Bestandswert kommt er aber vor: Dort ist
-// die Monatsrate identisch mit `amount`, eine Zweitzeile wäre reine Wiederholung.
-const TURNUS_PERIOD_LABEL = {
-  3: "pro Quartal",
-  6: "pro Halbjahr",
-  12: "pro Jahr",
-  24: "pro 2 Jahre",
-  36: "pro 3 Jahre",
-};
+/**
+ * Kostenregel (P5.3): Als Fixkosten zählen Ausgaben und Rückstellungen mit
+ * Turnus. Ein Transfer ohne Turnus ist eine Rücklage — freies Sparen ohne
+ * Rechnung dahinter. Dieselbe Regel wie in `useFixedCostTrend`.
+ */
+function countsAsFixedCost(item) {
+  return fixedCostKind(item) === "expense" || isSinkingFund(item);
+}
+
+// Schlüssel der Monatsbuchungen. Die Art gehört dazu: eine Entnahme aus
+// „Rechnung bezahlt" ist keine Monatsrate und darf den Status nicht setzen.
+function bookingKey(kind, id) {
+  return `${kind}:${id}`;
+}
 
 export default function FixedCostsView({
   activeBook,
-  entries: _entries,
+  entries,
+  monthStartDay = 1,
   onUpdateBook,
   onAddEntry,
   onAddEntries,
@@ -110,7 +115,7 @@ export default function FixedCostsView({
   const [editingItem, setEditingItem] = useState(null);
   // Beim Duplizieren: id des Originals, damit die Kopie direkt dahinter landet
   const [duplicateSourceId, setDuplicateSourceId] = useState(null);
-  // Aus einer Gruppe/Spalte heraus angelegte Positionen erben deren Art —
+  // Aus einer Tabelle/Gruppe heraus angelegte Positionen erben deren Art —
   // sie ist dann im Dialog fest vorgegeben.
   const [kindLocked, setKindLocked] = useState(false);
   const [tagInput, setTagInput] = useState("");
@@ -134,27 +139,20 @@ export default function FixedCostsView({
     tags: [],
   });
 
-  // Gruppen-Verwaltung
-  const [renamingGroupId, setRenamingGroupId] = useState(null);
+  // Gruppen-Dialog: `{ mode: "create", kind }` oder `{ mode: "rename", kind, groupId }`
+  const [groupDialog, setGroupDialog] = useState(null);
   const [groupNameDraft, setGroupNameDraft] = useState("");
-  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
-  // Spalte, in der die neue Gruppe angelegt wird — kein Auswahlschritt im Dialog
-  const [groupDialogKind, setGroupDialogKind] = useState("expense");
 
-  // Drag & Drop
-  const [draggingId, setDraggingId] = useState(null);
-  const [dragOverKey, setDragOverKey] = useState(null);
-  const [dropBeforeId, setDropBeforeId] = useState(null);
-
-  // Spalte je Gruppe — Grundlage für Zuordnung, Drop-Regeln und Dialog-Filter
+  // Tabelle je Gruppe — Grundlage für Zuordnung und Dialog-Filter
   const groupKindById = useMemo(() => {
     const map = new Map();
     for (const group of fixedCostGroups) map.set(group.id, fixedCostKind(group));
     return map;
   }, [fixedCostGroups]);
 
-  // Gruppen je Spalte, innerhalb der Spalte nach `order` sortiert
-  const groupsByColumn = useMemo(() => {
+  // Gruppen je Tabelle, nach `order` sortiert. Die Reihenfolge bestimmt auch
+  // die Bandfarbe — identisch zum Rückstellungs-View.
+  const groupsByKind = useMemo(() => {
     const result = { expense: [], transfer: [] };
     for (const group of fixedCostGroups) result[fixedCostKind(group)].push(group);
     result.expense.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -162,40 +160,62 @@ export default function FixedCostsView({
     return result;
   }, [fixedCostGroups]);
 
-  // Positionen je Sektion + Summen (Sektion, Spalte, gesamt)
-  const { itemsBySection, sectionTotals, columnTotals, columnCounts, totalAmount } = useMemo(() => {
-    const bySection = new Map();
-    const secTotals = new Map();
-    const colTotals = { expense: 0, transfer: 0 };
-    const colCounts = { expense: 0, transfer: 0 };
-    let total = 0;
+  // Buchungen des laufenden Finanzmonats je Position — zugeordnet über
+  // `recurringId`, wie im Rückstellungs-View.
+  const bookedThisMonth = useMemo(() => {
+    const map = new Map();
+    const currentMonth = getFinancialMonth(todayISO(), monthStartDay)?.yyyymm;
+    if (!currentMonth) return map;
+    for (const e of entries || EMPTY_ARRAY) {
+      if (!e.recurringId || (e.kind !== "expense" && e.kind !== "transfer")) continue;
+      if (getFinancialMonth(e.date, monthStartDay)?.yyyymm !== currentMonth) continue;
+      const key = bookingKey(e.kind, e.recurringId);
+      const prev = map.get(key);
+      map.set(key, {
+        count: (prev?.count || 0) + 1,
+        amount: (prev?.amount || 0) + Number(e.amount || 0),
+        lastDate: !prev || String(e.date) > prev.lastDate ? String(e.date) : prev.lastDate,
+      });
+    }
+    return map;
+  }, [entries, monthStartDay]);
 
+  // Zeilen je Tabelle + Kennzahlen der Gesamtzeile
+  const { rowsByKind, fixedMonthly, freeMonthly, bookedCount } = useMemo(() => {
+    const byKind = { expense: [], transfer: [] };
+    let fixed = 0;
+    let free = 0;
+    let booked = 0;
     for (const item of recurringExpenses) {
       const kind = fixedCostKind(item);
-      // Basis aller drei Totale ist die Monatsrate, nicht das Rohfeld: bei einer
-      // Rückstellung mit Turnus ist `amount` der Zyklusbetrag. Für alles ohne Turnus
-      // ist `monthlyRate()` wertidentisch mit `amount`.
-      const amount = monthlyRate(item);
-      total += amount;
-      colTotals[kind] += amount;
-      colCounts[kind] += 1;
-
-      // Nur eine existierende Gruppe derselben Spalte zählt — sonst „Weitere"
-      const gid = item.groupId || null;
-      const key = gid && groupKindById.get(gid) === kind ? gid : UNGROUPED_KEY[kind];
-      if (!bySection.has(key)) bySection.set(key, []);
-      bySection.get(key).push(item);
-      secTotals.set(key, (secTotals.get(key) || 0) + amount);
+      const bookedEntry = bookedThisMonth.get(bookingKey(kind, item.id)) ?? null;
+      byKind[kind].push({ id: item.id, item, booked: bookedEntry });
+      if (bookedEntry) booked += 1;
+      // Basis ist die Monatsrate, nicht das Rohfeld: bei einer Rückstellung mit
+      // Turnus ist `amount` der Zyklusbetrag.
+      if (countsAsFixedCost(item)) fixed += monthlyRate(item);
+      else free += monthlyRate(item);
     }
+    return { rowsByKind: byKind, fixedMonthly: fixed, freeMonthly: free, bookedCount: booked };
+  }, [recurringExpenses, bookedThisMonth]);
 
-    return {
-      itemsBySection: bySection,
-      sectionTotals: secTotals,
-      columnTotals: colTotals,
-      columnCounts: colCounts,
-      totalAmount: total,
-    };
-  }, [recurringExpenses, groupKindById]);
+  const columnCtx = useMemo(
+    () => ({
+      fmt,
+      categoryById: new Map(expenseCategories.map((c) => [c.id, c])),
+      potNameById: new Map(pots.map((p) => [p.id, p.name])),
+      groupNameById: new Map(fixedCostGroups.map((g) => [g.id, g.name])),
+    }),
+    [fmt, expenseCategories, pots, fixedCostGroups]
+  );
+
+  const columnsByKind = useMemo(
+    () => ({
+      expense: buildFixedCostColumns("expense", columnCtx),
+      transfer: buildFixedCostColumns("transfer", columnCtx),
+    }),
+    [columnCtx]
+  );
 
   const allBookTags = useMemo(() => {
     const set = new Set();
@@ -211,48 +231,49 @@ export default function FixedCostsView({
     return base.slice(0, 8);
   }, [allBookTags, draft.tags, tagInput]);
 
-  // Sektions-Schlüssel einer Position — identisch zur Zuordnung oben
+  // Sektions-Schlüssel einer Position: nur eine existierende Gruppe derselben
+  // Art zählt — sonst „Ohne Gruppe".
   function sectionKeyOfItem(item) {
-    const kind = fixedCostKind(item);
     const gid = item.groupId || null;
-    return gid && groupKindById.get(gid) === kind ? gid : UNGROUPED_KEY[kind];
+    return gid && groupKindById.get(gid) === fixedCostKind(item) ? gid : UNGROUPED_KEY;
   }
 
-  function columnLabel(kind) {
-    return COLUMNS.find((c) => c.kind === kind)?.title || "";
+  function tableLabel(kind) {
+    return TABLES.find((t) => t.kind === kind)?.title || "";
   }
 
   // Gruppen-CRUD
-  function openGroupDialog(kind) {
-    setGroupDialogKind(kind);
+  function openCreateGroupDialog(kind) {
     setGroupNameDraft("");
-    setGroupDialogOpen(true);
+    setGroupDialog({ mode: "create", kind });
   }
 
-  function createGroup() {
+  function openRenameGroupDialog(group) {
+    setGroupNameDraft(group.name || "");
+    setGroupDialog({ mode: "rename", kind: fixedCostKind(group), groupId: group.id });
+  }
+
+  function saveGroup() {
     const name = (groupNameDraft || "").trim();
-    if (!name) return;
-    const maxOrder = fixedCostGroups.reduce((m, g) => Math.max(m, g.order ?? 0), 0);
-    const newGroup = { id: generateId("fcg"), name, order: maxOrder + 1, kind: groupDialogKind };
-    onUpdateBook({ ...activeBook, fixedCostGroups: [...fixedCostGroups, newGroup] });
+    if (!name || !groupDialog) return;
+    if (groupDialog.mode === "rename") {
+      const updated = fixedCostGroups.map((g) => (g.id === groupDialog.groupId ? { ...g, name } : g));
+      onUpdateBook({ ...activeBook, fixedCostGroups: updated });
+    } else {
+      const maxOrder = fixedCostGroups.reduce((m, g) => Math.max(m, g.order ?? 0), 0);
+      const newGroup = { id: generateId("fcg"), name, order: maxOrder + 1, kind: groupDialog.kind };
+      onUpdateBook({ ...activeBook, fixedCostGroups: [...fixedCostGroups, newGroup] });
+    }
+    setGroupDialog(null);
     setGroupNameDraft("");
-    setGroupDialogOpen(false);
-  }
-
-  function renameGroup(groupId, newName) {
-    const name = (newName || "").trim();
-    if (!name) { setRenamingGroupId(null); return; }
-    const updated = fixedCostGroups.map((g) => g.id === groupId ? { ...g, name } : g);
-    onUpdateBook({ ...activeBook, fixedCostGroups: updated });
-    setRenamingGroupId(null);
   }
 
   async function deleteGroup(group) {
-    const itemCount = (itemsBySection.get(group.id) || EMPTY_ARRAY).length;
+    const itemCount = recurringExpenses.filter((r) => sectionKeyOfItem(r) === group.id).length;
     const ok = await confirm({
       title: "Gruppe löschen",
       message: itemCount > 0
-        ? `Gruppe „${group.name}“ löschen? Die ${itemCount === 1 ? "enthaltene Position wird" : `${itemCount} enthaltenen Positionen werden`} nach „Weitere“ verschoben.`
+        ? `Gruppe „${group.name}“ löschen? Die ${itemCount === 1 ? "enthaltene Position wird" : `${itemCount} enthaltenen Positionen werden`} nach „Ohne Gruppe“ verschoben.`
         : `Gruppe „${group.name}“ wirklich löschen?`,
       confirmLabel: "Löschen",
       danger: true,
@@ -342,8 +363,8 @@ export default function FixedCostsView({
     setKindLocked(false);
   }
 
-  // Art wechseln: die Gruppe gehört fest zu einer Spalte, die Position wandert
-  // also in den „Weitere"-Bereich der anderen Spalte. Turnus und Fälligkeit sind
+  // Art wechseln: die Gruppe gehört fest zu einer Tabelle, die Position wandert
+  // also nach „Ohne Gruppe" der anderen Tabelle. Turnus und Fälligkeit sind
   // Transfer-Felder und werden beim Wechsel auf „Ausgabe" zurückgesetzt — sonst
   // bliebe ein unsichtbarer Wert stehen, der die Speichern-Sperre auslöst.
   function handleKindChange(kind) {
@@ -387,7 +408,7 @@ export default function FixedCostsView({
       if (monthlyRate({ kind: "transfer", amount: numericAmount, turnus: draft.turnus }) < 0.01) return;
     }
 
-    // Absicherung gegen inkonsistente Zustände: eine Gruppe der anderen Spalte
+    // Absicherung gegen inkonsistente Zustände: eine Gruppe der anderen Tabelle
     // wird nie übernommen.
     const targetGroupId =
       draft.groupId && groupKindById.get(draft.groupId) === draft.kind ? draft.groupId : null;
@@ -477,10 +498,10 @@ export default function FixedCostsView({
       categoryId: kind === "expense" ? (item.categoryId || null) : null,
       subcategoryId: kind === "expense" ? (item.subcategoryId || null) : null,
       kind,
-      // Herkunftskennung: die Trend-Auswertung ordnet Buchungen darüber ihrer
-      // Fixkosten-Position zu. Die Notiz bleibt die Anzeige-Beschriftung in der
-      // Eintragsliste, ist aber nicht mehr die Zuordnungsgrundlage — eine
-      // umbenannte Position behält so ihre Historie.
+      // Herkunftskennung: die Trend-Auswertung und der Status „Diesen Monat"
+      // ordnen Buchungen darüber ihrer Fixkosten-Position zu. Die Notiz bleibt
+      // die Anzeige-Beschriftung in der Eintragsliste — eine umbenannte
+      // Position behält so ihre Historie.
       recurringId: item.id,
       note: item.name,
     };
@@ -494,21 +515,33 @@ export default function FixedCostsView({
     toast.success(`„${item.name}“ wurde gebucht.`);
   }
 
-  // Sammelbuchung einer Gruppe bzw. eines „Weitere"-Bereichs. Alle Einträge
-  // gehen als EIN State-Update raus (onAddEntries), damit bei wiederholten
-  // Aufrufen auf demselben Snapshot nichts verloren geht.
+  // Sammelbuchung einer Gruppe, der Positionen ohne Gruppe oder einer ganzen
+  // Tabelle ohne Gruppen. Alle Einträge gehen als EIN State-Update raus
+  // (onAddEntries), damit bei wiederholten Aufrufen auf demselben Snapshot
+  // nichts verloren geht.
   async function bookSection(label, items, isGroup) {
     if (!items || items.length === 0) return;
     const today = todayISO();
     const count = items.length;
     const scope = isGroup ? `der Gruppe „${label}“` : `aus „${label}“`;
+    // Die Sammelbuchung bucht bewusst alle Positionen — der Hinweis verhindert
+    // nur, dass eine schon gebuchte Position unbemerkt doppelt gebucht wird.
+    const already = items.filter((item) =>
+      bookedThisMonth.has(bookingKey(fixedCostKind(item), item.id))
+    ).length;
+    const alreadyNote = already === 0
+      ? ""
+      : already === 1
+        ? "\n\n1 Position wurde in diesem Finanzmonat bereits gebucht und wird erneut gebucht."
+        : `\n\n${already} Positionen wurden in diesem Finanzmonat bereits gebucht und werden erneut gebucht.`;
     const ok = await confirm({
       title: "Alle Positionen buchen",
       message:
         (count === 1
           ? `Wirklich 1 Position ${scope} buchen?`
           : `Wirklich alle ${count} Positionen ${scope} buchen?`) +
-        `\n\nGebucht wird auf das heutige Datum (${formatDateDE(today)}).`,
+        `\n\nGebucht wird auf das heutige Datum (${formatDateDE(today)}).` +
+        alreadyNote,
       confirmLabel: "Buchen",
     });
     if (!ok) return;
@@ -526,89 +559,6 @@ export default function FixedCostsView({
     );
   }
 
-  // Drag & Drop
-  const draggingKind = useMemo(() => {
-    if (!draggingId) return null;
-    const item = recurringExpenses.find((r) => r.id === draggingId);
-    return item ? fixedCostKind(item) : null;
-  }, [draggingId, recurringExpenses]);
-
-  function handleDragStart(e, item) {
-    // Die ganze Karte ist draggable — ein Mousedown auf einem Button (Kebab,
-    // "Jetzt buchen", …) darf keinen Karten-Drag starten.
-    if (e.target.closest("button")) {
-      e.preventDefault();
-      return;
-    }
-    setDraggingId(item.id);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", item.id);
-  }
-
-  function handleDragEnd() {
-    setDraggingId(null);
-    setDragOverKey(null);
-    setDropBeforeId(null);
-  }
-
-  // Kein preventDefault → der Browser lehnt den Drop ab; zusätzlich wird ein
-  // eventuell noch stehender Indikator gelöscht.
-  function rejectDrop() {
-    setDragOverKey(null);
-    setDropBeforeId(null);
-  }
-
-  function handleDragOverItem(e, sectionKind, sectionKey, beforeId) {
-    if (!draggingId) return;
-    if (draggingKind !== sectionKind) { rejectDrop(); return; }
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverKey(sectionKey);
-    setDropBeforeId(beforeId);
-  }
-
-  function handleDragOverGroupBody(e, sectionKind, sectionKey) {
-    if (!draggingId) return;
-    if (draggingKind !== sectionKind) { rejectDrop(); return; }
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverKey(sectionKey);
-    setDropBeforeId(null);
-  }
-
-  function handleDrop(e, sectionKind, targetGroupId, beforeId) {
-    e.preventDefault();
-    e.stopPropagation();
-    const dragId = draggingId || e.dataTransfer.getData("text/plain");
-    if (!dragId) return handleDragEnd();
-    const dragged = recurringExpenses.find((r) => r.id === dragId);
-    if (!dragged) return handleDragEnd();
-    // Spaltenwechsel per Drag ist nicht vorgesehen — die Art einer Position
-    // wird ausschließlich im Dialog geändert.
-    if (fixedCostKind(dragged) !== sectionKind) return handleDragEnd();
-
-    const rest = recurringExpenses.filter((r) => r.id !== dragId);
-    const movedItem = { ...dragged, groupId: targetGroupId || null };
-
-    let insertIndex;
-    if (beforeId) {
-      insertIndex = rest.findIndex((r) => r.id === beforeId);
-      if (insertIndex === -1) insertIndex = rest.length;
-    } else {
-      const targetKey = targetGroupId || UNGROUPED_KEY[sectionKind];
-      let lastIdx = -1;
-      rest.forEach((r, idx) => {
-        if (sectionKeyOfItem(r) === targetKey) lastIdx = idx;
-      });
-      insertIndex = lastIdx === -1 ? rest.length : lastIdx + 1;
-    }
-
-    const next = [...rest.slice(0, insertIndex), movedItem, ...rest.slice(insertIndex)];
-    onUpdateBook({ ...activeBook, recurringExpenses: next });
-    handleDragEnd();
-  }
-
   // Bedeutungswechsel von `amount`: mit Turnus ist der Wert der Zyklusbetrag,
   // gebucht wird die daraus abgeleitete Monatsrate.
   const draftAmount = parseAmount(draft.amount);
@@ -619,7 +569,7 @@ export default function FixedCostsView({
       ? monthlyRate({ kind: "transfer", amount: draftAmount, turnus: draft.turnus })
       : null;
   // Ein für sich gültiger Zyklusbetrag kann auf eine Rate von 0.00 herunterrunden
-  // (0.05 auf zwölf Monate). „Jetzt buchen" erzeugte dann Einträge über 0.00.
+  // (0.05 auf zwölf Monate). „Buchen" erzeugte dann Einträge über 0.00.
   const rateTooSmall = draftMonthlyRate !== null && draftMonthlyRate < 0.01;
   // Ein Turnus ohne Fälligkeit ist ein Halbzustand — ohne Startanker lässt sich
   // kein Zyklus berechnen. Das `kind`-Gate steckt in `hasTurnus` und ist zwingend:
@@ -641,207 +591,130 @@ export default function FixedCostsView({
     [fixedCostGroups, draft.kind]
   );
 
-  function renderCatPills(item) {
-    if (fixedCostKind(item) === "transfer") {
-      const potName = pots.find((p) => p.id === item.potId)?.name || item.potId;
-      return (
-        <>
-          <span className="hb-fixed-cat-pill">
-            {item.transferCategory || "Transfer"} → {potName}
-          </span>
-          {/* Ohne Turnus ist die Position eine Rücklage (freies Sparen) und
-              zählt seit der Kostenregel (P5.3) in keiner Fixkosten-Kennzahl mit.
-              Dasselbe Merkmal trägt die Trend-Übersichtsliste. */}
-          {!isSinkingFund(item) && (
-            <span
-              className="hb-fixed-cat-pill hb-fixed-cat-pill--free"
-              title="Rücklage ohne Turnus — freies Sparen, zählt nicht in die Fixkostenbelastung"
-            >
-              Rücklage
-            </span>
-          )}
-        </>
-      );
-    }
-    const cat = expenseCategories.find((c) => c.id === item.categoryId);
-    if (!cat) {
-      return <span className="hb-fixed-cat-pill">{item.category || "Unkategorisiert"}</span>;
-    }
-    const sub = item.subcategoryId
-      ? (cat.subcategories || []).find((s) => s.id === item.subcategoryId)
-      : null;
+  // Aktionen am Zeilenende — DataTable blendet sie beim Überfahren ein.
+  function renderRowActions(row) {
+    const item = row.item;
     return (
       <>
-        <span className="hb-fixed-cat-pill">
-          {cat.color && <span className="hb-fixed-cat-dot" style={{ background: cat.color }} />}
-          {cat.name}
-        </span>
-        {sub && (
-          <span className="hb-fixed-cat-pill">
-            {cat.color && (
-              <span className="hb-fixed-cat-dot" style={{ background: cat.color }} />
-            )}
-            {sub.name}
-          </span>
-        )}
+        <Button size="sm" variant="outline" onClick={() => bookNow(item)}>Buchen</Button>
+        <button
+          type="button"
+          className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+          onClick={() => openEditDialog(item)}
+          title="Bearbeiten"
+          aria-label={`„${item.name}“ bearbeiten`}
+        >
+          <IconEdit />
+        </button>
+        <OverflowMenu
+          label={`Weitere Aktionen für „${item.name}“`}
+          buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+          items={[
+            { label: "Duplizieren", onClick: () => openDuplicateDialog(item) },
+            { label: "Löschen", danger: true, onClick: () => deleteItem(item) },
+          ]}
+        />
       </>
     );
   }
 
-  function renderTagPills(item) {
-    if (!item.tags || item.tags.length === 0) return null;
-    return item.tags.map((tag) => (
-      <span key={tag} className="hb-tag-pill"><IconTag width={13} height={13} />{tag}</span>
-    ));
-  }
-
-  function renderItemCard(item, sectionKind, sectionKey, groupIdOfSection) {
-    const isDragging = draggingId === item.id;
-    const showDropLine = dragOverKey === sectionKey && dropBeforeId === item.id;
-    // Zweitzeile nur, wenn sich Zyklus- und Monatsbetrag unterscheiden können —
-    // bei monatlichem Turnus wäre sie eine Wiederholung der Hauptzahl.
-    const cyclePeriod = isSinkingFund(item) ? TURNUS_PERIOD_LABEL[turnusMonths(item)] : null;
-
-    return (
-      <React.Fragment key={item.id}>
-        {showDropLine && <div className="hb-fixed-drop-line" />}
-        <div
-          className={`hb-card hb-fixed-card-wrap${isDragging ? " is-dragging" : ""}`}
-          draggable
-          onDragStart={(e) => handleDragStart(e, item)}
-          onDragEnd={handleDragEnd}
-          onDragOver={(e) => handleDragOverItem(e, sectionKind, sectionKey, item.id)}
-          onDrop={(e) => handleDrop(e, sectionKind, groupIdOfSection, item.id)}
-        >
-          <div className="hb-card-content">
-            <div className="hb-fixed-card">
-              <span className="hb-fixed-drag-handle" aria-hidden="true">
-                <IconDrag />
-              </span>
-              <div className="hb-fixed-body">
-                <div className="hb-fixed-top">
-                  <div className="hb-fixed-info">
-                    <div className="hb-fixed-title-row">
-                      <h3 className="hb-fixed-name">{item.name}</h3>
-                      <div className="hb-fixed-amount-col">
-                        <div className="hb-fixed-amount hb-bad">-{fmt(monthlyRate(item))}</div>
-                        {cyclePeriod && (
-                          <div className="hb-fixed-amount-sub">
-                            {fmt(item.amount)} {cyclePeriod}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="hb-fixed-pills">
-                      {renderCatPills(item)}
-                      {renderTagPills(item)}
-                    </div>
-                  </div>
-                </div>
-                <div className="hb-fixed-actions">
-                  <Button size="sm" onClick={() => bookNow(item)}>Jetzt buchen</Button>
-                  <Button size="sm" variant="outline" onClick={() => openEditDialog(item)}>Bearbeiten</Button>
-                  <OverflowMenu
-                    label={`Weitere Aktionen für „${item.name}“`}
-                    buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
-                    items={[
-                      { label: "Duplizieren", onClick: () => openDuplicateDialog(item) },
-                      { label: "Löschen", danger: true, onClick: () => deleteItem(item) },
-                    ]}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </React.Fragment>
-    );
-  }
-
-  // Eine Sektion = eine Gruppe oder der „Weitere"-Bereich einer Spalte.
-  // Beide verhalten sich funktional gleich (Drop-Ziel, „+", Sammelbuchung).
-  function renderSection(columnKind, group) {
-    const isGroup = !!group;
-    const sectionKey = isGroup ? group.id : UNGROUPED_KEY[columnKind];
-    const groupIdOfSection = isGroup ? group.id : null;
-    const items = itemsBySection.get(sectionKey) || EMPTY_ARRAY;
-    const total = sectionTotals.get(sectionKey) || 0;
-    const label = isGroup
-      ? group.name
-      : (groupsByColumn[columnKind].length > 0 ? "Weitere" : "Alle Positionen");
-    const isDropTargetEmpty =
-      draggingId !== null && dragOverKey === sectionKey && dropBeforeId === null;
-
-    return (
-      <section
-        key={sectionKey}
-        className={`hb-fixed-group${isGroup ? "" : " hb-fixed-group--ungrouped"}`}
-      >
-        <header className="hb-fixed-group-head">
-          {isGroup && renamingGroupId === group.id ? (
-            <input
-              className="hb-input hb-fixed-group-rename"
-              autoFocus
-              value={groupNameDraft}
-              onChange={(e) => setGroupNameDraft(e.target.value)}
-              onBlur={() => renameGroup(group.id, groupNameDraft)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") renameGroup(group.id, groupNameDraft);
-                if (e.key === "Escape") setRenamingGroupId(null);
-              }}
-            />
-          ) : isGroup ? (
-            <button
-              className="hb-fixed-group-title"
-              onClick={() => { setRenamingGroupId(group.id); setGroupNameDraft(group.name); }}
-              title="Klicken zum Umbenennen"
-            >
-              {group.name}
-            </button>
-          ) : (
-            <span className="hb-fixed-group-title hb-fixed-group-title--static">{label}</span>
-          )}
-          <span className="hb-fixed-group-total">{fmt(total)}</span>
+  // Eine Sektion = eine Gruppe oder „Ohne Gruppe". Summe, Sammelbuchung und
+  // Gruppenverwaltung sitzen rechts im Band.
+  function buildSection(kind, group, rows, accent) {
+    const label = group ? group.name : "Ohne Gruppe";
+    const items = rows.map((r) => r.item);
+    const total = items.reduce((sum, item) => sum + monthlyRate(item), 0);
+    const menuItems = [
+      {
+        label: "Position hinzufügen",
+        onClick: () => openCreateDialog({ groupId: group?.id ?? null, kind, lockKind: true }),
+      },
+    ];
+    if (group) {
+      menuItems.push(
+        { label: "Umbenennen", onClick: () => openRenameGroupDialog(group) },
+        { label: "Gruppe löschen", danger: true, onClick: () => deleteGroup(group) }
+      );
+    }
+    return {
+      key: group ? group.id : UNGROUPED_KEY,
+      label,
+      accent,
+      rows,
+      aside: (
+        <>
+          <span className="hb-fixed-band-total">{fmt(total)}</span>
           <Button
             size="sm"
             variant="outline"
-            className="hb-fixed-group-book"
-            onClick={() => bookSection(label, items, isGroup)}
+            onClick={() => bookSection(label, items, !!group)}
             disabled={items.length === 0}
           >
-            Gruppe buchen
+            {group ? "Gruppe buchen" : "Alle buchen"}
           </Button>
-          <button
-            className="hb-icon-btn hb-icon-btn--sm"
-            onClick={() => openCreateDialog({ groupId: groupIdOfSection, kind: columnKind, lockKind: true })}
-            title={isGroup ? `Position zur Gruppe „${label}“ hinzufügen` : "Position ohne Gruppe hinzufügen"}
-            aria-label="Position hinzufügen"
+          <OverflowMenu
+            label={group ? `Aktionen für Gruppe „${label}“` : "Aktionen für Positionen ohne Gruppe"}
+            buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+            items={menuItems}
+          />
+        </>
+      ),
+    };
+  }
+
+  // Gliederung wie im Rückstellungs-View: Gruppen in ihrer `order`, „Ohne
+  // Gruppe" ans Ende und ohne Farbe. Ohne jede Gruppe gibt es kein Band.
+  // Anders als dort bleiben leere Gruppen sichtbar — hier werden sie verwaltet.
+  function buildSections(kind) {
+    const groups = groupsByKind[kind];
+    const rows = rowsByKind[kind];
+    if (groups.length === 0) {
+      return [{ key: UNGROUPED_KEY, label: null, accent: null, rows }];
+    }
+    const byKey = new Map();
+    for (const row of rows) {
+      const key = sectionKeyOfItem(row.item);
+      if (!byKey.has(key)) byKey.set(key, []);
+      byKey.get(key).push(row);
+    }
+    const sections = groups.map((group, index) =>
+      buildSection(
+        kind,
+        group,
+        byKey.get(group.id) || EMPTY_ARRAY,
+        GROUP_ACCENT_PALETTE[index % GROUP_ACCENT_PALETTE.length]
+      )
+    );
+    const ungrouped = byKey.get(UNGROUPED_KEY);
+    if (ungrouped?.length) sections.push(buildSection(kind, null, ungrouped, null));
+    return sections;
+  }
+
+  function renderTableToolbar(table) {
+    const items = rowsByKind[table.kind].map((r) => r.item);
+    // Ohne Gruppen gibt es kein Band — die Sammelbuchung rückt dann hierher.
+    const noBands = groupsByKind[table.kind].length === 0;
+    return (
+      <>
+        <h2 className="hb-fixed-table-title">{table.title}</h2>
+        <div className="hb-fixed-table-actions">
+          {noBands && items.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => bookSection(table.title, items, false)}>
+              Alle buchen
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={() => openCreateGroupDialog(table.kind)}>
+            <IconPlus /> Gruppe
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => openCreateDialog({ kind: table.kind, lockKind: true })}
           >
-            <IconPlus width={15} height={15} />
-          </button>
-          {isGroup && (
-            <button
-              className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--danger"
-              onClick={() => deleteGroup(group)}
-              title="Gruppe löschen"
-              aria-label="Gruppe löschen"
-            >
-              <IconDelete width={15} height={15} />
-            </button>
-          )}
-        </header>
-        <div
-          className={`hb-fixed-group-body${isDropTargetEmpty ? " is-drop-target" : ""}`}
-          onDragOver={(e) => handleDragOverGroupBody(e, columnKind, sectionKey)}
-          onDrop={(e) => handleDrop(e, columnKind, groupIdOfSection, null)}
-        >
-          {items.length === 0 ? (
-            <div className="hb-fixed-group-empty">Positionen hierher ziehen</div>
-          ) : (
-            items.map((item) => renderItemCard(item, columnKind, sectionKey, groupIdOfSection))
-          )}
+            <IconPlus /> {table.addLabel}
+          </Button>
         </div>
-      </section>
+      </>
     );
   }
 
@@ -849,27 +722,14 @@ export default function FixedCostsView({
 
   return (
     <div>
-      {/* Toolbar */}
-      <div className="hb-fixed-toolbar">
-        <div className="hb-stat-pill hb-stat-pill--accent hb-fixed-toolbar-pill">
-          <span className="hb-stat-pill-label">Gesamt pro Monat</span>
-          <span className="hb-stat-pill-value">{fmt(totalAmount)}</span>
-        </div>
-        <div className="hb-fixed-toolbar-actions">
-          <Button onClick={() => openCreateDialog()}>
-            <IconPlus /> Neue Fixkosten
-          </Button>
-        </div>
-      </div>
-
-      {/* Neue Gruppe anlegen — die Spalte ergibt sich aus dem Aufrufer */}
+      {/* Gruppe anlegen/umbenennen — die Tabelle ergibt sich aus dem Aufrufer */}
       <EditDialog
-        open={groupDialogOpen}
-        title="Neue Gruppe"
-        onClose={() => setGroupDialogOpen(false)}
-        onSave={createGroup}
+        open={!!groupDialog}
+        title={groupDialog?.mode === "rename" ? "Gruppe umbenennen" : "Neue Gruppe"}
+        onClose={() => setGroupDialog(null)}
+        onSave={saveGroup}
         canSave={!!groupNameDraft.trim()}
-        saveLabel="Anlegen"
+        saveLabel={groupDialog?.mode === "rename" ? "Speichern" : "Anlegen"}
       >
         <div className="hb-field">
           <div className="hb-label">Gruppenname</div>
@@ -877,14 +737,17 @@ export default function FixedCostsView({
             className="hb-input"
             style={{ width: "100%", minWidth: 0 }}
             type="text"
-            placeholder={groupDialogKind === "expense" ? "z.B. Wohnen, Abos" : "z.B. Steuern, Versicherungen"}
+            autoFocus
+            placeholder={groupDialog?.kind === "transfer" ? "z.B. Steuern, Versicherungen" : "z.B. Wohnen, Abos"}
             value={groupNameDraft}
             onChange={(e) => setGroupNameDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && groupNameDraft.trim()) createGroup(); }}
+            onKeyDown={(e) => { if (e.key === "Enter" && groupNameDraft.trim()) saveGroup(); }}
           />
-          <div className="hb-fixed-field-hint">
-            Wird in der Spalte „{columnLabel(groupDialogKind)}“ angelegt.
-          </div>
+          {groupDialog?.mode === "create" && (
+            <div className="hb-fixed-field-hint">
+              Wird in der Tabelle „{tableLabel(groupDialog.kind)}“ angelegt.
+            </div>
+          )}
         </div>
       </EditDialog>
 
@@ -906,56 +769,65 @@ export default function FixedCostsView({
           </CardContent>
         </Card>
       ) : (
-        <div className="hb-fixed-columns">
-          {COLUMNS.map((column) => {
-            const columnGroups = groupsByColumn[column.kind];
-            const ungroupedItems = itemsBySection.get(UNGROUPED_KEY[column.kind]) || EMPTY_ARRAY;
-            const isColumnEmpty = columnGroups.length === 0 && ungroupedItems.length === 0;
-            const count = columnCounts[column.kind];
-
+        <div className="hb-fixed-tables">
+          {TABLES.map((table) => {
+            const hasContent =
+              rowsByKind[table.kind].length > 0 || groupsByKind[table.kind].length > 0;
             return (
-              <section
-                key={column.kind}
-                className={`hb-fixed-column hb-fixed-column--${column.kind}`}
-                aria-label={column.title}
-              >
-                <header className="hb-fixed-col-head">
-                  <div className="hb-fixed-col-heading">
-                    <h2 className="hb-fixed-col-title">{column.title}</h2>
-                    <div className="hb-fixed-col-meta">
-                      {count === 1 ? "1 Position" : `${count} Positionen`}
-                    </div>
-                  </div>
-                  <div className="hb-fixed-col-total">{fmt(columnTotals[column.kind])}</div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openGroupDialog(column.kind)}
-                  >
-                    <IconPlus /> Gruppe
-                  </Button>
-                </header>
-
-                {isColumnEmpty ? (
-                  <div className="hb-fixed-col-empty">
-                    <div>{column.emptyText}</div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openCreateDialog({ kind: column.kind, lockKind: true })}
-                    >
-                      <IconPlus /> {column.addLabel}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="hb-fixed-col-body">
-                    {columnGroups.map((group) => renderSection(column.kind, group))}
-                    {renderSection(column.kind, null)}
-                  </div>
-                )}
-              </section>
+              <Card key={table.kind}>
+                <CardContent>
+                  {hasContent ? (
+                    <DataTable
+                      columns={columnsByKind[table.kind]}
+                      sections={buildSections(table.kind)}
+                      storageKey={`fixed-${table.kind}`}
+                      label={table.title}
+                      toolbar={renderTableToolbar(table)}
+                      renderRowActions={renderRowActions}
+                      bounded={false}
+                    />
+                  ) : (
+                    <>
+                      <div className="hb-dt-toolbar">
+                        <div className="hb-dt-toolbar-start">{renderTableToolbar(table)}</div>
+                      </div>
+                      <div className="hb-fixed-empty">{table.emptyText}</div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
             );
           })}
+
+          {/* Gesamtzeile unter beiden Tabellen. Sie liest sich als Abschluss der
+              beiden Summenzeilen darüber — und sagt dazu, warum sie kleiner ist
+              als deren Summe: freie Rücklagen stehen in der Transfer-Tabelle,
+              zählen nach der Kostenregel (P5.3) aber nicht als Fixkosten. */}
+          {/* Bewusst ohne CardContent: dessen 20 px Innenabstand machten aus der
+              schmalen Abschlusszeile eine weitere volle Karte. */}
+          {recurringExpenses.length > 0 && (
+            <Card>
+              <div className="hb-fixed-total">
+                <div className="hb-fixed-total-row">
+                  <span className="hb-fixed-total-label">Fixkosten pro Monat</span>
+                  <span className="hb-fixed-total-value">{fmt(fixedMonthly)}</span>
+                </div>
+                <div
+                  className="hb-fixed-total-meta"
+                  title="Ausgaben und Rückstellungen mit Turnus, umgerechnet auf den Monat. Rücklagen ohne Turnus sind freies Sparen und zählen nicht zu den Fixkosten."
+                >
+                  {freeMonthly > 0 && (
+                    <>
+                      Ohne {fmt(freeMonthly)} freie Rücklagen aus der Tabelle „Rücklagen &amp;
+                      Rückstellungen“
+                      <span aria-hidden="true"> · </span>
+                    </>
+                  )}
+                  {bookedCount} von {recurringExpenses.length} diesen Monat gebucht
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
       )}
 
@@ -1047,7 +919,7 @@ export default function FixedCostsView({
               </select>
               {kindLocked && (
                 <div className="hb-fixed-field-hint">
-                  Durch die Spalte „{columnLabel(draft.kind)}“ vorgegeben.
+                  Durch die Tabelle „{tableLabel(draft.kind)}“ vorgegeben.
                 </div>
               )}
             </div>
@@ -1058,7 +930,7 @@ export default function FixedCostsView({
                 value={draft.groupId || ""}
                 onChange={(e) => setDraft((d) => ({ ...d, groupId: e.target.value || null }))}
               >
-                <option value="">Weitere (keine Gruppe)</option>
+                <option value="">Ohne Gruppe</option>
                 {dialogGroupOptions.map((g) => (
                   <option key={g.id} value={g.id}>{g.name}</option>
                 ))}

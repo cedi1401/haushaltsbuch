@@ -293,6 +293,7 @@ export default function HaushaltsbuchApp() {
               <FixedCostsView
                 activeBook={activeBook}
                 entries={entries}
+                monthStartDay={monthStartDay}
                 onUpdateBook={updateBook}
                 onAddEntry={entryActions.addTransferEntry}
                 onAddEntries={entryActions.addEntries}

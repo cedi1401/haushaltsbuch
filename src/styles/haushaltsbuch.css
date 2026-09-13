@@ -2020,6 +2020,83 @@ select.hb-input option {
   color: var(--muted);
 }
 
+/* Rechter Teil des Bands (`section.aside`): Kennzahl und Aktionen, die der
+   ganzen Sektion gelten. Kompakter als ein normaler --sm-Button, damit das
+   Band nicht zur Datenzeile aufquillt. */
+.hb-dt-band-aside {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.hb-dt-band-aside .hb-btn-sm {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+
+.hb-dt-band-aside .hb-icon-btn--sm {
+  width: 26px;
+  height: 26px;
+}
+
+/* Linker Teil des Toolbar-Streifens (`toolbar`) — schiebt die Spaltenauswahl
+   an den rechten Rand. */
+.hb-dt-toolbar-start {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Aktionszelle am Zeilenende (`renderRowActions`). width: 1 % schrumpft die
+   Spalte auf ihren Inhalt. Die Aktionen erscheinen erst beim Überfahren oder
+   bei Tastaturfokus — dauerhaft sichtbar wären sie lauter als die Daten. */
+.hb-dt-table .hb-dt-actions-col {
+  width: 1%;
+  text-align: right;
+}
+
+.hb-dt-table tbody td.hb-dt-actions-col {
+  padding-block: 4px;
+}
+
+.hb-dt-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.hb-dt-row:hover .hb-dt-row-actions,
+.hb-dt-row:focus-within .hb-dt-row-actions {
+  opacity: 1;
+}
+
+/* Ohne Hover (Touch) gäbe es keinen Weg zu den Aktionen. */
+@media (hover: none) {
+  .hb-dt-row-actions {
+    opacity: 1;
+  }
+}
+
+/* Ohne Höhenbegrenzung (`bounded={false}`): mehrere Tabellen untereinander
+   scrollen mit der Seite. overflow: visible, damit Kebab-Menüs in den letzten
+   Zeilen nicht am Kasten abgeschnitten werden; Kopf und Summenzeile kleben
+   dann nicht mehr — es gibt keinen eigenen Scrollkasten, an dem sie haften. */
+.hb-dt-scroll--unbounded {
+  overflow: visible;
+  max-height: none;
+}
+
+.hb-dt-scroll--unbounded .hb-dt-table thead th,
+.hb-dt-scroll--unbounded .hb-dt-table tfoot td {
+  position: static;
+}
+
 /* Farbkante der Gruppe, 3 px an der ersten Zelle jeder Datenzeile.
 
    Als inset box-shadow und nicht als border-left: ein Rahmen zählt zur
@@ -3481,118 +3558,167 @@ select.hb-input option {
    FIXED COSTS VIEW
    ===================================================== */
 
-/* Toolbar */
-.hb-fixed-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
-.hb-fixed-toolbar-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-/* KPI-Pill in der Toolbar wie die Grid-Pills der anderen Views darstellen */
-.hb-fixed-toolbar-pill {
-  align-self: stretch;
-  min-width: 220px;
-}
-
-
-/* Semantische Spalten: links ausschließlich Ausgaben, rechts ausschließlich
-   Rücklagen/Rückstellungen. Jede Spalte ist ein eigenständiger vertikaler Stapel —
-   eine Gruppe wandert nie über die Spaltengrenze (früher: ein zeilenweise
-   befülltes Grid ohne semantische Bedeutung der Spalte).
-   align-items: start → jede Spalte behält ihre Eigenhöhe. */
-.hb-fixed-columns {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-  gap: 24px;
-}
-
-.hb-fixed-column {
+/* Zwei Tabellen untereinander: zuerst Ausgaben, darunter Rücklagen &
+   Rückstellungen. Beide sind DataTables wie im Rückstellungs-View — die
+   Gliederung nach Gruppen übernehmen deren Sektionsbänder. */
+.hb-fixed-tables {
   display: flex;
   flex-direction: column;
-  gap: 21px;
-  min-width: 0;
+  gap: 16px;
 }
 
-/* Spaltenkopf: Titel + Anzahl + Summe + eigener „Gruppe"-Button.
-   Der farbige Balken links kodiert die Spalte (Rot = Ausgabe, Akzent =
-   Transfer) — seit dem Wegfall der Art-Pills die einzige Farbcodierung. */
-.hb-fixed-col-head {
+/* Gesamtzeile unter beiden Tabellen — Abschluss der beiden Summenzeilen.
+   Gleiche Karte wie die Tabellen, Typografie wie die DataTable-Summenzeile.
+   Innenabstand = Karten-Padding (20 px) + Zell-Padding (10 px): Label und
+   Betrag stehen damit auf den Zellkanten der Tabellen darüber. Eine exakte
+   Flucht zur Monatsraten-Spalte ist bewusst nicht erzwungen — die Spalten
+   sind ein- und ausblendbar, und rechts folgen Status- und Aktionsspalte. */
+.hb-fixed-total {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  background: var(--card);
-  border: 1px solid var(--border-light);
-  border-left: 3px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 30px;
 }
 
-.hb-fixed-column--expense .hb-fixed-col-head {
-  border-left-color: var(--red);
+/* Auf schmalen Breiten bricht der Betrag unter das Label um und bleibt über
+   margin-left: auto trotzdem rechtsbündig. */
+.hb-fixed-total-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 16px;
 }
 
-.hb-fixed-column--transfer .hb-fixed-col-head {
-  border-left-color: var(--accent);
-}
-
-.hb-fixed-col-heading {
-  flex: 1;
-  min-width: 0;
-}
-
-.hb-fixed-col-title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.3;
+.hb-fixed-total-label {
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text);
 }
 
-.hb-fixed-col-meta {
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.hb-fixed-col-total {
-  font-size: 20px;
-  font-weight: 700;
+.hb-fixed-total-value {
+  margin-left: auto;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-/* Gruppen-Stapel innerhalb einer Spalte */
-.hb-fixed-col-body {
-  display: flex;
-  flex-direction: column;
-  gap: 26px;
+/* Nebenzeile: erklärt die Differenz zur Summe der beiden Summenzeilen und
+   den Buchungsstand. Der Tooltip nennt die Kostenregel. */
+.hb-fixed-total-meta {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+  cursor: help;
 }
 
-/* Leere Spalte: dezenter Hinweis statt leerer Fläche */
-.hb-fixed-col-empty {
+/* .hb-card-content wird unter 480 px auf 16 px Padding reduziert — die
+   Gesamtzeile zieht mit, damit die Flucht zu den Zellkanten bleibt. */
+@media (max-width: 480px) {
+  .hb-fixed-total {
+    padding-inline: 26px;
+  }
+}
+
+/* Tabellentitel links im Toolbar-Streifen der DataTable */
+.hb-fixed-table-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+/* Tabellenweite Aktionen (Sammelbuchung ohne Gruppen, Gruppe, Position) —
+   rechts vor der Spaltenauswahl. */
+.hb-fixed-table-actions {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 28px 20px;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Summe einer Sektion im Band. Monatsraten in Textfarbe — Rot bleibt
+   Zuständen vorbehalten, die Handeln verlangen. */
+.hb-fixed-band-total {
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Leere Tabelle: dezenter Hinweis statt Tabelle ohne Zeilen */
+.hb-fixed-empty {
+  padding: 24px 16px;
   text-align: center;
   font-size: 13px;
   line-height: 1.5;
   color: var(--muted);
   border: 1px dashed var(--border);
   border-radius: var(--radius-md);
+}
+
+/* Kategorie-Zelle: Farbpunkt + Klartext statt Pill */
+.hb-fixed-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hb-fixed-cat .hb-cat-dot {
+  width: 10px;
+  height: 10px;
+}
+
+/* Rücklage ohne Turnus in der Turnus-Spalte — zurückhaltend, mit Tooltip.
+   Dasselbe Idiom trägt die Trend-Übersichtsliste in .hb-fct-overview-cat--free. */
+.hb-fixed-free {
+  color: var(--muted);
+  cursor: help;
+}
+
+/* Status „Diesen Monat": Häkchen + Datum oder „Offen" mit leerem Kreis.
+   Die Form trägt die Aussage, nicht die Farbe allein. */
+.hb-fixed-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: help;
+  font-variant-numeric: tabular-nums;
+}
+
+.hb-fixed-state--done {
+  color: var(--text-secondary);
+}
+
+.hb-fixed-state--done svg {
+  flex-shrink: 0;
+  color: var(--green);
+}
+
+.hb-fixed-state--open {
+  color: var(--muted);
+}
+
+.hb-fixed-state--open::before {
+  content: "";
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Nur für Screenreader („Gebucht am") */
+.hb-fixed-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 /* Hinweiszeile unter einem Dialog-Feld (Spalten-/Gruppen-Bindung) */
@@ -3617,299 +3743,7 @@ select.hb-input option {
   line-height: 1.4;
 }
 
-/* Einzelne Gruppe */
-.hb-fixed-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-}
-
-/* Gruppen-Header */
-.hb-fixed-group-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-/* Aktionscluster (Sammelbuchung, Hinzufügen, Löschen) darf nie schrumpfen */
-.hb-fixed-group-head .hb-icon-btn,
-.hb-fixed-group-book {
-  flex-shrink: 0;
-}
-
-/* Beschrifteter Sammelbuchungs-Button: als Icon war die Aktion nicht als
-   solche erkennbar. Kompakter als ein normaler --sm-Button, damit der
-   Gruppenkopf neben Titel und Betrag nicht überläuft. */
-.hb-fixed-group-book {
-  white-space: nowrap;
-  padding-inline: 10px;
-}
-
-/* Auf Touch-Breiten wachsen die Icon-Buttons daneben auf 40px — der
-   beschriftete Button zieht mit, damit der Gruppenkopf bündig bleibt. */
-@media (max-width: 480px) {
-  .hb-fixed-group-book {
-    min-height: 40px;
-  }
-}
-
-/* Gruppen liegen jetzt eine Ebene unter dem Spaltenkopf — Schriftgrad
-   entsprechend kleiner, damit die Hierarchie Spalte > Gruppe lesbar bleibt. */
-.hb-fixed-group-title {
-  font-size: 15px;
-  font-weight: 700;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  transition: background var(--transition-fast);
-  line-height: 1.4;
-}
-
-.hb-fixed-group-title:hover {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-.hb-fixed-group-title--static {
-  cursor: default;
-  padding: 2px 6px;
-}
-
-.hb-fixed-group-title--static:hover {
-  background: none;
-  color: var(--text);
-}
-
-.hb-fixed-group-rename {
-  max-width: 260px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.hb-fixed-group-total {
-  margin-left: auto;
-  /* +5px Luft zum „Gruppe buchen"-Button, sonst klebt der Betrag daran */
-  margin-right: 5px;
-  font-weight: 700;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-  font-size: 15px;
-  flex-shrink: 0;
-}
-
-/* Gruppen-Body (Drop-Zone) */
-.hb-fixed-group-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border-radius: var(--radius-md);
-  padding: 3px;
-  transition: background var(--transition-fast), outline var(--transition-fast);
-  min-height: 10px;
-}
-
-.hb-fixed-group-body.is-drop-target {
-  outline: 1.5px dashed var(--accent);
-  outline-offset: 2px;
-  background: var(--accent-soft);
-}
-
-.hb-fixed-group-empty {
-  padding: 16px;
-  text-align: center;
-  color: var(--muted);
-  font-size: 13px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
-}
-
-/* Ungegruppierte Sektion */
-.hb-fixed-group--ungrouped .hb-fixed-group-title--static {
-  color: var(--muted);
-  font-weight: 500;
-}
-
-/* Drag & Drop */
-.hb-fixed-card-wrap {
-  cursor: grab;
-  transition: opacity var(--transition-fast), box-shadow var(--transition-fast);
-  border-radius: var(--radius-md);
-}
-
-.hb-fixed-card-wrap:active {
-  cursor: grabbing;
-}
-
-.hb-fixed-card-wrap.is-dragging {
-  opacity: 0.45;
-  box-shadow: none;
-}
-
-.hb-fixed-drag-handle {
-  display: inline-flex;
-  align-items: center;
-  align-self: center;
-  color: var(--border);
-  flex-shrink: 0;
-  transition: color var(--transition-fast);
-  cursor: grab;
-}
-
-.hb-fixed-drag-handle svg {
-  width: 22px;
-  height: 22px;
-}
-
-.hb-fixed-card-wrap:hover .hb-fixed-drag-handle {
-  color: var(--muted);
-}
-
-/* Drop-Indikator Linie */
-.hb-fixed-drop-line {
-  height: 2px;
-  background: var(--accent);
-  border-radius: 1px;
-  margin: -4px 0;
-}
-
-/* Item-Karte */
-.hb-fixed-card {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-}
-
-.hb-fixed-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.hb-fixed-top {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.hb-fixed-info {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Titelzeile: Name + Betrag als zusammengehöriges Paar */
-.hb-fixed-title-row {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.hb-fixed-name {
-  /* füllt die Zeile → Betrag rechtsbündig; lange Namen werden gekürzt */
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 16px;
-  font-weight: 700;
-  margin: 0;
-  color: var(--text);
-  line-height: 1.3;
-}
-
-.hb-fixed-amount {
-  font-size: 17px;
-  font-weight: 700;
-  white-space: nowrap;
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-/*
-  Betragsspalte: Monatsrate als Hauptzahl, darunter — nur bei Rückstellungen mit mehr
-  als einem Monat Zyklus — der Zyklusbetrag als leise Zweitzeile. Sie beantwortet
-  die einzige Frage, die die Hauptzahl offenlässt: warum dort 100 steht und nicht
-  1200. Der äußere align-items: baseline der Titelzeile greift auf die erste
-  Zeile dieser Spalte, Name und Monatsrate bleiben also in Flucht.
-*/
-.hb-fixed-amount-col {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-  flex-shrink: 0;
-}
-
-.hb-fixed-amount-sub {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.3;
-  color: var(--muted);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.hb-fixed-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-/* Kebab rechts andocken, damit "Löschen" nicht neben "Jetzt buchen" klebt */
-.hb-fixed-actions .hb-overflow {
-  margin-left: auto;
-}
-
-/* Pills-Zeile (Buchungsart + Kategorie) */
-.hb-fixed-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-/* Kategorie-Pill mit farbigem Dot */
-.hb-fixed-cat-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-subtle);
-  border: 1px solid var(--border-light);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-/* Marker „Freies Sparen": Transfer ohne Turnus — zählt in keiner
-   Fixkosten-Kennzahl mit. Zurückhaltend statt semantisch eingefärbt, gleiche
-   Metrik wie die Basisklasse. Dasselbe Idiom trägt die Trend-Übersichtsliste
-   in .hb-fct-overview-cat--free. */
-.hb-fixed-cat-pill--free {
-  background: transparent;
-  color: var(--muted);
-  font-weight: 500;
-}
-
-.hb-fixed-cat-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/* Tag-Pill (read-only, auf Item-Card) */
+/* Tag-Pill (read-only, z.B. in Tabellenzellen) */
 .hb-tag-pill {
   display: inline-flex;
   align-items: center;
@@ -4230,7 +4064,7 @@ select.hb-input option {
   white-space: nowrap;
 }
 
-/* Untertitel-Pills: Buchungsart, Betrag, Notiz — analog .hb-fixed-pills */
+/* Untertitel-Pills: Buchungsart, Betrag, Notiz */
 .hb-tpl-meta {
   display: flex;
   align-items: center;
@@ -4297,50 +4131,6 @@ select.hb-input option {
 .hb-fct-filter-hint {
   font-size: 12px;
   color: var(--muted);
-}
-
-/* Unter 1100px wird eine Fixkosten-Karte in zwei Spalten zu eng (Name, Betrag,
-   Pills und drei Aktionen pro Zeile) → Spalten untereinander stapeln.
-   DOM-Reihenfolge = Ausgaben zuerst, die Spaltenköpfe bleiben als
-   Überschriften sichtbar. */
-@media (max-width: 1100px) {
-  .hb-fixed-columns {
-    grid-template-columns: 1fr;
-    gap: 28px;
-  }
-}
-
-@media (max-width: 640px) {
-  .hb-fixed-col-head {
-    flex-wrap: wrap;
-  }
-
-  .hb-fixed-col-heading {
-    flex: 1 1 100%;
-  }
-
-  /* Summe links, „Gruppe"-Button rechts in der umgebrochenen zweiten Zeile */
-  .hb-fixed-col-total {
-    margin-right: auto;
-  }
-
-  .hb-fixed-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .hb-fixed-toolbar-actions {
-    justify-content: flex-end;
-  }
-
-  .hb-fixed-actions {
-    width: 100%;
-  }
-
-  .hb-fixed-actions .hb-btn {
-    flex: 1;
-    min-width: 0;
-  }
 }
 
 /* =====================================================
