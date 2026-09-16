@@ -405,7 +405,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
                       <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
-                        <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.purple} strokeWidth="1.5" strokeDasharray="3 3" />
+                        <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.teal} strokeWidth="1.5" strokeDasharray="3 3" />
                       </svg>
                       6M Ø
                     </span>
@@ -423,7 +423,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                         content={({ active, payload, label }) => {
                           if (!active || !payload?.length) return null;
                           const labelMap = { savingsRate: "Sparquote", avg3: "3M Ø", avg6: "6M Ø" };
-                          const colorMap = { savingsRate: themeColors.blue, avg3: themeColors.orange, avg6: themeColors.purple };
+                          const colorMap = { savingsRate: themeColors.blue, avg3: themeColors.orange, avg6: themeColors.teal };
                           return (
                             <div className="hb-chart-tooltip">
                               <span className="hb-chart-tooltip-label">{label}</span>
@@ -439,7 +439,11 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                       />
                       <Line type="monotone" dataKey="savingsRate" dot={false} strokeWidth={2.5} stroke={themeColors.blue} />
                       <Line type="monotone" dataKey="avg3" dot={false} strokeWidth={1.5} stroke={themeColors.orange} strokeDasharray="5 3" />
-                      <Line type="monotone" dataKey="avg6" dot={false} strokeWidth={1.5} stroke={themeColors.purple} strokeDasharray="3 3" />
+                      {/* Teal statt Violett: Violett war von der blauen Sparquoten-Linie unter
+                          Rot-Grün-Schwäche praktisch nicht zu trennen (ΔE 11.3 hell / 4.0 dunkel).
+                          Teal kommt auf 50.9 / 39.7 gegen Blau und 73.7 / 75.1 gegen Orange.
+                          Die Strichmuster („5 3" vs. „3 3") allein trugen das nicht. */}
+                      <Line type="monotone" dataKey="avg6" dot={false} strokeWidth={1.5} stroke={themeColors.teal} strokeDasharray="3 3" />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
