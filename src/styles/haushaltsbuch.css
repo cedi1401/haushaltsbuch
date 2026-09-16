@@ -7147,28 +7147,51 @@ select.hb-input option {
   height: 28px;
 }
 
-.hb-switch--theme .hb-switch-knob {
+/* Zwei feste Glyph-Plätze in der Spur (Sonne links, Mond rechts), deckungs-
+   gleich mit den beiden Endlagen des Knopfs. Der Knopf ist deckend und
+   verdeckt darum immer genau eines — sichtbar bleibt das Symbol des aktiven
+   Themes. Deshalb steht er im Dunkelmodus links und im Hellmodus rechts. */
+.hb-switch--theme .hb-switch-icon {
+  position: absolute;
+  top: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 22px;
   height: 22px;
   margin-top: -11px;
-  background: var(--card);
+  pointer-events: none;
+}
+
+.hb-switch--theme .hb-switch-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Sichtbar ist --off nur im Hellmodus, --on nur im Dunkelmodus. Jedes Glyph
+   braucht daher nur gegen die Spurfarbe genau dieses Themes zu bestehen. */
+.hb-switch--theme .hb-switch-icon--off {
+  left: 3px;
   color: var(--text-secondary);
+}
+
+.hb-switch--theme .hb-switch-icon--on {
+  left: 25px;
+  color: var(--text-on-accent);
+}
+
+.hb-switch--theme .hb-switch-knob {
+  width: 22px;
+  height: 22px;
+  margin-top: -11px;
+  background: var(--card);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  transform: translateX(3px);
+  transform: translateX(25px);
 }
 
 .hb-switch--theme[aria-checked="true"] .hb-switch-knob {
   background: var(--card);
-  color: var(--accent);
-  transform: translateX(25px);
-}
-
-.hb-switch--theme .hb-switch-knob svg {
-  width: 13px;
-  height: 13px;
+  transform: translateX(3px);
 }
 
 /* Auf Touch-Breiten das Klickziel vergrößern, ohne die Optik zu ändern. */

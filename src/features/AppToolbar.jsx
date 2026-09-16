@@ -124,16 +124,15 @@ export default function AppToolbar({
               </button>
             </div>
 
-            {/* Als Switch statt Icon-Button: der Knopf gleitet in die Richtung,
-                in die auch das Theme wechselt. Das Glyph zeigt den aktuellen
-                Zustand (Mond = dunkel), nicht die Aktion — Schalter zeigen
-                Zustand, Buttons zeigen Aktionen. */}
+            {/* Sonne links, Mond rechts — beide fest in der Spur. Der Knopf
+                gleitet darüber und verdeckt eines; sichtbar bleibt das Symbol
+                des aktiven Themes. Im Dunkelmodus steht der Knopf daher links. */}
             <HbSwitch
               className="hb-switch--theme"
               checked={darkMode}
               onChange={onDarkModeToggle}
               label="Dunkles Design"
-              knobIcon={darkMode ? <IconMoon /> : <IconSun />}
+              trackIcons={{ off: <IconSun />, on: <IconMoon /> }}
             />
 
             <button
