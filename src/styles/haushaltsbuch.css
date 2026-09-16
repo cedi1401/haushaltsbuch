@@ -7132,6 +7132,41 @@ select.hb-input option {
   transform: translateX(23px);
 }
 
+/* Theme-Variante (Toolbar): größer als der Standard-Switch, weil der Knopf ein
+   Glyph tragen muss — im 12-px-Knopf wäre es unlesbar. Geometrie analog zum
+   Standard: 3 px Luft ringsum, Weg = Breite - Knopf - 2*3 - 2*Rahmen.
+   Der Schalter ist genau dann „an", wenn der Dunkelmodus läuft — unchecked
+   rendert also immer mit hellen, checked immer mit dunklen Tokens. Deshalb
+   braucht es pro Zustand nur eine Farbkombination. */
+.hb-switch--theme {
+  width: 52px;
+  height: 28px;
+}
+
+.hb-switch--theme .hb-switch-knob {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-top: -11px;
+  background: var(--card);
+  color: var(--text-secondary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transform: translateX(3px);
+}
+
+.hb-switch--theme[aria-checked="true"] .hb-switch-knob {
+  background: var(--card);
+  color: var(--accent);
+  transform: translateX(25px);
+}
+
+.hb-switch--theme .hb-switch-knob svg {
+  width: 13px;
+  height: 13px;
+}
+
 /* Auf Touch-Breiten das Klickziel vergrößern, ohne die Optik zu ändern. */
 @media (max-width: 480px) {
   .hb-switch::before {

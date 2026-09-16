@@ -3,6 +3,7 @@ import { Button } from "../components/ui.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import RenameDialog from "../components/RenameDialog.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
+import HbSwitch from "../components/HbSwitch.jsx";
 import { IconMenu, IconClose, IconSettings, IconSun, IconMoon } from "../components/icons.jsx";
 import { HbMonthPicker } from "../components/HbDatePicker.jsx";
 
@@ -31,7 +32,6 @@ export default function AppToolbar({
   const [renameBookOpen, setRenameBookOpen] = useState(false);
 
   const title = VIEW_TITLES[view] || "Dashboard";
-  const themeTooltip = darkMode ? "Zu Light Mode wechseln" : "Zu Dark Mode wechseln";
 
   function handleCreateBook() {
     onCreateBook(newBookName);
@@ -124,15 +124,17 @@ export default function AppToolbar({
               </button>
             </div>
 
-            <button
-              className="hb-icon-btn hb-gear-btn"
-              type="button"
-              title={themeTooltip}
-              onClick={onDarkModeToggle}
-              aria-label={themeTooltip}
-            >
-              {darkMode ? <IconSun /> : <IconMoon />}
-            </button>
+            {/* Als Switch statt Icon-Button: der Knopf gleitet in die Richtung,
+                in die auch das Theme wechselt. Das Glyph zeigt den aktuellen
+                Zustand (Mond = dunkel), nicht die Aktion — Schalter zeigen
+                Zustand, Buttons zeigen Aktionen. */}
+            <HbSwitch
+              className="hb-switch--theme"
+              checked={darkMode}
+              onChange={onDarkModeToggle}
+              label="Dunkles Design"
+              knobIcon={darkMode ? <IconMoon /> : <IconSun />}
+            />
 
             <button
               className="hb-icon-btn hb-gear-btn"
