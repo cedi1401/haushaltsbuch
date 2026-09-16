@@ -43,7 +43,7 @@ describe('SETTING_SCHEMA', () => {
   it('contains exactly the expected keys', () => {
     const keys = [...SETTING_SCHEMA.keys()].sort();
     expect(keys).toEqual(
-      ['activeBookId', 'darkMode', 'fontFamily', 'month', 'monthStartDay', 'theme'].sort()
+      ['activeBookId', 'darkMode', 'month', 'monthStartDay', 'theme'].sort()
     );
   });
 });

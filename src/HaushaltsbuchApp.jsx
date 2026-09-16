@@ -65,7 +65,7 @@ export default function HaushaltsbuchApp() {
   } = bookManager;
 
   const appSettings = useAppSettings();
-  const { darkMode, setDarkMode, fontFamily, setFontFamily, monthFilter, setMonthFilter } = appSettings;
+  const { darkMode, setDarkMode, monthFilter, setMonthFilter } = appSettings;
   const update = useUpdateManager();
 
   const entries = activeBook?.entries || EMPTY_ARRAY;
@@ -365,8 +365,6 @@ export default function HaushaltsbuchApp() {
             onMonthStartDayChange={(newStartDay) =>
               handleMonthStartDayChange(newStartDay, setMonthFilter)
             }
-            fontFamily={fontFamily}
-            onFontFamilyChange={setFontFamily}
             update={update}
           />
         </div>

@@ -6,7 +6,6 @@ const log = makeLogger("useAppSettings");
 
 export function useAppSettings() {
   const [darkMode, setDarkMode] = useState(false);
-  const [fontFamily, setFontFamily] = useState("Inter");
   const [monthFilter, setMonthFilter] = useState("");
 
   // Gate persistence until the initial hydration from storage has finished, so
@@ -17,14 +16,12 @@ export function useAppSettings() {
   useEffect(() => {
     async function load() {
       try {
-        const [savedMonth, savedDark, savedFont] = await Promise.all([
+        const [savedMonth, savedDark] = await Promise.all([
           getSetting("month"),
           getSetting("darkMode"),
-          getSetting("fontFamily"),
         ]);
         if (typeof savedMonth === "string") setMonthFilter(savedMonth);
         if (savedDark === "true") setDarkMode(true);
-        if (typeof savedFont === "string" && savedFont) setFontFamily(savedFont);
       } catch (err) {
         log.warn("Einstellungen konnten nicht geladen werden — Standardwerte werden verwendet", err);
       } finally {
@@ -46,26 +43,12 @@ export function useAppSettings() {
   }, [darkMode]);
 
   useEffect(() => {
-    const fontMap = {
-      "Inter":       "'Inter Variable', sans-serif",
-      "Bitter":      "'Bitter Variable', serif",
-      "Nunito Sans": "'Nunito Sans Variable', sans-serif",
-    };
-    const value = fontMap[fontFamily] ?? "'Inter Variable', sans-serif";
-    document.documentElement.style.setProperty("--app-font-family", value);
-    if (hasLoaded.current) {
-      setSetting("fontFamily", fontFamily);
-    }
-  }, [fontFamily]);
-
-  useEffect(() => {
     if (!hasLoaded.current) return;
     setSetting("month", monthFilter);
   }, [monthFilter]);
 
   return {
     darkMode, setDarkMode,
-    fontFamily, setFontFamily,
     monthFilter, setMonthFilter,
   };
 }

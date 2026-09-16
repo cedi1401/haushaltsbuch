@@ -24,8 +24,6 @@ export default function SettingsDialog({
   activeBook,
   onUpdateBook,
   onMonthStartDayChange,
-  fontFamily,
-  onFontFamilyChange,
   update,
 }) {
   const backupInputRef = useRef(null);
@@ -211,21 +209,6 @@ export default function SettingsDialog({
         />
 
         <div className="hb-note">Tipp: Bewahre dein Backup in einer Cloud oder auf einem USB Stick auf.</div>
-      </div>
-
-      {/* SCHRIFTART */}
-      <div className="hb-field" style={{ marginTop: 24 }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>Schriftart</div>
-        <select
-          className="hb-input"
-          style={{ maxWidth: 150 }}
-          value={fontFamily || "Inter"}
-          onChange={(e) => onFontFamilyChange?.(e.target.value)}
-        >
-          <option value="Inter">Inter (Standard)</option>
-          <option value="Bitter">Bitter</option>
-          <option value="Nunito Sans">Nunito Sans</option>
-        </select>
       </div>
 
       {/* BASISWÄHRUNG */}
