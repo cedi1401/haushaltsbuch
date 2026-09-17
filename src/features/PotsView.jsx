@@ -58,6 +58,13 @@ const COMPOSITION_COLS_MIN = COMPOSITION_TOP_N + 1;
 // ein Betrag mit „0 %" daneben liest sich wie ein Fehler.
 const sharePct = (share) => (share > 0 && share < 1 ? "< 1" : String(Math.round(share)));
 
+// Track des Ranglisten-Balkens: leicht getönte Fläche in der Farbe des Balkens
+// selbst statt neutralem Grau — dasselbe Muster wie in der Übersicht-Card der
+// Insights (`${color}24` ≈ 14 % Deckkraft). Greift nur bei Hex-Farben;
+// REST_COLOR ist eine CSS-Variable und behält den neutralen Default-Track.
+const barTrackStyle = (color) =>
+  (color || "").startsWith("#") ? { background: `${color}24` } : undefined;
+
 // Halbe angenommene Breite der Tooltip-Blase — nur zum Klemmen an den
 // Viewport-Rand. Die Blase ist per translate(-50%) am Cursor zentriert; ohne
 // Klemmung liefe sie bei einem Segment ganz links/rechts aus dem Bild.
@@ -754,7 +761,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                             <span className="hb-cg-breakdown-share">{sharePct(r.share)} %</span>
                           </div>
                         </div>
-                        <div className="hb-cg-breakdown-bar">
+                        <div className="hb-cg-breakdown-bar" style={barTrackStyle(r.color)}>
                           <div
                             className="hb-cg-breakdown-bar-fill"
                             style={{ width: `${r.share}%`, background: r.color }}
