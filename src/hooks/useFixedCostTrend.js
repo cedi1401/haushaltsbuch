@@ -1,9 +1,5 @@
 import { useMemo } from "react";
-import {
-  buildFixedCostMonthlyData,
-  buildItemTrends,
-  detectFixedCostChanges,
-} from "../utils/fixedCostTrendUtils.js";
+import { buildFixedCostMonthlyData } from "../utils/fixedCostTrendUtils.js";
 import { monthlyRate, isSinkingFund } from "../utils/fixedCostUtils.js";
 import { fixedCostKind } from "../utils/hbUtils.js";
 
@@ -11,16 +7,6 @@ export function useFixedCostTrend({ entries, recurringExpenses, monthly, monthSt
   const fixedMonthly = useMemo(
     () => buildFixedCostMonthlyData(entries, recurringExpenses, monthly, monthStartDay),
     [entries, recurringExpenses, monthly, monthStartDay]
-  );
-
-  const itemTrends = useMemo(
-    () => buildItemTrends(entries, recurringExpenses, monthly, monthStartDay),
-    [entries, recurringExpenses, monthly, monthStartDay]
-  );
-
-  const changes = useMemo(
-    () => detectFixedCostChanges(itemTrends, monthly),
-    [itemTrends, monthly]
   );
 
   const kpis = useMemo(() => {
@@ -63,6 +49,5 @@ export function useFixedCostTrend({ entries, recurringExpenses, monthly, monthSt
     return { configuredTotal, bookedLast, momDelta, avgShare, activeCount: all.length, mostExpensive };
   }, [fixedMonthly, recurringExpenses]);
 
-  // itemTrends bleibt absichtlich intern — außerhalb wird nur `changes` gebraucht.
-  return { fixedMonthly, changes, kpis };
+  return { fixedMonthly, kpis };
 }

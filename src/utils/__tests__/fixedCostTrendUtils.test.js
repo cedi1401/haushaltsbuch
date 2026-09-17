@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  buildFixedCostMonthlyData,
-  buildItemTrends,
-} from '../fixedCostTrendUtils.js';
+import { buildFixedCostMonthlyData } from '../fixedCostTrendUtils.js';
 
 // Drei Positionen, die die Kostenregel abdecken:
 // - Ausgaben-Fixkosten            → zählt
@@ -104,22 +101,5 @@ describe('buildFixedCostMonthlyData — Anteil an der Gesamtbelastung', () => {
     expect(r.fixedTotal).toBe(0);
     expect(r.basis).toBe(0);
     expect(r.share).toBeNull();
-  });
-});
-
-describe('buildItemTrends — folgt derselben Kostenregel', () => {
-  it('führt freies Sparen ohne Werte, die Rücklage dagegen mit', () => {
-    const trends = buildItemTrends(
-      [
-        booked('r-steuern', 100, { kind: 'transfer', potId: 'pot-steuern' }),
-        booked('r-ferien', 200, { kind: 'transfer', potId: 'pot-ferien' }),
-      ],
-      items,
-      monthly,
-      1
-    );
-    const byId = Object.fromEntries(trends.map((t) => [t.id, t]));
-    expect(byId['r-steuern'].data[0].amount).toBe(100);
-    expect(byId['r-ferien'].data[0].amount).toBeNull();
   });
 });
