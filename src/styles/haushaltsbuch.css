@@ -57,8 +57,12 @@
      der Zeile). Rein unterscheidend, ohne Semantik — die Zuweisung ist zyklisch
      nach Position der Gruppe (siehe GROUP_ACCENT_PALETTE in hbPalette.js).
      Konstruktion:
-     - Hue-Band 190°–268° ausgespart: dort liegt TRANSFER_PALETTE (Zweck-Farben
-       im Topf-Donut). Keine Gruppenfarbe kollidiert mit einer Zweck-Farbe
+     - Hue-Band 190°–290° ausgespart: dort liegt TRANSFER_PALETTE (Zweck-Farben
+       der Topf-Zusammensetzung). Einzige Ausnahme ist --group-accent-3 (H288),
+       das seit der Verlängerung des Bands auf 290° hineinragt — bewusst in Kauf
+       genommen: Gruppen- und Zweck-Farben treffen sich in keiner Ansicht
+       (GROUP_ACCENT_PALETTE nur in FixedCostsView/ReservesView, TRANSFER_PALETTE
+       nur in PotsView)
      - Reihenfolge gegen Nachbarschaft optimiert statt entlang des Farbkreises:
        aufeinanderfolgende Indizes liegen ≥ 58° auseinander, damit zwei
        untereinanderliegende Bänder nie ähnlich aussehen

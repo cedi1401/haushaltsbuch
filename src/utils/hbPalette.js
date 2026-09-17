@@ -41,7 +41,7 @@ export const CUSTOM_CATEGORY_PALETTE = [
 ];
 
 // Palette für Transfer-Kategorien in der Topf-Zusammensetzung. Kühle, analoge Farbfamilie
-// (Teal → Cyan → Blau → Indigo → Violett, Hue 190°→268°) → kommuniziert weiterhin
+// (Teal → Cyan → Blau → Indigo → Violett → Magenta, Hue 190°→290°) → kommuniziert weiterhin
 // visuell „alle Transfers derselben Natur", während benachbarte Zwecke sich nun in
 // mehreren Dimensionen unterscheiden. Eine reine Mono-Hue-Helligkeitsrampe war in
 // der Legende (kleine Farbquadrate) praktisch nicht auseinanderzuhalten; daher hier
@@ -52,9 +52,12 @@ export const CUSTOM_CATEGORY_PALETTE = [
 // unbegrenzte Zweckliste angewendet werden. Ein Topf kann beliebig viele Zwecke
 // haben; bei 21 Zwecken trug dann jede Farbe drei davon und das Farbfeld in der
 // Legende identifizierte nichts mehr. Wer mehr Klassen darstellen muss, deckelt
-// die farbcodierten Klassen auf ≤ 8 (Rest neutral als „Sonstige“, siehe
-// PotsView) oder gibt Farbe als Identitätsträger ganz auf — eine neunte Farbe
-// zu erfinden ist nicht die Lösung.
+// die farbcodierten Klassen auf ≤ 10 (Rest neutral als „Sonstige“, siehe
+// PotsView) oder gibt Farbe als Identitätsträger ganz auf — eine elfte Farbe
+// zu erfinden ist nicht die Lösung. Die Ausdehnung von 8 auf 10 (Sept. 2026) war
+// eine bewusste Entscheidung des Nutzers und hat das Hue-Band auf 290° verlängert;
+// der Abstand des engsten Paares (Rang 8/9) liegt damit auf dem bisherigen
+// Minimum der Palette (ΔE2000 6.1) — weiter dehnen lässt sie sich nicht.
 export const TRANSFER_PALETTE = [
   "#267e8f", // Teal        H190 L36%
   "#338aba", // Cyan-Blau   H201 L46%
@@ -64,6 +67,8 @@ export const TRANSFER_PALETTE = [
   "#483bc3", // Blauviolett H246 L50%
   "#50319e", // Violett     H257 L41%
   "#7f43c4", // Purpur      H268 L52%
+  "#7d35a4", // Amethyst    H279 L43%
+  "#b14cc5", // Magenta     H290 L54%
 ];
 
 // Gruppenfarben der Rückstellungs-Tabellen: Gliederungsband (12-px-Punkt) und die

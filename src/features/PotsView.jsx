@@ -37,18 +37,22 @@ import {
 const fmtYearMonth = formatYearMonth;
 
 // Zusammensetzung: so viele Zwecke bekommen eine eigene Farbe im Stapelbalken.
-// Der Rest wird zu „Sonstige“ zusammengefasst. 8 farbige Klassen schöpfen
+// Der Rest wird zu „Sonstige“ zusammengefasst. 10 farbige Klassen schöpfen
 // TRANSFER_PALETTE genau aus; „Sonstige“ läuft neutral in REST_COLOR und
-// verbraucht keine neunte Farbe — die Palette wird nie zyklisch
+// verbraucht keine elfte Farbe — die Palette wird nie zyklisch
 // wiederverwendet (siehe Kommentar am composition-Memo).
-const COMPOSITION_TOP_N = 8;
+const COMPOSITION_TOP_N = 10;
 // Neutraler Ton für „Sonstige“ und für alle Zeilen jenseits der Top N. Bewusst
 // keine Palettenfarbe: Grau heißt hier „gehört zum Sonstige-Segment".
 const REST_COLOR = "var(--muted)";
-// Ab dieser Zahl wird die Rangliste eingeklappt (zweispaltig also 12 je Spalte).
-const COMPOSITION_VISIBLE = 24;
-// Ab so vielen Zwecken lohnt der zweispaltige Satz der Rangliste.
-const COMPOSITION_COLS_MIN = 7;
+// Ab dieser Zahl wird die Rangliste eingeklappt (zweispaltig also 10 je Spalte);
+// der Rest kommt hinter den „Weitere … anzeigen“-Button.
+const COMPOSITION_VISIBLE = 20;
+// Ab so vielen Zwecken lohnt der zweispaltige Satz der Rangliste. Deckt sich
+// bewusst mit COMPOSITION_TOP_N + 1: solange jede Zeile ihre eigene Farbe hat,
+// bleibt die Liste einspaltig; der zweispaltige Satz beginnt genau dort, wo die
+// erste neutrale „Sonstige“-Zeile dazukommt.
+const COMPOSITION_COLS_MIN = COMPOSITION_TOP_N + 1;
 
 // Prozentlabel der Zusammensetzung. Unter 1 % wird nicht auf „0 %" gerundet —
 // ein Betrag mit „0 %" daneben liest sich wie ein Fehler.
@@ -243,11 +247,11 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
   // Zusammensetzung des Topfs: 100-%-Stapelbalken + Rangliste.
   //
   // Farbe wird NUR an die COMPOSITION_TOP_N größten Zwecke vergeben, alles
-  // darunter läuft neutral als „Sonstige“. Grund: TRANSFER_PALETTE hat acht
+  // darunter läuft neutral als „Sonstige“. Grund: TRANSFER_PALETTE hat zehn
   // Farben; ein Topf kann beliebig viele Zwecke haben. Die frühere zyklische
   // Zuweisung (`i % length`) gab bei 21 Zwecken jeder Farbe drei Zwecke — das
   // Farbfeld identifizierte dann nichts mehr. Regel: die Zahl der farbcodierten
-  // Klassen bleibt ≤ 8, sonst trägt die Farbe keine Identität. Die Identität
+  // Klassen bleibt ≤ 10, sonst trägt die Farbe keine Identität. Die Identität
   // liegt hier ohnehin im Namen der Zeile, die Reihenfolge kodiert den Rang.
   const composition = useMemo(() => {
     const total = transfersByCategory.reduce((sum, d) => sum + d.value, 0);
