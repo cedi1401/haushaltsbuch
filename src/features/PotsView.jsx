@@ -697,7 +697,6 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                         {composition.rows.length} {composition.rows.length === 1 ? "Zweck" : "Zwecke"}
                       </span>
                     </div>
-                    <span className="hb-cg-catlist-total">{fmt(composition.total)}</span>
                   </div>
 
                   {/*
