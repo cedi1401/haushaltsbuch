@@ -19,7 +19,7 @@ import {
 import { calcPotSeries, potPurposeBalances } from "../utils/potUtils.js";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
-import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact, formatCurrencyAxis } from "../utils/hbUtils.js";
+import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact } from "../utils/hbUtils.js";
 import { formatYearMonth, getEntryFinancialMonth } from "../utils/financialMonthUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useThemeColors } from "../hooks/themeColors.js";
@@ -563,7 +563,9 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                           textAnchor="end"
                           height={62}
                         />
-                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)} width={64} />
+                        {/* Kompaktes Achsenformat (CHF10k) wie im Balkendiagramm daneben —
+                            ohne width, damit beide Plotflächen auf derselben Kante beginnen. */}
+                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} />
                         <Tooltip
                           wrapperStyle={{ zIndex: 10 }}
                           content={({ active, payload, label }) => {
