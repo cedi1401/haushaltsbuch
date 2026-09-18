@@ -3616,14 +3616,24 @@ select.hb-input option {
    zurückgenommene Fläche + dezenter grüner Akzent links als „erledigt"-Signal,
    konsistent zur Akzent-Border-Sprache der Stat-Pills. */
 .hb-goal-card--archived {
-  background: var(--bg-subtle);
-  /* Grüner „erledigt"-Streifen via inset-Shadow statt border-left:
-     kein Layout-Shift (Border bleibt 1px) und übersteht den Hover-State,
-     der border-color als Shorthand neu setzt. */
-  box-shadow: inset 3px 0 0 0 var(--green), var(--shadow-sm);
+  /* Grüner „erledigt"-Streifen nach dem Rezept von .hb-stat-pill: 4 px
+     Hintergrundstreifen über --pill-edge statt inset-Shadow, linke
+     Rahmenkante transparent. Begründung steht bei .hb-stat-pill. */
+  --pill-edge: var(--green);
+  background-color: var(--bg-subtle);
+  background-image: linear-gradient(var(--pill-edge), var(--pill-edge));
+  background-repeat: no-repeat;
+  background-origin: border-box;
+  background-clip: border-box;
+  background-position: left top;
+  background-size: 4px 100%;
+  border-left-color: transparent;
 }
+
+/* .hb-card:hover setzt border-color und würde die linke Kante wieder
+   sichtbar machen — sie bleibt auch im Hover transparent. */
 .hb-goal-card--archived:hover {
-  box-shadow: inset 3px 0 0 0 var(--green), var(--shadow-md);
+  border-left-color: transparent;
 }
 
 .hb-goal-archive-stats {
