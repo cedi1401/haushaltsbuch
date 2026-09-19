@@ -30,7 +30,12 @@ function createWindow() {
       nodeIntegration: false,
     },
     title: 'Haushaltsbuch',
-    icon: path.join(__dirname, process.platform === 'win32' ? '../dist/icon.ico' : '../dist/icon.png'),
+    icon: path.join(
+      __dirname,
+      // Dev liest aus public/ — dist/ wird erst beim Build befüllt und wäre veraltet
+      process.env.VITE_DEV_SERVER_URL ? '../public' : '../dist',
+      process.platform === 'win32' ? 'icon.ico' : 'icon.png'
+    ),
   });
 
   mainWindow.maximize();
