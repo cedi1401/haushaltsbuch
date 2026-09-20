@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { fetchQuote, fetchHistory, searchSymbols, marketDataAvailable } from "../dal/marketdata.js";
+import { fetchQuote, fetchQuotes, fetchHistory, searchSymbols, marketDataAvailable } from "../dal/marketdata.js";
 
 // Debug-Oberfläche zum Prüfen der Marktdaten-Abrufe. Bewusst roh gehalten:
 // Dieser View dient dem Nachweis, dass das Backend trägt — nicht der Gestaltung.
@@ -59,26 +59,50 @@ export default function MarketDebugView({ baseCurrency }) {
     setBusy(false);
   }
 
+  // Läuft über den Stapel-Endpunkt market:quotes — damit wird hier zugleich die
+  // sequentielle Drosselung im Main-Prozess geprüft, nicht nur der Einzelabruf.
   async function runBatch() {
     setBusy(true);
-    setBatch([]);
-    const rows = [];
-    for (const item of TEST_SYMBOLS) {
-      const started = performance.now();
-      const response = await fetchQuote(item.symbol, baseCurrency, { bypassCache: true });
-      rows.push({
-        ...item,
-        ok: response.ok === true,
-        price: response.data?.price ?? null,
-        originalPrice: response.data?.originalPrice ?? null,
-        originalCurrency: response.data?.originalCurrency ?? null,
-        fxRate: response.data?.fxRate ?? null,
-        error: response.error || response.data?.fxError || null,
-        ms: Math.round(performance.now() - started),
-      });
-      setBatch([...rows]);
+    setBatch(null);
+    const started = performance.now();
+    const response = await fetchQuotes(
+      TEST_SYMBOLS.map((t) => t.symbol),
+      baseCurrency,
+      { bypassCache }
+    );
+    const noteBySymbol = Object.fromEntries(TEST_SYMBOLS.map((t) => [t.symbol, t.note]));
+
+    if (!response.ok) {
+      setBatch({ error: response.error, ms: Math.round(performance.now() - started), rows: [] });
+      setBusy(false);
+      return;
     }
+
+    setBatch({
+      error: null,
+      ms: Math.round(performance.now() - started),
+      rows: response.data.map((row) => ({
+        symbol: row.symbol,
+        note: noteBySymbol[row.symbol] || "",
+        ok: row.ok === true,
+        price: row.data?.price ?? null,
+        originalPrice: row.data?.originalPrice ?? null,
+        originalCurrency: row.data?.originalCurrency ?? null,
+        fxRate: row.data?.fxRate ?? null,
+        cached: row.data?.cached === true,
+        stale: row.data?.stale === true,
+        fetchedAt: row.data?.fetchedAt || null,
+        error: row.error || row.data?.fxError || null,
+      })),
+    });
     setBusy(false);
+  }
+
+  // Der Zeitstempel des Cache-Eintrags — in der echten UI später "Stand vom ...".
+  function formatFetchedAt(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? "—" : d.toLocaleTimeString("de-CH");
   }
 
   const data = result?.data;
@@ -123,12 +147,12 @@ export default function MarketDebugView({ baseCurrency }) {
             </>
           )}
 
-          {mode === "quote" && (
-            <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <input type="checkbox" checked={bypassCache} onChange={(e) => setBypassCache(e.target.checked)} />
-              Cache umgehen
-            </label>
-          )}
+          {/* Gilt für Einzel- und Sammelabruf: abgewählt lassen, um in der
+              Spalte "Quelle" zu sehen, ob der persistente Cache greift. */}
+          <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <input type="checkbox" checked={bypassCache} onChange={(e) => setBypassCache(e.target.checked)} />
+            Cache umgehen
+          </label>
 
           <button type="button" onClick={runSingle} disabled={busy} style={{ padding: "6px 14px" }}>
             Abrufen
@@ -147,6 +171,7 @@ export default function MarketDebugView({ baseCurrency }) {
             </strong>
             {" · "}{result.ms} ms
             {data?.cached ? " · aus Cache" : ""}
+            {data?.stale ? " · VERALTET (kein Netz)" : ""}
           </div>
 
           {!result.ok && <div style={{ color: "#c44", marginBottom: 8 }}>{result.error}</div>}
@@ -165,6 +190,10 @@ export default function MarketDebugView({ baseCurrency }) {
                   <td><strong>{data.price != null ? data.price.toFixed(4) : "—"}</strong></td>
                 </tr>
                 <tr><td>Marktzeit</td><td>{data.marketTime || "—"}</td></tr>
+                <tr><td>Abgerufen</td><td>{formatFetchedAt(data.fetchedAt)}</td></tr>
+                {data.staleReason && (
+                  <tr><td>Grund veraltet</td><td style={{ color: "#c44" }}>{data.staleReason}</td></tr>
+                )}
                 {data.fxError && <tr><td>FX-Fehler</td><td style={{ color: "#c44" }}>{data.fxError}</td></tr>}
               </tbody>
             </table>
@@ -191,15 +220,21 @@ export default function MarketDebugView({ baseCurrency }) {
       {batch && (
         <div style={box}>
           <strong>Sammel-Durchlauf</strong>
+          <span style={{ opacity: 0.7 }}>
+            {" "}· über <code>market:quotes</code> · {batch.ms} ms gesamt
+          </span>
+
+          {batch.error && <div style={{ color: "#c44", marginTop: 8 }}>{batch.error}</div>}
+
           <table style={{ width: "100%", borderSpacing: "8px 4px", marginTop: 8, textAlign: "left" }}>
             <thead>
               <tr>
                 <th>Symbol</th><th>Erwartung</th><th>Status</th><th>Original</th><th>FX</th>
-                <th>in {baseCurrency}</th><th>ms</th>
+                <th>in {baseCurrency}</th><th>Quelle</th><th>Abgerufen</th>
               </tr>
             </thead>
             <tbody>
-              {batch.map((row) => (
+              {batch.rows.map((row) => (
                 <tr key={row.symbol}>
                   <td><code>{row.symbol}</code></td>
                   <td style={{ opacity: 0.7 }}>{row.note}</td>
@@ -207,14 +242,17 @@ export default function MarketDebugView({ baseCurrency }) {
                   <td>{row.originalPrice != null ? `${row.originalPrice} ${row.originalCurrency}` : "—"}</td>
                   <td>{row.fxRate != null ? row.fxRate : "—"}</td>
                   <td>{row.price != null ? row.price.toFixed(2) : "—"}</td>
-                  <td>{row.ms}</td>
+                  <td style={{ color: row.stale ? "#c44" : undefined }}>
+                    {!row.ok ? "—" : row.stale ? "veraltet" : row.cached ? "Cache" : "Netz"}
+                  </td>
+                  <td>{row.ok ? formatFetchedAt(row.fetchedAt) : "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {batch.some((r) => r.error) && (
+          {batch.rows.some((r) => r.error) && (
             <ul style={{ color: "#c44", marginBottom: 0 }}>
-              {batch.filter((r) => r.error).map((r) => (
+              {batch.rows.filter((r) => r.error).map((r) => (
                 <li key={r.symbol}><code>{r.symbol}</code>: {r.error}</li>
               ))}
             </ul>
