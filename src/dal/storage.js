@@ -2,6 +2,7 @@
 // The React app calls these functions; they route to the right backend automatically.
 
 import { formatFileStamp } from "../utils/hbUtils.js";
+import { BACKUP_FORMAT, BACKUP_VERSION } from "../backup.js";
 import makeLogger from "../utils/logger.js";
 
 const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
@@ -61,8 +62,8 @@ export async function createAutoBackup(books) {
 
 export async function exportBackupFile({ book, monthFilter }) {
   const payload = {
-    format: 'haushaltsbuch-backup',
-    version: 1,
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     books: [book],
     activeBookId: book?.id || null,

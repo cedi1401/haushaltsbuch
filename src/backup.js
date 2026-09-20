@@ -20,10 +20,21 @@ function isPlainObject(v) {
   return v != null && typeof v === "object" && !Array.isArray(v);
 }
 
+export const BACKUP_FORMAT = "haushaltsbuch-backup";
+
+// 1 = Ursprungsformat.
+// 2 = Bücher können `investments` tragen (Depots, Assets, Transaktionen, Snapshots).
+//     Angehoben statt stillschweigend erweitert, damit ein alter Build das Backup
+//     sichtbar ablehnt, statt die Investments beim Rück-Export zu verlieren.
+export const BACKUP_VERSION = 2;
+
+// Ältere Versionen bleiben lesbar — normalizeBook() ergänzt die fehlenden Felder.
+export const SUPPORTED_BACKUP_VERSIONS = [1, 2];
+
 export function validateBackupObject(obj) {
   if (!isPlainObject(obj)) return false;
-  if (obj.format !== "haushaltsbuch-backup") return false;
-  if (obj.version !== 1) return false;
+  if (obj.format !== BACKUP_FORMAT) return false;
+  if (!SUPPORTED_BACKUP_VERSIONS.includes(obj.version)) return false;
   if (!Array.isArray(obj.books)) return false;
   return true;
 }
@@ -37,8 +48,8 @@ export function validateBackupObject(obj) {
  */
 export function exportBackup({ book, monthFilter }) {
   const payload = {
-    format: "haushaltsbuch-backup",
-    version: 1,
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     books: [book],
     activeBookId: book?.id || null,
