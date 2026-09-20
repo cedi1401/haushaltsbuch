@@ -18,6 +18,10 @@ const NAV_ITEMS = [
   { id: "reserves", label: "Rückstellungen", Icon: IconReserves },
   { id: "costgroups", label: "Kostenrechner", Icon: IconCostGroups },
   { id: "trend", label: "Trend", Icon: IconTrend },
+  // Nur im Dev-Modus: Testbench für die Marktdaten-Abrufe, im Release unsichtbar.
+  ...(import.meta.env.DEV
+    ? [{ id: "marketdebug", label: "Marktdaten (Debug)", Icon: IconTrend }]
+    : []),
 ];
 
 export default function NavDrawer({ open, onClose, view, onChangeView, anchor }) {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, lazy, Suspense } from "react";
 
 import "./styles/haushaltsbuch.css";
 
@@ -38,7 +38,13 @@ import { useEntryActions } from "./hooks/useEntryActions.js";
 
 // Ansichten ohne Monatsbezug — dort ist der Monatsfilter in der Toolbar deaktiviert.
 // "pots" fehlt bewusst: Die Buchungsliste im Töpfe-View filtert nach Monat.
-const VIEW_LABELS = { trend: "Trend", goals: "Sparziele", fixed: "Fixkosten", reserves: "Rückstellungen", costgroups: "Kostenrechner" };
+// Marktdaten-Testbench: nur im Dev-Modus geladen. Der dynamische Import steht in einem
+// Zweig, den der Production-Build als toten Code entfernt — so bleibt sie aus dem Release.
+const MarketDebugView = import.meta.env.DEV
+  ? lazy(() => import("./features/MarketDebugView.jsx"))
+  : null;
+
+const VIEW_LABELS = { trend: "Trend", goals: "Sparziele", fixed: "Fixkosten", reserves: "Rückstellungen", costgroups: "Kostenrechner", marketdebug: "Marktdaten (Debug)" };
 
 export default function HaushaltsbuchApp() {
   const toast = useToast();
@@ -260,8 +266,12 @@ export default function HaushaltsbuchApp() {
             isViewWithoutMonth={isViewWithoutMonth}
           />
 
-          <ErrorBoundary context={view === "book" ? "Dashboard" : view === "trend" ? "Trend" : view === "pots" ? "Töpfe" : view === "goals" ? "Sparziele" : view === "costgroups" ? "Kostenrechner" : view === "reserves" ? "Rückstellungen" : "Fixkosten"}>
-            {view === "trend" ? (
+          <ErrorBoundary context={view === "marketdebug" ? "Marktdaten (Debug)" : view === "book" ? "Dashboard" : view === "trend" ? "Trend" : view === "pots" ? "Töpfe" : view === "goals" ? "Sparziele" : view === "costgroups" ? "Kostenrechner" : view === "reserves" ? "Rückstellungen" : "Fixkosten"}>
+            {view === "marketdebug" && MarketDebugView ? (
+              <Suspense fallback={<div style={{ padding: 16 }}>Lädt…</div>}>
+                <MarketDebugView baseCurrency={baseCurrency} />
+              </Suspense>
+            ) : view === "trend" ? (
               <TrendView
                 entries={entries}
                 recurringExpenses={activeBook?.recurringExpenses || []}
