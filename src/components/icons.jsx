@@ -369,3 +369,25 @@ export function IconTemplate(props) {
     </svg>
   );
 }
+
+// Säulen mit aufsteigender Linie — Investments/Depot.
+export function IconInvest(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <line x1="3" y1="21" x2="21" y2="21" />
+      <rect x="4.5" y="13" width="4" height="8" rx="1" />
+      <rect x="10" y="9" width="4" height="12" rx="1" />
+      <rect x="15.5" y="5" width="4" height="16" rx="1" />
+    </svg>
+  );
+}
+
+// Kreispfeil — Kurse neu abrufen.
+export function IconRefresh(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+      <polyline points="20 4 20 9 15 9" />
+    </svg>
+  );
+}
