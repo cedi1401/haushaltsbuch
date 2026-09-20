@@ -37,6 +37,16 @@ export function isValidSymbol(symbol) {
   return typeof symbol === 'string' && SYMBOL_PATTERN.test(symbol);
 }
 
+// Obergrenze für einen Stapelabruf. Der Service ruft sequentiell mit Pause ab;
+// eine unbegrenzte Liste würde den Main-Prozess minutenlang beschäftigen.
+export const MAX_SYMBOL_BATCH = 50;
+
+export function isValidSymbolList(symbols) {
+  if (!Array.isArray(symbols)) return false;
+  if (symbols.length === 0 || symbols.length > MAX_SYMBOL_BATCH) return false;
+  return symbols.every(isValidSymbol);
+}
+
 export function isValidSearchQuery(query) {
   return typeof query === 'string' && query.trim().length > 0 && query.length <= 64;
 }

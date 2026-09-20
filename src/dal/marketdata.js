@@ -34,6 +34,29 @@ export async function fetchQuote(symbol, targetCurrency, options = {}) {
 }
 
 /**
+ * Holt mehrere Kurse in einem Rutsch — der Weg, auf dem der Investment-View
+ * seine Positionen aktualisiert.
+ *
+ * Der Main-Prozess ruft sequentiell mit Drosselung ab (sonst HTTP 429). Ein
+ * einzelnes fehlgeschlagenes Symbol erscheint als Zeile mit `ok: false`, statt
+ * den ganzen Stapel scheitern zu lassen.
+ *
+ * @param {string[]} symbols
+ * @param {string} targetCurrency ISO-4217
+ * @param {{ bypassCache?: boolean }} options
+ * @returns {Promise<{ ok: boolean, data?: Array<{symbol: string, ok: boolean, data?: object, error?: string}>, error?: string }>}
+ */
+export async function fetchQuotes(symbols, targetCurrency, options = {}) {
+  if (!isElectron) return UNAVAILABLE;
+  try {
+    return await window.electronAPI.marketdata.quotes(symbols, targetCurrency, options);
+  } catch (err) {
+    log.error('fetchQuotes fehlgeschlagen', err);
+    return { ok: false, error: err?.message || 'IPC-Aufruf fehlgeschlagen' };
+  }
+}
+
+/**
  * Holt den Kursverlauf eines Symbols.
  *
  * @param {string} symbol

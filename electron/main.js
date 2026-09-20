@@ -3,8 +3,8 @@ import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDatabase, getDb, closeDatabase } from './database/db.js';
-import { validateBook, isValidSetting, isValidSymbol, isValidSearchQuery, isValidHistoryOptions } from './ipcValidation.js';
-import { getQuote, getHistory, search as searchSymbols } from './services/marketdata/index.js';
+import { validateBook, isValidSetting, isValidSymbol, isValidSymbolList, isValidSearchQuery, isValidHistoryOptions, MAX_SYMBOL_BATCH } from './ipcValidation.js';
+import { getQuote, getQuotes, getHistory, search as searchSymbols } from './services/marketdata/index.js';
 
 process.on('uncaughtException', (err) => {
   console.error('[main] uncaughtException:', err);
@@ -148,9 +148,9 @@ function registerIpcHandlers() {
     }
   });
 
-  // --- Marktdaten (Debug/Testbench) ---
+  // --- Marktdaten ---
   // Fehler werden als { ok: false, error } zurückgegeben statt geworfen,
-  // damit die Meldung im Debug-View im Klartext sichtbar wird.
+  // damit die Meldung in der UI im Klartext sichtbar wird.
   ipcMain.handle('market:quote', async (_event, symbol, targetCurrency, options) => {
     if (!isValidSymbol(symbol)) return { ok: false, error: `Ungültiges Symbol: ${String(symbol)}` };
     try {
@@ -158,6 +158,22 @@ function registerIpcHandlers() {
       return { ok: true, data };
     } catch (err) {
       console.error('[ipc] market:quote failed:', err);
+      return { ok: false, error: err?.message || 'Unbekannter Fehler' };
+    }
+  });
+
+  // Stapelabruf für den Investment-View. Der Service ruft sequentiell mit Pause
+  // ab; einzelne fehlgeschlagene Symbole stehen als Zeile mit ok:false im
+  // Ergebnis, statt den ganzen Abruf scheitern zu lassen.
+  ipcMain.handle('market:quotes', async (_event, symbols, targetCurrency, options) => {
+    if (!isValidSymbolList(symbols)) {
+      return { ok: false, error: `Ungültige Symbolliste (leer, zu lang oder fehlerhaft, max. ${MAX_SYMBOL_BATCH})` };
+    }
+    try {
+      const data = await getQuotes(symbols, targetCurrency, { bypassCache: options?.bypassCache === true });
+      return { ok: true, data };
+    } catch (err) {
+      console.error('[ipc] market:quotes failed:', err);
       return { ok: false, error: err?.message || 'Unbekannter Fehler' };
     }
   });

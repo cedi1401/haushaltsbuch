@@ -4,8 +4,10 @@ import {
   SETTING_SCHEMA,
   isValidSetting,
   isValidSymbol,
+  isValidSymbolList,
   isValidSearchQuery,
   isValidHistoryOptions,
+  MAX_SYMBOL_BATCH,
 } from '../../../electron/ipcValidation.js';
 
 describe('validateBook', () => {
@@ -107,6 +109,38 @@ describe('isValidSymbol', () => {
     ['null', null],
   ])('rejects %s', (_label, value) => {
     expect(isValidSymbol(value)).toBe(false);
+  });
+});
+
+describe('isValidSymbolList', () => {
+  it('accepts a list of valid symbols', () => {
+    expect(isValidSymbolList(['AAPL', 'VWRL.SW', 'GC=F', 'USDCHF=X'])).toBe(true);
+  });
+
+  it('accepts a single symbol', () => {
+    expect(isValidSymbolList(['SI=F'])).toBe(true);
+  });
+
+  it('rejects an empty list', () => {
+    expect(isValidSymbolList([])).toBe(false);
+  });
+
+  it('rejects a list above the batch limit', () => {
+    expect(isValidSymbolList(Array(MAX_SYMBOL_BATCH).fill('AAPL'))).toBe(true);
+    expect(isValidSymbolList(Array(MAX_SYMBOL_BATCH + 1).fill('AAPL'))).toBe(false);
+  });
+
+  it('rejects the whole list when one symbol is invalid', () => {
+    expect(isValidSymbolList(['AAPL', 'DROP TABLE'])).toBe(false);
+    expect(isValidSymbolList(['AAPL', ''])).toBe(false);
+    expect(isValidSymbolList(['AAPL', null])).toBe(false);
+  });
+
+  it('rejects non-arrays', () => {
+    expect(isValidSymbolList('AAPL')).toBe(false);
+    expect(isValidSymbolList(null)).toBe(false);
+    expect(isValidSymbolList(undefined)).toBe(false);
+    expect(isValidSymbolList({ 0: 'AAPL', length: 1 })).toBe(false);
   });
 });
 

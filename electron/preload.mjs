@@ -37,11 +37,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('update-downloaded', handler);
   },
 
-  // Marktdaten (Debug/Testbench) — Abruf läuft bewusst im Main-Prozess:
+  // Marktdaten — Abruf läuft bewusst im Main-Prozess:
   // im Renderer blockiert die Production-CSP externe Requests und der
   // nötige User-Agent-Header lässt sich dort nicht setzen.
   marketdata: {
     quote: (symbol, targetCurrency, options) => ipcRenderer.invoke('market:quote', symbol, targetCurrency, options),
+    quotes: (symbols, targetCurrency, options) => ipcRenderer.invoke('market:quotes', symbols, targetCurrency, options),
     history: (symbol, options) => ipcRenderer.invoke('market:history', symbol, options),
     search: (query) => ipcRenderer.invoke('market:search', query),
   },
