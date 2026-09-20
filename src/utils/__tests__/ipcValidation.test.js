@@ -3,6 +3,9 @@ import {
   validateBook,
   SETTING_SCHEMA,
   isValidSetting,
+  isValidSymbol,
+  isValidSearchQuery,
+  isValidHistoryOptions,
 } from '../../../electron/ipcValidation.js';
 
 describe('validateBook', () => {
@@ -83,5 +86,71 @@ describe('isValidSetting', () => {
 
   it('rejects theme with non-string value', () => {
     expect(isValidSetting('theme', 42)).toBe(false);
+  });
+});
+
+describe('isValidSymbol', () => {
+  it.each(['AAPL', 'VWRL.SW', '4GLD.DE', 'GC=F', 'USDCHF=X', '^GSPC', 'BRK-B'])(
+    'accepts %s',
+    (symbol) => {
+      expect(isValidSymbol(symbol)).toBe(true);
+    }
+  );
+
+  it.each([
+    ['empty string', ''],
+    ['slash (path traversal)', '../etc'],
+    ['query injection', 'AAPL&foo=1'],
+    ['whitespace', 'AA PL'],
+    ['too long', 'A'.repeat(21)],
+    ['non-string', 123],
+    ['null', null],
+  ])('rejects %s', (_label, value) => {
+    expect(isValidSymbol(value)).toBe(false);
+  });
+});
+
+describe('isValidSearchQuery', () => {
+  it('accepts normal text', () => {
+    expect(isValidSearchQuery('vanguard ftse')).toBe(true);
+  });
+
+  it('rejects blank-only input', () => {
+    expect(isValidSearchQuery('   ')).toBe(false);
+  });
+
+  it('rejects overly long input', () => {
+    expect(isValidSearchQuery('x'.repeat(65))).toBe(false);
+  });
+
+  it('rejects non-string', () => {
+    expect(isValidSearchQuery(null)).toBe(false);
+  });
+});
+
+describe('isValidHistoryOptions', () => {
+  it('accepts omitted options', () => {
+    expect(isValidHistoryOptions(undefined)).toBe(true);
+    expect(isValidHistoryOptions(null)).toBe(true);
+  });
+
+  it('accepts whitelisted interval and range', () => {
+    expect(isValidHistoryOptions({ interval: '1mo', range: '1y' })).toBe(true);
+  });
+
+  it('accepts a partial object', () => {
+    expect(isValidHistoryOptions({ range: 'max' })).toBe(true);
+  });
+
+  it('rejects unknown interval', () => {
+    expect(isValidHistoryOptions({ interval: '3s' })).toBe(false);
+  });
+
+  it('rejects unknown range', () => {
+    expect(isValidHistoryOptions({ range: '100y' })).toBe(false);
+  });
+
+  it('rejects non-object', () => {
+    expect(isValidHistoryOptions('1mo')).toBe(false);
   });
 });

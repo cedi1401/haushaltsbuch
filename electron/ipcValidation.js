@@ -26,3 +26,30 @@ export function isValidSetting(key, value) {
   const validator = SETTING_SCHEMA.get(key);
   return validator ? validator(value) : false;
 }
+
+// --- Marktdaten ---
+
+// Yahoo-Symbole enthalten neben Buchstaben/Ziffern auch Punkt (VWRL.SW), Bindestrich,
+// Gleichheitszeichen (GC=F, USDCHF=X) und Zirkumflex (^GSPC).
+const SYMBOL_PATTERN = /^[A-Za-z0-9.^=-]{1,20}$/;
+
+export function isValidSymbol(symbol) {
+  return typeof symbol === 'string' && SYMBOL_PATTERN.test(symbol);
+}
+
+export function isValidSearchQuery(query) {
+  return typeof query === 'string' && query.trim().length > 0 && query.length <= 64;
+}
+
+// Von Yahoo unterstützte Werte, als Whitelist statt Durchreichen freier Strings.
+export const HISTORY_INTERVALS = ['1d', '1wk', '1mo'];
+export const HISTORY_RANGES = ['1mo', '3mo', '6mo', '1y', '5y', 'max'];
+
+export function isValidHistoryOptions(options) {
+  if (options == null) return true;
+  if (typeof options !== 'object') return false;
+  const { interval, range } = options;
+  if (interval !== undefined && !HISTORY_INTERVALS.includes(interval)) return false;
+  if (range !== undefined && !HISTORY_RANGES.includes(range)) return false;
+  return true;
+}

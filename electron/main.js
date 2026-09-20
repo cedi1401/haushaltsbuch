@@ -3,7 +3,8 @@ import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDatabase, getDb, closeDatabase } from './database/db.js';
-import { validateBook, isValidSetting } from './ipcValidation.js';
+import { validateBook, isValidSetting, isValidSymbol, isValidSearchQuery, isValidHistoryOptions } from './ipcValidation.js';
+import { getQuote, getHistory, search as searchSymbols } from './services/marketdata/index.js';
 
 process.on('uncaughtException', (err) => {
   console.error('[main] uncaughtException:', err);
@@ -144,6 +145,43 @@ function registerIpcHandlers() {
     } catch (err) {
       console.error('[ipc] db:setSetting failed:', err);
       return false;
+    }
+  });
+
+  // --- Marktdaten (Debug/Testbench) ---
+  // Fehler werden als { ok: false, error } zurückgegeben statt geworfen,
+  // damit die Meldung im Debug-View im Klartext sichtbar wird.
+  ipcMain.handle('market:quote', async (_event, symbol, targetCurrency, options) => {
+    if (!isValidSymbol(symbol)) return { ok: false, error: `Ungültiges Symbol: ${String(symbol)}` };
+    try {
+      const data = await getQuote(symbol, targetCurrency, { bypassCache: options?.bypassCache === true });
+      return { ok: true, data };
+    } catch (err) {
+      console.error('[ipc] market:quote failed:', err);
+      return { ok: false, error: err?.message || 'Unbekannter Fehler' };
+    }
+  });
+
+  ipcMain.handle('market:history', async (_event, symbol, options) => {
+    if (!isValidSymbol(symbol)) return { ok: false, error: `Ungültiges Symbol: ${String(symbol)}` };
+    if (!isValidHistoryOptions(options)) return { ok: false, error: 'Ungültige Verlaufs-Optionen' };
+    try {
+      const data = await getHistory(symbol, options || {});
+      return { ok: true, data };
+    } catch (err) {
+      console.error('[ipc] market:history failed:', err);
+      return { ok: false, error: err?.message || 'Unbekannter Fehler' };
+    }
+  });
+
+  ipcMain.handle('market:search', async (_event, query) => {
+    if (!isValidSearchQuery(query)) return { ok: false, error: 'Ungültige Suchanfrage' };
+    try {
+      const data = await searchSymbols(query);
+      return { ok: true, data };
+    } catch (err) {
+      console.error('[ipc] market:search failed:', err);
+      return { ok: false, error: err?.message || 'Unbekannter Fehler' };
     }
   });
 
