@@ -3,12 +3,14 @@ import { CUSTOM_CATEGORY_PALETTE, DEFAULT_CATEGORY_COLOR } from "./hbPalette.js"
 import { MONTHS_LONG } from "./constants.js";
 import { generateId } from "./idUtils.js";
 import { normalizeEntryTemplate } from "./entryTemplateUtils.js";
+import { emptyInvestments, normalizeInvestments } from "./investmentModel.js";
 
 // 3 = Fixkosten-Gruppen haben ein festes `kind` ("expense" | "transfer") und
 //     damit eine feste Spalte im Fixkosten-View (siehe migrateFixedCostKinds).
 // 4 = Einträge tragen `recurringId` — die Herkunftskennung ihrer Fixkosten-
 //     Position (siehe stampRecurringIds).
-export const CURRENT_SCHEMA_VERSION = 4;
+// 5 = Bücher tragen `investments` (Depots, Assets, Transaktionen, Snapshots).
+export const CURRENT_SCHEMA_VERSION = 5;
 
 /** Returns true if the book has not yet been migrated to the current schema. */
 export function bookNeedsMigration(book) {
@@ -688,6 +690,7 @@ export function makeDefaultBook(name = "Mein Haushaltsbuch") {
     fixedCostGroups: [],
     costGroups: [],
     entryTemplates: [],
+    investments: emptyInvestments(),
     baseCurrency: "CHF",
     monthStartDay: 1,
   };
@@ -1109,6 +1112,11 @@ export function normalizeBook(book) {
       .map(normalizeEntryTemplate)
       .filter(Boolean);
   }
+
+  // Investments (Depots, Assets, Transaktionen, Snapshots). Läuft bewusst bei
+  // jedem Start und nicht nur einmalig: normalizeInvestments ist idempotent und
+  // hält die Struktur auch nach einem Import sauber.
+  normalized.investments = normalizeInvestments(normalized.investments);
 
   // Basiswährung: Standard CHF (bisherige implizite Währung)
   if (!normalized.baseCurrency) {
