@@ -7575,3 +7575,54 @@ select.hb-input option {
   font-size: 12px;
   color: var(--muted);
 }
+
+/* Gemeinsamer Chart-Bereich von Allokations- und Verlaufskarte. Die feste
+   Mindesthöhe hält beide Karten in .hb-two bündig und verhindert den
+   Höhensprung, wenn aus „noch kein Snapshot" die Kurve wird. */
+.hb-inv-chart-slot {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Donut links, Legende rechts. Bewusst NICHT .hb-chart-body: dessen
+   .hb-chart-legend (min-width 300px) und .hb-chart-pie-wrap (min-width 340px)
+   brauchen mit dem Abstand zusammen über 670 px — in einer .hb-two-Hälfte
+   bräche das um und bliese die Karte auf. Die Klassen sind für eine
+   Vollbreiten-Karte gebaut. */
+.hb-inv-alloc {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+}
+
+@media (max-width: 1100px) {
+  .hb-inv-alloc {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Bezugspunkt für .hb-pie-center-overlay (position: absolute). */
+.hb-inv-alloc-pie {
+  position: relative;
+}
+
+/* Legende ohne Balken: Die 16 px Zeilenabstand von .hb-cg-breakdown sind für
+   Zeilen MIT Balken gesetzt. Der Balken entfällt hier bewusst — er kodierte
+   exakt dasselbe wie der Donut daneben. */
+.hb-cg-breakdown--compact {
+  gap: 6px;
+}
+
+/* Einzelner Messpunkt im Verlauf: eine Zahl, kein Diagramm. Anders als
+   .hb-stat-pill-value ohne tabular-nums — bei einer einzelnen grossen Zahl
+   lässt die Tabellenziffernbreite sie lückig wirken; fluchten muss hier
+   nichts. */
+.hb-inv-hero-value {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}

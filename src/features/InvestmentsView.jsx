@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import DataTable from "../components/DataTable.jsx";
 import EditDialog from "../components/EditDialog.jsx";
@@ -15,10 +15,18 @@ import {
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
 import { formatDateDE } from "../utils/hbUtils.js";
-import { emptyInvestments, GRAMS_PER_TROY_OUNCE } from "../utils/investmentModel.js";
 import {
+  emptyInvestments,
+  GRAMS_PER_TROY_OUNCE,
+  TRANSACTION_TYPE_LABELS,
+} from "../utils/investmentModel.js";
+import {
+  calcAllocationByAssetClass,
+  calcAllocationByDepot,
   calcDepotSummaries,
   calcPositions,
+  hasAllocation,
+  listTransactions,
   summarizePositions,
   transactionsForPosition,
 } from "../utils/investmentUtils.js";
@@ -35,8 +43,12 @@ import {
   gainClass,
 } from "../utils/investmentFormat.js";
 import { useInvestmentQuotes } from "../hooks/useInvestmentQuotes.js";
+import { useSnapshotRecorder } from "../hooks/useSnapshotRecorder.js";
+import AllocationCard from "./investments/AllocationCard.jsx";
 import DepotsManager from "./investments/DepotsManager.jsx";
 import InvestmentTransactionDialog from "./investments/InvestmentTransactionDialog.jsx";
+import TransactionsCard from "./investments/TransactionsCard.jsx";
+import ValueHistoryCard from "./investments/ValueHistoryCard.jsx";
 import { buildPositionColumns } from "./investments/positionColumns.jsx";
 
 /**
@@ -77,16 +89,44 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
     [investments.assets]
   );
 
+  // Die Depotfarbe hängt am Depot, nicht an seinem Rang in irgendeiner Liste.
+  // Sektionsbänder, Donut, Legende und die Depot-Spalte der Transaktionen
+  // ziehen alle aus dieser einen Zuordnung — sonst wäre dasselbe Depot in der
+  // Tabelle beere und im Donut olivgrün und wechselte die Farbe, sobald eine
+  // Kursbewegung die Rangfolge dreht.
+  const depotAccent = useMemo(
+    () =>
+      new Map(
+        depotSummaries.map((d, i) => [d.depotId, GROUP_ACCENT_PALETTE[i % GROUP_ACCENT_PALETTE.length]])
+      ),
+    [depotSummaries]
+  );
+
+  const depotNames = useMemo(
+    () => new Map((investments.depots || []).map((d) => [d.id, d.name])),
+    [investments.depots]
+  );
+
+  const byClass = useMemo(() => calcAllocationByAssetClass(positions), [positions]);
+  const byDepot = useMemo(() => calcAllocationByDepot(positions), [positions]);
+  const unpricedCount = useMemo(
+    () => positions.filter((p) => p.isOpen && !p.priced).length,
+    [positions]
+  );
+  const showAllocation = hasAllocation(byClass, byDepot);
+
+  const txRows = useMemo(() => listTransactions(investments), [investments]);
+
   const columns = useMemo(() => buildPositionColumns({ fmt, baseCurrency }), [fmt, baseCurrency]);
 
   // Die Tabelle braucht je Zeile eine `id`; `share` lässt sich nur mit dem
   // Gesamtwert berechnen und gehört deshalb hierher, nicht in den Spaltensatz.
   const sections = useMemo(() => {
     const totalValue = total.marketValue || 0;
-    return depotSummaries.map((d, i) => ({
+    return depotSummaries.map((d) => ({
       key: d.depotId,
       label: d.name,
-      accent: GROUP_ACCENT_PALETTE[i % GROUP_ACCENT_PALETTE.length],
+      accent: depotAccent.get(d.depotId),
       rows: d.positions.map((p) => ({
         ...p,
         id: p.key,
@@ -118,13 +158,30 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
         </>
       ),
     }));
-  }, [depotSummaries, total.marketValue, fmt]);
+  }, [depotSummaries, total.marketValue, fmt, depotAccent]);
 
   // --- Schreiben ins Buch -------------------------------------------------
 
-  function applyInvestments(next) {
-    onUpdateBook?.({ ...activeBook, investments: next });
-  }
+  // useCallback, weil der Snapshot-Schreiber die Funktion als Effect-Abhängigkeit
+  // führt: eine bei jedem Rendern neue Identität ließe seinen Effect bei jedem
+  // Rendern laufen.
+  const applyInvestments = useCallback(
+    (next) => {
+      onUpdateBook?.({ ...activeBook, investments: next });
+    },
+    [activeBook, onUpdateBook]
+  );
+
+  // Tages-Snapshot für die Verlaufskurve (Beschluss F). Läuft erst, wenn der
+  // Abruf durch ist — während `loading` wären noch nicht alle Kurse da und
+  // buildSnapshot verweigerte den Tag ohnehin.
+  useSnapshotRecorder({
+    investments,
+    depotSummaries,
+    baseCurrency,
+    enabled: !loading && positions.length > 0,
+    onChange: applyInvestments,
+  });
 
   function openNewTransaction(depotId = "", assetId = "") {
     setEditingTx(null);
@@ -236,7 +293,7 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
               {txs.slice(0, 5).map((tx) => (
                 <div key={tx.id} className="hb-inv-detail-tx">
                   <span className="hb-muted">{formatDateDE(tx.date)}</span>
-                  <span>{TX_LABEL[tx.type]}</span>
+                  <span>{TRANSACTION_TYPE_LABELS[tx.type]}</span>
                   <span>
                     {tx.type === "dividend"
                       ? fmt(tx.price * tx.fxRate)
@@ -439,48 +496,31 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
       </div>
 
       <div className="hb-stack hb-stack--lg" style={{ marginTop: 16 }}>
-        {depotSummaries.length > 1 && (
-          <Card>
-            <CardContent>
-              <h3 className="hb-card-title">Vermögensübersicht</h3>
-              <div className="hb-cg-breakdown" style={{ marginTop: 14 }}>
-                {depotSummaries.map((d, i) => {
-                  const value = d.summary.marketValue;
-                  const share =
-                    value === null || !total.marketValue ? null : (value / total.marketValue) * 100;
-                  const accent = GROUP_ACCENT_PALETTE[i % GROUP_ACCENT_PALETTE.length];
-                  return (
-                    <div key={d.depotId} className="hb-cg-breakdown-row">
-                      <div className="hb-cg-breakdown-top">
-                        <div className="hb-cg-breakdown-info">
-                          <span className="hb-cat-dot" style={{ background: accent }} />
-                          <div className="hb-cg-breakdown-names">
-                            <div className="hb-cg-breakdown-name">{d.name}</div>
-                            {d.note && <div className="hb-cg-breakdown-parent">{d.note}</div>}
-                          </div>
-                        </div>
-                        <div className="hb-cg-breakdown-values">
-                          <span className="hb-cg-breakdown-amount">
-                            {value === null ? "—" : fmt(value)}
-                          </span>
-                          <span className="hb-cg-breakdown-share">
-                            {share === null ? "—" : formatPercent(share, { digits: 1, sign: false })}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="hb-cg-breakdown-bar">
-                        <div
-                          className="hb-cg-breakdown-bar-fill"
-                          style={{ width: `${Math.max(0, share || 0)}%`, background: accent }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Allokation links, Verlauf rechts: Der Verlauf ist in den ersten
+            Wochen leer — die stabil gefüllte Karte gehört nach links. Bei
+            einer einzigen Klasse und einem einzigen Depot entfällt der Donut
+            und der Verlauf nimmt die ganze Breite. */}
+        <div className={showAllocation ? "hb-two" : undefined}>
+          {showAllocation && (
+            <AllocationCard
+              byClass={byClass}
+              byDepot={byDepot}
+              depotSummaries={depotSummaries}
+              total={total}
+              depotAccent={depotAccent}
+              unpricedCount={unpricedCount}
+              fmt={fmt}
+            />
+          )}
+          <ValueHistoryCard
+            snapshots={investments.snapshots || []}
+            depotCount={depots.length}
+            depotNames={depotNames}
+            unpricedCount={unpricedCount}
+            fmt={fmt}
+            baseCurrency={baseCurrency}
+          />
+        </div>
 
         <Card>
           <CardContent>
@@ -508,18 +548,26 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
                 />
               )}
               label="Positionen"
+              toolbar={<h3 className="hb-card-title">Positionen</h3>}
               bounded={false}
             />
           </CardContent>
         </Card>
+
+        <TransactionsCard
+          transactions={txRows}
+          depotAccent={depotAccent}
+          onEdit={openEditTransaction}
+          onDelete={deleteTransaction}
+          fmt={fmt}
+          baseCurrency={baseCurrency}
+        />
       </div>
 
       {dialogs}
     </>
   );
 }
-
-const TX_LABEL = { buy: "Kauf", sell: "Verkauf", dividend: "Ausschüttung" };
 
 /** Grüner/roter Rand der KPI-Pille. `null` bleibt neutral. */
 function pillTone(value) {
@@ -567,7 +615,8 @@ function buildNotice({ available, hasStale, error, positions, oldestFetchedAt })
       title: `${failed} Position${failed === 1 ? "" : "en"} ohne Kurs`,
       message:
         "Für diese Positionen liegt kein Kurs vor. Bestand und Einstand stimmen trotzdem, " +
-        "nur der aktuelle Wert fehlt.",
+        "nur der aktuelle Wert fehlt. Solange ein Kurs fehlt, wird auch kein Punkt in den " +
+        "Verlauf geschrieben.",
       retry: true,
     };
   }
