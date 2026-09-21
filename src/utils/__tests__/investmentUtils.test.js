@@ -7,7 +7,6 @@ import {
   calcDepotSummaries,
   calcPositions,
   collectQuoteSymbols,
-  hasAllocation,
   listTransactions,
   normalizedQuantity,
   positionKey,
@@ -15,11 +14,13 @@ import {
   quoteMapFromBatch,
   quoteSymbolFor,
   sameSnapshot,
+  shiftMonthsBack,
   summarizePositions,
   summarizeSnapshots,
   transactionAmounts,
   transactionsForPosition,
   upsertSnapshot,
+  windowSnapshots,
 } from '../investmentUtils.js';
 
 // --- Fixtures -------------------------------------------------------------
@@ -541,6 +542,7 @@ describe('Allokation', () => {
     const rows = calcAllocationByAssetClass(calcPositions(investments, quotes));
     expect(rows.map((r) => r.key)).toEqual(['metal', 'etf']);
     expect(rows[0]).toMatchObject({ label: 'Edelmetall', value: 10000 });
+    expect(rows[1]).toMatchObject({ value: 3000, costBasis: 3000, unrealizedGain: 0, unrealizedGainPct: 0 });
     expect(rows[0].share).toBeCloseTo(76.923, 3);
     expect(rows.reduce((s, r) => s + r.share, 0)).toBeCloseTo(100, 10);
   });
@@ -748,22 +750,52 @@ describe('listTransactions', () => {
   });
 });
 
-// --- hasAllocation --------------------------------------------------------
+// --- windowSnapshots ------------------------------------------------------
 
-describe('hasAllocation', () => {
-  const row = (key) => ({ key, label: key, value: 1, share: 50 });
-
-  it('lohnt nicht bei je einem Segment', () => {
-    expect(hasAllocation([row('etf')], [row('dep_a')])).toBe(false);
+describe('shiftMonthsBack', () => {
+  it('verschiebt um Kalendermonate', () => {
+    expect(shiftMonthsBack('2026-09-21', 1)).toBe('2026-08-21');
+    expect(shiftMonthsBack('2026-02-15', 3)).toBe('2025-11-15');
   });
 
-  it('lohnt, sobald eine der beiden Sichten mehr als ein Segment hat', () => {
-    expect(hasAllocation([row('etf'), row('metal')], [row('dep_a')])).toBe(true);
-    expect(hasAllocation([row('etf')], [row('dep_a'), row('dep_b')])).toBe(true);
+  it('klemmt ein fehlendes Monatsende auf den letzten Tag', () => {
+    expect(shiftMonthsBack('2026-03-31', 1)).toBe('2026-02-28');
+    expect(shiftMonthsBack('2024-05-31', 3)).toBe('2024-02-29');
+  });
+});
+
+describe('windowSnapshots', () => {
+  const snap = (date, total) => ({ date, total, currency: 'CHF', byDepot: [] });
+  const list = [
+    snap('2025-11-10', 100),
+    snap('2026-01-05', 110),
+    snap('2026-07-01', 120),
+    snap('2026-08-25', 130),
+    snap('2026-09-20', 140),
+  ];
+
+  it('liefert bei „Gesamt" alles ab dem ersten Punkt', () => {
+    expect(windowSnapshots(list, 'all')).toEqual({ rows: list, domainStart: '2025-11-10' });
   });
 
-  it('lohnt nicht ohne bewertete Positionen', () => {
-    expect(hasAllocation([], [])).toBe(false);
-    expect(hasAllocation(undefined, undefined)).toBe(false);
+  it('nimmt den letzten Punkt vor dem Fensterbeginn mit', () => {
+    const { rows, domainStart } = windowSnapshots(list, '1m');
+    expect(domainStart).toBe('2026-08-20');
+    expect(rows.map((r) => r.date)).toEqual(['2026-07-01', '2026-08-25', '2026-09-20']);
+  });
+
+  it('ankert YTD am Jahr des letzten Snapshots', () => {
+    const { rows, domainStart } = windowSnapshots(list, 'ytd');
+    expect(domainStart).toBe('2026-01-01');
+    expect(rows[0].date).toBe('2025-11-10');
+  });
+
+  it('beginnt die Achse beim ersten Punkt, wenn die Historie kürzer ist', () => {
+    expect(windowSnapshots(list, '12m').domainStart).toBe('2025-11-10');
+  });
+
+  it('kommt ohne Snapshots zurecht', () => {
+    expect(windowSnapshots([], '3m')).toEqual({ rows: [], domainStart: null });
+    expect(windowSnapshots(undefined, 'all')).toEqual({ rows: [], domainStart: null });
   });
 });

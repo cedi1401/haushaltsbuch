@@ -401,22 +401,36 @@ function byValueDesc(a, b) {
  * Allokation nach Asset-Klasse — die Daten hinter dem Donut.
  * Nur offene, bewertete Positionen; unbewertete würden die Anteile verfälschen.
  *
+ * Je Klasse kommt die nicht realisierte G/V mit, gegen die Kostenbasis
+ * derselben bewerteten Positionen gerechnet — sonst stünde neben einem Wert
+ * ohne die unbewertete Position ein Einstand mit ihr.
+ *
  * @param {Array<object>} positions
- * @returns {Array<{key: string, label: string, value: number, share: number}>}
+ * @returns {Array<{key: string, label: string, value: number, share: number,
+ *   costBasis: number, unrealizedGain: number, unrealizedGainPct: number|null}>}
  */
 export function calcAllocationByAssetClass(positions) {
   const buckets = new Map();
   for (const p of positions || []) {
     if (!p.isOpen || !p.priced) continue;
     const key = ASSET_CLASSES.includes(p.assetClass) ? p.assetClass : "other";
-    buckets.set(key, (buckets.get(key) || 0) + (p.marketValue || 0));
+    const prev = buckets.get(key) || { value: 0, costBasis: 0 };
+    prev.value += p.marketValue || 0;
+    prev.costBasis += p.costBasis || 0;
+    buckets.set(key, prev);
   }
   return sharesOf(
-    [...buckets.entries()].map(([key, value]) => ({
-      key,
-      label: ASSET_CLASS_LABELS[key] || ASSET_CLASS_LABELS.other,
-      value,
-    })),
+    [...buckets.entries()].map(([key, { value, costBasis }]) => {
+      const unrealizedGain = value - costBasis;
+      return {
+        key,
+        label: ASSET_CLASS_LABELS[key] || ASSET_CLASS_LABELS.other,
+        value,
+        costBasis,
+        unrealizedGain,
+        unrealizedGainPct: costBasis > 0 ? (unrealizedGain / costBasis) * 100 : null,
+      };
+    }),
   );
 }
 
@@ -436,18 +450,6 @@ export function calcAllocationByDepot(positions) {
     buckets.set(p.depotId, prev);
   }
   return sharesOf([...buckets.values()]);
-}
-
-/**
- * Lohnt eine Aufteilungs-Darstellung? Ein Donut mit einem einzigen Segment
- * sagt nichts, was die Kennzahl „Depotwert" nicht schon sagt.
- *
- * @param {Array<object>} byClass Ergebnis von calcAllocationByAssetClass
- * @param {Array<object>} byDepot Ergebnis von calcAllocationByDepot
- * @returns {boolean}
- */
-export function hasAllocation(byClass, byDepot) {
-  return (byClass?.length || 0) > 1 || (byDepot?.length || 0) > 1;
 }
 
 function sharesOf(rows) {
@@ -566,6 +568,60 @@ export function summarizeSnapshots(snapshots) {
     change,
     changePct: first.total > 0 ? (change / first.total) * 100 : null,
   };
+}
+
+/** Zeiträume des Verlaufs; die Monatswerte sind Kalendermonate, keine 30-Tage-Blöcke. */
+export const HISTORY_RANGES = ["1m", "3m", "6m", "12m", "ytd", "all"];
+
+const RANGE_MONTHS = { "1m": 1, "3m": 3, "6m": 6, "12m": 12 };
+
+/**
+ * Verschiebt ein ISO-Datum um ganze Kalendermonate zurück. Ein Monatsende,
+ * das es im Zielmonat nicht gibt, fällt auf dessen letzten Tag (31.03. → 28.02.)
+ * statt in den Folgemonat zu überlaufen. Gerechnet in UTC, damit keine
+ * Sommerzeitumstellung einen Tag verschluckt.
+ *
+ * @param {string} iso "YYYY-MM-DD"
+ * @param {number} months
+ * @returns {string}
+ */
+export function shiftMonthsBack(iso, months) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1 - months, d));
+  if (date.getUTCDate() !== d) date.setUTCDate(0);
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Die Snapshots eines Zeitraums für die Verlaufskurve.
+ *
+ * Anker ist der letzte Snapshot, nicht die Uhr: das hält die Funktion rein und
+ * zeigt auch nach längerer Pause die letzten Wochen. YTD meint entsprechend
+ * das Jahr des letzten Snapshots.
+ *
+ * Der letzte Punkt vor dem Fensterbeginn kommt mit, damit die Linie am linken
+ * Rand beginnt statt mitten im Fenster. `domainStart` ist der Fensterbeginn,
+ * frühestens aber der erste Snapshot — eine kurze Historie soll die Achse
+ * nicht mit Leere füllen.
+ *
+ * @param {Array<object>} snapshots nach Datum sortiert
+ * @param {string} range einer von HISTORY_RANGES
+ * @returns {{rows: Array<object>, domainStart: string|null}}
+ */
+export function windowSnapshots(snapshots, range) {
+  const list = Array.isArray(snapshots) ? snapshots : [];
+  if (list.length === 0) return { rows: [], domainStart: null };
+
+  const firstDate = list[0].date;
+  const lastDate = list[list.length - 1].date;
+  let start = null;
+  if (range === "ytd") start = `${lastDate.slice(0, 4)}-01-01`;
+  else if (RANGE_MONTHS[range]) start = shiftMonthsBack(lastDate, RANGE_MONTHS[range]);
+
+  if (!start || start <= firstDate) return { rows: list, domainStart: firstDate };
+
+  const idx = list.findIndex((s) => s.date >= start);
+  return { rows: list.slice(Math.max(0, idx - 1)), domainStart: start };
 }
 
 /**
