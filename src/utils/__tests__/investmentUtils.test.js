@@ -7,12 +7,16 @@ import {
   calcDepotSummaries,
   calcPositions,
   collectQuoteSymbols,
+  hasAllocation,
+  listTransactions,
   normalizedQuantity,
   positionKey,
   positionUnit,
   quoteMapFromBatch,
   quoteSymbolFor,
+  sameSnapshot,
   summarizePositions,
+  summarizeSnapshots,
   transactionAmounts,
   transactionsForPosition,
   upsertSnapshot,
@@ -601,5 +605,165 @@ describe('transactionsForPosition', () => {
     ]);
     const rows = transactionsForPosition(investments, DEPOT_A.id, ETF.id);
     expect(rows.map((t) => t.date)).toEqual(['2026-03-10', '2026-01-10']);
+  });
+});
+
+// --- sameSnapshot ---------------------------------------------------------
+
+describe('sameSnapshot', () => {
+  const base = {
+    date: '2026-09-20',
+    currency: 'CHF',
+    total: 1000,
+    byDepot: [
+      { depotId: DEPOT_A.id, value: 600 },
+      { depotId: DEPOT_B.id, value: 400 },
+    ],
+  };
+
+  it('erkennt zwei identische Snapshots', () => {
+    expect(sameSnapshot(base, { ...base, byDepot: [...base.byDepot] })).toBe(true);
+  });
+
+  it('stört sich nicht an der Reihenfolge der Depots', () => {
+    const gedreht = { ...base, byDepot: [base.byDepot[1], base.byDepot[0]] };
+    expect(sameSnapshot(base, gedreht)).toBe(true);
+  });
+
+  it('verzeiht Gleitkomma-Rest unterhalb eines Rappens', () => {
+    const fast = { ...base, total: 1000.0000001 };
+    expect(sameSnapshot(base, fast)).toBe(true);
+  });
+
+  it('meldet eine echte Wertänderung', () => {
+    expect(sameSnapshot(base, { ...base, total: 1000.5 })).toBe(false);
+  });
+
+  it('meldet eine Verschiebung zwischen Depots bei gleicher Summe', () => {
+    const verschoben = {
+      ...base,
+      byDepot: [
+        { depotId: DEPOT_A.id, value: 700 },
+        { depotId: DEPOT_B.id, value: 300 },
+      ],
+    };
+    expect(sameSnapshot(base, verschoben)).toBe(false);
+  });
+
+  it('meldet ein neu hinzugekommenes Depot', () => {
+    const mehr = { ...base, byDepot: [...base.byDepot, { depotId: 'dep_c', value: 0 }] };
+    expect(sameSnapshot(base, mehr)).toBe(false);
+  });
+
+  it('ist bei fehlendem Snapshot immer false', () => {
+    expect(sameSnapshot(null, base)).toBe(false);
+    expect(sameSnapshot(base, null)).toBe(false);
+  });
+});
+
+// --- summarizeSnapshots ---------------------------------------------------
+
+describe('summarizeSnapshots', () => {
+  const snap = (date, total) => ({ date, currency: 'CHF', total, byDepot: [] });
+
+  it('liefert ohne Snapshots leere Kennzahlen', () => {
+    const s = summarizeSnapshots([]);
+    expect(s).toEqual({ count: 0, first: null, last: null, change: null, changePct: null });
+  });
+
+  it('meldet bei einem einzigen Punkt keine Veränderung', () => {
+    const s = summarizeSnapshots([snap('2026-09-20', 1000)]);
+    expect(s.count).toBe(1);
+    expect(s.last.total).toBe(1000);
+    // null, nicht 0 — eine Veränderung wurde nie gemessen.
+    expect(s.change).toBeNull();
+    expect(s.changePct).toBeNull();
+  });
+
+  it('rechnet die Veränderung zwischen erstem und letztem Punkt', () => {
+    const s = summarizeSnapshots([snap('2026-09-18', 1000), snap('2026-09-19', 900), snap('2026-09-20', 1200)]);
+    expect(s.count).toBe(3);
+    expect(s.change).toBe(200);
+    expect(s.changePct).toBeCloseTo(20, 10);
+  });
+
+  it('lässt den Prozentwert weg, wenn der Startwert 0 war', () => {
+    const s = summarizeSnapshots([snap('2026-09-19', 0), snap('2026-09-20', 500)]);
+    expect(s.change).toBe(500);
+    expect(s.changePct).toBeNull();
+  });
+});
+
+// --- listTransactions -----------------------------------------------------
+
+describe('listTransactions', () => {
+  it('reichert jede Zeile um Depot- und Wertpapiernamen an', () => {
+    const rows = listTransactions(book([tx({ depotId: DEPOT_B.id, assetId: STOCK.id })]));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].depotName).toBe('Zu Hause');
+    expect(rows[0].name).toBe('Apple');
+    expect(rows[0].symbol).toBe('AAPL');
+  });
+
+  it('sortiert neueste zuerst', () => {
+    const rows = listTransactions(
+      book([
+        tx({ date: '2026-01-10' }),
+        tx({ date: '2026-05-10' }),
+        tx({ date: '2026-03-10' }),
+      ]),
+    );
+    expect(rows.map((r) => r.date)).toEqual(['2026-05-10', '2026-03-10', '2026-01-10']);
+  });
+
+  it('zeigt den Kauf als Abfluss und den Verkauf als Zufluss', () => {
+    const rows = listTransactions(
+      book([
+        tx({ type: 'buy', quantity: 10, price: 100, fee: 9 }),
+        tx({ type: 'sell', quantity: 10, price: 100, fee: 9, date: '2026-04-01' }),
+      ]),
+    );
+    const kauf = rows.find((r) => r.type === 'buy');
+    const verkauf = rows.find((r) => r.type === 'sell');
+    expect(kauf.cashFlowBase).toBe(-1009);
+    expect(verkauf.cashFlowBase).toBe(991);
+  });
+
+  it('rechnet den Geldfluss über den gespeicherten fxRate in die Buchwährung', () => {
+    const rows = listTransactions(
+      book([tx({ type: 'buy', quantity: 10, price: 100, currency: 'USD', fxRate: 0.9 })]),
+    );
+    expect(rows[0].cashFlowBase).toBeCloseTo(-900, 10);
+    expect(rows[0].currency).toBe('USD');
+  });
+
+  it('wirft verwaiste Zeilen raus', () => {
+    const rows = listTransactions(book([tx({ depotId: 'dep_weg' }), tx({ assetId: 'ast_weg' }), tx({})]));
+    expect(rows).toHaveLength(1);
+  });
+
+  it('kommt mit einer leeren Struktur zurecht', () => {
+    expect(listTransactions(undefined)).toEqual([]);
+    expect(listTransactions({})).toEqual([]);
+  });
+});
+
+// --- hasAllocation --------------------------------------------------------
+
+describe('hasAllocation', () => {
+  const row = (key) => ({ key, label: key, value: 1, share: 50 });
+
+  it('lohnt nicht bei je einem Segment', () => {
+    expect(hasAllocation([row('etf')], [row('dep_a')])).toBe(false);
+  });
+
+  it('lohnt, sobald eine der beiden Sichten mehr als ein Segment hat', () => {
+    expect(hasAllocation([row('etf'), row('metal')], [row('dep_a')])).toBe(true);
+    expect(hasAllocation([row('etf')], [row('dep_a'), row('dep_b')])).toBe(true);
+  });
+
+  it('lohnt nicht ohne bewertete Positionen', () => {
+    expect(hasAllocation([], [])).toBe(false);
+    expect(hasAllocation(undefined, undefined)).toBe(false);
   });
 });

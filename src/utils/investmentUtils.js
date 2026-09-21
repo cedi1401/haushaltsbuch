@@ -438,6 +438,18 @@ export function calcAllocationByDepot(positions) {
   return sharesOf([...buckets.values()]);
 }
 
+/**
+ * Lohnt eine Aufteilungs-Darstellung? Ein Donut mit einem einzigen Segment
+ * sagt nichts, was die Kennzahl „Depotwert" nicht schon sagt.
+ *
+ * @param {Array<object>} byClass Ergebnis von calcAllocationByAssetClass
+ * @param {Array<object>} byDepot Ergebnis von calcAllocationByDepot
+ * @returns {boolean}
+ */
+export function hasAllocation(byClass, byDepot) {
+  return (byClass?.length || 0) > 1 || (byDepot?.length || 0) > 1;
+}
+
 function sharesOf(rows) {
   const total = rows.reduce((s, r) => s + r.value, 0);
   return rows
@@ -495,4 +507,114 @@ export function transactionsForPosition(investments, depotId, assetId) {
   return list
     .filter((t) => t.depotId === depotId && t.assetId === assetId)
     .sort((a, b) => (a.date === b.date ? 0 : a.date < b.date ? 1 : -1));
+}
+
+/**
+ * Inhaltlicher Vergleich zweier Snapshots — der Wächter vor Schreib-Schleifen.
+ *
+ * Der Snapshot-Schreiber läuft nach jeder Bewertung. Ohne diesen Vergleich
+ * würde jeder Durchlauf das Buch speichern, das gespeicherte Buch eine neue
+ * Berechnung auslösen und der View endlos im Kreis schreiben.
+ *
+ * Verglichen wird auf Cent-Genauigkeit: Gleitkommasummen derselben Eingaben
+ * sind zwar bitgleich, ein neu abgerufener Kurs ändert den Wert aber echt —
+ * und genau dann soll der Tagespunkt aktualisiert werden.
+ *
+ * @param {object|null} a
+ * @param {object|null} b
+ * @returns {boolean}
+ */
+export function sameSnapshot(a, b) {
+  if (!a || !b) return false;
+  if (a.date !== b.date || a.currency !== b.currency) return false;
+  if (!nearlyEqual(a.total, b.total)) return false;
+
+  const rowsA = Array.isArray(a.byDepot) ? a.byDepot : [];
+  const rowsB = Array.isArray(b.byDepot) ? b.byDepot : [];
+  if (rowsA.length !== rowsB.length) return false;
+
+  const byId = new Map(rowsB.map((r) => [r.depotId, r.value]));
+  return rowsA.every((r) => byId.has(r.depotId) && nearlyEqual(r.value, byId.get(r.depotId)));
+}
+
+function nearlyEqual(a, b) {
+  return Math.abs(Number(a) - Number(b)) < 0.005;
+}
+
+/**
+ * Kennzahlen der Verlaufskurve: erster und letzter Punkt plus die Veränderung
+ * dazwischen. Bei weniger als zwei Punkten gibt es keine Veränderung — `null`,
+ * nicht 0, sonst behauptet die Karte eine Entwicklung, die niemand gemessen hat.
+ *
+ * @param {Array<object>} snapshots nach Datum sortiert (upsertSnapshot garantiert das)
+ * @returns {{count: number, first: object|null, last: object|null, change: number|null, changePct: number|null}}
+ */
+export function summarizeSnapshots(snapshots) {
+  const list = Array.isArray(snapshots) ? snapshots : [];
+  const first = list[0] || null;
+  const last = list.length > 0 ? list[list.length - 1] : null;
+
+  if (list.length < 2) {
+    return { count: list.length, first, last, change: null, changePct: null };
+  }
+
+  const change = last.total - first.total;
+  return {
+    count: list.length,
+    first,
+    last,
+    change,
+    changePct: first.total > 0 ? (change / first.total) * 100 : null,
+  };
+}
+
+/**
+ * Alle Transaktionen als flache Zeilen für die Transaktionstabelle —
+ * angereichert um Depot- und Wertpapiernamen, die in der Transaktion selbst
+ * nur als Id stehen.
+ *
+ * `cashFlowBase` ist der Geldfluss aus Sicht des Haushalts: Käufe negativ,
+ * Verkäufe und Ausschüttungen positiv. Damit ist die Spalte summierbar und
+ * eine Zeile ohne Vorzeichen nie mehrdeutig.
+ *
+ * Verwaiste Zeilen (Depot oder Asset gelöscht) fallen raus — dieselbe Regel
+ * wie im Rechenkern.
+ *
+ * @param {object} investments
+ * @returns {Array<object>} neueste zuerst
+ */
+export function listTransactions(investments) {
+  const depotById = new Map((investments?.depots || []).map((d) => [d.id, d]));
+  const assetById = new Map((investments?.assets || []).map((a) => [a.id, a]));
+  const list = Array.isArray(investments?.transactions) ? investments.transactions : [];
+
+  return list
+    .map((tx) => {
+      const depot = depotById.get(tx.depotId);
+      const asset = assetById.get(tx.assetId);
+      if (!depot || !asset) return null;
+
+      const amounts = transactionAmounts(tx);
+      const sign = tx.type === "buy" ? -1 : 1;
+
+      return {
+        ...tx,
+        depotName: depot.name,
+        name: asset.name,
+        symbol: asset.symbol,
+        quoteSymbol: quoteSymbolFor(asset),
+        assetClass: asset.assetClass,
+        kind: asset.kind,
+        gross: amounts.gross,
+        net: amounts.net,
+        netBase: amounts.netBase,
+        feeBase: amounts.feeBase,
+        cashFlowBase: sign * amounts.netBase,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+    });
 }
