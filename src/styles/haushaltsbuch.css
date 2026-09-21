@@ -7580,16 +7580,6 @@ select.hb-input option {
   color: var(--muted);
 }
 
-/* Gemeinsamer Chart-Bereich von Allokations- und Verlaufskarte. Die feste
-   Mindesthöhe hält beide Karten in .hb-two bündig und verhindert den
-   Höhensprung, wenn aus „noch kein Snapshot" die Kurve wird. */
-.hb-inv-chart-slot {
-  min-height: 260px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
 /* Donut links, Legende rechts. Bewusst NICHT .hb-chart-body: dessen
    .hb-chart-legend (min-width 300px) und .hb-chart-pie-wrap (min-width 340px)
    brauchen mit dem Abstand zusammen über 670 px — in einer .hb-two-Hälfte
@@ -7597,8 +7587,8 @@ select.hb-input option {
    Vollbreiten-Karte gebaut. */
 .hb-inv-alloc {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
   align-items: center;
 }
 
@@ -7620,13 +7610,239 @@ select.hb-input option {
   gap: 6px;
 }
 
-/* Einzelner Messpunkt im Verlauf: eine Zahl, kein Diagramm. Anders als
-   .hb-stat-pill-value ohne tabular-nums — bei einer einzelnen grossen Zahl
-   lässt die Tabellenziffernbreite sie lückig wirken; fluchten muss hier
-   nichts. */
+/* =====================================================
+   INVESTMENT-VIEW — RASTER UND KARTEN
+   ===================================================== */
+/* Kopfzeile ohne Seitentitel (kein anderer View hat einen H1): nur die
+   Aktionen, rechtsbündig. */
+.hb-inv-header {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+/* 2:1 wie im Konzept — links Depotwert und Aufteilung, rechts Depots und
+   Rendite. stretch hält die Karten einer Zeile gleich hoch. */
+.hb-inv-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.hb-inv-grid > .hb-card {
+  min-width: 0;
+}
+
+.hb-inv-grid--no-alloc .hb-inv-cell--hero {
+  grid-row: span 2;
+}
+
+@media (max-width: 1100px) {
+  .hb-inv-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hb-inv-grid--no-alloc .hb-inv-cell--hero {
+    grid-row: auto;
+  }
+}
+
+/* Depotwert-Karte: Wertspalte links, Verlauf rechts. */
+.hb-inv-hero {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 32px;
+  align-items: stretch;
+}
+
+@media (max-width: 760px) {
+  .hb-inv-hero {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+.hb-inv-hero-summary {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+
+.hb-inv-hero-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Anders als .hb-stat-pill-value mit tabular-nums: die Ziffern sollen beim
+   Aktualisieren der Kurse nicht springen. */
 .hb-inv-hero-value {
   font-size: 30px;
   font-weight: 600;
   letter-spacing: -0.5px;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
+}
+
+.hb-inv-hero-gain {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hb-inv-hero-gain .hb-muted {
+  font-weight: 400;
+  font-size: 13px;
+}
+
+/* Veränderung im Zeitraum: neutral, weil sie Käufe und Verkäufe enthält. */
+.hb-inv-hero-delta {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hb-inv-hero-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hb-inv-hero-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hb-inv-hero-chart {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hb-inv-hero-chart-head {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-height: 32px;
+}
+
+/* Feste Mindesthöhe (inline gesetzt, 220/300 px): kein Höhensprung, wenn aus
+   „noch kein Punkt" die Kurve wird. */
+.hb-inv-hero-slot {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* G/V-Prozent in Legende und Übersicht. Das Gewicht 700 von .hb-ok/.hb-bad
+   wäre in einer Legende zu laut. */
+.hb-inv-legend-gain {
+  min-width: 56px;
+  text-align: right;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hb-inv-legend-gain.hb-ok,
+.hb-inv-legend-gain.hb-bad {
+  font-weight: 600;
+}
+
+/* Summenzeile unter Vermögensübersicht und Rendite. */
+.hb-inv-overview-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  border-top: 1px solid var(--border-light);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.hb-inv-overview-total-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.hb-inv-overview-total-label svg {
+  width: 16px;
+  height: 16px;
+}
+
+.hb-inv-overview-total-value {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hb-inv-return-value {
+  font-size: 22px;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.hb-inv-return-sub {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: right;
+  margin-top: 2px;
+}
+
+/* Transaktionstabelle: Breiten nur hier, die Einträgetabelle bleibt unberührt. */
+.hb-inv-tx-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.hb-inv-tx-table .hb-col-date { width: 10%; }
+.hb-inv-tx-table .hb-col-type { width: 10%; }
+
+.hb-inv-tx-table .hb-col-asset {
+  width: auto;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-inv-tx-table .hb-col-depot {
+  width: 14%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-inv-tx-table .hb-col-qty,
+.hb-inv-tx-table .hb-col-price {
+  width: 11%;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.hb-inv-tx-table .hb-col-amount { width: 18%; }
+.hb-inv-tx-table .hb-col-actions { width: 88px; }
+
+@media (max-width: 768px) {
+  .hb-inv-tx-table .hb-col-depot,
+  .hb-inv-tx-table .hb-col-price {
+    display: none;
+  }
 }

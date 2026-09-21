@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -12,9 +12,10 @@ import { Card, CardContent, RangeTabs } from "../../components/ui.jsx";
 import HbTooltip from "../../components/HbTooltip.jsx";
 import { IconTrend } from "../../components/icons.jsx";
 import { useThemeColors } from "../../hooks/themeColors.js";
+import { useCardBg } from "../../hooks/useCardBg.js";
 import { formatCurrencyAxis, formatDateDE } from "../../utils/hbUtils.js";
-import { formatPercent, gainClass } from "../../utils/investmentFormat.js";
-import { summarizeSnapshots } from "../../utils/investmentUtils.js";
+import { formatFetchedAt, formatPercent, gainClass } from "../../utils/investmentFormat.js";
+import { windowSnapshots } from "../../utils/investmentUtils.js";
 
 const HELP_HISTORY =
   "Das Haushaltsbuch hält den Depotwert fest, sobald alle offenen Positionen einen Kurs " +
@@ -24,167 +25,277 @@ const HELP_HISTORY =
   "ersetzt der neuere Wert den älteren — der Tagespunkt ist also der zuletzt gesehene " +
   "Wert des Tages, kein Schlusskurs. Rückwirkend gibt es keine Werte.";
 
-// Erst ab dieser Zahl von Punkten lohnt ein Zeitraum-Umschalter; bei drei
-// Punkten wäre er Zierrat.
-const RANGE_THRESHOLD = 30;
-
 const RANGE_OPTIONS = [
-  { value: 30, label: "30 Tage" },
-  { value: 90, label: "90 Tage" },
-  { value: 0, label: "Alles" },
+  { value: "1m", label: "1M" },
+  { value: "3m", label: "3M" },
+  { value: "6m", label: "6M" },
+  { value: "12m", label: "12M" },
+  { value: "ytd", label: "YTD" },
+  { value: "all", label: "Gesamt" },
 ];
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Ab so vielen Punkten werden die Punkte auf der Linie zur Perlenkette.
+const DOT_LIMIT = 60;
+
+const toT = (iso) => new Date(`${iso}T12:00:00`).getTime();
+
 /**
- * Verlauf des Depotwerts aus den Tages-Snapshots (Beschluss F).
+ * Achsenmarken für die Zeitachse. Bis etwa sechs Wochen eine Marke pro Woche,
+ * darüber je Monatserster — ausgedünnt, sobald es mehr als acht würden.
+ */
+function buildTicks(startT, endT) {
+  if (endT - startT <= 45 * DAY_MS) {
+    const ticks = [];
+    for (let t = startT; t <= endT; t += 7 * DAY_MS) ticks.push(t);
+    return { ticks, monthly: false };
+  }
+  const months = [];
+  const d = new Date(startT);
+  d.setDate(1);
+  d.setHours(12, 0, 0, 0);
+  if (d.getTime() < startT) d.setMonth(d.getMonth() + 1);
+  while (d.getTime() <= endT) {
+    months.push(d.getTime());
+    d.setMonth(d.getMonth() + 1);
+  }
+  const step = Math.ceil(months.length / 8);
+  return { ticks: months.filter((_, i) => i % step === 0), monthly: true };
+}
+
+/**
+ * Kopfkarte des Investment-Views: links der Depotwert mit nicht realisierter
+ * G/V und Kursstand, rechts der Verlauf aus den Tages-Snapshots (Beschluss F).
  *
- * Die Kurve beginnt beim ersten Snapshot und füllt sich von da an — es gibt
- * keine Rückrechnung. Deshalb drei Zustände statt eines leeren Charts:
- * gar kein Punkt (Erklärung), genau ein Punkt (eine Zahl, kein Verlauf) und
- * ab zwei Punkten die Linie.
+ * Der Wert links ist der Live-Wert aus den Positionen, nicht der letzte
+ * Snapshot — er steht auch dann, wenn es noch keinen Verlauf gibt. Für den
+ * Verlauf gibt es drei Zustände: gar kein Punkt (Erklärung), genau ein Punkt
+ * (Hinweis, kein Ein-Punkt-Diagramm) und ab zwei Punkten die Fläche.
  *
  * @param {object} props
+ * @param {object} props.total Ergebnis von summarizePositions
+ * @param {number} props.depotCount
  * @param {Array<object>} props.snapshots book.investments.snapshots, nach Datum sortiert
- * @param {number} props.depotCount Anzahl Depots — entscheidet über die Aufschlüsselung im Tooltip
  * @param {Map<string, string>} props.depotNames depotId -> Name
  * @param {number} props.unpricedCount offene Positionen ohne Kurs
+ * @param {string|null} props.oldestFetchedAt ältester Kurszeitpunkt
+ * @param {boolean} props.hasStale
+ * @param {boolean} props.tall volle Höhe, wenn daneben keine Aufteilung steht
  * @param {(n: number) => string} props.fmt
  * @param {string} props.baseCurrency
  */
 export default function ValueHistoryCard({
-  snapshots,
+  total,
   depotCount,
+  snapshots,
   depotNames,
   unpricedCount,
+  oldestFetchedAt,
+  hasStale,
+  tall,
   fmt,
   baseCurrency,
 }) {
   const themeColors = useThemeColors();
-  const [rangeDays, setRangeDays] = useState(0);
+  const cardBg = useCardBg();
+  const gradientId = useId();
+  const [range, setRange] = useState("all");
 
-  const stats = useMemo(() => summarizeSnapshots(snapshots), [snapshots]);
+  const count = (snapshots || []).length;
+  const chartHeight = tall ? 300 : 220;
 
-  // Der Zeitstempel als Zahl: mit einer Kategorieachse sähe eine dreimonatige
+  // Zeitstempel als Zahl: mit einer Kategorieachse sähe eine dreimonatige
   // Lücke genauso breit aus wie ein Tagesabstand — das Diagramm erfände einen
   // Verlauf, den es nie gemessen hat.
-  const data = useMemo(() => {
-    const rows = (snapshots || []).map((s) => ({
-      ...s,
-      t: new Date(`${s.date}T12:00:00`).getTime(),
-    }));
-    if (!rangeDays || rows.length === 0) return rows;
-    // Anker ist der letzte Messpunkt, nicht die aktuelle Uhrzeit: Das hält die
-    // Berechnung rein (sie hängt nur von den Daten ab) und zeigt auch dann die
-    // letzten Wochen, wenn die App längere Zeit nicht offen war.
-    const cutoff = rows[rows.length - 1].t - rangeDays * 24 * 60 * 60 * 1000;
-    const windowed = rows.filter((r) => r.t >= cutoff);
-    // Ein Fenster mit einem einzigen Punkt ergäbe keine Linie — dann lieber alles.
-    return windowed.length >= 2 ? windowed : rows;
-  }, [snapshots, rangeDays]);
+  const view = useMemo(() => {
+    const { rows, domainStart } = windowSnapshots(snapshots, range);
+    const data = rows.map((s) => ({ ...s, t: toT(s.date) }));
+    if (data.length < 2) return { data, startT: null, endT: null, ticks: [], monthly: false };
+    const startT = toT(domainStart);
+    const endT = data[data.length - 1].t;
+    return { data, startT, endT, ...buildTicks(startT, endT) };
+  }, [snapshots, range]);
 
-  const header = (
-    <div className="hb-row" style={{ alignItems: "flex-start", marginBottom: 12, gap: 8 }}>
-      <div>
-        <div className="hb-title-with-help">
-          <h3 className="hb-card-title">Depotwert-Verlauf</h3>
-          <HbTooltip text={HELP_HISTORY} />
-        </div>
-        {stats.change !== null && (
-          <div style={{ fontSize: 12, marginTop: 4 }}>
-            <span className={gainClass(stats.change)}>
-              {stats.change > 0 ? "+" : ""}
-              {fmt(stats.change)}
-              {stats.changePct !== null && ` (${formatPercent(stats.changePct)})`}
-            </span>{" "}
-            <span className="hb-muted">seit {formatDateDE(stats.first.date)}</span>
-          </div>
-        )}
-      </div>
-      {stats.count > RANGE_THRESHOLD && (
-        <RangeTabs
-          options={RANGE_OPTIONS}
-          value={rangeDays}
-          onChange={setRangeDays}
-          ariaLabel="Zeitraum wählen"
-        />
-      )}
-    </div>
-  );
+  // Veränderung im gewählten Zeitraum. Sie enthält Käufe und Verkäufe — ein
+  // Kauf für 5000 erschiene als +5000. Deshalb neutral und nicht als Gewinn
+  // eingefärbt.
+  const delta =
+    view.data.length >= 2 ? view.data[view.data.length - 1].total - view.data[0].total : null;
+
+  const accent = themeColors.accent;
+  const gain = total.unrealizedGain;
 
   return (
-    <Card>
+    <Card className="hb-inv-cell--hero">
       <CardContent>
-        {header}
-        <div className="hb-inv-chart-slot">
-          {stats.count === 0 ? (
-            <EmptyHistory unpricedCount={unpricedCount} />
-          ) : stats.count === 1 ? (
-            <SingleSnapshot snapshot={stats.last} fmt={fmt} />
-          ) : (
-            <ResponsiveContainer width="100%" height={230}>
-              <LineChart data={data} margin={{ top: 4, right: 12, bottom: 0, left: 0 }}>
-                <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-                <XAxis
-                  dataKey="t"
-                  type="number"
-                  scale="time"
-                  domain={["dataMin", "dataMax"]}
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(t) =>
-                    new Date(t).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit" })
-                  }
-                  height={28}
+        <div className={`hb-inv-hero${tall ? " hb-inv-hero--tall" : ""}`}>
+          <div className="hb-inv-hero-summary">
+            <div>
+              <div className="hb-inv-hero-label">Depotwert</div>
+              <div className="hb-inv-hero-value">
+                {total.marketValue === null ? "—" : fmt(total.marketValue)}
+              </div>
+              {gain !== null && (
+                <div className="hb-inv-hero-gain">
+                  <span className={gainClass(gain)}>
+                    {gain > 0 ? "+" : ""}
+                    {fmt(gain)} ({formatPercent(total.unrealizedGainPct)})
+                  </span>{" "}
+                  <span className="hb-muted">nicht realisiert</span>
+                </div>
+              )}
+              {delta !== null && (
+                <div
+                  className="hb-inv-hero-delta"
+                  title="Wertveränderung im gewählten Zeitraum, inklusive Käufe und Verkäufe"
+                >
+                  {delta > 0 ? "+" : ""}
+                  {fmt(delta)} seit {formatDateDE(view.data[0].date)}
+                </div>
+              )}
+            </div>
+
+            <div className="hb-inv-hero-meta">
+              <div>
+                {total.positionCount} Position{total.positionCount === 1 ? "" : "en"} in{" "}
+                {depotCount} Depot{depotCount === 1 ? "" : "s"}
+              </div>
+              <div className="hb-inv-hero-meta-row">
+                <span>
+                  {oldestFetchedAt
+                    ? `Kurse: Stand ${formatFetchedAt(oldestFetchedAt)}`
+                    : "Noch keine Kurse abgerufen"}
+                </span>
+                {hasStale && (
+                  <span
+                    className="hb-badge hb-inv-pill hb-inv-pill--stale"
+                    title="Die App konnte die Kurse nicht neu abrufen und zeigt die letzten bekannten."
+                  >
+                    veraltet
+                  </span>
+                )}
+              </div>
+              {unpricedCount > 0 && (
+                <div className="hb-stat-pill-delta-note">
+                  {unpricedCount} Position{unpricedCount === 1 ? "" : "en"} ohne Kurs
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="hb-inv-hero-chart">
+            <div className="hb-inv-hero-chart-head">
+              <HbTooltip text={HELP_HISTORY} />
+              {count >= 2 && (
+                <RangeTabs
+                  options={RANGE_OPTIONS}
+                  value={range}
+                  onChange={setRange}
+                  ariaLabel="Zeitraum wählen"
                 />
-                <YAxis
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)}
-                  width={64}
-                  domain={["auto", "auto"]}
-                />
-                <Tooltip
-                  wrapperStyle={{ zIndex: 10 }}
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const row = payload[0].payload;
-                    const index = data.findIndex((d) => d.date === row.date);
-                    const prev = index > 0 ? data[index - 1] : null;
-                    const delta = prev ? row.total - prev.total : null;
-                    return (
-                      <div className="hb-chart-tooltip">
-                        <span className="hb-chart-tooltip-label">{formatDateDE(row.date)}</span>
-                        <TooltipRow label="Depotwert" value={fmt(row.total)} />
-                        {delta !== null && (
-                          <TooltipRow
-                            label="ggü. Vorpunkt"
-                            value={`${delta > 0 ? "+" : ""}${fmt(delta)}`}
-                            className={gainClass(delta)}
-                          />
-                        )}
-                        {depotCount > 1 &&
-                          row.byDepot.map((d) => (
-                            <TooltipRow
-                              key={d.depotId}
-                              label={depotNames.get(d.depotId) || "Gelöschtes Depot"}
-                              value={fmt(d.value)}
-                              muted
-                            />
-                          ))}
-                      </div>
-                    );
-                  }}
-                />
-                {/* Sichtbare Punkte: die Reihe ist dünn und unregelmäßig besetzt —
-                    eine nackte Linie behauptete eine Kontinuität, die es nicht gibt. */}
-                <Line
-                  type="monotone"
-                  dataKey="total"
-                  stroke={themeColors.accent}
-                  strokeWidth={2}
-                  dot={{ r: 3, strokeWidth: 0, fill: themeColors.accent }}
-                  activeDot={{ r: 5 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
+              )}
+            </div>
+
+            <div className="hb-inv-hero-slot" style={{ minHeight: chartHeight }}>
+              {count === 0 ? (
+                <EmptyHistory unpricedCount={unpricedCount} />
+              ) : count === 1 ? (
+                <SingleSnapshot snapshot={snapshots[0]} />
+              ) : (
+                <ResponsiveContainer width="100%" height={chartHeight}>
+                  <AreaChart data={view.data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                    <defs>
+                      <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={accent} stopOpacity={0.28} />
+                        <stop offset="70%" stopColor={accent} stopOpacity={0.08} />
+                        <stop offset="100%" stopColor={accent} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
+                    {/* allowDataOverflow schneidet den Vorpunkt vor dem Fensterbeginn
+                        am linken Rand ab — die Linie beginnt am Rand, die Achse
+                        dehnt sich aber nicht auf seinen Zeitpunkt aus. */}
+                    <XAxis
+                      dataKey="t"
+                      type="number"
+                      scale="time"
+                      domain={[view.startT, view.endT]}
+                      allowDataOverflow
+                      ticks={view.ticks}
+                      tick={{ fontSize: 11 }}
+                      tickFormatter={(t) =>
+                        new Date(t).toLocaleDateString(
+                          "de-CH",
+                          view.monthly ? { month: "short", year: "2-digit" } : { day: "2-digit", month: "2-digit" },
+                        )
+                      }
+                      axisLine={false}
+                      tickLine={false}
+                      height={28}
+                    />
+                    {/* Basis 0: eine Fläche kodiert Menge ab der Grundlinie; eine
+                        abgeschnittene Achse dramatisierte jede Schwankung. */}
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)}
+                      width={64}
+                      domain={[0, "auto"]}
+                      tickCount={4}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      wrapperStyle={{ zIndex: 10 }}
+                      cursor={{ stroke: themeColors.muted, strokeDasharray: "3 3" }}
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const row = payload[0].payload;
+                        const index = view.data.findIndex((d) => d.date === row.date);
+                        const prev = index > 0 ? view.data[index - 1] : null;
+                        const step = prev ? row.total - prev.total : null;
+                        return (
+                          <div className="hb-chart-tooltip">
+                            <span className="hb-chart-tooltip-label">{formatDateDE(row.date)}</span>
+                            <TooltipRow label="Depotwert" value={fmt(row.total)} />
+                            {step !== null && (
+                              <TooltipRow
+                                label="ggü. Vorpunkt"
+                                value={`${step > 0 ? "+" : ""}${fmt(step)}`}
+                                className={gainClass(step)}
+                              />
+                            )}
+                            {depotCount > 1 &&
+                              row.byDepot.map((d) => (
+                                <TooltipRow
+                                  key={d.depotId}
+                                  label={depotNames.get(d.depotId) || "Gelöschtes Depot"}
+                                  value={fmt(d.value)}
+                                  muted
+                                />
+                              ))}
+                          </div>
+                        );
+                      }}
+                    />
+                    {/* Sichtbare Punkte, solange die Reihe dünn ist: sie ist
+                        unregelmäßig besetzt, eine nackte Linie behauptete eine
+                        Kontinuität, die es nicht gibt. */}
+                    <Area
+                      type="monotone"
+                      dataKey="total"
+                      stroke={accent}
+                      strokeWidth={2}
+                      fill={`url(#${gradientId})`}
+                      dot={view.data.length <= DOT_LIMIT ? { r: 2.5, strokeWidth: 0, fill: accent } : false}
+                      activeDot={{ r: 4, stroke: cardBg, strokeWidth: 2, fill: accent }}
+                      isAnimationActive={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -221,18 +332,15 @@ function EmptyHistory({ unpricedCount }) {
 }
 
 /**
- * Ein einzelner Punkt ist eine Zahl, kein Verlauf. Ein Diagramm mit einem
- * Datenpunkt sieht aus wie ein Fehler; die große Zahl sagt dasselbe ehrlich.
+ * Ein einzelner Punkt ist kein Verlauf; ein Diagramm mit einem Datenpunkt
+ * sieht aus wie ein Fehler. Der Wert selbst steht schon links.
  */
-function SingleSnapshot({ snapshot, fmt }) {
+function SingleSnapshot({ snapshot }) {
   return (
-    <div style={{ textAlign: "center" }}>
-      <div className="hb-inv-hero-value">{fmt(snapshot.total)}</div>
-      <div className="hb-muted" style={{ fontSize: 12, marginTop: 2 }}>
-        Stand vom {formatDateDE(snapshot.date)}
-      </div>
-      <div className="hb-muted" style={{ fontSize: 12, marginTop: 10 }}>
-        Ab dem zweiten Messpunkt wird daraus eine Linie.
+    <div className="hb-empty hb-empty--sm">
+      <div className="hb-empty-icon"><IconTrend /></div>
+      <div className="hb-empty-text">
+        Erster Messpunkt am {formatDateDE(snapshot.date)}. Ab dem zweiten wird daraus eine Linie.
       </div>
     </div>
   );

@@ -25,7 +25,6 @@ import {
   calcAllocationByDepot,
   calcDepotSummaries,
   calcPositions,
-  hasAllocation,
   listTransactions,
   summarizePositions,
   transactionsForPosition,
@@ -45,8 +44,10 @@ import {
 import { useInvestmentQuotes } from "../hooks/useInvestmentQuotes.js";
 import { useSnapshotRecorder } from "../hooks/useSnapshotRecorder.js";
 import AllocationCard from "./investments/AllocationCard.jsx";
+import DepotOverviewCard from "./investments/DepotOverviewCard.jsx";
 import DepotsManager from "./investments/DepotsManager.jsx";
 import InvestmentTransactionDialog from "./investments/InvestmentTransactionDialog.jsx";
+import ReturnsCard from "./investments/ReturnsCard.jsx";
 import TransactionsCard from "./investments/TransactionsCard.jsx";
 import ValueHistoryCard from "./investments/ValueHistoryCard.jsx";
 import { buildPositionColumns } from "./investments/positionColumns.jsx";
@@ -113,7 +114,9 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
     () => positions.filter((p) => p.isOpen && !p.priced).length,
     [positions]
   );
-  const showAllocation = hasAllocation(byClass, byDepot);
+  // Ein Donut mit einem einzigen Segment sagt nichts, was der Depotwert nicht
+  // schon sagt.
+  const showAllocation = byClass.length > 1;
 
   const txRows = useMemo(() => listTransactions(investments), [investments]);
 
@@ -144,17 +147,6 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
             </span>
           )}
           {d.positions.length === 0 && <span className="hb-muted">noch leer</span>}
-          <OverflowMenu
-            buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
-            label={`Aktionen für „${d.name}“`}
-            items={[
-              {
-                label: "Transaktion in diesem Depot erfassen",
-                onClick: () => openNewTransaction(d.depotId, ""),
-              },
-              { label: "Depots verwalten", onClick: () => setDepotsOpen(true) },
-            ]}
-          />
         </>
       ),
     }));
@@ -383,37 +375,21 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
     );
   }
 
+  // Kursstand und Depotverwaltung stehen dort, wo sie etwas einschränken bzw.
+  // bearbeiten: im Kopf der Depotwert-Karte und in der Vermögensübersicht.
   const header = (
-    <div className="hb-row" style={{ marginBottom: 16, alignItems: "center" }}>
-      <div className="hb-info-pills">
-        <span className="hb-info-pill">
-          {oldestFetchedAt ? `Stand vom ${formatFetchedAt(oldestFetchedAt)}` : "Noch keine Kurse abgerufen"}
-        </span>
-        {hasStale && (
-          <span
-            className="hb-badge hb-inv-pill hb-inv-pill--stale"
-            title="Die App konnte die Kurse nicht neu abrufen und zeigt die letzten bekannten."
-          >
-            Kurse veraltet
-          </span>
-        )}
-      </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <Button
-          variant="outline"
-          onClick={() => refresh({ bypassCache: true })}
-          disabled={loading || !available}
-          title={available ? undefined : "Kurse gibt es nur in der Desktop-App."}
-        >
-          <IconRefresh /> {loading ? "Wird aktualisiert …" : "Kurse aktualisieren"}
-        </Button>
-        <Button variant="outline" onClick={() => setDepotsOpen(true)}>
-          <IconWallet /> Depots verwalten
-        </Button>
-        <Button onClick={() => openNewTransaction(depots[0]?.id || "", "")}>
-          <IconPlus /> Transaktion erfassen
-        </Button>
-      </div>
+    <div className="hb-inv-header">
+      <Button
+        variant="outline"
+        onClick={() => refresh({ bypassCache: true })}
+        disabled={loading || !available}
+        title={available ? undefined : "Kurse gibt es nur in der Desktop-App."}
+      >
+        <IconRefresh /> {loading ? "Wird aktualisiert …" : "Kurse aktualisieren"}
+      </Button>
+      <Button onClick={() => openNewTransaction(depots[0]?.id || "", "")}>
+        <IconPlus /> Transaktion erfassen
+      </Button>
     </div>
   );
 
@@ -433,9 +409,16 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
                 Erfasse deinen ersten Kauf. Vergangene Käufe sind ausdrücklich erlaubt —
                 Bestand, Einstand und Gewinn werden rückwirkend berechnet.
               </div>
-              <Button onClick={() => openNewTransaction(depots[0]?.id || "", "")}>
-                <IconPlus /> Transaktion erfassen
-              </Button>
+              <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                <Button onClick={() => openNewTransaction(depots[0]?.id || "", "")}>
+                  <IconPlus /> Transaktion erfassen
+                </Button>
+                {/* Die Depotverwaltung wohnt sonst in der Vermögensübersicht,
+                    die es ohne Buchungen noch nicht gibt. */}
+                <Button variant="outline" onClick={() => setDepotsOpen(true)}>
+                  <IconWallet /> Depots verwalten
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -449,79 +432,38 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
       {header}
       {notice && <NoticeBar notice={notice} onRetry={() => refresh({ bypassCache: true })} />}
 
-      <div className="hb-stat-pills" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
-        <div className="hb-stat-pill hb-stat-pill--accent">
-          <div className="hb-stat-pill-label">Depotwert</div>
-          <div className="hb-stat-pill-value">
-            {total.marketValue === null ? "—" : fmt(total.marketValue)}
-          </div>
-          <div className="hb-stat-pill-sub">
-            {total.marketValue === null
-              ? "keine Kurse verfügbar"
-              : `${total.positionCount} Position${total.positionCount === 1 ? "" : "en"} in ${depots.length} Depot${depots.length === 1 ? "" : "s"}`}
-          </div>
-          {total.hasUnpriced && (
-            <div className="hb-stat-pill-delta-note">
-              {positions.filter((p) => p.isOpen && !p.priced).length} Positionen ohne Kurs
-            </div>
-          )}
-        </div>
-
-        <div className="hb-stat-pill hb-stat-pill--plan">
-          <div className="hb-stat-pill-label">Eingesetzt</div>
-          <div className="hb-stat-pill-value">{fmt(total.costBasis)}</div>
-          <div className="hb-stat-pill-sub">inkl. {fmt(total.fees)} Gebühren</div>
-        </div>
-
-        <div className={`hb-stat-pill ${pillTone(total.unrealizedGain)}`}>
-          <div className="hb-stat-pill-label">Nicht realisiert</div>
-          <div className={`hb-stat-pill-value ${gainClass(total.unrealizedGain)}`}>
-            {total.unrealizedGain === null
-              ? "—"
-              : `${total.unrealizedGain > 0 ? "+" : ""}${fmt(total.unrealizedGain)}`}
-          </div>
-          <div className="hb-stat-pill-sub">{formatPercent(total.unrealizedGainPct)}</div>
-        </div>
-
-        <div className={`hb-stat-pill ${pillTone(total.totalReturn)}`}>
-          <div className="hb-stat-pill-label">Gesamtrendite</div>
-          <div className={`hb-stat-pill-value ${gainClass(total.totalReturn)}`}>
-            {total.totalReturn > 0 ? "+" : ""}
-            {fmt(total.totalReturn)}
-          </div>
-          <div className="hb-stat-pill-sub">
-            realisiert {fmt(total.realizedGain)} · Ausschüttungen {fmt(total.dividends)}
-          </div>
-        </div>
+      {/* Links Depotwert und Aufteilung, rechts Depots und Rendite — die
+          Kennzahlen sitzen in den Karten statt als Pillen über dem View.
+          Ohne Aufteilung (nur eine Klasse) läuft die Depotwert-Karte über
+          beide Zeilen, damit links keine Lücke bleibt. */}
+      <div className={`hb-inv-grid${showAllocation ? "" : " hb-inv-grid--no-alloc"}`}>
+        <ValueHistoryCard
+          total={total}
+          depotCount={depots.length}
+          snapshots={investments.snapshots || []}
+          depotNames={depotNames}
+          unpricedCount={unpricedCount}
+          oldestFetchedAt={oldestFetchedAt}
+          hasStale={hasStale}
+          tall={!showAllocation}
+          fmt={fmt}
+          baseCurrency={baseCurrency}
+        />
+        <DepotOverviewCard
+          depotSummaries={depotSummaries}
+          byDepot={byDepot}
+          depotAccent={depotAccent}
+          total={total}
+          onManageDepots={() => setDepotsOpen(true)}
+          fmt={fmt}
+        />
+        {showAllocation && (
+          <AllocationCard byClass={byClass} unpricedCount={unpricedCount} fmt={fmt} />
+        )}
+        <ReturnsCard total={total} fmt={fmt} />
       </div>
 
-      <div className="hb-stack hb-stack--lg" style={{ marginTop: 16 }}>
-        {/* Allokation links, Verlauf rechts: Der Verlauf ist in den ersten
-            Wochen leer — die stabil gefüllte Karte gehört nach links. Bei
-            einer einzigen Klasse und einem einzigen Depot entfällt der Donut
-            und der Verlauf nimmt die ganze Breite. */}
-        <div className={showAllocation ? "hb-two" : undefined}>
-          {showAllocation && (
-            <AllocationCard
-              byClass={byClass}
-              byDepot={byDepot}
-              depotSummaries={depotSummaries}
-              total={total}
-              depotAccent={depotAccent}
-              unpricedCount={unpricedCount}
-              fmt={fmt}
-            />
-          )}
-          <ValueHistoryCard
-            snapshots={investments.snapshots || []}
-            depotCount={depots.length}
-            depotNames={depotNames}
-            unpricedCount={unpricedCount}
-            fmt={fmt}
-            baseCurrency={baseCurrency}
-          />
-        </div>
-
+      <div className="hb-stack hb-stack--lg" style={{ marginTop: 20 }}>
         <Card>
           <CardContent>
             <DataTable
@@ -535,10 +477,6 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
                   buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
                   label={`Aktionen für „${row.name}“`}
                   items={[
-                    {
-                      label: "Transaktion erfassen",
-                      onClick: () => openNewTransaction(row.depotId, row.assetId),
-                    },
                     {
                       label: "Kurse neu laden",
                       disabled: !available,
@@ -559,6 +497,7 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
           depotAccent={depotAccent}
           onEdit={openEditTransaction}
           onDelete={deleteTransaction}
+          onAdd={() => openNewTransaction(depots[0]?.id || "", "")}
           fmt={fmt}
           baseCurrency={baseCurrency}
         />
@@ -567,14 +506,6 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
       {dialogs}
     </>
   );
-}
-
-/** Grüner/roter Rand der KPI-Pille. `null` bleibt neutral. */
-function pillTone(value) {
-  if (value === null || value === undefined) return "";
-  if (value > 0) return "hb-stat-pill--ok";
-  if (value < 0) return "hb-stat-pill--bad";
-  return "";
 }
 
 function DetailRow({ label, value, className }) {
