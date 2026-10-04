@@ -19,10 +19,13 @@ const NAV_ITEMS = [
   { id: "reserves", label: "Rückstellungen", Icon: IconReserves },
   { id: "costgroups", label: "Kostenrechner", Icon: IconCostGroups },
   { id: "trend", label: "Trend", Icon: IconTrend },
-  { id: "investments", label: "Investments", Icon: IconInvest },
-  // Nur im Dev-Modus: Testbench für die Marktdaten-Abrufe, im Release unsichtbar.
+  // Nur im Dev-Modus: der Investment-View (noch in Arbeit) und die Testbench für die
+  // Marktdaten-Abrufe, beide im Release unsichtbar.
   ...(import.meta.env.DEV
-    ? [{ id: "marketdebug", label: "Marktdaten (Debug)", Icon: IconTrend }]
+    ? [
+        { id: "investments", label: "Investments", Icon: IconInvest },
+        { id: "marketdebug", label: "Marktdaten (Debug)", Icon: IconTrend },
+      ]
     : []),
 ];
 

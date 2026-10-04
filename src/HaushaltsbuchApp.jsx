@@ -18,7 +18,6 @@ import NavDrawer from "./features/NavDrawer.jsx";
 import EditEntryDialog from "./features/EditEntryDialog.jsx";
 import AppToolbar from "./features/AppToolbar.jsx";
 import DashboardView from "./features/DashboardView.jsx";
-import InvestmentsView from "./features/InvestmentsView.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 import {
@@ -43,6 +42,10 @@ import { useEntryActions } from "./hooks/useEntryActions.js";
 // Zweig, den der Production-Build als toten Code entfernt — so bleibt sie aus dem Release.
 const MarketDebugView = import.meta.env.DEV
   ? lazy(() => import("./features/MarketDebugView.jsx"))
+  : null;
+// Investment-View: noch in Arbeit und deshalb ebenfalls nur im Dev-Modus geladen.
+const InvestmentsView = import.meta.env.DEV
+  ? lazy(() => import("./features/InvestmentsView.jsx"))
   : null;
 
 const VIEW_LABELS = { trend: "Trend", goals: "Sparziele", fixed: "Fixkosten", reserves: "Rückstellungen", costgroups: "Kostenrechner", investments: "Investments", marketdebug: "Marktdaten (Debug)" };
@@ -318,8 +321,10 @@ export default function HaushaltsbuchApp() {
                 onAddEntries={entryActions.addEntries}
                 onNavigateToFixed={() => setView("fixed")}
               />
-            ) : view === "investments" ? (
-              <InvestmentsView activeBook={activeBook} onUpdateBook={updateBook} />
+            ) : view === "investments" && InvestmentsView ? (
+              <Suspense fallback={<div style={{ padding: 16 }}>Lädt…</div>}>
+                <InvestmentsView activeBook={activeBook} onUpdateBook={updateBook} />
+              </Suspense>
             ) : view === "costgroups" ? (
               <CostGroupsView
                 activeBook={activeBook}
