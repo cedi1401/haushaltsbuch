@@ -128,7 +128,7 @@ export default function TransactionsCard({
                         </span>
                       </td>
                       <td className="hb-col-qty hb-right">
-                        {isDividend ? "—" : formatQuantity(row.quantity, row.unit)}
+                        {isDividend ? "—" : formatQuantity(row.quantity, row.unit, row.assetClass)}
                       </td>
                       <td className="hb-col-price hb-right">
                         {isDividend ? (

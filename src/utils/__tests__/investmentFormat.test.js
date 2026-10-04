@@ -24,6 +24,14 @@ describe('formatQuantity', () => {
     expect(formatQuantity(120, 'g')).toBe('120 g');
   });
 
+  it('zeigt bei Krypto bis zu acht Nachkommastellen', () => {
+    expect(formatQuantity(0.00054321, 'pcs', 'crypto')).toBe('0.00054321 Stk');
+  });
+
+  it('rundet kleine Krypto-Mengen ohne Anlageklasse noch auf vier Stellen', () => {
+    expect(formatQuantity(0.00054321, 'pcs')).toBe('0.0005 Stk');
+  });
+
   it('fällt bei unbekannter Einheit auf Stück zurück', () => {
     expect(formatQuantity(2, 'kg')).toBe('2 Stk');
   });

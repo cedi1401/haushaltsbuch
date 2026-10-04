@@ -11,11 +11,16 @@ import { QUANTITY_UNIT_LABELS } from "./investmentModel.js";
  * deshalb bis zu vier Nachkommastellen, aber keine Nullen zum Auffüllen
  * (3 Stk statt 3,0000 Stk).
  *
+ * Krypto bekommt acht Stellen: ein Bestand von 0,00054321 BTC wäre bei vier
+ * Stellen auf „0,0005" gerundet und damit als Mengenangabe unbrauchbar.
+ * Gerechnet wird überall mit dem vollen Wert, das hier ist nur die Anzeige.
+ *
  * @param {number} quantity
  * @param {"pcs"|"g"|"oz"} unit
+ * @param {string} [assetClass] Anlageklasse der Position/Buchung
  * @returns {string}
  */
-export function formatQuantity(quantity, unit = "pcs") {
+export function formatQuantity(quantity, unit = "pcs", assetClass = null) {
   // Number(null) ist 0 und damit endlich — null muss vorher abgefangen werden,
   // sonst liest sich „kein Bestand bekannt" wie ein Bestand von 0.
   if (quantity === null || quantity === undefined) return "—";
@@ -23,7 +28,7 @@ export function formatQuantity(quantity, unit = "pcs") {
   if (!Number.isFinite(n)) return "—";
   const text = new Intl.NumberFormat("de-CH", {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 4,
+    maximumFractionDigits: assetClass === "crypto" ? 8 : 4,
   }).format(n);
   const label = QUANTITY_UNIT_LABELS[unit] || QUANTITY_UNIT_LABELS.pcs;
   return `${text} ${label}`;

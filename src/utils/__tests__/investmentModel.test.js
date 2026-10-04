@@ -142,9 +142,14 @@ describe('normalizeAsset', () => {
   });
 
   it('falls back to "other" for an unknown asset class', () => {
-    const result = normalizeAsset({ symbol: 'AAPL', assetClass: 'crypto' });
+    const result = normalizeAsset({ symbol: 'AAPL', assetClass: 'bond' });
     expect(result.assetClass).toBe('other');
     expect(ASSET_CLASSES).toContain(result.assetClass);
+  });
+
+  it('keeps "crypto" as an asset class', () => {
+    const result = normalizeAsset({ symbol: 'BTC-USD', assetClass: 'crypto' });
+    expect(result.assetClass).toBe('crypto');
   });
 
   it('uses the symbol as name when none is given', () => {

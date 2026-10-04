@@ -17,13 +17,13 @@
 
 import { generateId } from "./idUtils.js";
 
-export const ASSET_CLASSES = ["stock", "etf", "metal", "bond", "other"];
+export const ASSET_CLASSES = ["stock", "etf", "metal", "crypto", "other"];
 
 export const ASSET_CLASS_LABELS = {
   stock: "Aktie",
   etf: "ETF",
   metal: "Edelmetall",
-  bond: "Anleihe",
+  crypto: "Krypto",
   other: "Sonstiges",
 };
 

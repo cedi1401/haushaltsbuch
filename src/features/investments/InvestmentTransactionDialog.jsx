@@ -297,7 +297,7 @@ export default function InvestmentTransactionDialog({
         ? normalizedQuantity(editing.transaction, { kind: isMetal ? "metal" : "security" })
         : 0;
     if (wanted <= held + ownOld) return null;
-    return `Mehr als der aktuelle Bestand (${formatQuantity(held + ownOld, isMetal ? "oz" : "pcs")}).`;
+    return `Mehr als der aktuelle Bestand (${formatQuantity(held + ownOld, isMetal ? "oz" : "pcs", pos?.assetClass)}).`;
   }, [draft.type, draft.depotId, draft.assetId, draft.unit, quantityNum, positions, isMetal, editing]);
 
   const hasAsset = Boolean(draft.assetId || draft.symbol);
@@ -755,6 +755,6 @@ function guessAssetClass(type) {
   const t = String(type || "").toUpperCase();
   if (t === "ETF") return "etf";
   if (t === "EQUITY") return "stock";
-  if (t === "BOND" || t === "MUTUALFUND") return "bond";
+  if (t === "CRYPTOCURRENCY") return "crypto";
   return "other";
 }

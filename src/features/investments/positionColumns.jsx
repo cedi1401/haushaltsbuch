@@ -8,17 +8,14 @@ import {
   gainClass,
 } from "../../utils/investmentFormat.js";
 
-// Farbe je Anlageklasse. Das ETF-Grün ist ein Petrolton, der sich vom
-// Gewinngrün sichtbar abhebt. Die Werte stehen als CSS-Variablen im
-// Stylesheet, damit Hell- und Dunkelmodus eigene Töne bekommen. Für SVG-
-// Füllungen (Donut) gibt es die aufgelösten Werte in `useThemeColors()`.
-// `crypto` ist vorbereitet, die Klasse gibt es im Modell noch nicht.
+// Farbe je Anlageklasse. Die Werte stehen als CSS-Variablen im Stylesheet,
+// damit Hell- und Dunkelmodus eigene Töne bekommen. Für SVG-Füllungen (Donut)
+// gibt es die aufgelösten Werte in `useThemeColors()`.
 export const ASSET_CLASS_COLORS = {
   etf: "var(--inv-class-etf)",
   stock: "var(--inv-class-stock)",
   metal: "var(--inv-class-metal)",
   crypto: "var(--inv-class-crypto)",
-  bond: "var(--inv-class-bond)",
   other: "var(--inv-class-other)",
 };
 
@@ -144,7 +141,7 @@ export function positionColumnCatalog({ fmt, baseCurrency }) {
       label: "Bestand",
       align: "right",
       sortValue: (row) => row.quantity,
-      render: (row) => formatQuantity(row.quantity, row.unit),
+      render: (row) => formatQuantity(row.quantity, row.unit, row.assetClass),
     },
     {
       id: "avgCost",

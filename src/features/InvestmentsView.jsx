@@ -289,7 +289,7 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
                   <span>
                     {tx.type === "dividend"
                       ? fmt(tx.price * tx.fxRate)
-                      : `${formatQuantity(tx.quantity, tx.unit)} × ${tx.price} ${tx.currency}`}
+                      : `${formatQuantity(tx.quantity, tx.unit, tx.assetClass)} × ${tx.price} ${tx.currency}`}
                   </span>
                   <OverflowMenu
                     buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
