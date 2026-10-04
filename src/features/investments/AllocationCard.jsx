@@ -14,7 +14,6 @@ const CLASS_COLOR_KEYS = {
   etf: "invEtf",
   metal: "invMetal",
   crypto: "invCrypto",
-  bond: "invBond",
   other: "invOther",
 };
 

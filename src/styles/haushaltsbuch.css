@@ -78,17 +78,17 @@
   --group-accent-8: #a0740d;  /* Ocker       H42  */
 
   /* Anlageklassen des Investment-Views (Donut, Farbpunkt „Klasse").
-     ETF ist ein Petrolgrün (H≈180), sichtbar getrennt vom Gewinngrün --green
-     (ΔE 16.4) — Grün bedeutet hier nicht Gewinn. Das Aktien-Blau ist bewusst
-     nicht der Accent, damit Verlaufskurve und Aktien-Segment unterscheidbar
-     bleiben. „Sonstiges" ist absichtlich unbunt — es ist der Restposten.
-     Krypto ist vorbereitet, die Klasse gibt es im Modell noch nicht.
-     Kontrast gegen --card #ffffff jeweils ≥ 3:1. */
-  --inv-class-stock:  #035ba2;  /* Blau        6.95:1 */
-  --inv-class-etf:    #0f9f8f;  /* Petrolgrün  3.29:1 */
-  --inv-class-metal:  #b98003;  /* Gold/Ocker  3.41:1 */
-  --inv-class-crypto: #8c67c8;  /* Violett     4.30:1 */
-  --inv-class-bond:   #a1287e;  /* Beere       6.73:1 */
+     Vier gesetzte Töne aus docs/colors.md — Blau, Grün, Gelb, Violett —, hier
+     als Flächenfarben: Grün bedeutet in diesem View nicht Gewinn, der
+     Gewinn/Verlust-Zustand steht als Prozentwert daneben. Das Aktien-Blau ist
+     bewusst nicht der Accent, damit Verlaufskurve und Aktien-Segment
+     unterscheidbar bleiben. „Sonstiges" ist absichtlich unbunt — es ist der
+     Restposten. Die Segmente trennt ein 3px-Rand in --card, Gelb und Grün
+     liegen gegen #ffffff darum unter 3:1; Beschriftung steht nie darauf. */
+  --inv-class-stock:  #3b82f6;  /* Blau        3.67:1 */
+  --inv-class-etf:    #22c55e;  /* Grün        2.30:1 */
+  --inv-class-metal:  #eab308;  /* Gelb        1.93:1 */
+  --inv-class-crypto: #8b5cf6;  /* Violett     4.23:1 */
   --inv-class-other:  #8e949c;  /* neutral     3.06:1 */
 
   /* Interactive states */
@@ -185,15 +185,12 @@
   --group-accent-7: #5cd689;
   --group-accent-8: #ecbd51;
 
-  /* Gegenstücke für den Dunkelmodus, Kontrast gegen --card #1e2330 ≥ 3:1.
-     Gold ist hier eher Ocker: ein helleres Gelb stäche aus dem
-     Helligkeitsband der übrigen Töne heraus. */
-  --inv-class-stock:  #3377b8;  /* Blau        3.34:1 */
-  --inv-class-etf:    #18aa98;  /* Petrolgrün  5.41:1 */
-  --inv-class-metal:  #ab842c;  /* Gold/Ocker  4.53:1 */
-  --inv-class-crypto: #987bee;  /* Violett     4.78:1 */
-  --inv-class-bond:   #bd4288;  /* Beere       3.21:1 */
-  --inv-class-other:  #8a94a6;  /* neutral     5.13:1 */
+  /* Gegenstücke für den Dunkelmodus, Kontrast gegen --card #1e2330 ≥ 3:1. */
+  --inv-class-stock:  #60a5fa;  /* Blau         6.18:1 */
+  --inv-class-etf:    #4ade80;  /* Grün         9.01:1 */
+  --inv-class-metal:  #facc15;  /* Gelb        10.25:1 */
+  --inv-class-crypto: #a78bfa;  /* Violett      5.77:1 */
+  --inv-class-other:  #8a94a6;  /* neutral      5.13:1 */
 
   /* Interactive states */
   --input-bg: #151924;

@@ -17,11 +17,10 @@ export const DEFAULT_COLORS = {
   yoyOld: "#8ab6e0",
   yoyMid: "#2b7fd4",
   yoyNew: "#153a70",
-  invStock: "#035ba2",
-  invEtf: "#0f9f8f",
-  invMetal: "#b98003",
-  invCrypto: "#8c67c8",
-  invBond: "#a1287e",
+  invStock: "#3b82f6",
+  invEtf: "#22c55e",
+  invMetal: "#eab308",
+  invCrypto: "#8b5cf6",
   invOther: "#8e949c",
 };
 
@@ -48,7 +47,6 @@ export function readColors() {
     invEtf: get("--inv-class-etf", DEFAULT_COLORS.invEtf),
     invMetal: get("--inv-class-metal", DEFAULT_COLORS.invMetal),
     invCrypto: get("--inv-class-crypto", DEFAULT_COLORS.invCrypto),
-    invBond: get("--inv-class-bond", DEFAULT_COLORS.invBond),
     invOther: get("--inv-class-other", DEFAULT_COLORS.invOther),
   };
 }
