@@ -31,7 +31,7 @@ export default function DepotOverviewCard({
   const shareByDepot = useMemo(() => new Map(byDepot.map((r) => [r.key, r.share])), [byDepot]);
 
   return (
-    <Card>
+    <Card className="hb-inv-cell--depots">
       <CardContent>
         <div className="hb-row" style={{ alignItems: "center", marginBottom: 12, gap: 8 }}>
           <h3 className="hb-card-title">Vermögensübersicht</h3>

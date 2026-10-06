@@ -7578,28 +7578,26 @@ select.hb-input option {
   color: var(--muted);
 }
 
-/* Legende links, Donut rechts — dieselbe Anordnung wie die Donuts im
-   Dashboard. Bewusst NICHT .hb-chart-body: dessen
+/* Donut oben, Legende am Kartenfuß — die Karte ist eine 440 px schmale
+   Seitenspalte über beide Rasterzeilen. Bewusst NICHT .hb-chart-body: dessen
    .hb-chart-legend (min-width 300px) und .hb-chart-pie-wrap (min-width 340px)
-   brauchen mit dem Abstand zusammen über 670 px — in einer .hb-two-Hälfte
-   bräche das um und bliese die Karte auf. Die Klassen sind für eine
-   Vollbreiten-Karte gebaut. */
+   sind für eine Vollbreiten-Karte mit Legende neben dem Donut gebaut. */
 .hb-inv-alloc {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
-  gap: 24px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
 }
 
-@media (max-width: 1100px) {
-  .hb-inv-alloc {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Bezugspunkt für .hb-pie-center-overlay (position: absolute). */
+/* Bezugspunkt für .hb-pie-center-overlay (position: absolute). Nimmt die
+   freie Kartenhöhe und hält den Donut darin mittig. */
 .hb-inv-alloc-pie {
   position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Legende ohne Balken: Die 16 px Zeilenabstand von .hb-cg-breakdown sind für
@@ -7624,31 +7622,53 @@ select.hb-input option {
   flex-wrap: wrap;
 }
 
-/* 2:1 wie im Konzept — links Depotwert und Aufteilung, rechts Depots und
-   Rendite. stretch hält die Karten einer Zeile gleich hoch. */
+/* Hauptfläche plus Seitenspalte: oben der Depotwert über zwei Spalten,
+   darunter Vermögensübersicht und Rendite, rechts die Aufteilung über beide
+   Zeilen. Die Karten bekommen ihre Größe vom Inhalt, nicht von einem festen
+   2:1-Raster. */
 .hb-inv-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 440px;
+  grid-template-areas:
+    "hero   hero    alloc"
+    "depots returns alloc";
   gap: 20px;
   align-items: stretch;
 }
 
+/* Ohne Aufteilung (nur eine Anlageklasse): Depotwert über beide Zeilen,
+   Vermögensübersicht und Rendite untereinander in der Seitenspalte. */
+.hb-inv-grid--no-alloc {
+  grid-template-areas:
+    "hero hero depots"
+    "hero hero returns";
+}
+
+.hb-inv-cell--hero { grid-area: hero; }
+.hb-inv-cell--depots { grid-area: depots; }
+.hb-inv-cell--returns { grid-area: returns; }
+.hb-inv-cell--alloc { grid-area: alloc; }
+
+/* Karten als Spalte, damit Inhalte die gestreckte Höhe nutzen können.
+   CardContent reicht kein className durch, daher der Kind-Selektor. */
 .hb-inv-grid > .hb-card {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.hb-inv-grid--no-alloc .hb-inv-cell--hero {
-  grid-row: span 2;
+.hb-inv-grid > .hb-card > .hb-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-@media (max-width: 1100px) {
-  .hb-inv-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .hb-inv-grid--no-alloc .hb-inv-cell--hero {
-    grid-row: auto;
-  }
+/* Mindestabstand über der Summenzeile, die per margin-top: auto am Kartenfuß
+   sitzt (siehe .hb-inv-overview-total). */
+.hb-inv-cell--depots .hb-cg-breakdown,
+.hb-inv-cell--returns .hb-inv-detail {
+  margin-bottom: 12px;
 }
 
 /* Depotwert-Karte: Wertspalte links, Verlauf rechts. */
@@ -7657,13 +7677,7 @@ select.hb-input option {
   grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
   gap: 32px;
   align-items: stretch;
-}
-
-@media (max-width: 760px) {
-  .hb-inv-hero {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
+  flex: 1;
 }
 
 .hb-inv-hero-summary {
@@ -7741,12 +7755,22 @@ select.hb-input option {
   min-height: 32px;
 }
 
-/* Feste Mindesthöhe (inline gesetzt, 220/300 px): kein Höhensprung, wenn aus
-   „noch kein Punkt" die Kurve wird. */
+/* Füllt die Kartenhöhe; die Mindesthöhe verhindert einen Höhensprung, wenn
+   aus „noch kein Punkt" die Kurve wird. */
 .hb-inv-hero-slot {
+  flex: 1;
+  position: relative;
+  min-height: 220px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+
+/* Der Chart liegt absolut im Slot: im normalen Fluss hielte seine eigene Höhe
+   die Karte auf und er schrumpfte nicht mehr mit. */
+.hb-inv-hero-fill {
+  position: absolute;
+  inset: 0;
 }
 
 /* G/V-Prozent in Legende und Übersicht. Das Gewicht 700 von .hb-ok/.hb-bad
@@ -7763,7 +7787,8 @@ select.hb-input option {
   font-weight: 600;
 }
 
-/* Summenzeile unter Vermögensübersicht und Rendite. */
+/* Summenzeile am Fuß von Vermögensübersicht und Rendite: so liegen die
+   Summenstriche beider Karten auf einer Linie. */
 .hb-inv-overview-total {
   display: flex;
   justify-content: space-between;
@@ -7771,7 +7796,7 @@ select.hb-input option {
   gap: 12px;
   border-top: 1px solid var(--border-light);
   padding-top: 12px;
-  margin-top: 12px;
+  margin-top: auto;
 }
 
 .hb-inv-overview-total-label {

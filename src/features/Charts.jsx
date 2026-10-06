@@ -14,6 +14,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { makeSubcategoryColorShades, CHART_COLORS } from "../utils/hbPalette.js";
+import { pieCenterFontSize } from "../utils/chartStyle.js";
 
 const CHART_TAB_OPTIONS = [
   { value: "expense", label: "Ausgaben" },
@@ -360,11 +361,9 @@ export default function Charts({
                 const centerValue = displayMode === "percent"
                   ? "100 %"
                   : (activeTab === "expense" ? "−" : "+") + fmt(totalValue);
-                const len = centerValue.length;
-                const fontSize = len >= 15 ? 17 : len >= 12 ? 20 : 24;
                 return (
                   <div className="hb-pie-center-overlay" style={{ pointerEvents: "none" }}>
-                    <div className="hb-pie-total-value" style={{ fontSize }}>
+                    <div className="hb-pie-total-value" style={{ fontSize: pieCenterFontSize(centerValue) }}>
                       {centerValue}
                     </div>
                     <div className="hb-pie-total-label">{centerLabel}</div>

@@ -4,6 +4,7 @@ import { Card, CardContent } from "../../components/ui.jsx";
 import { useCardBg } from "../../hooks/useCardBg.js";
 import { useThemeColors } from "../../hooks/themeColors.js";
 import { formatPercent } from "../../utils/hbUtils.js";
+import { pieCenterFontSize } from "../../utils/chartStyle.js";
 import { gainClass } from "../../utils/investmentFormat.js";
 
 // Aufgelöste Klassenfarben für die SVG-Füllung. Recharts schreibt `fill` als
@@ -24,6 +25,9 @@ const CLASS_COLOR_KEYS = {
  * Die Sicht „nach Depot" lebt in der Vermögensübersicht daneben; eine zweite
  * Darstellung desselben Sachverhalts wäre doppelt.
  *
+ * Donut oben, Legende darunter: die Karte ist die schmale Seitenspalte des
+ * Kopfbereichs, anders als die Vollbreiten-Donuts im Dashboard.
+ *
  * Unbewertete Positionen sind im Donut nicht enthalten — das steht als Fußzeile
  * unter der Legende, statt still zu verschwinden. Ob die Karte überhaupt
  * erscheint, entscheidet der View (ab zwei Klassen).
@@ -38,61 +42,29 @@ export default function AllocationCard({ byClass, unpricedCount, fmt }) {
   const themeColors = useThemeColors();
 
   const pricedTotal = byClass.reduce((s, r) => s + r.value, 0);
+  const centerValue = fmt(pricedTotal);
   const chartRows = byClass.map((r) => ({
     ...r,
     color: themeColors[CLASS_COLOR_KEYS[r.key] || CLASS_COLOR_KEYS.other],
   }));
 
   return (
-    <Card>
+    <Card className="hb-inv-cell--alloc">
       <CardContent>
         <h3 className="hb-card-title" style={{ marginBottom: 12 }}>
           Aufteilung nach Anlageklasse
         </h3>
 
         <div className="hb-inv-alloc">
-          <div>
-            <div className="hb-cg-breakdown hb-cg-breakdown--legend">
-              {chartRows.map((row) => (
-                <div key={row.key} className="hb-cg-breakdown-row">
-                  <div className="hb-cg-breakdown-top">
-                    <div className="hb-cg-breakdown-info">
-                      <span className="hb-cat-dot" style={{ background: row.color }} />
-                      <div className="hb-cg-breakdown-names">
-                        <div className="hb-cg-breakdown-name">{row.label}</div>
-                        <div className="hb-cg-breakdown-parent">{fmt(row.value)}</div>
-                      </div>
-                    </div>
-                    <div className="hb-cg-breakdown-values">
-                      <span className="hb-cg-breakdown-share">
-                        {formatPercent(row.share, { digits: 1, sign: false })}
-                      </span>
-                      <span className={`hb-inv-legend-gain ${gainClass(row.unrealizedGain)}`}>
-                        {formatPercent(row.unrealizedGainPct)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {unpricedCount > 0 && (
-              <div className="hb-stat-pill-delta-note">
-                {unpricedCount} Position{unpricedCount === 1 ? "" : "en"} ohne Kurs
-                {unpricedCount === 1 ? " ist" : " sind"} hier nicht enthalten.
-              </div>
-            )}
-          </div>
-
           <div className="hb-inv-alloc-pie">
-            <ResponsiveContainer width="100%" height={210}>
+            <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
                   data={chartRows}
                   dataKey="value"
                   nameKey="label"
-                  innerRadius={62}
-                  outerRadius={102}
+                  innerRadius={92}
+                  outerRadius={134}
                   paddingAngle={0}
                   cornerRadius={4}
                   stroke={cardBg}
@@ -126,9 +98,44 @@ export default function AllocationCard({ byClass, unpricedCount, fmt }) {
               </PieChart>
             </ResponsiveContainer>
             <div className="hb-pie-center-overlay" style={{ pointerEvents: "none" }}>
-              <div className="hb-pie-total-value">{fmt(pricedTotal)}</div>
+              <div className="hb-pie-total-value" style={{ fontSize: pieCenterFontSize(centerValue) }}>
+                {centerValue}
+              </div>
               <div className="hb-pie-total-label">bewertet</div>
             </div>
+          </div>
+
+          <div>
+            <div className="hb-cg-breakdown hb-cg-breakdown--legend">
+              {chartRows.map((row) => (
+                <div key={row.key} className="hb-cg-breakdown-row">
+                  <div className="hb-cg-breakdown-top">
+                    <div className="hb-cg-breakdown-info">
+                      <span className="hb-cat-dot" style={{ background: row.color }} />
+                      <div className="hb-cg-breakdown-names">
+                        <div className="hb-cg-breakdown-name">{row.label}</div>
+                        <div className="hb-cg-breakdown-parent">{fmt(row.value)}</div>
+                      </div>
+                    </div>
+                    <div className="hb-cg-breakdown-values">
+                      <span className="hb-cg-breakdown-share">
+                        {formatPercent(row.share, { digits: 1, sign: false })}
+                      </span>
+                      <span className={`hb-inv-legend-gain ${gainClass(row.unrealizedGain)}`}>
+                        {formatPercent(row.unrealizedGainPct)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {unpricedCount > 0 && (
+              <div className="hb-stat-pill-delta-note">
+                {unpricedCount} Position{unpricedCount === 1 ? "" : "en"} ohne Kurs
+                {unpricedCount === 1 ? " ist" : " sind"} hier nicht enthalten.
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

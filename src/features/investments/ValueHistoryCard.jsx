@@ -83,7 +83,6 @@ function buildTicks(startT, endT) {
  * @param {number} props.unpricedCount offene Positionen ohne Kurs
  * @param {string|null} props.oldestFetchedAt ältester Kurszeitpunkt
  * @param {boolean} props.hasStale
- * @param {boolean} props.tall volle Höhe, wenn daneben keine Aufteilung steht
  * @param {(n: number) => string} props.fmt
  * @param {string} props.baseCurrency
  */
@@ -95,7 +94,6 @@ export default function ValueHistoryCard({
   unpricedCount,
   oldestFetchedAt,
   hasStale,
-  tall,
   fmt,
   baseCurrency,
 }) {
@@ -105,7 +103,6 @@ export default function ValueHistoryCard({
   const [range, setRange] = useState("all");
 
   const count = (snapshots || []).length;
-  const chartHeight = tall ? 300 : 220;
 
   // Zeitstempel als Zahl: mit einer Kategorieachse sähe eine dreimonatige
   // Lücke genauso breit aus wie ein Tagesabstand — das Diagramm erfände einen
@@ -131,7 +128,7 @@ export default function ValueHistoryCard({
   return (
     <Card className="hb-inv-cell--hero">
       <CardContent>
-        <div className={`hb-inv-hero${tall ? " hb-inv-hero--tall" : ""}`}>
+        <div className="hb-inv-hero">
           <div className="hb-inv-hero-summary">
             <div>
               <div className="hb-inv-hero-label">Depotwert</div>
@@ -197,96 +194,98 @@ export default function ValueHistoryCard({
               )}
             </div>
 
-            <div className="hb-inv-hero-slot" style={{ minHeight: chartHeight }}>
+            <div className="hb-inv-hero-slot">
               {count === 0 ? (
                 <EmptyHistory unpricedCount={unpricedCount} />
               ) : count === 1 ? (
                 <SingleSnapshot snapshot={snapshots[0]} />
               ) : (
-                <ResponsiveContainer width="100%" height={chartHeight}>
-                  <AreaChart data={view.data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                    <defs>
-                      <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={accent} stopOpacity={0.28} />
-                        <stop offset="70%" stopColor={accent} stopOpacity={0.08} />
-                        <stop offset="100%" stopColor={accent} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-                    {/* allowDataOverflow schneidet den Vorpunkt vor dem Fensterbeginn
-                        am linken Rand ab — die Linie beginnt am Rand, die Achse
-                        dehnt sich aber nicht auf seinen Zeitpunkt aus. */}
-                    <XAxis
-                      dataKey="t"
-                      type="number"
-                      scale="time"
-                      domain={[view.startT, view.endT]}
-                      allowDataOverflow
-                      ticks={view.ticks}
-                      {...xAxisProps(themeColors)}
-                      tickFormatter={(t) =>
-                        new Date(t).toLocaleDateString(
-                          "de-CH",
-                          view.monthly ? { month: "short", year: "2-digit" } : { day: "2-digit", month: "2-digit" },
-                        )
-                      }
-                    />
-                    {/* Basis 0: eine Fläche kodiert Menge ab der Grundlinie; eine
-                        abgeschnittene Achse dramatisierte jede Schwankung. */}
-                    <YAxis
-                      {...axisProps(themeColors)}
-                      tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)}
-                      width={AMOUNT_AXIS_WIDTH}
-                      domain={[0, "auto"]}
-                      tickCount={4}
-                    />
-                    <Tooltip
-                      wrapperStyle={{ zIndex: 10 }}
-                      cursor={{ stroke: themeColors.muted, strokeWidth: CHART_STROKE.aux, strokeDasharray: CHART_DASH.secondary }}
-                      content={({ active, payload }) => {
-                        if (!active || !payload?.length) return null;
-                        const row = payload[0].payload;
-                        const index = view.data.findIndex((d) => d.date === row.date);
-                        const prev = index > 0 ? view.data[index - 1] : null;
-                        const step = prev ? row.total - prev.total : null;
-                        return (
-                          <ChartTooltip title={formatDateDE(row.date)}>
-                            <ChartTooltipRow label="Depotwert" color={accent} value={fmt(row.total)} />
-                            {step !== null && (
-                              <ChartTooltipRow
-                                label="ggü. Vorpunkt"
-                                value={formatSigned(fmt, step)}
-                                valueClassName={gainClass(step)}
-                              />
-                            )}
-                            {depotCount > 1 && <ChartTooltipDivider />}
-                            {depotCount > 1 &&
-                              row.byDepot.map((d) => (
+                <div className="hb-inv-hero-fill">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={view.data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                      <defs>
+                        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={accent} stopOpacity={0.28} />
+                          <stop offset="70%" stopColor={accent} stopOpacity={0.08} />
+                          <stop offset="100%" stopColor={accent} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
+                      {/* allowDataOverflow schneidet den Vorpunkt vor dem Fensterbeginn
+                          am linken Rand ab — die Linie beginnt am Rand, die Achse
+                          dehnt sich aber nicht auf seinen Zeitpunkt aus. */}
+                      <XAxis
+                        dataKey="t"
+                        type="number"
+                        scale="time"
+                        domain={[view.startT, view.endT]}
+                        allowDataOverflow
+                        ticks={view.ticks}
+                        {...xAxisProps(themeColors)}
+                        tickFormatter={(t) =>
+                          new Date(t).toLocaleDateString(
+                            "de-CH",
+                            view.monthly ? { month: "short", year: "2-digit" } : { day: "2-digit", month: "2-digit" },
+                          )
+                        }
+                      />
+                      {/* Basis 0: eine Fläche kodiert Menge ab der Grundlinie; eine
+                          abgeschnittene Achse dramatisierte jede Schwankung. */}
+                      <YAxis
+                        {...axisProps(themeColors)}
+                        tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)}
+                        width={AMOUNT_AXIS_WIDTH}
+                        domain={[0, "auto"]}
+                        tickCount={4}
+                      />
+                      <Tooltip
+                        wrapperStyle={{ zIndex: 10 }}
+                        cursor={{ stroke: themeColors.muted, strokeWidth: CHART_STROKE.aux, strokeDasharray: CHART_DASH.secondary }}
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const row = payload[0].payload;
+                          const index = view.data.findIndex((d) => d.date === row.date);
+                          const prev = index > 0 ? view.data[index - 1] : null;
+                          const step = prev ? row.total - prev.total : null;
+                          return (
+                            <ChartTooltip title={formatDateDE(row.date)}>
+                              <ChartTooltipRow label="Depotwert" color={accent} value={fmt(row.total)} />
+                              {step !== null && (
                                 <ChartTooltipRow
-                                  key={d.depotId}
-                                  label={depotNames.get(d.depotId) || "Gelöschtes Depot"}
-                                  value={fmt(d.value)}
+                                  label="ggü. Vorpunkt"
+                                  value={formatSigned(fmt, step)}
+                                  valueClassName={gainClass(step)}
                                 />
-                              ))}
-                          </ChartTooltip>
-                        );
-                      }}
-                    />
-                    {/* Sichtbare Punkte, solange die Reihe dünn ist: sie ist
-                        unregelmäßig besetzt, eine nackte Linie behauptete eine
-                        Kontinuität, die es nicht gibt. */}
-                    <Area
-                      type="monotone"
-                      dataKey="total"
-                      stroke={accent}
-                      strokeWidth={CHART_STROKE.main}
-                      fill={`url(#${gradientId})`}
-                      dot={view.data.length <= DOT_LIMIT ? { r: 2.5, strokeWidth: 0, fill: accent } : false}
-                      activeDot={{ r: 4, stroke: cardBg, strokeWidth: 2, fill: accent }}
-                      isAnimationActive={false}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                              )}
+                              {depotCount > 1 && <ChartTooltipDivider />}
+                              {depotCount > 1 &&
+                                row.byDepot.map((d) => (
+                                  <ChartTooltipRow
+                                    key={d.depotId}
+                                    label={depotNames.get(d.depotId) || "Gelöschtes Depot"}
+                                    value={fmt(d.value)}
+                                  />
+                                ))}
+                            </ChartTooltip>
+                          );
+                        }}
+                      />
+                      {/* Sichtbare Punkte, solange die Reihe dünn ist: sie ist
+                          unregelmäßig besetzt, eine nackte Linie behauptete eine
+                          Kontinuität, die es nicht gibt. */}
+                      <Area
+                        type="monotone"
+                        dataKey="total"
+                        stroke={accent}
+                        strokeWidth={CHART_STROKE.main}
+                        fill={`url(#${gradientId})`}
+                        dot={view.data.length <= DOT_LIMIT ? { r: 2.5, strokeWidth: 0, fill: accent } : false}
+                        activeDot={{ r: 4, stroke: cardBg, strokeWidth: 2, fill: accent }}
+                        isAnimationActive={false}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </div>
           </div>

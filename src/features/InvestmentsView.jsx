@@ -443,10 +443,11 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
       {header}
       {notice && <NoticeBar notice={notice} onRetry={() => refresh({ bypassCache: true })} />}
 
-      {/* Links Depotwert und Aufteilung, rechts Depots und Rendite — die
-          Kennzahlen sitzen in den Karten statt als Pillen über dem View.
-          Ohne Aufteilung (nur eine Klasse) läuft die Depotwert-Karte über
-          beide Zeilen, damit links keine Lücke bleibt. */}
+      {/* Oben der Depotwert, darunter Vermögensübersicht und Rendite, rechts
+          die Aufteilung als Seitenspalte — die Kennzahlen sitzen in den Karten
+          statt als Pillen über dem View. Die Platzierung läuft über grid-area
+          (.hb-inv-cell--*); ohne Aufteilung (nur eine Klasse) rücken
+          Vermögensübersicht und Rendite in die Seitenspalte. */}
       <div className={`hb-inv-grid${showAllocation ? "" : " hb-inv-grid--no-alloc"}`}>
         <ValueHistoryCard
           total={total}
@@ -456,7 +457,6 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
           unpricedCount={unpricedCount}
           oldestFetchedAt={oldestFetchedAt}
           hasStale={hasStale}
-          tall={!showAllocation}
           fmt={fmt}
           baseCurrency={baseCurrency}
         />

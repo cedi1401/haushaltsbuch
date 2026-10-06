@@ -50,6 +50,13 @@ export function monthAxisProps(themeColors) {
   };
 }
 
+// Schriftgröße für den Betrag in der Donut-Mitte: lange Beträge eine Stufe
+// kleiner, damit sie nicht in den Ring ragen.
+export function pieCenterFontSize(text) {
+  const len = String(text).length;
+  return len >= 15 ? 17 : len >= 12 ? 20 : 24;
+}
+
 // Der eine Stil für „Durchschnitt", app-weit gleich.
 export function averageLineProps(themeColors) {
   return {

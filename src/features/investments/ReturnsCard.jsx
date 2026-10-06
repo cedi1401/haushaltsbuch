@@ -18,7 +18,7 @@ import { gainClass } from "../../utils/investmentFormat.js";
  */
 export default function ReturnsCard({ total, fmt }) {
   return (
-    <Card>
+    <Card className="hb-inv-cell--returns">
       <CardContent>
         <h3 className="hb-card-title" style={{ marginBottom: 12 }}>Rendite</h3>
 
