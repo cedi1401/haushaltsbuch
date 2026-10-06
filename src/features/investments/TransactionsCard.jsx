@@ -156,7 +156,7 @@ export default function TransactionsCard({
                         <div className="hb-actions hb-actions-hover">
                           <button
                             type="button"
-                            className="hb-icon-btn"
+                            className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
                             onClick={() => onEdit(row)}
                             title="Bearbeiten"
                             aria-label="Bearbeiten"
@@ -165,7 +165,7 @@ export default function TransactionsCard({
                           </button>
                           <button
                             type="button"
-                            className="hb-icon-btn hb-icon-btn--danger"
+                            className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle hb-icon-btn--danger"
                             onClick={() => onDelete(row)}
                             title="Löschen"
                             aria-label="Löschen"

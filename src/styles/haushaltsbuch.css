@@ -1006,6 +1006,11 @@ select.hb-input option {
   border-color: var(--red);
 }
 
+/* Rahmenlos bleibt rahmenlos: nur Füllung und Farbe wechseln auf Rot. */
+.hb-icon-btn--subtle.hb-icon-btn--danger:hover {
+  border-color: transparent;
+}
+
 /* Deaktiviert: identische Abschwächung wie .hb-btn:disabled, und kein
    Hover-Feedback mehr (sonst wirkt der Button trotzdem klickbar). */
 .hb-icon-btn:disabled {
@@ -1789,6 +1794,12 @@ select.hb-input option {
   justify-content: flex-end;
 }
 
+/* Die 30-px-Aktionen sollen die Zeilenhöhe nicht bestimmen: ohne den negativen
+   Rand wäre jede Zeile 9 px höher als ihr Text verlangt. */
+.hb-table .hb-actions {
+  margin-block: -5px;
+}
+
 /* Row-hover-reveal for table actions: keep markup but hide visually until row hover */
 .hb-table tbody tr .hb-actions-hover {
   opacity: 0;
@@ -1847,7 +1858,7 @@ select.hb-input option {
 }
 
 .hb-entries-table .hb-col-actions {
-  width: 106px;
+  width: 88px;
   white-space: nowrap;
   overflow: hidden;
   text-align: right;
@@ -7370,7 +7381,9 @@ select.hb-input option {
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Detailbereich einer Position ------------------- */
+/* --- Kennzahl-Zeilen (Rendite-Karte) ---------------- */
+/* Schriftgröße wie die Zeilen von .hb-cg-breakdown in der Vermögensübersicht
+   daneben. */
 
 .hb-inv-detail {
   display: flex;
@@ -7384,7 +7397,7 @@ select.hb-input option {
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .hb-inv-detail-label {
@@ -7397,14 +7410,22 @@ select.hb-input option {
   text-align: right;
 }
 
-.hb-inv-detail-note {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--muted);
+/* --- Detailbereich einer Position ------------------- */
+/* Gerüst, Kacheln und Aktionsleiste kommen von .hb-res-detail; hier steht nur,
+   was die Buchungsliste im Notizblock zusätzlich braucht. */
+
+/* Gewinn und Verlust färben den Kachelwert nur: Gewicht und Größe bleiben die
+   der Nachbarkacheln (.hb-ok/.hb-bad brächten 700 mit, .hb-muted 13 px). */
+.hb-res-fact-value .hb-ok,
+.hb-res-fact-value .hb-bad {
+  font-weight: inherit;
+}
+
+.hb-res-fact-value .hb-muted {
+  font-size: inherit;
 }
 
 .hb-inv-detail-txs {
-  margin-top: 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -7422,6 +7443,19 @@ select.hb-input option {
 
 .hb-inv-detail-tx:hover {
   background: var(--hover-bg);
+}
+
+.hb-inv-detail-more {
+  padding: 3px 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Kursfehler: derselbe getönte Block wie „Überfällig" bei den Rückstellungen. */
+.hb-inv-note--error {
+  --hb-res-tone: var(--red);
+  --hb-res-tone-mark: var(--red);
+  --hb-res-tone-soft: var(--red-soft);
 }
 
 /* --- Transaktions-Dialog ---------------------------- */
@@ -7489,14 +7523,15 @@ select.hb-input option {
   color: var(--muted);
 }
 
-/* Donut links, Legende rechts. Bewusst NICHT .hb-chart-body: dessen
+/* Legende links, Donut rechts — dieselbe Anordnung wie die Donuts im
+   Dashboard. Bewusst NICHT .hb-chart-body: dessen
    .hb-chart-legend (min-width 300px) und .hb-chart-pie-wrap (min-width 340px)
    brauchen mit dem Abstand zusammen über 670 px — in einer .hb-two-Hälfte
    bräche das um und bliese die Karte auf. Die Klassen sind für eine
    Vollbreiten-Karte gebaut. */
 .hb-inv-alloc {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 220px;
   gap: 24px;
   align-items: center;
 }
@@ -7594,7 +7629,7 @@ select.hb-input option {
    Aktualisieren der Kurse nicht springen. */
 .hb-inv-hero-value {
   font-size: 30px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.5px;
   color: var(--text);
   font-variant-numeric: tabular-nums;
@@ -7688,7 +7723,7 @@ select.hb-input option {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -7705,7 +7740,7 @@ select.hb-input option {
 
 .hb-inv-return-value {
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 700;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }

@@ -135,7 +135,7 @@ export default function EntriesTable({
                         <div className="hb-actions hb-actions-hover">
                           <button
                             type="button"
-                            className="hb-icon-btn"
+                            className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
                             onClick={() => startEdit(e)}
                             title="Bearbeiten"
                             aria-label="Bearbeiten"
@@ -144,7 +144,7 @@ export default function EntriesTable({
                           </button>
                           <button
                             type="button"
-                            className="hb-icon-btn hb-icon-btn--danger"
+                            className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle hb-icon-btn--danger"
                             onClick={() => removeEntry(e.id)}
                             title="Löschen"
                             aria-label="Löschen"

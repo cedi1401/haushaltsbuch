@@ -231,81 +231,94 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
 
   // --- Detailbereich einer Position ---------------------------------------
 
+  // Aufbau wie der Detailbereich der Rückstellungen (.hb-res-detail): links die
+  // Kennzahlen als Kacheln, rechts die Buchungen, unten die Aktionsleiste.
   function renderDetail(row) {
     const txs = transactionsForPosition(investments, row.depotId, row.assetId);
     return (
-      <div className="hb-two" style={{ gap: 24 }}>
-        <div className="hb-inv-detail">
-          <DetailRow label="Eingesetzt" value={fmt(row.invested)} />
-          <DetailRow label="Kostenbasis (Bestand)" value={fmt(row.costBasis)} />
-          <DetailRow label="Gebühren" value={fmt(row.fees)} />
-          <DetailRow
+      <div className="hb-res-detail">
+        <div className="hb-res-facts">
+          <DetailFact label="Eingesetzt" value={fmt(row.invested)} />
+          <DetailFact label="Kostenbasis (Bestand)" value={fmt(row.costBasis)} />
+          <DetailFact label="Gebühren" value={fmt(row.fees)} />
+          <DetailFact
             label="Realisiert"
             value={formatSigned(fmt, row.realizedGain)}
             className={gainClass(row.realizedGain)}
           />
-          <DetailRow label="Ausschüttungen" value={fmt(row.dividends)} />
-          <DetailRow
+          <DetailFact label="Ausschüttungen" value={fmt(row.dividends)} />
+          <DetailFact
             label="Gesamtrendite"
-            value={`${formatSigned(fmt, row.totalReturn)} (${formatPercent(row.totalReturnPct)})`}
+            value={formatSigned(fmt, row.totalReturn)}
             className={gainClass(row.totalReturn)}
           />
-          <DetailRow
-            label="Buchungen"
-            value={`${row.transactionCount} · ${formatDateDE(row.firstDate)} bis ${formatDateDE(row.lastDate)}`}
+          <DetailFact
+            label="Gesamtrendite %"
+            value={formatPercent(row.totalReturnPct)}
+            className={gainClass(row.totalReturnPct)}
           />
-        </div>
-
-        <div className="hb-inv-detail">
-          <DetailRow label="Symbol" value={row.quoteSymbol} />
-          <DetailRow label="Handelswährung" value={row.quoteCurrency} />
-          <DetailRow label="Kurs vom" value={formatFetchedAt(row.fetchedAt)} />
+          <DetailFact label="Symbol" value={row.quoteSymbol} />
+          <DetailFact label="Handelswährung" value={row.quoteCurrency} />
+          <DetailFact label="Kurs vom" value={formatFetchedAt(row.fetchedAt)} />
           {row.kind === "metal" && (
-            <DetailRow
+            <DetailFact
               label="Bestand in Gramm"
               value={formatQuantity(row.quantity * GRAMS_PER_TROY_OUNCE, "g")}
             />
           )}
-          {row.quoteError && (
-            <DetailRow label="Kursfehler" value={row.quoteError} className="hb-bad" />
-          )}
-          <div className="hb-inv-detail-note">
-            Käufe werden mit dem Wechselkurs vom Kauftag gerechnet, nicht mit dem heutigen.
-          </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-            <Button size="sm" variant="outline" onClick={() => openNewTransaction(row.depotId, row.assetId)}>
-              <IconPlus /> Transaktion erfassen
-            </Button>
-          </div>
+        </div>
 
-          {txs.length > 0 && (
-            <div className="hb-inv-detail-txs">
-              {txs.slice(0, 5).map((tx) => (
-                <div key={tx.id} className="hb-inv-detail-tx">
-                  <span className="hb-muted">{formatDateDE(tx.date)}</span>
-                  <span>{TRANSACTION_TYPE_LABELS[tx.type]}</span>
-                  <span>
-                    {tx.type === "dividend"
-                      ? fmt(tx.price * tx.fxRate)
-                      : `${formatQuantity(tx.quantity, tx.unit, tx.assetClass)} × ${tx.price} ${tx.currency}`}
-                  </span>
-                  <OverflowMenu
-                    buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
-                    label="Aktionen für diese Buchung"
-                    items={[
-                      { label: "Bearbeiten", onClick: () => openEditTransaction(tx) },
-                      { label: "Löschen", danger: true, onClick: () => deleteTransaction(tx) },
-                    ]}
-                  />
-                </div>
-              ))}
-              {txs.length > 5 && (
-                <div className="hb-muted" style={{ fontSize: 12 }}>
-                  … und {txs.length - 5} weitere
-                </div>
-              )}
-            </div>
+        <div className="hb-res-side">
+          <section className="hb-res-note hb-res-note--plain">
+            <h4 className="hb-res-note-title">
+              {row.transactionCount} Buchung{row.transactionCount === 1 ? "" : "en"}
+              <span className="hb-inv-sub">
+                {" "}· {formatDateDE(row.firstDate)} bis {formatDateDE(row.lastDate)}
+              </span>
+            </h4>
+            {txs.length > 0 && (
+              <div className="hb-inv-detail-txs">
+                {txs.slice(0, 5).map((tx) => (
+                  <div key={tx.id} className="hb-inv-detail-tx">
+                    <span className="hb-muted">{formatDateDE(tx.date)}</span>
+                    <span>{TRANSACTION_TYPE_LABELS[tx.type]}</span>
+                    <span>
+                      {tx.type === "dividend"
+                        ? fmt(tx.price * tx.fxRate)
+                        : `${formatQuantity(tx.quantity, tx.unit, tx.assetClass)} × ${tx.price} ${tx.currency}`}
+                    </span>
+                    <OverflowMenu
+                      buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+                      label="Aktionen für diese Buchung"
+                      items={[
+                        { label: "Bearbeiten", onClick: () => openEditTransaction(tx) },
+                        { label: "Löschen", danger: true, onClick: () => deleteTransaction(tx) },
+                      ]}
+                    />
+                  </div>
+                ))}
+                {txs.length > 5 && (
+                  <div className="hb-inv-detail-more">… und {txs.length - 5} weitere</div>
+                )}
+              </div>
+            )}
+            <p className="hb-res-note-hint">
+              Käufe werden mit dem Wechselkurs vom Kauftag gerechnet, nicht mit dem heutigen.
+            </p>
+          </section>
+
+          {row.quoteError && (
+            <section className="hb-res-note hb-res-note--tone hb-inv-note--error">
+              <h4 className="hb-res-note-title">Kursfehler</h4>
+              <p className="hb-res-note-text">{row.quoteError}</p>
+            </section>
           )}
+        </div>
+
+        <div className="hb-res-detail-actions">
+          <Button size="sm" variant="outline" onClick={() => openNewTransaction(row.depotId, row.assetId)}>
+            <IconPlus /> Transaktion erfassen
+          </Button>
         </div>
       </div>
     );
@@ -506,11 +519,16 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
   );
 }
 
-function DetailRow({ label, value, className }) {
+// Kachel im Detailbereich; `className` färbt nur den Wert (Gewinn/Verlust).
+// Ohne Wert verliert die Kachel ihre Fläche, wie bei den Rückstellungen.
+function DetailFact({ label, value, className }) {
+  const empty = value === null || value === undefined || value === "" || value === "—";
   return (
-    <div className="hb-inv-detail-row">
-      <span className="hb-inv-detail-label">{label}</span>
-      <span className={`hb-inv-detail-value${className ? ` ${className}` : ""}`}>{value}</span>
+    <div className={"hb-res-fact" + (empty ? " hb-res-fact--empty" : "")}>
+      <span className="hb-res-fact-label">{label}</span>
+      <span className="hb-res-fact-value">
+        {className ? <span className={className}>{value}</span> : value}
+      </span>
     </div>
   );
 }

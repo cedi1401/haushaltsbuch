@@ -51,6 +51,39 @@ export default function AllocationCard({ byClass, unpricedCount, fmt }) {
         </h3>
 
         <div className="hb-inv-alloc">
+          <div>
+            <div className="hb-cg-breakdown hb-cg-breakdown--legend">
+              {chartRows.map((row) => (
+                <div key={row.key} className="hb-cg-breakdown-row">
+                  <div className="hb-cg-breakdown-top">
+                    <div className="hb-cg-breakdown-info">
+                      <span className="hb-cat-dot" style={{ background: row.color }} />
+                      <div className="hb-cg-breakdown-names">
+                        <div className="hb-cg-breakdown-name">{row.label}</div>
+                        <div className="hb-cg-breakdown-parent">{fmt(row.value)}</div>
+                      </div>
+                    </div>
+                    <div className="hb-cg-breakdown-values">
+                      <span className="hb-cg-breakdown-share">
+                        {formatPercent(row.share, { digits: 1, sign: false })}
+                      </span>
+                      <span className={`hb-inv-legend-gain ${gainClass(row.unrealizedGain)}`}>
+                        {formatPercent(row.unrealizedGainPct)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {unpricedCount > 0 && (
+              <div className="hb-stat-pill-delta-note">
+                {unpricedCount} Position{unpricedCount === 1 ? "" : "en"} ohne Kurs
+                {unpricedCount === 1 ? " ist" : " sind"} hier nicht enthalten.
+              </div>
+            )}
+          </div>
+
           <div className="hb-inv-alloc-pie">
             <ResponsiveContainer width="100%" height={210}>
               <PieChart>
@@ -96,39 +129,6 @@ export default function AllocationCard({ byClass, unpricedCount, fmt }) {
               <div className="hb-pie-total-value">{fmt(pricedTotal)}</div>
               <div className="hb-pie-total-label">bewertet</div>
             </div>
-          </div>
-
-          <div>
-            <div className="hb-cg-breakdown hb-cg-breakdown--legend">
-              {chartRows.map((row) => (
-                <div key={row.key} className="hb-cg-breakdown-row">
-                  <div className="hb-cg-breakdown-top">
-                    <div className="hb-cg-breakdown-info">
-                      <span className="hb-cat-dot" style={{ background: row.color }} />
-                      <div className="hb-cg-breakdown-names">
-                        <div className="hb-cg-breakdown-name">{row.label}</div>
-                        <div className="hb-cg-breakdown-parent">{fmt(row.value)}</div>
-                      </div>
-                    </div>
-                    <div className="hb-cg-breakdown-values">
-                      <span className="hb-cg-breakdown-share">
-                        {formatPercent(row.share, { digits: 1, sign: false })}
-                      </span>
-                      <span className={`hb-inv-legend-gain ${gainClass(row.unrealizedGain)}`}>
-                        {formatPercent(row.unrealizedGainPct)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {unpricedCount > 0 && (
-              <div className="hb-stat-pill-delta-note">
-                {unpricedCount} Position{unpricedCount === 1 ? "" : "en"} ohne Kurs
-                {unpricedCount === 1 ? " ist" : " sind"} hier nicht enthalten.
-              </div>
-            )}
           </div>
         </div>
       </CardContent>
