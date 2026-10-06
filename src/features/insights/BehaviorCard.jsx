@@ -13,6 +13,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { useThemeColors } from "../../hooks/themeColors.js";
+import { CHART_STROKE, CHART_DASH, axisProps, averageLineProps } from "../../utils/chartStyle.js";
 import { formatDateDELong } from "../../utils/hbUtils.js";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { IconInbox } from "../../components/icons.jsx";
@@ -81,17 +82,13 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                   />
                   <XAxis
                     dataKey="day"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: themeColors.muted }}
+                    {...axisProps(themeColors)}
                   />
                   <YAxis
                     allowDecimals={false}
                     tickCount={4}
-                    axisLine={false}
-                    tickLine={false}
+                    {...axisProps(themeColors)}
                     width={24}
-                    tick={{ fontSize: 10, fill: themeColors.muted }}
                   />
                   <Tooltip
                     wrapperStyle={{ zIndex: 10 }}
@@ -191,14 +188,12 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                     ticks={areaTicks}
                     domain={[0, areaYMax]}
                     allowDecimals={false}
-                    axisLine={false}
-                    tickLine={false}
+                    {...axisProps(themeColors)}
                     width={38}
-                    tick={{ fontSize: 10, fill: themeColors.muted }}
                   />
                   <Tooltip
                     wrapperStyle={{ zIndex: 10 }}
-                    cursor={{ stroke: themeColors.accent, strokeWidth: 1, strokeDasharray: "3 3" }}
+                    cursor={{ stroke: themeColors.accent, strokeWidth: CHART_STROKE.aux, strokeDasharray: CHART_DASH.secondary }}
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const d = payload[0].payload;
@@ -212,9 +207,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                   />
                   <ReferenceLine
                     y={avgAmount}
-                    stroke={themeColors.muted}
-                    strokeDasharray="4 3"
-                    strokeWidth={1}
+                    {...averageLineProps(themeColors)}
                   />
                   <Area
                     type="monotone"
@@ -222,7 +215,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                     stroke={themeColors.accent}
                     fill={themeColors.accent}
                     fillOpacity={0.12}
-                    strokeWidth={1.5}
+                    strokeWidth={CHART_STROKE.main}
                     dot={false}
                     isAnimationActive={false}
                   />

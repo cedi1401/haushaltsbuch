@@ -14,7 +14,8 @@ import { ChartTooltip, ChartTooltipRow, ChartTooltipDivider } from "../../compon
 import { IconTrend } from "../../components/icons.jsx";
 import { useThemeColors } from "../../hooks/themeColors.js";
 import { useCardBg } from "../../hooks/useCardBg.js";
-import { formatCurrencyAxis, formatDateDE } from "../../utils/hbUtils.js";
+import { formatCurrencyCompact, formatDateDE } from "../../utils/hbUtils.js";
+import { CHART_STROKE, CHART_DASH, AMOUNT_AXIS_WIDTH, axisProps, xAxisProps } from "../../utils/chartStyle.js";
 import { formatFetchedAt, formatPercent, gainClass } from "../../utils/investmentFormat.js";
 import { windowSnapshots } from "../../utils/investmentUtils.js";
 
@@ -224,31 +225,26 @@ export default function ValueHistoryCard({
                       domain={[view.startT, view.endT]}
                       allowDataOverflow
                       ticks={view.ticks}
-                      tick={{ fontSize: 11, fill: themeColors.muted }}
+                      {...xAxisProps(themeColors)}
                       tickFormatter={(t) =>
                         new Date(t).toLocaleDateString(
                           "de-CH",
                           view.monthly ? { month: "short", year: "2-digit" } : { day: "2-digit", month: "2-digit" },
                         )
                       }
-                      axisLine={false}
-                      tickLine={false}
-                      height={28}
                     />
                     {/* Basis 0: eine Fläche kodiert Menge ab der Grundlinie; eine
                         abgeschnittene Achse dramatisierte jede Schwankung. */}
                     <YAxis
-                      tick={{ fontSize: 11, fill: themeColors.muted }}
-                      tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)}
-                      width={64}
+                      {...axisProps(themeColors)}
+                      tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)}
+                      width={AMOUNT_AXIS_WIDTH}
                       domain={[0, "auto"]}
                       tickCount={4}
-                      axisLine={false}
-                      tickLine={false}
                     />
                     <Tooltip
                       wrapperStyle={{ zIndex: 10 }}
-                      cursor={{ stroke: themeColors.muted, strokeDasharray: "3 3" }}
+                      cursor={{ stroke: themeColors.muted, strokeWidth: CHART_STROKE.aux, strokeDasharray: CHART_DASH.secondary }}
                       content={({ active, payload }) => {
                         if (!active || !payload?.length) return null;
                         const row = payload[0].payload;
@@ -285,7 +281,7 @@ export default function ValueHistoryCard({
                       type="monotone"
                       dataKey="total"
                       stroke={accent}
-                      strokeWidth={2}
+                      strokeWidth={CHART_STROKE.main}
                       fill={`url(#${gradientId})`}
                       dot={view.data.length <= DOT_LIMIT ? { r: 2.5, strokeWidth: 0, fill: accent } : false}
                       activeDot={{ r: 4, stroke: cardBg, strokeWidth: 2, fill: accent }}

@@ -3,6 +3,7 @@ import { Card, CardContent, Button, RangeTabs, ChartScrollNav } from "../compone
 import { MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 import EditDialog from "../components/EditDialog.jsx";
 import { ChartTooltip, ChartTooltipRow, ChartTooltipDivider } from "../components/ChartTooltip.jsx";
+import { ChartLegend } from "../components/ChartLegend.jsx";
 import PotsManager, { POTS_MANAGER_TITLE } from "./PotsManager.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import {
@@ -20,6 +21,7 @@ import {
 import { calcPotSeries, potPurposeBalances } from "../utils/potUtils.js";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
+import { CHART_STROKE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, zeroLineProps } from "../utils/chartStyle.js";
 import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact } from "../utils/hbUtils.js";
 import { formatYearMonth, getEntryFinancialMonth } from "../utils/financialMonthUtils.js";
 import { generateId } from "../utils/idUtils.js";
@@ -522,51 +524,36 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
               {/* LineChart: Stand über Zeit */}
               <Card>
                 <CardContent>
-                  <div className="hb-row" style={{ alignItems: "center", marginBottom: 8 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div className="hb-row" style={{ alignItems: "center" }}>
                       <h3 className="hb-card-title">Entwicklung</h3>
-                      <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                        <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
-                          <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.blue} strokeWidth="2.5" />
-                          <circle cx="10" cy="5" r="2.5" fill={themeColors.blue} />
-                        </svg>
-                        Stand
-                      </span>
-                    </div>
-                    <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <ChartScrollNav
-                        offset={lineScrollOffset}
-                        maxOffset={lineMaxOffset}
-                        onOffsetChange={setLineScrollOffset}
-                        label={lineWindowLabel}
-                        style={{ visibility: lineMaxOffset > 0 ? "visible" : "hidden" }}
-                      />
-                      {potSeries.length > 12 && (
-                        <RangeTabs
-                          options={MONTH_RANGE_OPTIONS}
-                          value={lineRangeOption}
-                          onChange={(val) => { setLineRangeOption(val); setLineScrollOffset(0); }}
-                          ariaLabel="Zeitraum wählen"
+                      <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <ChartScrollNav
+                          offset={lineScrollOffset}
+                          maxOffset={lineMaxOffset}
+                          onOffsetChange={setLineScrollOffset}
+                          label={lineWindowLabel}
+                          style={{ visibility: lineMaxOffset > 0 ? "visible" : "hidden" }}
                         />
-                      )}
+                        {potSeries.length > 12 && (
+                          <RangeTabs
+                            options={MONTH_RANGE_OPTIONS}
+                            value={lineRangeOption}
+                            onChange={(val) => { setLineRangeOption(val); setLineScrollOffset(0); }}
+                            ariaLabel="Zeitraum wählen"
+                          />
+                        )}
+                      </div>
                     </div>
+                    <ChartLegend items={[{ label: "Stand", type: "line", color: themeColors.blue }]} />
                   </div>
 
                   <div style={{ width: "100%", height: 260, marginTop: 16 }}>
                     <ResponsiveContainer width="100%" height={260}>
                       <LineChart data={lineChartData}>
                         <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-                        <XAxis
-                          dataKey="name"
-                          tick={{ fontSize: 11, fill: themeColors.muted }}
-                          interval={0}
-                          angle={-35}
-                          textAnchor="end"
-                          height={62}
-                        />
-                        {/* Kompaktes Achsenformat (CHF10k) wie im Balkendiagramm daneben —
-                            ohne width, damit beide Plotflächen auf derselben Kante beginnen. */}
-                        <YAxis tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} />
+                        <XAxis dataKey="name" {...monthAxisProps(themeColors)} />
+                        <YAxis {...axisProps(themeColors)} width={AMOUNT_AXIS_WIDTH} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} />
                         <Tooltip
                           wrapperStyle={{ zIndex: 10 }}
                           content={({ active, payload, label }) => {
@@ -584,8 +571,8 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                           type="monotone"
                           dataKey="balance"
                           stroke={themeColors.blue}
-                          strokeWidth={3}
-                          dot={{ r: 4, fill: themeColors.blue, stroke: "var(--card)", strokeWidth: 1.5 }}
+                          strokeWidth={CHART_STROKE.main}
+                          dot={{ r: 3.5, fill: themeColors.blue, stroke: "var(--card)", strokeWidth: 1.5 }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -618,31 +605,20 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                         )}
                       </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px 14px" }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted, whiteSpace: "nowrap" }}>
-                        <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: themeColors.green }} />
-                        Einzahlungen
-                      </span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted, whiteSpace: "nowrap" }}>
-                        <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: themeColors.red }} />
-                        Entnahmen
-                      </span>
-                    </div>
+                    <ChartLegend
+                      items={[
+                        { label: "Einzahlungen", color: themeColors.green },
+                        { label: "Entnahmen", color: themeColors.red },
+                      ]}
+                    />
                   </div>
 
                   <div style={{ width: "100%", height: 240, marginTop: 16 }}>
                     <ResponsiveContainer width="100%" height={240}>
                       <BarChart data={barChartData} barCategoryGap="32%" stackOffset="sign">
                         <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-                        <XAxis
-                          dataKey="name"
-                          tick={{ fontSize: 11, fill: themeColors.muted }}
-                          interval={0}
-                          angle={-35}
-                          textAnchor="end"
-                          height={62}
-                        />
-                        <YAxis tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} />
+                        <XAxis dataKey="name" {...monthAxisProps(themeColors)} />
+                        <YAxis {...axisProps(themeColors)} width={AMOUNT_AXIS_WIDTH} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} />
                         <Tooltip
                           wrapperStyle={{ zIndex: 10 }}
                           content={({ active, payload, label }) => {
@@ -668,7 +644,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                         />
                         <Bar dataKey="transfersIn" stackId="pf" barSize={20} fill={themeColors.green} shape={IncomeBarShape} />
                         <Bar dataKey="expensesOut" stackId="pf" barSize={20} fill={themeColors.red} shape={OutflowBarShape} />
-                        <ReferenceLine y={0} stroke={themeColors.muted} strokeOpacity={0.6} strokeWidth={1.5} />
+                        <ReferenceLine y={0} {...zeroLineProps(themeColors)} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

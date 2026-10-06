@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Card, CardContent, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import { IconTrend } from "../components/icons.jsx";
 import { ChartTooltip, ChartTooltipRow, ChartTooltipDivider } from "../components/ChartTooltip.jsx";
+import { ChartLegend } from "../components/ChartLegend.jsx";
 import { getEntryFinancialMonth, formatYearMonth } from "../utils/financialMonthUtils.js";
 import {
   ResponsiveContainer,
@@ -17,7 +18,17 @@ import {
 } from "recharts";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
-import { formatCurrencyCompact, formatCurrencyAxis } from "../utils/hbUtils.js";
+import { formatCurrencyCompact } from "../utils/hbUtils.js";
+import {
+  CHART_STROKE,
+  CHART_DASH,
+  AMOUNT_AXIS_WIDTH,
+  axisProps,
+  xAxisProps,
+  monthAxisProps,
+  averageLineProps,
+  zeroLineProps,
+} from "../utils/chartStyle.js";
 import { useFixedCostTrend } from "../hooks/useFixedCostTrend.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import FixedCostTrendSection from "./FixedCostTrendSection.jsx";
@@ -76,13 +87,15 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const fmtTick = (v) => formatCurrencyCompact(v, baseCurrency);
-  const fmtAxis = (v) => formatCurrencyAxis(v, baseCurrency);
   const [saldoRangeOption, setSaldoRangeOption] = useState("12");
   const [saldoScrollOffset, setSaldoScrollOffset] = useState(0);
   const [evaRangeOption, setEvaRangeOption] = useState("12");
   const [evaScrollOffset, setEvaScrollOffset] = useState(0);
   const [yoyMode, setYoyMode] = useState("expense"); // "expense" | "transfer" | "savings"
   const themeColors = useThemeColors();
+  const avgLine = averageLineProps(themeColors);
+  // Zweit-Durchschnitt (6M): Teal und gepunktet, damit er sich vom 3M-Ø abhebt.
+  const avg6Line = { stroke: themeColors.teal, strokeWidth: CHART_STROKE.ref, strokeDasharray: CHART_DASH.secondary };
 
   const savingsPotIds = useMemo(
     () => new Set((pots || []).filter((p) => p.isSavings).map((p) => p.id)),
@@ -372,40 +385,27 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                       )}
                     </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                      <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
-                        <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.blue} strokeWidth="2.5" />
-                      </svg>
-                      Sparquote
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                      <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
-                        <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.orange} strokeWidth="1.5" strokeDasharray="5 3" />
-                      </svg>
-                      3M Ø
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                      <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
-                        <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.teal} strokeWidth="1.5" strokeDasharray="3 3" />
-                      </svg>
-                      6M Ø
-                    </span>
-                  </div>
+                  <ChartLegend
+                    items={[
+                      { label: "Sparquote", type: "line", color: themeColors.blue },
+                      { label: "3M Ø", type: "line", color: avgLine.stroke, strokeWidth: avgLine.strokeWidth, dash: avgLine.strokeDasharray },
+                      { label: "6M Ø", type: "line", color: avg6Line.stroke, strokeWidth: avg6Line.strokeWidth, dash: avg6Line.strokeDasharray },
+                    ]}
+                  />
                 </div>
 
                 <div style={{ width: "100%", height: 280, marginTop: 16 }}>
                   <ResponsiveContainer width="100%" height={280}>
                     <LineChart data={saldoChartData}>
                       <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: themeColors.muted }} interval={0} angle={-20} textAnchor="end" height={60} />
-                      <YAxis tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={(v) => `${v.toFixed(0)} %`} />
+                      <XAxis dataKey="name" {...monthAxisProps(themeColors)} />
+                      <YAxis {...axisProps(themeColors)} tickFormatter={(v) => `${v.toFixed(0)} %`} />
                       <Tooltip
                         wrapperStyle={{ zIndex: 10 }}
                         content={({ active, payload, label }) => {
                           if (!active || !payload?.length) return null;
                           const labelMap = { savingsRate: "Sparquote", avg3: "3M Ø", avg6: "6M Ø" };
-                          const colorMap = { savingsRate: themeColors.blue, avg3: themeColors.orange, avg6: themeColors.teal };
+                          const colorMap = { savingsRate: themeColors.blue, avg3: avgLine.stroke, avg6: avg6Line.stroke };
                           return (
                             <ChartTooltip title={label}>
                               {payload.filter((p) => p.value != null).map((p) => (
@@ -420,13 +420,13 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                           );
                         }}
                       />
-                      <Line type="monotone" dataKey="savingsRate" dot={false} strokeWidth={2.5} stroke={themeColors.blue} />
-                      <Line type="monotone" dataKey="avg3" dot={false} strokeWidth={1.5} stroke={themeColors.orange} strokeDasharray="5 3" />
+                      <Line type="monotone" dataKey="savingsRate" dot={false} strokeWidth={CHART_STROKE.main} stroke={themeColors.blue} />
+                      <Line type="monotone" dataKey="avg3" dot={false} {...avgLine} />
                       {/* Teal statt Violett: Violett war von der blauen Sparquoten-Linie unter
                           Rot-Grün-Schwäche praktisch nicht zu trennen (ΔE 11.3 hell / 4.0 dunkel).
                           Teal kommt auf 50.9 / 39.7 gegen Blau und 73.7 / 75.1 gegen Orange.
-                          Die Strichmuster („5 3" vs. „3 3") allein trugen das nicht. */}
-                      <Line type="monotone" dataKey="avg6" dot={false} strokeWidth={1.5} stroke={themeColors.teal} strokeDasharray="3 3" />
+                          Die Strichmuster allein trugen das nicht. */}
+                      <Line type="monotone" dataKey="avg6" dot={false} {...avg6Line} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -457,22 +457,13 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                       )}
                     </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px 14px" }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted, whiteSpace: "nowrap" }}>
-                      <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: themeColors.green }} />
-                      Einnahmen
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted, whiteSpace: "nowrap" }}>
-                      <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: themeColors.red }} />
-                      Ausgaben & Rücklagen
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted, whiteSpace: "nowrap" }}>
-                      <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
-                        <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.blue} strokeWidth="2.5" strokeLinecap="round" />
-                      </svg>
-                      Sparen (kumuliert)
-                    </span>
-                  </div>
+                  <ChartLegend
+                    items={[
+                      { label: "Einnahmen", color: themeColors.green },
+                      { label: "Ausgaben & Rücklagen", color: themeColors.red },
+                      { label: "Sparen (kumuliert)", type: "line", color: themeColors.blue },
+                    ]}
+                  />
                 </div>
 
                 <div style={{ width: "100%", height: 280, marginTop: 16 }}>
@@ -480,10 +471,10 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                     <ComposedChart data={cashflowChartData} barCategoryGap="32%" stackOffset="sign">
                       {/* yAxisId="cash" nötig, weil beide Y-Achsen explizite IDs haben; sonst sucht das Grid die Default-Achse (id 0) und rendert keine horizontalen Linien */}
                       <CartesianGrid yAxisId="cash" stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: themeColors.muted }} interval={0} angle={-20} textAnchor="end" height={60} />
-                      <YAxis yAxisId="cash" tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={fmtTick} />
+                      <XAxis dataKey="name" {...monthAxisProps(themeColors)} />
+                      <YAxis yAxisId="cash" {...axisProps(themeColors)} width={AMOUNT_AXIS_WIDTH} tickFormatter={fmtTick} />
                       {/* Rechte Achse dezent in Blau, passend zur Sparen-Linie; ohne Achsen-/Tick-Linie, damit sie nicht mit der linken Cash-Achse konkurriert */}
-                      <YAxis yAxisId="savings" orientation="right" axisLine={false} tickLine={false} width={56} tick={{ fontSize: 11, fill: themeColors.blue }} tickFormatter={fmtTick} />
+                      <YAxis yAxisId="savings" orientation="right" {...axisProps(themeColors)} width={AMOUNT_AXIS_WIDTH} tick={{ ...axisProps(themeColors).tick, fill: themeColors.blue }} tickFormatter={fmtTick} />
                       <Tooltip
                         wrapperStyle={{ zIndex: 10 }}
                         content={(props) => <CashflowTooltip {...props} fmt={fmt} />}
@@ -493,7 +484,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                       <Bar yAxisId="cash" dataKey="income" stackId="cf" barSize={20} fill={themeColors.green} shape={IncomeBarShape} />
                       <Bar yAxisId="cash" dataKey="outflow" stackId="cf" barSize={20} fill={themeColors.red} shape={OutflowBarShape} />
                       {/* Nulllinie über den Balken, damit sie sauber abschließt */}
-                      <ReferenceLine yAxisId="cash" y={0} stroke={themeColors.muted} strokeOpacity={0.6} strokeWidth={1.5} />
+                      <ReferenceLine yAxisId="cash" y={0} {...zeroLineProps(themeColors)} />
                       {/* Blaue Linie: kumuliertes Sparen (rechte Achse), mit Akzent-Dot am letzten Punkt */}
                       <Line
                         yAxisId="savings"
@@ -505,7 +496,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                           return <circle key={props.index} cx={props.cx} cy={props.cy} r={3.5} fill={themeColors.blue} stroke="var(--card)" strokeWidth={1.5} />;
                         }}
                         activeDot={{ r: 4, fill: themeColors.blue, stroke: "var(--card)", strokeWidth: 1.5 }}
-                        strokeWidth={2.5}
+                        strokeWidth={CHART_STROKE.main}
                         stroke={themeColors.blue}
                       />
                     </ComposedChart>
@@ -519,7 +510,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
           <div className="hb-full-card">
             <Card>
               <CardContent>
-                <div className="hb-row" style={{ alignItems: "center", marginBottom: 8 }}>
+                <div className="hb-row" style={{ alignItems: "center", marginBottom: 6 }}>
                   <h3 className="hb-card-title">Jahresvergleich</h3>
                   <RangeTabs
                     options={[
@@ -534,35 +525,27 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                 </div>
                 {yoyYears.length >= 2 ? (
                   <>
-                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
-                      {[...yoyYears].reverse().map((y) => (
-                        <span key={y} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                          <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 2, background: colorForYear(y), flexShrink: 0 }} />
-                          {y}
-                        </span>
-                      ))}
-                      <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                        <svg width="20" height="10" style={{ display: "block", flexShrink: 0 }}>
-                          <line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.orange} strokeWidth="1.5" strokeDasharray="5 3" />
-                        </svg>
-                        Ø
-                      </span>
-                    </div>
-                    <div style={{ width: "100%", height: 260, marginTop: 4 }}>
+                    <ChartLegend
+                      items={[
+                        ...[...yoyYears].reverse().map((y) => ({ label: String(y), color: colorForYear(y) })),
+                        { label: "Ø", type: "line", color: avgLine.stroke, strokeWidth: avgLine.strokeWidth, dash: avgLine.strokeDasharray },
+                      ]}
+                    />
+                    <div style={{ width: "100%", height: 260, marginTop: 16 }}>
                       <ResponsiveContainer width="100%" height={260}>
                         <ComposedChart data={yoyChartData} barCategoryGap="20%" barGap={3}>
                           <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-                          <XAxis dataKey="label" tick={{ fontSize: 11, fill: themeColors.muted }} />
-                          <YAxis tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={fmtAxis} width={64} />
+                          <XAxis dataKey="label" {...xAxisProps(themeColors)} />
+                          <YAxis {...axisProps(themeColors)} tickFormatter={fmtTick} width={AMOUNT_AXIS_WIDTH} />
                           <Tooltip
                             wrapperStyle={{ zIndex: 10 }}
-                            content={(props) => <YoYTooltip {...props} fmt={fmt} avgColor={themeColors.orange} />}
+                            content={(props) => <YoYTooltip {...props} fmt={fmt} avgColor={avgLine.stroke} />}
                             cursor={false}
                           />
                           {yoyYears.map((y) => (
                             <Bar key={y} dataKey={y} fill={colorForYear(y)} barSize={18} radius={[2, 2, 0, 0]} />
                           ))}
-                          <Line type="monotone" dataKey="__avg" dot={false} strokeWidth={1.5} stroke={themeColors.orange} strokeDasharray="5 3" connectNulls isAnimationActive={false} />
+                          <Line type="monotone" dataKey="__avg" dot={false} {...avgLine} connectNulls isAnimationActive={false} />
                         </ComposedChart>
                       </ResponsiveContainer>
                     </div>

@@ -6013,6 +6013,37 @@ select.hb-input option {
   white-space: nowrap;
 }
 
+/* Serien-Legende über einem Chart (ChartLegend.jsx): eigene Zeile unter der
+   Titelzeile. Nicht zu verwechseln mit .hb-chart-legend (Donut-Legende). */
+.hb-series-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hb-series-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.hb-series-legend-box {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.hb-series-legend-line {
+  display: block;
+  flex-shrink: 0;
+}
+
 /* =====================================================
    HB TOOLTIP - Hover-Hilfe hinter ?-Icon (WinUI 3)
    ===================================================== */

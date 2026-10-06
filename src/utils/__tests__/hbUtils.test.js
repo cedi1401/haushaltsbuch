@@ -11,7 +11,9 @@ import {
   migrateFixedCostKinds,
   DEFAULT_POTS,
   formatCurrency,
+  formatCurrencyCompact,
 } from '../hbUtils.js';
+import { shortMonthTick } from '../chartStyle.js';
 
 // ─── bookNeedsMigration ────────────────────────────────────────────────────
 
@@ -657,5 +659,34 @@ describe('formatCurrency', () => {
     expect(formatCurrency(65, 'USD')).toBe('$65.00');
     expect(formatCurrency(0, 'USD')).toBe('$0.00');
     expect(formatCurrency(-0, 'USD')).toBe('$0.00');
+  });
+});
+
+// ─── formatCurrencyCompact ─────────────────────────────────────────────────
+
+describe('formatCurrencyCompact', () => {
+  it('shortens thousands and millions and drops a trailing .0', () => {
+    expect(formatCurrencyCompact(500, 'CHF')).toBe('CHF 500');
+    expect(formatCurrencyCompact(7000, 'CHF')).toBe('CHF 7k');
+    expect(formatCurrencyCompact(7500, 'CHF')).toBe('CHF 7.5k');
+    expect(formatCurrencyCompact(1_200_000, 'CHF')).toBe('CHF 1.2M');
+  });
+
+  it('follows the affix placement of formatCurrency', () => {
+    expect(formatCurrencyCompact(7000, 'EUR')).toBe('7k €');
+    expect(formatCurrencyCompact(7000, 'USD')).toBe('$7k');
+    expect(formatCurrencyCompact(7000, 'SEK')).toBe('SEK 7k');
+  });
+
+  it('puts a real minus sign before the currency affix', () => {
+    expect(formatCurrencyCompact(-7000, 'CHF')).toBe('−CHF 7k');
+    expect(formatCurrencyCompact(-7000, 'EUR')).toBe('−7k €');
+  });
+});
+
+describe('shortMonthTick', () => {
+  it('shortens the year of a month label and leaves other labels alone', () => {
+    expect(shortMonthTick('Jan 2026')).toBe('Jan 26');
+    expect(shortMonthTick('Mär')).toBe('Mär');
   });
 });

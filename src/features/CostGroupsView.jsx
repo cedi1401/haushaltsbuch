@@ -17,6 +17,7 @@ import EditDialog from "../components/EditDialog.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
 import { ChartTooltip, ChartTooltipRow } from "../components/ChartTooltip.jsx";
+import { ChartLegend } from "../components/ChartLegend.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
@@ -25,7 +26,8 @@ import { useClickOutside } from "../hooks/useClickOutside.js";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { generateId } from "../utils/idUtils.js";
-import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, formatCurrencyAxis, formatDateDE, todayISO } from "../utils/hbUtils.js";
+import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, formatCurrencyCompact, formatDateDE, todayISO } from "../utils/hbUtils.js";
+import { CHART_STROKE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, averageLineProps } from "../utils/chartStyle.js";
 import { EMPTY_ARRAY, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 import { CUSTOM_CATEGORY_PALETTE } from "../utils/hbPalette.js";
 import { calcCostGroupStats, calcExpectedMonthly, formatMonthCount } from "../utils/costGroupUtils.js";
@@ -97,6 +99,7 @@ export default function CostGroupsView({
   const { confirm } = useConfirm();
   const toast = useToast();
   const themeColors = useThemeColors();
+  const avgLine = averageLineProps(themeColors);
 
   const costGroups = activeBook?.costGroups || EMPTY_ARRAY;
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
@@ -675,27 +678,11 @@ export default function CostGroupsView({
               Ablesen, keine Summe über den Balken. */}
           <Card style={{ marginBottom: 20 }}>
             <CardContent>
-              <div className="hb-row" style={{ alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-                  <span className="hb-title-with-help">
-                    <h4 style={{ margin: 0, fontSize: 15 }}>Kostenverlauf</h4>
-                    <HbTooltip size={16} text={HELP_CHART} />
-                  </span>
-                  {/* Legende nur bei gezeichnetem Chart — im Empty-State gäbe es
-                      keine Linien, die sie erklären könnte. */}
-                  {hasChartData && (
-                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                      <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.accent} strokeWidth="1.5" strokeDasharray="5 3" /></svg>
-                      Ø Ist
-                    </span>
-                  )}
-                  {hasChartData && planned.expectedMonthly > 0 && (
-                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                      <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.purple} strokeWidth="1.5" strokeDasharray="5 3" /></svg>
-                      Rücklagenbedarf
-                    </span>
-                  )}
-                </div>
+              <div className="hb-row" style={{ alignItems: "center", marginBottom: hasChartData ? 6 : 12, flexWrap: "wrap", gap: 8 }}>
+                <span className="hb-title-with-help">
+                  <h4 style={{ margin: 0, fontSize: 15 }}>Kostenverlauf</h4>
+                  <HbTooltip size={16} text={HELP_CHART} />
+                </span>
                 {chartMaxOffset > 0 && (
                   <ChartScrollNav
                     offset={chartOffset}
@@ -705,6 +692,19 @@ export default function CostGroupsView({
                   />
                 )}
               </div>
+              {/* Legende nur bei gezeichnetem Chart — im Empty-State gäbe es
+                  keine Linien, die sie erklären könnte. */}
+              {hasChartData && (
+                <ChartLegend
+                  style={{ marginBottom: 16 }}
+                  items={[
+                    { label: "Ø Ist", type: "line", color: avgLine.stroke, strokeWidth: avgLine.strokeWidth, dash: avgLine.strokeDasharray },
+                    ...(planned.expectedMonthly > 0
+                      ? [{ label: "Rücklagenbedarf", type: "line", color: themeColors.purple, strokeWidth: CHART_STROKE.ref }]
+                      : []),
+                  ]}
+                />
+              )}
 
               {!hasChartData ? (
                 <div className="hb-empty hb-empty--sm">
@@ -719,8 +719,8 @@ export default function CostGroupsView({
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={chartWindow} margin={{ top: 4, right: 16, bottom: 0, left: 0 }} barCategoryGap="32%">
                     <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: themeColors.muted }} interval={0} angle={-20} textAnchor="end" height={50} />
-                    <YAxis tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)} width={64} />
+                    <XAxis dataKey="label" {...monthAxisProps(themeColors)} />
+                    <YAxis {...axisProps(themeColors)} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} width={AMOUNT_AXIS_WIDTH} />
                     <Tooltip
                       wrapperStyle={{ zIndex: 10 }}
                       cursor={false}
@@ -743,10 +743,13 @@ export default function CostGroupsView({
                         );
                       }}
                     />
+                    {/* Zielmarke durchgezogen, Durchschnitt gestrichelt: doppelt
+                        kodiert (Farbe und Muster), damit beide auch dicht
+                        beieinander unterscheidbar bleiben. */}
                     {planned.expectedMonthly > 0 && (
-                      <ReferenceLine y={planned.expectedMonthly} stroke={themeColors.purple} strokeDasharray="5 3" strokeWidth={1.5} />
+                      <ReferenceLine y={planned.expectedMonthly} stroke={themeColors.purple} strokeWidth={CHART_STROKE.ref} />
                     )}
-                    <ReferenceLine y={stats.avgMonthly} stroke={themeColors.accent} strokeDasharray="5 3" strokeWidth={1.5} />
+                    <ReferenceLine y={stats.avgMonthly} {...avgLine} />
                     <Bar
                       dataKey="total"
                       fill={activeGroup.color || themeColors.accent}
@@ -996,7 +999,7 @@ export default function CostGroupsView({
                         type="monotone"
                         dataKey="total"
                         stroke={group.color || themeColors.accent}
-                        strokeWidth={1.8}
+                        strokeWidth={CHART_STROKE.ref}
                         dot={false}
                         isAnimationActive={false}
                       />

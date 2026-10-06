@@ -11,10 +11,12 @@ import {
 import { Card, CardContent, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
 import { ChartTooltip, ChartTooltipRow } from "../components/ChartTooltip.jsx";
+import { ChartLegend } from "../components/ChartLegend.jsx";
 import HbSparklineHover from "../components/HbSparklineHover.jsx";
 import { IconTag, IconInfo } from "../components/icons.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
-import { getCategoryLabel, formatCurrencyAxis, fixedCostKind } from "../utils/hbUtils.js";
+import { getCategoryLabel, formatCurrencyCompact, fixedCostKind } from "../utils/hbUtils.js";
+import { CHART_STROKE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps } from "../utils/chartStyle.js";
 import { FALLBACK_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { monthlyRate, annualAmount, isSinkingFund } from "../utils/fixedCostUtils.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
@@ -285,14 +287,8 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
       {/* Hauptchart: Verlauf Gesamtbetrag + %-Anteil */}
       <Card>
         <CardContent>
-          <div className="hb-row" style={{ alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <h4 style={{ margin: 0, fontSize: 15 }}>Verlauf über Zeit</h4>
-              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: themeColors.muted }}>
-                <svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke={themeColors.accent} strokeWidth="2" /></svg>
-                Gebucht
-              </span>
-            </div>
+          <div className="hb-row" style={{ alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+            <h4 style={{ margin: 0, fontSize: 15 }}>Verlauf über Zeit</h4>
             <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <ChartScrollNav
                 offset={fctScrollOffset}
@@ -311,12 +307,13 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
               )}
             </div>
           </div>
+          <ChartLegend style={{ marginBottom: 16 }} items={[{ label: "Gebucht", type: "line", color: themeColors.accent }]} />
 
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={fctWindowData} margin={{ top: 4, right: 12, bottom: 0, left: 0 }}>
               <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: themeColors.muted }} interval={0} angle={-20} textAnchor="end" height={50} />
-              <YAxis tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)} width={64} />
+              <XAxis dataKey="label" {...monthAxisProps(themeColors)} />
+              <YAxis {...axisProps(themeColors)} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} width={AMOUNT_AXIS_WIDTH} />
               <Tooltip
                 wrapperStyle={{ zIndex: 10 }}
                 content={({ active, payload, label }) => {
@@ -330,7 +327,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                   );
                 }}
               />
-              <Line type="monotone" dataKey="fixedTotal" stroke={themeColors.accent} strokeWidth={2.5} dot={false} connectNulls={false} />
+              <Line type="monotone" dataKey="fixedTotal" stroke={themeColors.accent} strokeWidth={CHART_STROKE.main} dot={false} connectNulls={false} />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>

@@ -13,7 +13,8 @@ import {
 } from "recharts";
 import { useThemeColors } from "../../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
-import { formatCurrencyAxis } from "../../utils/hbUtils.js";
+import { formatCurrencyCompact } from "../../utils/hbUtils.js";
+import { CHART_STROKE, CHART_DASH, AXIS_FONT_SIZE, axisProps, zeroLineProps } from "../../utils/chartStyle.js";
 import { IconInbox } from "../../components/icons.jsx";
 
 const ForecastCard = memo(function ForecastCard({ analytics }) {
@@ -128,9 +129,7 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
                 domain={[1, forecastData.length]}
                 ticks={xTicks}
                 tickFormatter={(v) => `${v}`}
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 10, fill: "var(--muted, #888)" }}
+                {...axisProps(themeColors)}
               />
               <YAxis
                 axisLine={false}
@@ -139,14 +138,14 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
                 tickCount={5}
                 allowDecimals={false}
                 tick={({ y, payload }) => (
-                  <text x={0} y={y} dy="0.35em" textAnchor="start" fontSize={10} fill="var(--muted, #888)">
-                    {formatCurrencyAxis(payload.value, baseCurrency)}
+                  <text x={0} y={y} dy="0.35em" textAnchor="start" fontSize={AXIS_FONT_SIZE} fill={themeColors.muted}>
+                    {formatCurrencyCompact(payload.value, baseCurrency)}
                   </text>
                 )}
               />
               <Tooltip
                 wrapperStyle={{ zIndex: 10 }}
-                cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
+                cursor={{ stroke: "var(--border)", strokeWidth: CHART_STROKE.aux }}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const row = payload[0]?.payload;
@@ -177,17 +176,17 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
                 }}
               />
               {/* 0-Linie = Ziel */}
-              <ReferenceLine y={0} stroke="var(--muted)" strokeDasharray="3 3" />
+              <ReferenceLine y={0} {...zeroLineProps(themeColors)} />
               {isCurrentMonth && lastActualDay && (
-                <ReferenceLine x={lastActualDay} stroke="var(--border)" strokeDasharray="3 3" />
+                <ReferenceLine x={lastActualDay} stroke="var(--border)" strokeWidth={CHART_STROKE.aux} strokeDasharray={CHART_DASH.secondary} />
               )}
               {/* Soll-Pace (neutrale Referenz, linear auf 0) */}
               <Line
                 type="monotone"
                 dataKey="soll"
                 stroke="var(--border)"
-                strokeWidth={1}
-                strokeDasharray="5 4"
+                strokeWidth={CHART_STROKE.aux}
+                strokeDasharray={CHART_DASH.derived}
                 dot={false}
                 isAnimationActive={false}
               />
@@ -208,7 +207,7 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
                 type="monotone"
                 dataKey="actual"
                 stroke={lineColor}
-                strokeWidth={2.5}
+                strokeWidth={CHART_STROKE.main}
                 dot={false}
                 connectNulls={false}
                 isAnimationActive={false}
@@ -218,8 +217,8 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
                 type="monotone"
                 dataKey="projected"
                 stroke={lineColor}
-                strokeWidth={1.5}
-                strokeDasharray="4 2"
+                strokeWidth={CHART_STROKE.ref}
+                strokeDasharray={CHART_DASH.derived}
                 dot={false}
                 connectNulls={false}
                 isAnimationActive={false}
