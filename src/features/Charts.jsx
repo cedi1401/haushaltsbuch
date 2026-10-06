@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { EMPTY_ARRAY } from "../utils/constants.js";
+import { formatPercent } from "../utils/hbUtils.js";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import { IconInbox } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
@@ -180,9 +181,9 @@ export default function Charts({
                 <div className="hb-legend-items-scroll">
                   {allocationData.items.map((item) => {
                     const pct = allocationData.totalValue > 0
-                      ? ((item.value / allocationData.totalValue) * 100).toFixed(1)
-                      : "0.0";
-                    const valueStr = displayMode === "percent" ? `${pct}%` : fmt(item.value);
+                      ? (item.value / allocationData.totalValue) * 100
+                      : 0;
+                    const valueStr = displayMode === "percent" ? formatPercent(pct, { sign: false }) : fmt(item.value);
                     return (
                       <div key={item.name} className="hb-legend-row">
                         <div className="hb-legend-left">
@@ -222,7 +223,7 @@ export default function Charts({
                         if (!active || !payload?.length) return null;
                         const p = payload[0];
                         const valStr = displayMode === "percent"
-                          ? `${((p.value / allocationData.totalValue) * 100).toFixed(1)}%`
+                          ? formatPercent((p.value / allocationData.totalValue) * 100, { sign: false })
                           : fmt(p.value);
                         return (
                           <div className="hb-chart-tooltip">
@@ -280,7 +281,7 @@ export default function Charts({
                 <span>{drilldownId && activeCat ? `${activeCat.name} gesamt (${activeCat.entryCount})` : activeTab === "expense" ? "Ausgaben gesamt" : "Einnahmen gesamt"}</span>
                 <span>
                   {displayMode === "percent"
-                    ? "100%"
+                    ? "100 %"
                     : (activeTab === "expense" ? "−" : "+") + fmt(totalValue)}
                 </span>
               </div>
@@ -288,9 +289,9 @@ export default function Charts({
               {/* Legend rows — scrollbar erscheint ab dem 11. Eintrag */}
               <div className="hb-legend-items-scroll">
                 {legendItems.map((item, i) => {
-                  const pct = totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : "0.0";
+                  const pct = totalValue > 0 ? (item.value / totalValue) * 100 : 0;
                   const valueStr = displayMode === "percent"
-                    ? `${pct}%`
+                    ? formatPercent(pct, { sign: false })
                     : (activeTab === "expense" ? "−" : "+") + fmt(item.value);
                   return (
                     <div
@@ -355,7 +356,7 @@ export default function Charts({
                       if (!active || !payload?.length) return null;
                       const p = payload[0];
                       const valStr = displayMode === "percent"
-                        ? `${((p.value / totalValue) * 100).toFixed(1)}%`
+                        ? formatPercent((p.value / totalValue) * 100, { sign: false })
                         : fmt(p.value);
                       return (
                         <div className="hb-chart-tooltip">
@@ -374,7 +375,7 @@ export default function Charts({
               {/* Center overlay */}
               {(() => {
                 const centerValue = displayMode === "percent"
-                  ? "100%"
+                  ? "100 %"
                   : (activeTab === "expense" ? "−" : "+") + fmt(totalValue);
                 const len = centerValue.length;
                 const fontSize = len >= 15 ? 17 : len >= 12 ? 20 : 24;

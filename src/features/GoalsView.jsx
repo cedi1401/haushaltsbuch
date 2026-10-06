@@ -9,7 +9,7 @@ import {
   calcGoalPrognosis,
   calcGoalArchiveStats,
 } from "../utils/goalUtils.js";
-import { parseAmount, todayISO } from "../utils/hbUtils.js";
+import { formatPercent, parseAmount, todayISO } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
@@ -359,12 +359,12 @@ export default function GoalsView({
             <div className="hb-stat-pill hb-stat-pill--ok">
               <div className="hb-stat-pill-label">Erreicht</div>
               <div className="hb-stat-pill-value hb-ok">{stats.completedCount}</div>
-              <div className="hb-stat-pill-sub hb-stat-pill-sub--lg">{stats.successRate}% Erfolgsquote</div>
+              <div className="hb-stat-pill-sub hb-stat-pill-sub--lg">{formatPercent(stats.successRate, { digits: 0, sign: false })} Erfolgsquote</div>
             </div>
 
             <div className="hb-stat-pill hb-stat-pill--accent">
               <div className="hb-stat-pill-label">Erfüllungsgrad aktiv</div>
-              <div className="hb-stat-pill-value">{stats.avgActivePercent}%</div>
+              <div className="hb-stat-pill-value">{formatPercent(stats.avgActivePercent, { digits: 0, sign: false })}</div>
               <div className="hb-stat-pill-gauge-track">
                 <div
                   className="hb-stat-pill-gauge-fill"
@@ -444,7 +444,7 @@ export default function GoalsView({
                   <div className={goal.progress.percent >= 100
                     ? "hb-goal-percent hb-goal-percent--done"
                     : "hb-goal-percent"}>
-                    {goal.progress.percent}%
+                    {formatPercent(goal.progress.percent, { digits: 0, sign: false })}
                   </div>
                 </div>
 

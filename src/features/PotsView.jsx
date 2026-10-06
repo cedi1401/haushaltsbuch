@@ -22,7 +22,7 @@ import { calcPotSeries, potPurposeBalances } from "../utils/potUtils.js";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import { CHART_STROKE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, zeroLineProps } from "../utils/chartStyle.js";
-import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact } from "../utils/hbUtils.js";
+import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact, formatSigned } from "../utils/hbUtils.js";
 import { formatYearMonth, getEntryFinancialMonth } from "../utils/financialMonthUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useThemeColors } from "../hooks/themeColors.js";
@@ -634,7 +634,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                                 <ChartTooltipDivider />
                                 <ChartTooltipRow
                                   label="Netto"
-                                  value={`${netto >= 0 ? "+" : "−"}${fmt(Math.abs(netto))}`}
+                                  value={formatSigned(fmt, netto)}
                                   valueStyle={{ color: netto >= 0 ? themeColors.green : themeColors.red }}
                                 />
                               </ChartTooltip>

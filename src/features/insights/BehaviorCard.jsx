@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { useThemeColors } from "../../hooks/themeColors.js";
 import { CHART_STROKE, CHART_DASH, axisProps, averageLineProps } from "../../utils/chartStyle.js";
-import { formatDateDELong } from "../../utils/hbUtils.js";
+import { formatDateDELong, formatPercent } from "../../utils/hbUtils.js";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { IconInbox } from "../../components/icons.jsx";
 
@@ -143,7 +143,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                       fontWeight: 600,
                       color: dailyTrendPct > 0 ? themeColors.red : dailyTrendPct < 0 ? themeColors.green : themeColors.muted,
                     }}>
-                      {dailyTrendPct > 0 ? "+" : ""}{Math.round(dailyTrendPct)}%
+                      {formatPercent(dailyTrendPct, { digits: 0 })}
                     </span>
                     {trendTooltipVisible && (
                       <div style={{
@@ -251,7 +251,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
           <Kpi
             label="Häufigste"
             value={topCategory || "–"}
-            sub={topCategory && topCategoryPct != null ? `${topCategoryPct}% aller Buchungen` : null}
+            sub={topCategory && topCategoryPct != null ? `${formatPercent(topCategoryPct, { digits: 0, sign: false })} aller Buchungen` : null}
           />
         </div>
       </div>

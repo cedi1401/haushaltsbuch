@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { getEntryFinancialMonth, getFinancialMonthRange, getFinancialMonth } from "../utils/financialMonthUtils.js";
-import { toLocalISO } from "../utils/hbUtils.js";
+import { formatPercent, toLocalISO } from "../utils/hbUtils.js";
 import { BURNRATE_DELTA_THRESHOLD_PCT } from "../utils/constants.js";
 
 const DAY_NAMES_MON_FIRST = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -313,9 +313,9 @@ export function useFinanceAnalytics({
     let contextMessage = null;
     if (burnRateDeltaPct !== null && isCurrentMonth) {
       if (burnRateDeltaPct > BURNRATE_DELTA_THRESHOLD_PCT) {
-        contextMessage = `Du liegst ${Math.round(burnRateDeltaPct)}% über deinem Vormonatsniveau`;
+        contextMessage = `Du liegst ${formatPercent(burnRateDeltaPct, { digits: 0, sign: false })} über deinem Vormonatsniveau`;
       } else if (burnRateDeltaPct < -BURNRATE_DELTA_THRESHOLD_PCT) {
-        contextMessage = `Du liegst ${Math.round(Math.abs(burnRateDeltaPct))}% unter deinem Vormonatsniveau`;
+        contextMessage = `Du liegst ${formatPercent(Math.abs(burnRateDeltaPct), { digits: 0, sign: false })} unter deinem Vormonatsniveau`;
       } else {
         contextMessage = "Du liegst im Bereich deines üblichen Niveaus";
       }

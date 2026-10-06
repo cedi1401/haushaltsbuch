@@ -12,6 +12,8 @@ import {
   DEFAULT_POTS,
   formatCurrency,
   formatCurrencyCompact,
+  formatPercent,
+  formatSigned,
 } from '../hbUtils.js';
 import { shortMonthTick } from '../chartStyle.js';
 
@@ -659,6 +661,52 @@ describe('formatCurrency', () => {
     expect(formatCurrency(65, 'USD')).toBe('$65.00');
     expect(formatCurrency(0, 'USD')).toBe('$0.00');
     expect(formatCurrency(-0, 'USD')).toBe('$0.00');
+  });
+});
+
+// ─── formatSigned ──────────────────────────────────────────────────────────
+
+describe('formatSigned', () => {
+  const fmt = (n) => formatCurrency(n, 'USD');
+
+  it('adds a plus to positive amounts and keeps the real minus', () => {
+    expect(formatSigned(fmt, 65)).toBe('+$65.00');
+    expect(formatSigned(fmt, -65)).toBe('−$65.00');
+  });
+
+  it('leaves amounts that round to zero unsigned', () => {
+    expect(formatSigned(fmt, 0)).toBe('$0.00');
+    expect(formatSigned(fmt, 0.004)).toBe('$0.00');
+    expect(formatSigned(fmt, -0.004)).toBe('$0.00');
+    expect(formatSigned(fmt, null)).toBe('$0.00');
+  });
+});
+
+// ─── formatPercent ─────────────────────────────────────────────────────────
+
+describe('formatPercent', () => {
+  it('adds a plus to positive values', () => {
+    expect(formatPercent(12.34)).toBe('+12.3 %');
+  });
+
+  it('uses a real minus sign', () => {
+    expect(formatPercent(-4.5)).toBe('−4.5 %');
+    expect(formatPercent(-4.5, { sign: false })).toBe('−4.5 %');
+  });
+
+  it('distinguishes null from 0 %', () => {
+    expect(formatPercent(null)).toBe('—');
+    expect(formatPercent(0)).toBe('0.0 %');
+  });
+
+  it('leaves values that round to zero unsigned', () => {
+    expect(formatPercent(0.04)).toBe('0.0 %');
+    expect(formatPercent(-0.04)).toBe('0.0 %');
+    expect(formatPercent(-0.4, { digits: 0 })).toBe('0 %');
+  });
+
+  it('can drop the sign and change the digits', () => {
+    expect(formatPercent(51.234, { digits: 0, sign: false })).toBe('51 %');
   });
 });
 

@@ -1,6 +1,7 @@
 import React, { memo, useState, useEffect } from "react";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { IconInbox } from "../../components/icons.jsx";
+import { formatPercent } from "../../utils/hbUtils.js";
 import { getFinancialMonthRange, getFinancialMonth } from "../../utils/financialMonthUtils.js";
 
 function getBudgetStatus(pct) {
@@ -135,7 +136,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
               / {fmt(totalBudget, 0)}
               {" · "}
               <span style={{ fontVariantNumeric: "tabular-nums" }}>
-                {Math.min(Math.round(totalPct * 100), 150)}% verbraucht
+                {formatPercent(Math.min(Math.round(totalPct * 100), 150), { digits: 0, sign: false })} verbraucht
               </span>
             </span>
           </div>
@@ -178,7 +179,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
           const isOver   = remaining < 0;
 
           const pctDisplay = Math.round(pct * 100);
-          const pillText   = pctDisplay > 150 ? STATUS_LABEL[status] : `${pctDisplay}%`;
+          const pillText   = pctDisplay > 150 ? STATUS_LABEL[status] : formatPercent(pctDisplay, { digits: 0, sign: false });
 
           return (
             <div key={item.id} className="hb-budget-row">

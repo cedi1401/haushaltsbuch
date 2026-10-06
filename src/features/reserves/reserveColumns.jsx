@@ -1,5 +1,5 @@
 import React from "react";
-import { formatDateDE } from "../../utils/hbUtils.js";
+import { formatDateDE, formatPercent } from "../../utils/hbUtils.js";
 import { IconTag } from "../../components/icons.jsx";
 import { formatRateCount } from "./reserveFormat.js";
 
@@ -53,7 +53,7 @@ function sumBy(rows, pick) {
 
 function pct(value) {
   if (value === null || value === undefined || !Number.isFinite(value)) return null;
-  return `${(value * 100).toFixed(0)}%`;
+  return formatPercent(value * 100, { digits: 0, sign: false });
 }
 
 /**

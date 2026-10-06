@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   formatFetchedAt,
-  formatPercent,
   formatQuantity,
   formatQuotePrice,
   gainClass,
@@ -39,25 +38,6 @@ describe('formatQuantity', () => {
   it('meldet unbrauchbare Mengen als Strich', () => {
     expect(formatQuantity(null)).toBe('—');
     expect(formatQuantity(Number.NaN)).toBe('—');
-  });
-});
-
-describe('formatPercent', () => {
-  it('setzt bei Gewinn ein Plus', () => {
-    expect(formatPercent(12.34)).toBe('+12.3 %');
-  });
-
-  it('lässt das Minus stehen', () => {
-    expect(formatPercent(-4.5)).toBe('-4.5 %');
-  });
-
-  it('unterscheidet null von 0 %', () => {
-    expect(formatPercent(null)).toBe('—');
-    expect(formatPercent(0)).toBe('0.0 %');
-  });
-
-  it('kann das Vorzeichen weglassen und die Stellen ändern', () => {
-    expect(formatPercent(51.234, { digits: 0, sign: false })).toBe('51 %');
   });
 });
 

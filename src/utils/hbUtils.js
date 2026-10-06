@@ -94,6 +94,40 @@ export function formatCurrency(n, currency = "CHF", fractionDigits = 2) {
   }
 }
 
+// Betrag einer Differenz: wie `fmt`, positive Werte bekommen zusätzlich ein „+".
+// `fmt` ist der Formatierer des aktiven Buchs (useFmt). Was gerundet null
+// ergibt, bleibt ohne Vorzeichen — „+CHF 0.00" oder „−CHF 0.00" gibt es nicht.
+// Nur für Differenzen und Gewinne; Richtungsangaben wie Einnahme/Ausgabe
+// setzen ihr Zeichen weiter selbst.
+export function formatSigned(fmt, n) {
+  const value = Number(n || 0);
+  const zero = fmt(0);
+  if (fmt(Math.abs(value)) === zero) return zero;
+  return `${value > 0 ? "+" : ""}${fmt(value)}`;
+}
+
+/**
+ * Prozentwert im app-weiten Format: Leerzeichen vor dem Zeichen („15.3 %"),
+ * echtes Minus (U+2212) wie bei formatCurrency, auf Wunsch ein „+" bei
+ * positiven Werten. `null` (kein Wert berechenbar) wird zu „—", nicht zu „0 %".
+ * Was gerundet null ergibt, trägt kein Vorzeichen.
+ *
+ * @param {number|null} value Prozentwert (15.3, nicht 0.153)
+ * @param {{digits?: number, sign?: boolean}} options
+ * @returns {string}
+ */
+export function formatPercent(value, { digits = 1, sign = true } = {}) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return "—";
+  const n = Number(value);
+  const rounded = Number(n.toFixed(digits));
+  const text = new Intl.NumberFormat("de-CH", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(Math.abs(n));
+  const prefix = rounded < 0 ? "−" : sign && rounded > 0 ? "+" : "";
+  return `${prefix}${text} %`;
+}
+
 // Kompakte Währungsdarstellung für Chart-Achsen und andere enge Kontexte:
 // Tausender/Millionen werden zu „k"/„M" gekürzt, z. B. CHF 3.5k, −1.2k €, $4M.
 // Der einzige Achsen-Formatierer der App — der exakte Betrag steht im Tooltip.

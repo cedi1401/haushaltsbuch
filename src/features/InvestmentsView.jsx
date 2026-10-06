@@ -14,7 +14,7 @@ import {
 } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
-import { formatDateDE } from "../utils/hbUtils.js";
+import { formatDateDE, formatPercent, formatSigned } from "../utils/hbUtils.js";
 import {
   emptyInvestments,
   GRAMS_PER_TROY_OUNCE,
@@ -37,7 +37,6 @@ import {
 } from "../utils/investmentActions.js";
 import {
   formatFetchedAt,
-  formatPercent,
   formatQuantity,
   gainClass,
 } from "../utils/investmentFormat.js";
@@ -142,8 +141,7 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
           </span>
           {d.summary.unrealizedGain !== null && (
             <span className={gainClass(d.summary.unrealizedGain)}>
-              {d.summary.unrealizedGain > 0 ? "+" : ""}
-              {fmt(d.summary.unrealizedGain)}
+              {formatSigned(fmt, d.summary.unrealizedGain)}
             </span>
           )}
           {d.positions.length === 0 && <span className="hb-muted">noch leer</span>}
@@ -243,13 +241,13 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
           <DetailRow label="Gebühren" value={fmt(row.fees)} />
           <DetailRow
             label="Realisiert"
-            value={`${row.realizedGain > 0 ? "+" : ""}${fmt(row.realizedGain)}`}
+            value={formatSigned(fmt, row.realizedGain)}
             className={gainClass(row.realizedGain)}
           />
           <DetailRow label="Ausschüttungen" value={fmt(row.dividends)} />
           <DetailRow
             label="Gesamtrendite"
-            value={`${row.totalReturn > 0 ? "+" : ""}${fmt(row.totalReturn)} (${formatPercent(row.totalReturnPct)})`}
+            value={`${formatSigned(fmt, row.totalReturn)} (${formatPercent(row.totalReturnPct)})`}
             className={gainClass(row.totalReturn)}
           />
           <DetailRow

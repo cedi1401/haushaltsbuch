@@ -1,9 +1,8 @@
 import React from "react";
 import { Card, CardContent } from "../../components/ui.jsx";
 import { IconTrend } from "../../components/icons.jsx";
-import { formatPercent, gainClass } from "../../utils/investmentFormat.js";
-
-const signed = (fmt, n) => `${n > 0 ? "+" : ""}${fmt(n)}`;
+import { formatPercent, formatSigned } from "../../utils/hbUtils.js";
+import { gainClass } from "../../utils/investmentFormat.js";
 
 /**
  * Rendite als Rechnung: Eingesetzt, dann die drei Summanden der
@@ -36,13 +35,13 @@ export default function ReturnsCard({ total, fmt }) {
             <span className={`hb-inv-detail-value ${gainClass(total.unrealizedGain)}`}>
               {total.unrealizedGain === null
                 ? "—"
-                : `${signed(fmt, total.unrealizedGain)} (${formatPercent(total.unrealizedGainPct)})`}
+                : `${formatSigned(fmt, total.unrealizedGain)} (${formatPercent(total.unrealizedGainPct)})`}
             </span>
           </div>
           <div className="hb-inv-detail-row">
             <span className="hb-inv-detail-label">Realisiert</span>
             <span className={`hb-inv-detail-value ${gainClass(total.realizedGain)}`}>
-              {signed(fmt, total.realizedGain)}
+              {formatSigned(fmt, total.realizedGain)}
             </span>
           </div>
           <div className="hb-inv-detail-row">
@@ -57,7 +56,7 @@ export default function ReturnsCard({ total, fmt }) {
           </span>
           <div>
             <div className={`hb-inv-return-value ${gainClass(total.totalReturn)}`}>
-              {signed(fmt, total.totalReturn)}
+              {formatSigned(fmt, total.totalReturn)}
             </div>
             <div className="hb-inv-return-sub">
               {formatPercent(total.totalReturnPct)} auf die Summe aller Käufe

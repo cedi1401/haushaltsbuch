@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { useThemeColors } from "../../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
-import { formatCurrencyCompact } from "../../utils/hbUtils.js";
+import { formatCurrencyCompact, formatPercent, formatSigned } from "../../utils/hbUtils.js";
 import { CHART_STROKE, CHART_DASH, AXIS_FONT_SIZE, axisProps, zeroLineProps } from "../../utils/chartStyle.js";
 import { IconInbox } from "../../components/icons.jsx";
 
@@ -168,7 +168,7 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
                       <div className="hb-chart-tooltip-row">
                         <span className="hb-chart-tooltip-key">{delta >= 0 ? "voraus" : "hinterher"}</span>
                         <span style={{ color: delta >= 0 ? "var(--green)" : "var(--red)" }}>
-                          {delta >= 0 ? "+" : "−"}{fmt(Math.abs(delta))}
+                          {formatSigned(fmt, delta)}
                         </span>
                       </div>
                     </div>
@@ -275,7 +275,7 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
           </div>
           <div className="hb-insight-kpi">
             {isPastMonth
-              ? (savingsRate != null ? `${savingsRate}%` : "–")
+              ? (savingsRate != null ? formatPercent(savingsRate, { digits: 0, sign: false }) : "–")
               : (isFutureMonth ? "–" : fmt(sollPerDay))
             }
           </div>
@@ -289,7 +289,7 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
           <div className="hb-insight-kpi">
             {isFutureMonth
               ? (daysInMonth ?? "–")
-              : (trendVsPrevMonthPct != null ? `${trendVsPrevMonthPct > 0 ? "+" : ""}${trendVsPrevMonthPct}%` : "–")
+              : (trendVsPrevMonthPct != null ? formatPercent(trendVsPrevMonthPct, { digits: 0 }) : "–")
             }
           </div>
         </div>

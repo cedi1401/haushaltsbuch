@@ -18,7 +18,7 @@ import {
 } from "recharts";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
-import { formatCurrencyCompact } from "../utils/hbUtils.js";
+import { formatCurrencyCompact, formatPercent, formatSigned } from "../utils/hbUtils.js";
 import {
   CHART_STROKE,
   CHART_DASH,
@@ -55,7 +55,7 @@ function CashflowTooltip({ active, payload, label, fmt }) {
       <ChartTooltipDivider />
       <ChartTooltipRow
         label="Frei"
-        value={`${frei >= 0 ? "+" : "−"}${fmt(Math.abs(frei))}`}
+        value={formatSigned(fmt, frei)}
         valueStyle={{ color: frei >= 0 ? "var(--green)" : "var(--red)" }}
       />
     </ChartTooltip>
@@ -326,7 +326,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
           </div>
           <div className={`hb-stat-pill ${savingsRate >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
             <span className="hb-stat-pill-label">Sparquote (Ø)</span>
-            <span className={`hb-stat-pill-value ${savingsRate >= 0 ? "hb-ok" : "hb-bad"}`}>{savingsRate.toFixed(1)} %</span>
+            <span className={`hb-stat-pill-value ${savingsRate >= 0 ? "hb-ok" : "hb-bad"}`}>{formatPercent(savingsRate, { sign: false })}</span>
             <div className="hb-stat-pill-gauge-track">
               <div
                 className="hb-stat-pill-gauge-fill"
@@ -399,7 +399,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                     <LineChart data={saldoChartData}>
                       <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                       <XAxis dataKey="name" {...monthAxisProps(themeColors)} />
-                      <YAxis {...axisProps(themeColors)} tickFormatter={(v) => `${v.toFixed(0)} %`} />
+                      <YAxis {...axisProps(themeColors)} tickFormatter={(v) => formatPercent(v, { digits: 0, sign: false })} />
                       <Tooltip
                         wrapperStyle={{ zIndex: 10 }}
                         content={({ active, payload, label }) => {
@@ -413,7 +413,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                                   key={p.dataKey}
                                   label={labelMap[p.dataKey] || p.dataKey}
                                   color={colorMap[p.dataKey]}
-                                  value={`${p.value.toFixed(1)} %`}
+                                  value={formatPercent(p.value, { sign: false })}
                                 />
                               ))}
                             </ChartTooltip>

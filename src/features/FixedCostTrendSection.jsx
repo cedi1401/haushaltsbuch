@@ -15,7 +15,7 @@ import { ChartLegend } from "../components/ChartLegend.jsx";
 import HbSparklineHover from "../components/HbSparklineHover.jsx";
 import { IconTag, IconInfo } from "../components/icons.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
-import { getCategoryLabel, formatCurrencyCompact, fixedCostKind } from "../utils/hbUtils.js";
+import { getCategoryLabel, formatCurrencyCompact, formatPercent, fixedCostKind } from "../utils/hbUtils.js";
 import { CHART_STROKE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps } from "../utils/chartStyle.js";
 import { FALLBACK_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { monthlyRate, annualAmount, isSinkingFund } from "../utils/fixedCostUtils.js";
@@ -135,7 +135,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
 
   const momLabel =
     kpis.momDelta == null ? null
-    : `${kpis.momDelta > 0 ? "+" : ""}${kpis.momDelta.toFixed(1)}% ggü. Vormonat`;
+    : `${formatPercent(kpis.momDelta)} ggü. Vormonat`;
 
   const availableTags = useMemo(() => {
     const set = new Set();
@@ -273,7 +273,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
         />
         <KpiCard
           label="Ø Anteil an der Gesamtbelastung"
-          value={kpis.avgShare != null ? `${kpis.avgShare.toFixed(1)} %` : "—"}
+          value={formatPercent(kpis.avgShare, { sign: false })}
           sub="über den Zeitraum"
           spark={{ data: fctWindowData, dataKey: "share", color: themeColors.purple, caption: fctWindowLabel }}
         />

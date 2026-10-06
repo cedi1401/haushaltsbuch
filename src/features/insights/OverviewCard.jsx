@@ -1,15 +1,15 @@
 import React, { memo } from "react";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { IconInbox } from "../../components/icons.jsx";
+import { formatPercent } from "../../utils/hbUtils.js";
 
 function MomDelta({ momDelta, fontSize }) {
   const style = fontSize ? { fontSize } : undefined;
   if (!momDelta) return <span className="hb-insight-mom hb-insight-mom--flat" style={style}>–</span>;
   const arrow = momDelta.dir === "up" ? "▲" : momDelta.dir === "down" ? "▼" : "";
-  const sign = momDelta.dir === "up" ? "+" : "";
   return (
     <span className={`hb-insight-mom hb-insight-mom--${momDelta.dir}`} style={style}>
-      {arrow ? `${arrow} ` : ""}{sign}{Math.abs(momDelta.pct).toFixed(0)}%
+      {arrow ? `${arrow} ` : ""}{formatPercent(Math.abs(momDelta.pct), { digits: 0, sign: momDelta.dir === "up" })}
     </span>
   );
 }

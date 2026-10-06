@@ -2,7 +2,8 @@
 // dort steht die Rechnung, hier nur die Darstellung.
 //
 // Beträge laufen weiterhin über `fmt` aus dem CurrencyContext — hier stehen nur
-// die Formate, die es dort nicht gibt (Stückzahlen, Prozente, Zeitstempel).
+// die Formate, die es dort nicht gibt (Stückzahlen, Kurse, Zeitstempel).
+// Prozentwerte laufen über `formatPercent` aus hbUtils.js.
 
 import { QUANTITY_UNIT_LABELS } from "./investmentModel.js";
 
@@ -32,24 +33,6 @@ export function formatQuantity(quantity, unit = "pcs", assetClass = null) {
   }).format(n);
   const label = QUANTITY_UNIT_LABELS[unit] || QUANTITY_UNIT_LABELS.pcs;
   return `${text} ${label}`;
-}
-
-/**
- * Prozentwert mit Vorzeichen — für Rendite-Angaben.
- * `null` (keine Kostenbasis, kein Kurs) wird zu „—", nicht zu „0 %".
- *
- * @param {number|null} value
- * @param {{digits?: number, sign?: boolean}} options
- * @returns {string}
- */
-export function formatPercent(value, { digits = 1, sign = true } = {}) {
-  if (value === null || value === undefined || !Number.isFinite(Number(value))) return "—";
-  const n = Number(value);
-  const text = new Intl.NumberFormat("de-CH", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(n);
-  return `${sign && n > 0 ? "+" : ""}${text} %`;
 }
 
 /**

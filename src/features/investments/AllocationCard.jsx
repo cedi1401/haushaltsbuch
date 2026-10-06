@@ -3,7 +3,8 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent } from "../../components/ui.jsx";
 import { useCardBg } from "../../hooks/useCardBg.js";
 import { useThemeColors } from "../../hooks/themeColors.js";
-import { formatPercent, gainClass } from "../../utils/investmentFormat.js";
+import { formatPercent } from "../../utils/hbUtils.js";
+import { gainClass } from "../../utils/investmentFormat.js";
 
 // Aufgelöste Klassenfarben für die SVG-Füllung. Recharts schreibt `fill` als
 // Attribut, und `var()` in SVG-Präsentationsattributen löst nicht jeder

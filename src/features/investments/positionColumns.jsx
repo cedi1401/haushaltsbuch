@@ -1,9 +1,8 @@
 import React from "react";
-import { formatDateDE } from "../../utils/hbUtils.js";
+import { formatDateDE, formatPercent, formatSigned } from "../../utils/hbUtils.js";
 import { ASSET_CLASS_LABELS } from "../../utils/investmentModel.js";
 import {
   formatFetchedAt,
-  formatPercent,
   formatQuantity,
   gainClass,
 } from "../../utils/investmentFormat.js";
@@ -198,8 +197,7 @@ export function positionColumnCatalog({ fmt, baseCurrency }) {
       render: (row) =>
         row.unrealizedGain === null ? null : (
           <span className={gainClass(row.unrealizedGain)}>
-            {row.unrealizedGain > 0 ? "+" : ""}
-            {fmt(row.unrealizedGain)}
+            {formatSigned(fmt, row.unrealizedGain)}
           </span>
         ),
       summarize: (rows) => {
@@ -208,8 +206,7 @@ export function positionColumnCatalog({ fmt, baseCurrency }) {
         const total = sumBy(priced, (r) => r.unrealizedGain);
         return (
           <span className={gainClass(total)}>
-            {total > 0 ? "+" : ""}
-            {fmt(total)}
+            {formatSigned(fmt, total)}
           </span>
         );
       },
@@ -262,16 +259,14 @@ export function positionColumnCatalog({ fmt, baseCurrency }) {
       render: (row) =>
         row.realizedGain === 0 ? null : (
           <span className={gainClass(row.realizedGain)}>
-            {row.realizedGain > 0 ? "+" : ""}
-            {fmt(row.realizedGain)}
+            {formatSigned(fmt, row.realizedGain)}
           </span>
         ),
       summarize: (rows) => {
         const total = sumBy(rows, (r) => r.realizedGain);
         return (
           <span className={gainClass(total)}>
-            {total > 0 ? "+" : ""}
-            {fmt(total)}
+            {formatSigned(fmt, total)}
           </span>
         );
       },
@@ -283,8 +278,7 @@ export function positionColumnCatalog({ fmt, baseCurrency }) {
       sortValue: (row) => row.totalReturn,
       render: (row) => (
         <span className={gainClass(row.totalReturn)}>
-          {row.totalReturn > 0 ? "+" : ""}
-          {fmt(row.totalReturn)}
+          {formatSigned(fmt, row.totalReturn)}
         </span>
       ),
     },

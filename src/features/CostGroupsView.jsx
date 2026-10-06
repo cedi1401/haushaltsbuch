@@ -26,7 +26,7 @@ import { useClickOutside } from "../hooks/useClickOutside.js";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { generateId } from "../utils/idUtils.js";
-import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, formatCurrencyCompact, formatDateDE, todayISO } from "../utils/hbUtils.js";
+import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, formatCurrencyCompact, formatDateDE, formatPercent, formatSigned, todayISO } from "../utils/hbUtils.js";
 import { CHART_STROKE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, averageLineProps } from "../utils/chartStyle.js";
 import { EMPTY_ARRAY, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 import { CUSTOM_CATEGORY_PALETTE } from "../utils/hbPalette.js";
@@ -657,8 +657,7 @@ export default function CostGroupsView({
                     : undefined
                 }
               >
-                {hasPlan && deviationSign > 0 ? "+" : hasPlan && deviationSign < 0 ? "−" : ""}
-                {fmt(hasPlan ? Math.abs(deviation) : 0)}
+                {hasPlan ? formatSigned(fmt, deviation) : fmt(0)}
               </span>
               <span className="hb-stat-pill-sub">
                 {!hasPlan
@@ -820,7 +819,7 @@ export default function CostGroupsView({
                           </div>
                           <div className="hb-cg-breakdown-values">
                             <span className="hb-cg-breakdown-amount">{fmt(c.total)}</span>
-                            <span className="hb-cg-breakdown-share">{pct} %</span>
+                            <span className="hb-cg-breakdown-share">{formatPercent(pct, { digits: 0, sign: false })}</span>
                           </div>
                         </div>
                         <div className="hb-cg-breakdown-bar">

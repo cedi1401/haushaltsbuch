@@ -14,9 +14,9 @@ import { ChartTooltip, ChartTooltipRow, ChartTooltipDivider } from "../../compon
 import { IconTrend } from "../../components/icons.jsx";
 import { useThemeColors } from "../../hooks/themeColors.js";
 import { useCardBg } from "../../hooks/useCardBg.js";
-import { formatCurrencyCompact, formatDateDE } from "../../utils/hbUtils.js";
+import { formatCurrencyCompact, formatDateDE, formatPercent, formatSigned } from "../../utils/hbUtils.js";
 import { CHART_STROKE, CHART_DASH, AMOUNT_AXIS_WIDTH, axisProps, xAxisProps } from "../../utils/chartStyle.js";
-import { formatFetchedAt, formatPercent, gainClass } from "../../utils/investmentFormat.js";
+import { formatFetchedAt, gainClass } from "../../utils/investmentFormat.js";
 import { windowSnapshots } from "../../utils/investmentUtils.js";
 
 const HELP_HISTORY =
@@ -141,8 +141,7 @@ export default function ValueHistoryCard({
               {gain !== null && (
                 <div className="hb-inv-hero-gain">
                   <span className={gainClass(gain)}>
-                    {gain > 0 ? "+" : ""}
-                    {fmt(gain)} ({formatPercent(total.unrealizedGainPct)})
+                    {formatSigned(fmt, gain)} ({formatPercent(total.unrealizedGainPct)})
                   </span>{" "}
                   <span className="hb-muted">nicht realisiert</span>
                 </div>
@@ -152,8 +151,7 @@ export default function ValueHistoryCard({
                   className="hb-inv-hero-delta"
                   title="Wertveränderung im gewählten Zeitraum, inklusive Käufe und Verkäufe"
                 >
-                  {delta > 0 ? "+" : ""}
-                  {fmt(delta)} seit {formatDateDE(view.data[0].date)}
+                  {formatSigned(fmt, delta)} seit {formatDateDE(view.data[0].date)}
                 </div>
               )}
             </div>
@@ -257,7 +255,7 @@ export default function ValueHistoryCard({
                             {step !== null && (
                               <ChartTooltipRow
                                 label="ggü. Vorpunkt"
-                                value={`${step > 0 ? "+" : ""}${fmt(step)}`}
+                                value={formatSigned(fmt, step)}
                                 valueClassName={gainClass(step)}
                               />
                             )}

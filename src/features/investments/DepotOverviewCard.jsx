@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
 import { Card, CardContent, Button } from "../../components/ui.jsx";
 import { IconWallet } from "../../components/icons.jsx";
-import { formatPercent, gainClass } from "../../utils/investmentFormat.js";
+import { formatPercent } from "../../utils/hbUtils.js";
+import { gainClass } from "../../utils/investmentFormat.js";
 
 /**
  * Vermögensübersicht: die Depots mit Wert, Anteil und G/V (Beschluss G).
