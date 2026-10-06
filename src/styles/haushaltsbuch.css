@@ -3773,6 +3773,70 @@ select.hb-input option {
   color: var(--text);
 }
 
+/* Buchungsstand „1 von 8 gebucht". Zwei Fundorte mit demselben Markup
+   (renderBookedStatus): als Pille im Kartenkopf direkt neben dem Tabellentitel
+   und als getönter Text in der Summenzeile. Ton nach dem Rezept von
+   .hb-res-pill: alles gebucht = Grün, sonst --yellow-text auf --yellow-soft —
+   nie Rot, offene Buchungen sind am Monatsanfang der Normalfall. Das Symbol
+   (gefüllter Kreis mit Haken gegen leeren Kreis) trägt die Aussage mit, die
+   Farbe ist redundante Kodierung. */
+.hb-fixed-booked {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  /* Es hängt ein title-Tooltip daran — der Zeiger kündigt ihn an. */
+  cursor: help;
+}
+
+.hb-fixed-booked--done { color: var(--green); }
+.hb-fixed-booked--open { color: var(--yellow-text); }
+
+/* Pille im Kartenkopf. Geometrie und Rahmen von .hb-badge, aber eine Stufe
+   größer (13 px statt 11 px, 28 px hoch): sie ist der Blickfang der Karte und
+   steht neben einem 16-px-Titel und 28 px hohen Schaltflächen. Steht nach
+   .hb-badge in der Datei und gewinnt bei gleicher Spezifität. */
+.hb-fixed-booked--pill {
+  gap: 8px;
+  min-height: 28px;
+  margin-left: 4px;
+  padding: 3px 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.hb-fixed-booked--pill.hb-fixed-booked--done {
+  color: var(--green);
+  background: var(--green-soft);
+  border-color: var(--green-border);
+}
+
+.hb-fixed-booked--pill.hb-fixed-booked--open {
+  color: var(--yellow-text);
+  background: var(--yellow-soft);
+  border-color: var(--yellow-border);
+}
+
+/* Fortschrittsbalken in der Pille — Track und Fill von .hb-stat-pill-gauge-*,
+   Track Hue-auf-Hue wie bei den Stat-Pills. In der Zeile statt am Pillenboden
+   (margin-top: auto zurückgesetzt) und ohne Übergang: der Stand soll beim
+   Öffnen sofort stehen. */
+.hb-fixed-booked-gauge {
+  flex: none;
+  width: 56px;
+  height: 4px;
+  margin-top: 0;
+  background: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.hb-fixed-booked-gauge-fill {
+  display: block;
+  background: currentColor;
+  transition: none;
+}
+
 /* Tabellenweite Aktionen (Sammelbuchung ohne Gruppen, Gruppe, Position) —
    rechts vor der Spaltenauswahl. */
 .hb-fixed-table-actions {

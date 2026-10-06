@@ -82,6 +82,50 @@ function statusTitle(booked, fmt) {
   );
 }
 
+/**
+ * Buchungsstand einer Tabelle („1 von 8 gebucht") mit Statuston: alles gebucht
+ * = Grün, sonst der Warnton — offene Buchungen sind am Monatsanfang der
+ * Normalfall, deshalb nie Rot. Die Form trägt die Aussage mit (gefüllter Kreis
+ * mit Haken gegen leeren Kreis), die Farbe ist nur redundante Kodierung.
+ *
+ * Zwei Fundorte, ein Markup: `pill` ist die Pille im Kartenkopf neben dem
+ * Tabellentitel (mit Fortschrittsbalken), ohne `pill` der getönte Text in der
+ * Summenzeile. Der Kartenkopf ist der verlässliche Ort — die Summenzelle
+ * verschwindet, sobald die Spalte „Diesen Monat" ausgeblendet ist.
+ *
+ * Render-Funktion statt Komponente, siehe stateIcon.
+ */
+export function renderBookedStatus(rows, { pill = false } = {}) {
+  const total = rows.length;
+  if (total === 0) return null;
+  const booked = rows.filter((r) => r.booked).length;
+  const open = total - booked;
+  const done = open === 0;
+  const title = done
+    ? "Alle Positionen sind in diesem Finanzmonat gebucht."
+    : open === 1
+      ? "1 Position ist in diesem Finanzmonat noch offen."
+      : `${open} Positionen sind in diesem Finanzmonat noch offen.`;
+  const className =
+    "hb-fixed-booked" +
+    (done ? " hb-fixed-booked--done" : " hb-fixed-booked--open") +
+    (pill ? " hb-badge hb-fixed-booked--pill" : "");
+  return (
+    <span className={className} title={title}>
+      {stateIcon(done)}
+      {booked} von {total} gebucht
+      {pill && (
+        <span className="hb-stat-pill-gauge-track hb-fixed-booked-gauge" aria-hidden="true">
+          <span
+            className="hb-stat-pill-gauge-fill hb-fixed-booked-gauge-fill"
+            style={{ width: `${(booked / total) * 100}%` }}
+          />
+        </span>
+      )}
+    </span>
+  );
+}
+
 function categoryLabel(item, categoryById) {
   const cat = categoryById.get(item.categoryId);
   if (!cat) return { cat: null, text: item.category || "Unkategorisiert" };
@@ -170,7 +214,7 @@ function catalog(kind, { fmt, categoryById, potNameById, groupNameById }) {
           Offen
         </span>
       ),
-    summarize: (rows) => `${rows.filter((r) => r.booked).length} von ${rows.length} gebucht`,
+    summarize: (rows) => renderBookedStatus(rows),
   };
 
   if (kind === "expense") {

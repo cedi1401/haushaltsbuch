@@ -21,7 +21,7 @@ import { useToast } from "../components/toastContext.js";
 import { IconEdit, IconFixed, IconPlus, IconTag, IconWarning } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { EMPTY_ARRAY } from "../utils/constants.js";
-import { buildFixedCostColumns } from "./fixed/fixedCostColumns.jsx";
+import { buildFixedCostColumns, renderBookedStatus } from "./fixed/fixedCostColumns.jsx";
 
 // Die beiden Tabellen des Views, untereinander. Die Reihenfolge ist zugleich
 // die Darstellungsreihenfolge.
@@ -697,6 +697,9 @@ export default function FixedCostsView({
     return (
       <>
         <h2 className="hb-fixed-table-title">{table.title}</h2>
+        {/* Buchungsstand im Kartenkopf: unabhängig von der Spaltenauswahl
+            sichtbar und der erste Blickfang der Karte. */}
+        {renderBookedStatus(rowsByKind[table.kind], { pill: true })}
         <div className="hb-fixed-table-actions">
           {noBands && items.length > 0 && (
             <Button size="sm" variant="outline" onClick={() => bookSection(table.title, items, false)}>
