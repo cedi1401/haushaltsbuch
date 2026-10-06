@@ -308,12 +308,6 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
 
   return (
     <div>
-      <div className="hb-row" style={{ marginBottom: 12 }}>
-        <div>
-          <h2 className="hb-section-title">Monatsvergleich & Trend</h2>
-        </div>
-      </div>
-
       {highlights ? (
         <div className="hb-stat-pills">
           <div className="hb-stat-pill hb-stat-pill--ok">

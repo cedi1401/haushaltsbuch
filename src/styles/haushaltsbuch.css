@@ -385,13 +385,6 @@ button, input, select, textarea {
   color: var(--text);
 }
 
-.hb-section-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--text);
-}
-
 /* Card/sub-section heading (16px) — replaces ad-hoc inline `fontSize:16` on <h3>. */
 .hb-card-title {
   font-size: 16px;
@@ -1304,11 +1297,6 @@ select.hb-input option {
   margin-top: 1px;
 }
 
-/* Größere Variante für Pills ohne Fortschrittsbalken (mehr vertikaler Raum) */
-.hb-stat-pill-sub--lg {
-  font-size: 15px;
-}
-
 /* Vormonatsdelta: signierte Veränderung ggü. Vormonat. Farbe = Richtung ×
    Bewertung (via inline style), Pfeil trägt die Richtung, Wert in tabular-nums. */
 .hb-stat-pill-delta {
@@ -1450,6 +1438,13 @@ select.hb-input option {
   color: var(--muted);
   line-height: 1.3;
   margin-top: 1px;
+}
+
+/* Bewertete Veränderung in der Unterzeile: Farbe ja, aber nicht das Gewicht
+   700 von .hb-ok/.hb-bad. */
+.hb-fct-kpi-sub .hb-ok,
+.hb-fct-kpi-sub .hb-bad {
+  font-weight: 600;
 }
 
 /* Positionen-Übersicht: 5-Spalten-Grid in der Lesereihenfolge der Zeile —
@@ -1714,7 +1709,7 @@ select.hb-input option {
   font-size: 18px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  color: var(--text);
 }
 
 /* Checkbox im Dialog */
@@ -6687,12 +6682,9 @@ select.hb-input option {
   min-width: 0;
 }
 
-/* Übersichts-Titel auf dem Niveau des Gruppen-Dropdown-Triggers */
-.hb-cg-overview-title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.3;
+/* Übersicht: kein Titel im View (der steht in der Toolbar), nur die Aktionen. */
+.hb-cg-head--actions {
+  justify-content: flex-end;
 }
 
 /* Übersichts-Kacheln: klickbare Variante der Dashboard-Topf-Kacheln
@@ -6882,7 +6874,6 @@ select.hb-input option {
 }
 
 .hb-cg-planned-total span:last-child {
-  color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
 
@@ -7559,9 +7550,9 @@ select.hb-input option {
 /* =====================================================
    INVESTMENT-VIEW — RASTER UND KARTEN
    ===================================================== */
-/* Kopfzeile ohne Seitentitel (kein anderer View hat einen H1): nur die
+/* Kopfzeile eines Views ohne Seitentitel (der steht in der Toolbar): nur die
    Aktionen, rechtsbündig. */
-.hb-inv-header {
+.hb-view-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;

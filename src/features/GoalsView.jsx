@@ -319,11 +319,7 @@ export default function GoalsView({
 
   return (
     <div>
-      <div className="hb-row" style={{ marginBottom: 12, alignItems: "flex-start" }}>
-        <div>
-          <div className="hb-section-title">Definiere Ziele und verfolge deinen Fortschritt</div>
-        </div>
-
+      <div className="hb-view-actions">
         <Button onClick={openCreateDialog}><IconPlus /> Neues Sparziel</Button>
       </div>
 
@@ -353,13 +349,13 @@ export default function GoalsView({
             <div className="hb-stat-pill hb-stat-pill--accent">
               <div className="hb-stat-pill-label">Angelegt {stats.currentYear}</div>
               <div className="hb-stat-pill-value">{stats.createdThisYearCount}</div>
-              <div className="hb-stat-pill-sub hb-stat-pill-sub--lg">{stats.activeThisYearCount} davon aktiv</div>
+              <div className="hb-stat-pill-sub">{stats.activeThisYearCount} davon aktiv</div>
             </div>
 
             <div className="hb-stat-pill hb-stat-pill--ok">
               <div className="hb-stat-pill-label">Erreicht</div>
               <div className="hb-stat-pill-value hb-ok">{stats.completedCount}</div>
-              <div className="hb-stat-pill-sub hb-stat-pill-sub--lg">{formatPercent(stats.successRate, { digits: 0, sign: false })} Erfolgsquote</div>
+              <div className="hb-stat-pill-sub">{formatPercent(stats.successRate, { digits: 0, sign: false })} Erfolgsquote</div>
             </div>
 
             <div className="hb-stat-pill hb-stat-pill--accent">
@@ -375,7 +371,7 @@ export default function GoalsView({
 
             <div className="hb-stat-pill hb-stat-pill--ok">
               <div className="hb-stat-pill-label">Gesamt angespart</div>
-              <div className="hb-stat-pill-value">{fmt(stats.totalSaved)}</div>
+              <div className="hb-stat-pill-value hb-ok">{fmt(stats.totalSaved)}</div>
               <div className="hb-stat-pill-sub">von {fmt(stats.totalTarget)} Gesamtziel</div>
               <div className="hb-stat-pill-gauge-track">
                 <div

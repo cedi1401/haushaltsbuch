@@ -54,7 +54,7 @@ export default function EntriesTable({
       <CardContent>
         <div className="hb-row" style={{ alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <h2 style={{ margin: 0, fontSize: 18 }}>Buchungen</h2>
+            <h3 className="hb-card-title">Buchungen</h3>
             <HbTooltip
               text="Wenn du im Monatsfilter editierst und das Datum in einen anderen Monat änderst, verschwindet der Eintrag aus der aktuellen Ansicht."
               placement="right"

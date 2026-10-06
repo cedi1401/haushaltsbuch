@@ -133,9 +133,17 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
     return first === last ? first : `${first} – ${last}`;
   }, [fctWindowData]);
 
+  // Die Bewertung gilt der Veränderung, nicht dem Betrag: Rot/Grün sitzt am
+  // Prozentwert der Unterzeile, Kante und Wert der Kachel bleiben neutral.
   const momLabel =
-    kpis.momDelta == null ? null
-    : `${formatPercent(kpis.momDelta)} ggü. Vormonat`;
+    kpis.momDelta == null ? null : (
+      <>
+        <span className={kpis.momDelta > 0 ? "hb-bad" : kpis.momDelta < 0 ? "hb-ok" : undefined}>
+          {formatPercent(kpis.momDelta)}
+        </span>{" "}
+        ggü. Vormonat
+      </>
+    );
 
   const availableTags = useMemo(() => {
     const set = new Set();
@@ -268,19 +276,21 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
           label="Gebucht (letzter Monat)"
           value={fmt(kpis.bookedLast)}
           sub={momLabel}
-          accent={kpis.momDelta == null ? undefined : kpis.momDelta > 0 ? "var(--red)" : "var(--green)"}
+          accent="var(--accent)"
           spark={{ data: fctWindowData, dataKey: "fixedTotal", color: themeColors.accent, caption: fctWindowLabel }}
         />
         <KpiCard
           label="Ø Anteil an der Gesamtbelastung"
           value={formatPercent(kpis.avgShare, { sign: false })}
           sub="über den Zeitraum"
+          accent="var(--purple)"
           spark={{ data: fctWindowData, dataKey: "share", color: themeColors.purple, caption: fctWindowLabel }}
         />
         <KpiCard
           label="Teuerste Position"
           value={kpis.mostExpensive ? fmt(kpis.mostExpensive.monthlyAmount) : "—"}
           sub={kpis.mostExpensive ? `${kpis.mostExpensive.name} · pro Monat` : null}
+          accent="var(--accent)"
         />
       </div>
 
@@ -288,7 +298,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
       <Card>
         <CardContent>
           <div className="hb-row" style={{ alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
-            <h4 style={{ margin: 0, fontSize: 15 }}>Verlauf über Zeit</h4>
+            <h3 className="hb-card-title">Verlauf über Zeit</h3>
             <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <ChartScrollNav
                 offset={fctScrollOffset}
@@ -340,7 +350,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
             <div style={{ marginBottom: 16, display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 8, justifyContent: "space-between" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <h4 style={{ margin: 0, fontSize: 15 }}>Übersicht</h4>
+                  <h3 className="hb-card-title">Übersicht</h3>
                   {selectedTags.size > 0 && (
                     <span className="hb-fct-filter-hint">{activeItems.length} von {totalOverviewCount}</span>
                   )}

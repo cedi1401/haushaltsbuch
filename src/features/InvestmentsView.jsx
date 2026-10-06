@@ -389,7 +389,7 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
   // Kursstand und Depotverwaltung stehen dort, wo sie etwas einschränken bzw.
   // bearbeiten: im Kopf der Depotwert-Karte und in der Vermögensübersicht.
   const header = (
-    <div className="hb-inv-header">
+    <div className="hb-view-actions">
       <Button
         variant="outline"
         onClick={() => refresh({ bypassCache: true })}

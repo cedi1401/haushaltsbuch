@@ -650,11 +650,9 @@ export default function CostGroupsView({
                 <HbTooltip size={16} text={HELP_DEVIATION} />
               </div>
               <span
-                className="hb-stat-pill-value"
-                style={
-                  hasPlan
-                    ? { color: deviationSign > 0 ? "var(--red)" : "var(--green)" }
-                    : undefined
+                className={
+                  "hb-stat-pill-value" +
+                  (hasPlan ? (deviationSign > 0 ? " hb-bad" : " hb-ok") : "")
                 }
               >
                 {hasPlan ? formatSigned(fmt, deviation) : fmt(0)}
@@ -679,7 +677,7 @@ export default function CostGroupsView({
             <CardContent>
               <div className="hb-row" style={{ alignItems: "center", marginBottom: hasChartData ? 6 : 12, flexWrap: "wrap", gap: 8 }}>
                 <span className="hb-title-with-help">
-                  <h4 style={{ margin: 0, fontSize: 15 }}>Kostenverlauf</h4>
+                  <h3 className="hb-card-title">Kostenverlauf</h3>
                   <HbTooltip size={16} text={HELP_CHART} />
                 </span>
                 {chartMaxOffset > 0 && (
@@ -958,9 +956,8 @@ export default function CostGroupsView({
   function renderOverview() {
     return (
       <>
-        {/* Kopfzeile: Titel + Zeitraumwähler + Neue Gruppe */}
-        <div className="hb-cg-head">
-          <h2 className="hb-cg-overview-title">Kostengruppen</h2>
+        {/* Kopfzeile ohne Titel (der steht in der Toolbar): Zeitraumwähler + Neue Gruppe */}
+        <div className="hb-cg-head hb-cg-head--actions">
           <div className="hb-cg-head-actions">
             {renderRangeSelector()}
             <Button onClick={openCreateDialog}>
