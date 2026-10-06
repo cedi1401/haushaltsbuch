@@ -274,6 +274,7 @@ export default function ReservesView({
               defaultSort={{ columnId: "nextDue", dir: "asc" }}
               renderDetail={renderDetail}
               label="Rückstellungen"
+              toolbar={<h3 className="hb-card-title">Positionen</h3>}
             />
           )}
         </CardContent>

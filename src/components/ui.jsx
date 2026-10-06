@@ -63,7 +63,7 @@ export function RangeTabs({ options, value, onChange, ariaLabel, style, size, fu
 // beim Aufrufer, da er je nach Layout variiert.
 export function ChartScrollNav({ offset, maxOffset, onOffsetChange, label, style }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 4, ...style }}>
+    <div className="hb-chart-nav" style={{ display: "flex", alignItems: "center", gap: 4, ...style }}>
       <button
         type="button"
         className="hb-icon-btn"

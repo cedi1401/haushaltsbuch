@@ -424,6 +424,7 @@ export default function GoalsView({
                     </div>
                   </div>
                   <OverflowMenu
+                    buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
                     items={[
                       { label: "Bearbeiten", onClick: () => openEditDialog(goal) },
                       { label: "Löschen", danger: true, onClick: () => deleteGoal(goal.id) },
@@ -561,6 +562,7 @@ export default function GoalsView({
                             </div>
                           </div>
                           <OverflowMenu
+                            buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
                             items={[
                               { label: "Wieder aktivieren", onClick: () => reactivateGoal(goal) },
                               { label: "Entfernen", danger: true, onClick: () => deleteGoal(goal.id) },

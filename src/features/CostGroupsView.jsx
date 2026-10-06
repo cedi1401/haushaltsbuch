@@ -1117,12 +1117,12 @@ export default function CostGroupsView({
 
           <div className="hb-field">
             <div className="hb-label">Farbe</div>
-            <div className="hb-cg-color-row">
+            <div className="hb-color-picker">
               {CUSTOM_CATEGORY_PALETTE.map((c) => (
                 <button
                   key={c}
                   type="button"
-                  className={`hb-cg-color-swatch${draft.color === c ? " hb-cg-color-swatch--active" : ""}`}
+                  className={`hb-color-dot${draft.color === c ? " hb-color-dot-selected" : ""}`}
                   style={{ background: c }}
                   onClick={() => setDraft((d) => ({ ...d, color: c }))}
                   aria-label={`Farbe ${c}`}

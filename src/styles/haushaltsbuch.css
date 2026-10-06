@@ -952,7 +952,9 @@ select.hb-input option {
   border-color: var(--accent);
 }
 
-.hb-chart-range .hb-icon-btn {
+/* Blätter-Buttons von ChartScrollNav: kompakter als der Standard, damit sie
+   neben den RangeTabs im Kartenkopf nicht dominieren. */
+.hb-chart-nav .hb-icon-btn {
   height: 34px;
   width: 34px;
   font-size: 14px;
@@ -3495,11 +3497,12 @@ select.hb-input option {
 .hb-goal-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
+  padding: 2px 9px;
   border-radius: var(--radius-sm);
   background: var(--bg-subtle);
   border: 1px solid var(--border-light);
-  font-size: 15px;
+  font-size: 13px;
+  line-height: 1.4;
   font-weight: 500;
   color: var(--muted);
 }
@@ -4300,9 +4303,12 @@ select.hb-input option {
   white-space: nowrap;
 }
 
-.hb-tpl-pill--expense    { background: var(--red-soft);    color: var(--red);    border-color: var(--red); }
-.hb-tpl-pill--income     { background: var(--green-soft);  color: var(--green);  border-color: var(--green); }
-.hb-tpl-pill--withdrawal { background: var(--orange-soft); color: var(--orange); border-color: var(--orange); }
+/* Entnahme ist rot wie die Ausgabe — so färbt auch die Buchungstabelle
+   (.hb-bad / .hb-withdrawal); unterschieden wird über das Wort in der Pille.
+   Rahmen in der Alpha-Stufe wie .hb-res-pill. */
+.hb-tpl-pill--expense,
+.hb-tpl-pill--withdrawal { background: var(--red-soft);    color: var(--red);    border-color: color-mix(in srgb, var(--red) 30%, transparent); }
+.hb-tpl-pill--income     { background: var(--green-soft);  color: var(--green);  border-color: var(--green-border); }
 .hb-tpl-pill--transfer   { background: var(--accent-soft); color: var(--accent); border-color: var(--reveal-border); }
 
 .hb-tpl-pill--amount {
@@ -4328,9 +4334,9 @@ select.hb-input option {
 }
 
 .hb-tpl-pill--warn {
-  background: var(--orange-soft);
-  color: var(--orange);
-  border-color: var(--orange);
+  background: var(--yellow-soft);
+  color: var(--yellow-text);
+  border-color: var(--yellow-border);
 }
 
 .hb-tpl-actions {
@@ -6825,29 +6831,6 @@ select.hb-input option {
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
-}
-
-.hb-cg-color-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.hb-cg-color-swatch {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  cursor: pointer;
-  padding: 0;
-  transition: transform var(--transition-fast);
-}
-
-.hb-cg-color-swatch:hover { transform: scale(1.1); }
-
-.hb-cg-color-swatch--active {
-  border-color: var(--text);
-  box-shadow: 0 0 0 2px var(--card) inset;
 }
 
 .hb-cg-picker-hint {
