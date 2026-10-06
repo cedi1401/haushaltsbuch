@@ -161,10 +161,10 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
       </div>
 
       {/* Gesamtbalken */}
-      <div className="hb-budget-total-bar">
+      <div className="hb-meter hb-meter--sm hb-budget-total-bar">
         <div
-          className="hb-budget-bar-fill"
-          style={{ "--w": `${Math.min(totalPct * 100, 100)}%`, "--c": STATUS_COLOR[totalStatus] }}
+          className="hb-meter-fill hb-budget-bar-fill"
+          style={{ "--w": `${Math.min(totalPct * 100, 100)}%`, "--meter-tone": STATUS_COLOR[totalStatus] }}
         />
       </div>
 
@@ -197,10 +197,10 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
                 </span>
               </div>
 
-              <div className="hb-insight-bar-track">
+              <div className="hb-meter hb-meter--lg">
                 <div
-                  className="hb-budget-bar-fill"
-                  style={{ "--w": `${Math.min(pct * 100, 100)}%`, "--c": color }}
+                  className="hb-meter-fill hb-budget-bar-fill"
+                  style={{ "--w": `${Math.min(pct * 100, 100)}%`, "--meter-tone": color }}
                 />
               </div>
 
@@ -239,7 +239,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
               <span className="hb-budget-row-amounts">&nbsp;</span>
               <span className="hb-budget-status-pill">&nbsp;</span>
             </div>
-            <div className="hb-insight-bar-track" />
+            <div className="hb-meter hb-meter--lg" />
             <div className="hb-budget-row-meta">&nbsp;</div>
           </div>
         ))}

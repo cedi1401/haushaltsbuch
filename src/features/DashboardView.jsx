@@ -350,9 +350,9 @@ export default function DashboardView({
         })}
       </div>
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card style={{ marginBottom: "var(--card-gap)" }}>
         <CardContent>
-          <div className="hb-row" style={{ marginBottom: 10 }}>
+          <div className="hb-card-head">
             <h3 className="hb-card-title">Topf-Stände</h3>
           </div>
           {potBalances.length === 0 ? (

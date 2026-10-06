@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, Button, RangeTabs } from "../../components/ui.jsx";
+import HbTooltip from "../../components/HbTooltip.jsx";
 import { IconDelete, IconEdit, IconPlus } from "../../components/icons.jsx";
 import { formatCurrency, formatDateDE } from "../../utils/hbUtils.js";
 import { TRANSACTION_TYPE_LABELS } from "../../utils/investmentModel.js";
@@ -59,7 +60,7 @@ export default function TransactionsCard({
   return (
     <Card>
       <CardContent>
-        <div className="hb-row" style={{ alignItems: "center", marginBottom: 10, gap: 8 }}>
+        <div className="hb-card-head hb-card-head--flush">
           <div className="hb-title-group">
             <h3 className="hb-card-title">Transaktionen</h3>
             <span className="hb-info-pill">
@@ -141,15 +142,18 @@ export default function TransactionsCard({
                         )}
                       </td>
                       {/* Immer in Buchwährung, mit Vorzeichen. Bei Fremdwährung
-                          steht der Originalbetrag dahinter, der Kurs im title. */}
-                      <td
-                        className="hb-col-amount hb-right"
-                        title={foreign ? `Wechselkurs vom ${formatDateDE(row.date)}: ${row.fxRate}` : undefined}
-                      >
+                          steht der Originalbetrag dahinter, der Kurs im Tooltip. */}
+                      <td className="hb-col-amount hb-right">
                         <span className="hb-sign">{row.cashFlowBase > 0 ? "+" : row.cashFlowBase < 0 ? "−" : ""}</span>
                         <span className="hb-amount-value">{fmt(Math.abs(row.cashFlowBase))}</span>
                         {foreign && (
-                          <span className="hb-inv-sub"> · {formatCurrency(row.net, row.currency)}</span>
+                          <HbTooltip
+                            inline
+                            focusable={false}
+                            text={`Wechselkurs vom ${formatDateDE(row.date)}: ${row.fxRate}`}
+                          >
+                            <span className="hb-inv-sub"> · {formatCurrency(row.net, row.currency)}</span>
+                          </HbTooltip>
                         )}
                       </td>
                       <td className="hb-col-actions">

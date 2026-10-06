@@ -1,4 +1,5 @@
 import React from "react";
+import HbTooltip from "../../components/HbTooltip.jsx";
 import { formatDateDE, formatPercent, formatSigned } from "../../utils/hbUtils.js";
 import { ASSET_CLASS_LABELS } from "../../utils/investmentModel.js";
 import {
@@ -106,9 +107,9 @@ export function positionColumnCatalog({ fmt, baseCurrency }) {
         <span className="hb-inv-name">
           <span className="hb-inv-name-text">{row.name}</span>
           {statusPills(row).map((p) => (
-            <span key={p.key} className={`hb-badge hb-inv-pill ${p.cls}`} title={p.title}>
-              {p.label}
-            </span>
+            <HbTooltip key={p.key} text={p.title} focusable={false}>
+              <span className={`hb-badge hb-inv-pill ${p.cls}`}>{p.label}</span>
+            </HbTooltip>
           ))}
         </span>
       ),

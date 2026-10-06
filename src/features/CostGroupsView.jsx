@@ -673,9 +673,9 @@ export default function CostGroupsView({
               und den Rücklagenbedarf aus der Planung — Chart-Idiom wie
               FixedCostTrendSection. Die Rücklagenlinie ist eine Zielmarke zum
               Ablesen, keine Summe über den Balken. */}
-          <Card style={{ marginBottom: 20 }}>
+          <Card style={{ marginBottom: "var(--card-gap)" }}>
             <CardContent>
-              <div className="hb-row" style={{ alignItems: "center", marginBottom: hasChartData ? 6 : 12, flexWrap: "wrap", gap: 8 }}>
+              <div className={`hb-card-head${hasChartData ? " hb-card-head--legend" : ""}`}>
                 <span className="hb-title-with-help">
                   <h3 className="hb-card-title">Kostenverlauf</h3>
                   <HbTooltip size={16} text={HELP_CHART} />
@@ -820,9 +820,9 @@ export default function CostGroupsView({
                             <span className="hb-cg-breakdown-share">{formatPercent(pct, { digits: 0, sign: false })}</span>
                           </div>
                         </div>
-                        <div className="hb-cg-breakdown-bar">
+                        <div className="hb-meter hb-meter--lg hb-meter--animated hb-cg-breakdown-bar">
                           <div
-                            className="hb-cg-breakdown-bar-fill"
+                            className="hb-meter-fill hb-cg-breakdown-bar-fill"
                             style={{ width: `${pct}%`, background: activeGroup.color || "var(--accent)" }}
                           />
                         </div>

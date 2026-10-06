@@ -1,4 +1,4 @@
-import React, { memo, useState } from "react";
+import React, { memo } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -17,6 +17,7 @@ import { CHART_STROKE, CHART_DASH, axisProps, averageLineProps } from "../../uti
 import { formatDateDELong, formatPercent } from "../../utils/hbUtils.js";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { IconInbox } from "../../components/icons.jsx";
+import HbTooltip from "../../components/HbTooltip.jsx";
 
 function Kpi({ label, value, sub }) {
   return (
@@ -44,7 +45,6 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
     dailyTrendPct,
   } = analytics;
 
-  const [trendTooltipVisible, setTrendTooltipVisible] = useState(false);
   const themeColors = useThemeColors();
   const hasBarData = dailySpendData.some((d) => d.count > 0);
   const hasAreaData = thirtyDayData.some((d) => d.amount > 0);
@@ -133,10 +133,13 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                   </span>
                 )}
                 {dailyTrendPct !== null && (
-                  <span
-                    style={{ position: "relative", cursor: "default" }}
-                    onMouseEnter={() => setTrendTooltipVisible(true)}
-                    onMouseLeave={() => setTrendTooltipVisible(false)}
+                  <HbTooltip
+                    placement="bottom"
+                    text={
+                      <>
+                        Vergleicht den Tagesdurchschnitt der <strong>letzten 15 Tage</strong> mit den <strong>15 Tagen davor</strong>. Ein positiver Wert bedeutet, die Ausgaben steigen tendenziell; ein negativer Wert, dass sie sinken.
+                      </>
+                    }
                   >
                     <span style={{
                       fontSize: 11,
@@ -145,27 +148,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                     }}>
                       {formatPercent(dailyTrendPct, { digits: 0 })}
                     </span>
-                    {trendTooltipVisible && (
-                      <div style={{
-                        position: "absolute",
-                        right: 0,
-                        top: "calc(100% + 6px)",
-                        width: 220,
-                        background: "var(--card)",
-                        border: "1px solid var(--border, #e0e0e0)",
-                        borderRadius: 6,
-                        padding: "8px 10px",
-                        fontSize: 12,
-                        color: "var(--text, #1a1a1a)",
-                        lineHeight: 1.5,
-                        zIndex: 10,
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                        pointerEvents: "none",
-                      }}>
-                        Vergleicht den Tagesdurchschnitt der <strong>letzten 15 Tage</strong> mit den <strong>15 Tagen davor</strong>. Ein positiver Wert bedeutet, die Ausgaben steigen tendenziell; ein negativer Wert, dass sie sinken.
-                      </div>
-                    )}
-                  </span>
+                  </HbTooltip>
                 )}
               </span>
             </div>

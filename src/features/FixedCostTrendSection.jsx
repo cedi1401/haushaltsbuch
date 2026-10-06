@@ -86,14 +86,14 @@ function tintedChipStyle(color) {
 function ProportionBar({ pct, color }) {
   return (
     <div
-      className="hb-fct-prop-track"
-      style={isHex(color) ? { background: `${color}24` } : undefined}
+      className="hb-meter hb-meter--lg hb-meter--tinted hb-meter--animated"
+      style={color ? { "--meter-tone": color } : undefined}
     >
       <div
-        className="hb-fct-prop-fill"
+        className="hb-meter-fill"
         // minWidth: Die kleinste Position der Liste liegt schnell unter 1 % und
         // hätte sonst gar keinen sichtbaren Balken mehr.
-        style={{ width: `${Math.min(pct, 100)}%`, minWidth: pct > 0 ? 3 : 0, background: color }}
+        style={{ width: `${Math.min(pct, 100)}%`, minWidth: pct > 0 ? 3 : 0 }}
       />
     </div>
   );
@@ -297,7 +297,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
       {/* Hauptchart: Verlauf Gesamtbetrag + %-Anteil */}
       <Card>
         <CardContent>
-          <div className="hb-row" style={{ alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+          <div className="hb-card-head hb-card-head--legend">
             <h3 className="hb-card-title">Verlauf über Zeit</h3>
             <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <ChartScrollNav
@@ -347,7 +347,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
       {activeItems.length > 0 && (
         <Card>
           <CardContent>
-            <div style={{ marginBottom: 16, display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 8, justifyContent: "space-between" }}>
+            <div className="hb-card-head" style={{ alignItems: "flex-start" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <h3 className="hb-card-title">Übersicht</h3>
@@ -417,12 +417,11 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                             {item.categoryLabel}
                           </span>
                           {item.isFreeSaving && (
-                            <span
-                              className="hb-fct-overview-cat hb-fct-overview-cat--free"
-                              title="Ohne Turnus — zählt nicht in die Fixkostenbelastung"
-                            >
-                              Freies Sparen
-                            </span>
+                            <HbTooltip text="Ohne Turnus — zählt nicht in die Fixkostenbelastung">
+                              <span className="hb-fct-overview-cat hb-fct-overview-cat--free">
+                                Freies Sparen
+                              </span>
+                            </HbTooltip>
                           )}
                         </div>
                       </div>

@@ -61,13 +61,6 @@ const COMPOSITION_COLS_MIN = COMPOSITION_TOP_N + 1;
 // ein Betrag mit „0 %" daneben liest sich wie ein Fehler.
 const sharePct = (share) => (share > 0 && share < 1 ? "< 1" : String(Math.round(share)));
 
-// Track des Ranglisten-Balkens: leicht getönte Fläche in der Farbe des Balkens
-// selbst statt neutralem Grau — dasselbe Muster wie in der Übersicht-Card der
-// Insights (`${color}24` ≈ 14 % Deckkraft). Greift nur bei Hex-Farben;
-// REST_COLOR ist eine CSS-Variable und behält den neutralen Default-Track.
-const barTrackStyle = (color) =>
-  (color || "").startsWith("#") ? { background: `${color}24` } : undefined;
-
 // Halbe angenommene Breite der Tooltip-Blase — nur zum Klemmen an den
 // Viewport-Rand. Die Blase ist per translate(-50%) am Cursor zentriert; ohne
 // Klemmung liefe sie bei einem Segment ganz links/rechts aus dem Bild.
@@ -613,8 +606,8 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                     />
                   </div>
 
-                  <div style={{ width: "100%", height: 240, marginTop: 16 }}>
-                    <ResponsiveContainer width="100%" height={240}>
+                  <div style={{ width: "100%", height: 260, marginTop: 16 }}>
+                    <ResponsiveContainer width="100%" height={260}>
                       <BarChart data={barChartData} barCategoryGap="32%" stackOffset="sign">
                         <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                         <XAxis dataKey="name" {...monthAxisProps(themeColors)} />
@@ -657,7 +650,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
             {composition ? (
               <Card>
                 <CardContent>
-                  <div className="hb-row" style={{ alignItems: "center", marginBottom: 14 }}>
+                  <div className="hb-card-head">
                     <div className="hb-title-group">
                       <h3 className="hb-card-title">Zusammensetzung</h3>
                       <span className="hb-info-pill hb-info-pill--title">
@@ -727,10 +720,13 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                             <span className="hb-cg-breakdown-share">{sharePct(r.share)} %</span>
                           </div>
                         </div>
-                        <div className="hb-cg-breakdown-bar" style={barTrackStyle(r.color)}>
+                        <div
+                          className="hb-meter hb-meter--lg hb-meter--tinted hb-meter--animated hb-cg-breakdown-bar"
+                          style={{ "--meter-tone": r.color }}
+                        >
                           <div
-                            className="hb-cg-breakdown-bar-fill"
-                            style={{ width: `${r.share}%`, background: r.color }}
+                            className="hb-meter-fill hb-cg-breakdown-bar-fill"
+                            style={{ width: `${r.share}%` }}
                           />
                         </div>
                       </div>
@@ -751,7 +747,9 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
             ) : (
               <Card>
                 <CardContent>
-                  <h3 className="hb-card-title" style={{ marginBottom: 8 }}>Zusammensetzung</h3>
+                  <div className="hb-card-head">
+                    <h3 className="hb-card-title">Zusammensetzung</h3>
+                  </div>
                   <div className="hb-muted" style={{ textAlign: "center", padding: "32px 8px" }}>
                     Noch keine positiven Netto-Beträge je Zweck vorhanden.
                   </div>
@@ -763,9 +761,9 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
       )}
 
       {/* Buchungsliste für diesen Topf */}
-      <Card style={{ marginTop: 16 }}>
+      <Card style={{ marginTop: "var(--card-gap)" }}>
         <CardContent>
-          <div className="hb-row" style={{ alignItems: "center", marginBottom: 10 }}>
+          <div className="hb-card-head hb-card-head--flush">
             <div className="hb-title-group">
               <h3 className="hb-card-title">Buchungen</h3>
               <span className="hb-info-pill hb-info-pill--title">{selectedPot.name}</span>

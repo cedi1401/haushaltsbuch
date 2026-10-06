@@ -1,4 +1,5 @@
 import React from "react";
+import HbTooltip from "../../components/HbTooltip.jsx";
 import { IconTag } from "../../components/icons.jsx";
 import { formatDateDE } from "../../utils/hbUtils.js";
 import { annualAmount, isSinkingFund, monthlyRate, turnusMonths } from "../../utils/fixedCostUtils.js";
@@ -111,18 +112,20 @@ export function renderBookedStatus(rows, { pill = false } = {}) {
     (done ? " hb-fixed-booked--done" : " hb-fixed-booked--open") +
     (pill ? " hb-badge hb-fixed-booked--pill" : "");
   return (
-    <span className={className} title={title}>
-      {stateIcon(done)}
-      {booked} von {total} gebucht
-      {pill && (
-        <span className="hb-stat-pill-gauge-track hb-fixed-booked-gauge" aria-hidden="true">
-          <span
-            className="hb-stat-pill-gauge-fill hb-fixed-booked-gauge-fill"
-            style={{ width: `${(booked / total) * 100}%` }}
-          />
-        </span>
-      )}
-    </span>
+    <HbTooltip text={title}>
+      <span className={className}>
+        {stateIcon(done)}
+        {booked} von {total} gebucht
+        {pill && (
+          <span className="hb-meter hb-meter--sm hb-fixed-booked-gauge" aria-hidden="true">
+            <span
+              className="hb-meter-fill hb-fixed-booked-gauge-fill"
+              style={{ width: `${(booked / total) * 100}%` }}
+            />
+          </span>
+        )}
+      </span>
+    </HbTooltip>
   );
 }
 
@@ -203,16 +206,20 @@ function catalog(kind, { fmt, categoryById, potNameById, groupNameById }) {
     sortValue: (row) => row.booked?.lastDate ?? null,
     render: (row) =>
       row.booked ? (
-        <span className="hb-fixed-state hb-fixed-state--done" title={statusTitle(row.booked, fmt)}>
-          {stateIcon(true)}
-          <span className="hb-fixed-sr">Gebucht am </span>
-          {formatDateDE(row.booked.lastDate)}
-        </span>
+        <HbTooltip text={statusTitle(row.booked, fmt)} focusable={false}>
+          <span className="hb-fixed-state hb-fixed-state--done">
+            {stateIcon(true)}
+            <span className="hb-fixed-sr">Gebucht am </span>
+            {formatDateDE(row.booked.lastDate)}
+          </span>
+        </HbTooltip>
       ) : (
-        <span className="hb-fixed-state hb-fixed-state--open" title={statusTitle(null, fmt)}>
-          {stateIcon(false)}
-          Offen
-        </span>
+        <HbTooltip text={statusTitle(null, fmt)} focusable={false}>
+          <span className="hb-fixed-state hb-fixed-state--open">
+            {stateIcon(false)}
+            Offen
+          </span>
+        </HbTooltip>
       ),
     summarize: (rows) => renderBookedStatus(rows),
   };
@@ -271,12 +278,13 @@ function catalog(kind, { fmt, categoryById, potNameById, groupNameById }) {
       render: (row) => {
         if (!isSinkingFund(row.item)) {
           return (
-            <span
-              className="hb-fixed-free"
-              title="Rücklage ohne Turnus — freies Sparen, zählt nicht zu den Fixkosten pro Monat"
+            <HbTooltip
+              text="Rücklage ohne Turnus — freies Sparen, zählt nicht zu den Fixkosten pro Monat"
+              focusable={false}
+              underline
             >
-              Rücklage
-            </span>
+              <span className="hb-fixed-free">Rücklage</span>
+            </HbTooltip>
           );
         }
         const months = turnusMonths(row.item);

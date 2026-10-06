@@ -1,4 +1,5 @@
 import React from "react";
+import HbTooltip from "../../components/HbTooltip.jsx";
 import { formatDateDE, formatPercent } from "../../utils/hbUtils.js";
 import { IconTag } from "../../components/icons.jsx";
 import { formatRateCount } from "./reserveFormat.js";
@@ -59,9 +60,8 @@ function pct(value) {
 /**
  * Der Tooltip an der Status-Pille. Er sagt, was die
  * Farbe nur andeutet — und bei „Fällig"/„Überfällig", was als Nächstes zu tun
- * ist. Bewusst als `title` und nicht über `HbTooltip`: dessen Auslöser ist ein
- * fest verdrahtetes Fragezeichen-Icon, ein zweites Symbol neben jeder Pille
- * wäre in einer Tabellenspalte zu viel.
+ * ist. Die Pille selbst ist der Auslöser (`HbTooltip` mit Kind): ein
+ * Fragezeichen-Icon neben jeder Pille wäre in einer Tabellenspalte zu viel.
  */
 function statusTooltip(row, fmt) {
   const due = row.nextDue ? formatDateDE(row.nextDue) : "—";
@@ -248,8 +248,8 @@ function reserveColumnCatalog({ fmt, potNameById, groupNameById }) {
         const width = Math.max(0, Math.min(1, row.progress)) * 100;
         return (
           <span className="hb-dt-progress">
-            <span className="hb-dt-progress-track">
-              <span className="hb-dt-progress-fill" style={{ width: `${width}%` }} />
+            <span className="hb-meter hb-dt-progress-track" aria-hidden="true">
+              <span className="hb-meter-fill" style={{ width: `${width}%` }} />
             </span>
             <span className="hb-dt-progress-value">{pct(row.progress)}</span>
           </span>
@@ -282,12 +282,9 @@ function reserveColumnCatalog({ fmt, potNameById, groupNameById }) {
         const label = STATUS_LABEL[row.status];
         if (!label) return null;
         return (
-          <span
-            className={`hb-badge hb-res-pill hb-res-pill--${row.status}`}
-            title={statusTooltip(row, fmt)}
-          >
-            {label}
-          </span>
+          <HbTooltip text={statusTooltip(row, fmt)} focusable={false}>
+            <span className={`hb-badge hb-res-pill hb-res-pill--${row.status}`}>{label}</span>
+          </HbTooltip>
         );
       },
     },

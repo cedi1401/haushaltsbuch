@@ -42,19 +42,19 @@ const OverviewCard = memo(function OverviewCard({ analytics }) {
                   <MomDelta momDelta={cat.momDelta} fontSize={14} />
                 </div>
                 <div
-                  className="hb-insight-bar-track"
-                  style={cat.color ? { background: `${cat.color}24` } : undefined}
+                  className={`hb-meter hb-meter--lg${cat.color ? " hb-meter--tinted" : ""}`}
+                  style={cat.color ? { "--meter-tone": cat.color } : undefined}
                 >
                   <div
-                    className="hb-insight-bar-fill"
-                    style={{ "--w": `${cat.pct}%`, "--c": cat.color || "var(--accent)" }}
+                    className="hb-meter-fill hb-insight-bar-fill"
+                    style={{ "--w": `${cat.pct}%` }}
                   />
                 </div>
               </div>
             ) : (
               <div key={`ph-${i}`} className="hb-insight-cat-row hb-insight-cat-row--placeholder" aria-hidden="true">
                 <div className="hb-insight-cat-meta">&nbsp;</div>
-                <div className="hb-insight-bar-track" />
+                <div className="hb-meter hb-meter--lg" />
               </div>
             )
           )}

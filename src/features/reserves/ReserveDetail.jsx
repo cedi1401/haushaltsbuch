@@ -1,4 +1,5 @@
 import React from "react";
+import HbTooltip from "../../components/HbTooltip.jsx";
 import { Button } from "../../components/ui.jsx";
 import { formatDateDE } from "../../utils/hbUtils.js";
 import { formatRateCount } from "./reserveFormat.js";
@@ -108,29 +109,27 @@ export default function ReserveDetail({
         {(row.sharedPurpose || pot?.isSavings) && (
           <div className="hb-res-detail-hints">
             {row.sharedPurpose && (
-              <span
-                className="hb-badge hb-res-hint"
-                title={
+              <HbTooltip
+                text={
                   `Den Zweck „${purpose}" im Topf „${potName}" nutzen ${row.sharedWith + 1} Positionen. ` +
                   "Der Ist-Stand lässt sich nicht einzeln zuordnen — die Deckung wird deshalb " +
                   "gegen die Summe aller Soll-Stände dieses Zwecks gerechnet."
                 }
               >
-                Zweck geteilt
-              </span>
+                <span className="hb-badge hb-res-hint">Zweck geteilt</span>
+              </HbTooltip>
             )}
             {pot?.isSavings && (
-              <span
-                className="hb-badge hb-res-hint"
-                title={
+              <HbTooltip
+                text={
                   `Der Topf „${potName}" ist als Spartopf markiert. Diese Position erscheint ` +
                   `deshalb im Dashboard unter „Gespart" und gleichzeitig im Trend als ` +
                   `Fixkostenbelastung. Beides ist gewollt: Das Dashboard zeigt, wohin das Geld ` +
                   `fließt, der Trend, was es monatlich kostet.`
                 }
               >
-                Spartopf
-              </span>
+                <span className="hb-badge hb-res-hint">Spartopf</span>
+              </HbTooltip>
             )}
           </div>
         )}
@@ -191,11 +190,11 @@ function CycleMeter({ row }) {
   const done = Math.max(0, Math.min(1, row.elapsed / row.turnusMonths)) * 100;
   return (
     <span
-      className="hb-res-meter"
+      className="hb-meter hb-meter--tinted hb-res-meter"
       role="img"
       aria-label={`${row.elapsed} von ${row.turnusMonths} Monaten des Zyklus vergangen`}
     >
-      <span className="hb-res-meter-fill" style={{ width: `${done}%` }} />
+      <span className="hb-meter-fill" style={{ width: `${done}%` }} />
     </span>
   );
 }

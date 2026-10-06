@@ -321,9 +321,9 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
           <div className={`hb-stat-pill ${savingsRate >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
             <span className="hb-stat-pill-label">Sparquote (Ø)</span>
             <span className={`hb-stat-pill-value ${savingsRate >= 0 ? "hb-ok" : "hb-bad"}`}>{formatPercent(savingsRate, { sign: false })}</span>
-            <div className="hb-stat-pill-gauge-track">
+            <div className="hb-meter hb-meter--sm hb-meter--animated hb-stat-pill-gauge-track">
               <div
-                className="hb-stat-pill-gauge-fill"
+                className="hb-meter-fill"
                 style={{
                   width: `${Math.min(Math.max(savingsRate, 0), 100)}%`,
                   background: savingsRate >= 0 ? "var(--green)" : "var(--red)",
@@ -504,7 +504,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
           <div className="hb-full-card">
             <Card>
               <CardContent>
-                <div className="hb-row" style={{ alignItems: "center", marginBottom: 6 }}>
+                <div className={`hb-card-head${yoyYears.length >= 2 ? " hb-card-head--legend" : ""}`}>
                   <h3 className="hb-card-title">Jahresvergleich</h3>
                   <RangeTabs
                     options={[

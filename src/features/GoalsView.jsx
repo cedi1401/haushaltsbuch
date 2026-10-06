@@ -361,9 +361,9 @@ export default function GoalsView({
             <div className="hb-stat-pill hb-stat-pill--accent">
               <div className="hb-stat-pill-label">Erfüllungsgrad aktiv</div>
               <div className="hb-stat-pill-value">{formatPercent(stats.avgActivePercent, { digits: 0, sign: false })}</div>
-              <div className="hb-stat-pill-gauge-track">
+              <div className="hb-meter hb-meter--sm hb-meter--animated hb-stat-pill-gauge-track">
                 <div
-                  className="hb-stat-pill-gauge-fill"
+                  className="hb-meter-fill"
                   style={{ width: `${stats.avgActivePercent}%`, background: "var(--accent)" }}
                 />
               </div>
@@ -373,9 +373,9 @@ export default function GoalsView({
               <div className="hb-stat-pill-label">Gesamt angespart</div>
               <div className="hb-stat-pill-value hb-ok">{fmt(stats.totalSaved)}</div>
               <div className="hb-stat-pill-sub">von {fmt(stats.totalTarget)} Gesamtziel</div>
-              <div className="hb-stat-pill-gauge-track">
+              <div className="hb-meter hb-meter--sm hb-meter--animated hb-stat-pill-gauge-track">
                 <div
-                  className="hb-stat-pill-gauge-fill"
+                  className="hb-meter-fill"
                   style={{ width: `${stats.totalPercent}%`, background: "var(--green)" }}
                 />
               </div>
@@ -445,9 +445,9 @@ export default function GoalsView({
                   </div>
                 </div>
 
-                <div className="hb-goal-progress-bg">
+                <div className="hb-meter hb-meter--lg hb-meter--animated hb-goal-progress-bg">
                   <div
-                    className="hb-goal-progress-bar"
+                    className="hb-meter-fill"
                     style={{ width: `${Math.min(goal.progress.percent, 100)}%` }}
                   />
                 </div>

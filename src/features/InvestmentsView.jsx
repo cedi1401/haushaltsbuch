@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
+import HbTooltip from "../components/HbTooltip.jsx";
 import DataTable from "../components/DataTable.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
@@ -390,14 +391,19 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
   // bearbeiten: im Kopf der Depotwert-Karte und in der Vermögensübersicht.
   const header = (
     <div className="hb-view-actions">
-      <Button
-        variant="outline"
-        onClick={() => refresh({ bypassCache: true })}
-        disabled={loading || !available}
-        title={available ? undefined : "Kurse gibt es nur in der Desktop-App."}
-      >
-        <IconRefresh /> {loading ? "Wird aktualisiert …" : "Kurse aktualisieren"}
-      </Button>
+      {available ? (
+        <Button variant="outline" onClick={() => refresh({ bypassCache: true })} disabled={loading}>
+          <IconRefresh /> {loading ? "Wird aktualisiert …" : "Kurse aktualisieren"}
+        </Button>
+      ) : (
+        // Ein deaktivierter Button nimmt weder Hover noch Fokus an — der
+        // Tooltip hängt deshalb am umschließenden Auslöser.
+        <HbTooltip text="Kurse gibt es nur in der Desktop-App.">
+          <Button variant="outline" disabled>
+            <IconRefresh /> Kurse aktualisieren
+          </Button>
+        </HbTooltip>
+      )}
       <Button onClick={() => openNewTransaction(depots[0]?.id || "", "")}>
         <IconPlus /> Transaktion erfassen
       </Button>
@@ -474,7 +480,7 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
         <ReturnsCard total={total} fmt={fmt} />
       </div>
 
-      <div className="hb-stack hb-stack--lg" style={{ marginTop: 20 }}>
+      <div className="hb-stack hb-stack--lg" style={{ marginTop: "var(--card-gap)" }}>
         <Card>
           <CardContent>
             <DataTable

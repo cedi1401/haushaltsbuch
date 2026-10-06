@@ -144,11 +144,10 @@ export default function ValueHistoryCard({
                 </div>
               )}
               {delta !== null && (
-                <div
-                  className="hb-inv-hero-delta"
-                  title="Wertveränderung im gewählten Zeitraum, inklusive Käufe und Verkäufe"
-                >
-                  {formatSigned(fmt, delta)} seit {formatDateDE(view.data[0].date)}
+                <div className="hb-inv-hero-delta">
+                  <HbTooltip inline text="Wertveränderung im gewählten Zeitraum, inklusive Käufe und Verkäufe">
+                    {formatSigned(fmt, delta)} seit {formatDateDE(view.data[0].date)}
+                  </HbTooltip>
                 </div>
               )}
             </div>
@@ -165,12 +164,9 @@ export default function ValueHistoryCard({
                     : "Noch keine Kurse abgerufen"}
                 </span>
                 {hasStale && (
-                  <span
-                    className="hb-badge hb-inv-pill hb-inv-pill--stale"
-                    title="Die App konnte die Kurse nicht neu abrufen und zeigt die letzten bekannten."
-                  >
-                    veraltet
-                  </span>
+                  <HbTooltip text="Die App konnte die Kurse nicht neu abrufen und zeigt die letzten bekannten.">
+                    <span className="hb-badge hb-inv-pill hb-inv-pill--stale">veraltet</span>
+                  </HbTooltip>
                 )}
               </div>
               {unpricedCount > 0 && (

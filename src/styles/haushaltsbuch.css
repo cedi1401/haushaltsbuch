@@ -99,6 +99,9 @@
   --hover-bg: rgba(0, 0, 0, 0.03);
   --active-bg: rgba(0, 0, 0, 0.06);
   --focus-ring: rgba(0, 120, 212, 0.3);
+  /* Der eine Fokus-Ring der App. Die globale :focus-visible-Regel setzt ihn;
+     wer einen eigenen box-shadow trägt (Schatten, Hover), nimmt das Token. */
+  --focus-shadow: 0 0 0 2px var(--focus-ring);
   --overlay-bg: rgba(0, 0, 0, 0.3);
   --reveal-border: rgba(0, 120, 212, 0.2);
 
@@ -117,6 +120,9 @@
   --radius-lg: 8px;
   --radius-xl: 12px;
   --radius-pill: 999px;
+
+  /* Abstand zwischen Karten (und zwischen KPI-Reihe und erster Karte) */
+  --card-gap: 20px;
 
   /* Semantic UI colors */
   --bar-track-bg: rgba(128, 128, 128, 0.12);
@@ -369,7 +375,7 @@ button, input, select, textarea {
 
 /* Flex column utility — replaces style={{ display:"flex", flexDirection:"column", gap:X }} */
 .hb-stack { display: flex; flex-direction: column; gap: 12px; }
-.hb-stack--lg { gap: 16px; }
+.hb-stack--lg { gap: var(--card-gap); }
 
 .hb-title-row {
   display: flex;
@@ -391,6 +397,62 @@ button, input, select, textarea {
   font-weight: 700;
   margin: 0;
   color: var(--text);
+}
+
+/* Kopfzeile einer Karte: Titel links, Aktionen/Pillen rechts, 12 px bis zum
+   Inhalt. --legend: es folgt die Chart-Legende, die zum Kopf gehört (6 px).
+   --flush: es folgt eine .hb-table, deren Kopfzeile den Abstand selbst
+   mitbringt. */
+.hb-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+
+.hb-card-head--legend { margin-bottom: 6px; }
+.hb-card-head--flush { margin-bottom: 0; }
+
+/* =====================================================
+   METER — der eine Fortschritts-/Anteilsbalken der App.
+   .hb-meter ist der Track, .hb-meter-fill die Füllung (Breite inline).
+   Größen: --sm 4 px (in Kacheln und Pillen), Standard 6 px (Tabellenzelle,
+   Detail), --lg 8 px (Listenbalken). Track neutral; --tinted tönt ihn in der
+   Farbe der Füllung (--meter-tone). Übergang nur mit --animated: bei vielen
+   Zeilen flimmerte er sonst bei jedem Re-Render.
+   Die älteren Klassen (.hb-goal-progress-bg, .hb-dt-progress-track …) stehen
+   nur noch als Layout-Haken daneben (Abstand, Breite, Ton).
+   ===================================================== */
+.hb-meter {
+  display: block;
+  height: 6px;
+  background: var(--bar-track-bg);
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+}
+
+.hb-meter--sm { height: 4px; }
+.hb-meter--lg { height: 8px; }
+
+.hb-meter--tinted {
+  background: color-mix(in srgb, var(--meter-tone, var(--accent)) 20%, var(--border-light));
+}
+
+.hb-meter-fill {
+  display: block;
+  height: 100%;
+  background: var(--meter-tone, var(--accent));
+  border-radius: inherit;
+}
+
+.hb-meter--animated .hb-meter-fill {
+  transition: width 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-meter--animated .hb-meter-fill { transition: none; }
 }
 
 .hb-group {
@@ -905,8 +967,6 @@ select.hb-input option {
 }
 
 .hb-link-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--focus-ring);
   border-radius: var(--radius-sm);
 }
 
@@ -1168,7 +1228,7 @@ select.hb-input option {
 .hb-two {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: var(--card-gap);
 }
 
 @media (max-width: 900px) {
@@ -1219,7 +1279,7 @@ select.hb-input option {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: var(--card-gap);
 }
 
 /* Farbkante links — das Rezept für alle KPI-Karten (auch .hb-fct-kpi):
@@ -1318,21 +1378,11 @@ select.hb-input option {
 }
 
 .hb-stat-pill-gauge-track {
-  height: 3px;
-  background: var(--border-light);
-  border-radius: var(--radius-xs);
   /* Anchor the gauge to the bottom of the pill. In a stat-pills row that
      mixes gauge pills with sub-only pills, this keeps every gauge on one
      shared baseline. (.hb-stat-pill is a column flex container; the value
      and optional sub line above already provide the visual gap.) */
   margin-top: auto;
-  overflow: hidden;
-}
-
-.hb-stat-pill-gauge-fill {
-  height: 100%;
-  border-radius: var(--radius-xs);
-  transition: width 0.4s ease;
 }
 
 /* Meter-Track in der Hue des Fills tönen (Hue-auf-Hue statt neutralem Grau) —
@@ -1353,8 +1403,8 @@ select.hb-input option {
 .hb-fct-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 16px;
+  gap: var(--card-gap);
+  margin-top: var(--card-gap);
 }
 
 .hb-fct-header {
@@ -1617,6 +1667,12 @@ select.hb-input option {
   border-bottom: 1px solid var(--border-light);
 }
 
+/* Die Zelle ist ein Flex-Container: ohne eigene Breite fiele der Balken
+   auf 0 zusammen. */
+.hb-fct-bar-cell > .hb-meter {
+  flex: 1;
+}
+
 .hb-fct-month-cell {
   justify-content: flex-end;
 }
@@ -1624,22 +1680,6 @@ select.hb-input option {
 .hb-fct-pct-cell {
   justify-content: flex-end;
   min-width: calc(48px + var(--fct-col-gap));
-}
-
-/* Proportionsbalken */
-.hb-fct-prop-track {
-  width: 100%;
-  height: 8px;
-  background: var(--border-light);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.hb-fct-prop-fill {
-  height: 100%;
-  border-radius: var(--radius-sm);
-  transition: width 0.4s ease;
-  opacity: 0.85;
 }
 
 .hb-fct-overview-amount {
@@ -2474,10 +2514,9 @@ select.hb-input option {
   gap: 4px;
 }
 
-/* Fortschrittsbalken — Vorbild .hb-insight-bar-*, hier 6 px statt 8 px, damit
-   der Balken in der 40-px-Zeile nicht wie ein zweites Element wirkt. Ohne die
-   Wachstums-Animation der Insight-Bars: bei bis zu 20 Zeilen würde sie bei
-   jedem Re-Render flimmern. */
+/* Fortschrittsbalken — .hb-meter in Standardgröße (6 px), damit der Balken in
+   der 40-px-Zeile nicht wie ein zweites Element wirkt. Ohne --animated: bei
+   bis zu 20 Zeilen würde der Übergang bei jedem Re-Render flimmern. */
 .hb-dt-progress {
   display: flex;
   align-items: center;
@@ -2489,17 +2528,6 @@ select.hb-input option {
   /* Keine Spaltenbreite, sondern die Untergrenze, ab der ein Balken noch
      etwas aussagt — die Zelle wächst mit, sobald die Spalte breiter wird. */
   min-width: 56px;
-  height: 6px;
-  background: var(--bar-track-bg);
-  border-radius: var(--radius-xs);
-  overflow: hidden;
-}
-
-.hb-dt-progress-fill {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-  border-radius: var(--radius-xs);
 }
 
 .hb-dt-progress-value {
@@ -2739,8 +2767,8 @@ select.hb-input option {
   color: var(--text);
 }
 
-/* Track in der Hue der Füllung statt neutralem Grau — dieselbe Regel wie an
-   .hb-stat-pill--accent .hb-stat-pill-gauge-track. In column-Richtung ist die
+/* Track in der Hue der Füllung statt neutralem Grau (wie .hb-meter--tinted)
+   und in der Kachelgröße 4 px (wie .hb-meter--sm). In column-Richtung ist die
    flex-basis die Höhe. */
 .hb-res-fact .hb-dt-progress-track {
   flex: 0 0 4px;
@@ -2807,22 +2835,11 @@ select.hb-input option {
 }
 
 /* Zyklus-Meter: ein Verhältnis gegen eine Grenze (verstrichene von turnusMonths).
-   Ohne Übergang — wie .hb-dt-progress-fill, das aus demselben Grund keinen hat:
-   bei vielen offenen Zeilen flimmerte er bei jedem Re-Render. */
+   .hb-meter --tinted im Statuston, ohne Übergang: bei vielen offenen Zeilen
+   flimmerte er bei jedem Re-Render. */
 .hb-res-meter {
-  display: block;
-  height: 6px;
+  --meter-tone: var(--hb-res-tone-mark);
   margin: 2px 0 10px;
-  border-radius: var(--radius-xs);
-  background: color-mix(in srgb, var(--hb-res-tone-mark) 20%, var(--border-light));
-  overflow: hidden;
-}
-
-.hb-res-meter-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--radius-xs);
-  background: var(--hb-res-tone-mark);
 }
 
 /* ---------- Statustöne ---------- */
@@ -2868,11 +2885,10 @@ select.hb-input option {
   margin-top: 2px;
 }
 
-/* Die Hinweis-Pillen tragen ihre Erklärung im title. */
+/* Die Hinweis-Pillen tragen ihre Erklärung als HbTooltip. */
 .hb-res-hint {
   font-size: 12px;
   padding: 3px 9px;
-  cursor: help;
 }
 
 /* Die Linie über die volle Breite schließt den Streifen ab — dieselbe Geste wie
@@ -2935,8 +2951,6 @@ select.hb-input option {
 .hb-res-pill {
   display: inline-block;
   white-space: nowrap;
-  /* Es hängt ein title-Tooltip daran — der Zeiger kündigt ihn an. */
-  cursor: help;
 }
 
 .hb-res-pill--onTrack {
@@ -3460,17 +3474,7 @@ select.hb-input option {
    GOALS VIEW
    ===================================================== */
 .hb-goal-progress-bg {
-  height: 8px;
-  background: var(--bg-subtle);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.hb-goal-progress-bar {
-  height: 100%;
-  background: var(--green);
-  border-radius: var(--radius-sm);
-  transition: width 0.4s ease;
+  --meter-tone: var(--green);
 }
 
 .hb-goal-header {
@@ -3756,7 +3760,6 @@ select.hb-input option {
   font-size: 12px;
   line-height: 1.4;
   color: var(--muted);
-  cursor: help;
 }
 
 /* .hb-card-content wird unter 480 px auf 16 px Padding reduziert — die
@@ -3790,8 +3793,6 @@ select.hb-input option {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  /* Es hängt ein title-Tooltip daran — der Zeiger kündigt ihn an. */
-  cursor: help;
 }
 
 .hb-fixed-booked--done { color: var(--green); }
@@ -3822,22 +3823,18 @@ select.hb-input option {
   border-color: var(--yellow-border);
 }
 
-/* Fortschrittsbalken in der Pille — Track und Fill von .hb-stat-pill-gauge-*,
-   Track Hue-auf-Hue wie bei den Stat-Pills. In der Zeile statt am Pillenboden
-   (margin-top: auto zurückgesetzt) und ohne Übergang: der Stand soll beim
-   Öffnen sofort stehen. */
+/* Fortschrittsbalken in der Pille — .hb-meter--sm. Track und Füllung aus der
+   Textfarbe der Pille statt über --meter-tone: die Pille ist selbst getönt,
+   ein Mix mit --border-light gäbe dort einen grauen Fleck. Ohne Übergang: der
+   Stand soll beim Öffnen sofort stehen. */
 .hb-fixed-booked-gauge {
   flex: none;
   width: 56px;
-  height: 4px;
-  margin-top: 0;
   background: color-mix(in srgb, currentColor 22%, transparent);
 }
 
 .hb-fixed-booked-gauge-fill {
-  display: block;
   background: currentColor;
-  transition: none;
 }
 
 /* Tabellenweite Aktionen (Sammelbuchung ohne Gruppen, Gruppe, Position) —
@@ -3885,7 +3882,6 @@ select.hb-input option {
    Dasselbe Idiom trägt die Trend-Übersichtsliste in .hb-fct-overview-cat--free. */
 .hb-fixed-free {
   color: var(--muted);
-  cursor: help;
 }
 
 /* Status „Diesen Monat": gefüllter grüner Kreis mit ausgespartem Haken
@@ -3896,7 +3892,6 @@ select.hb-input option {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  cursor: help;
   font-variant-numeric: tabular-nums;
 }
 
@@ -4149,9 +4144,9 @@ select.hb-input option {
   border-color: var(--reveal-border);
 }
 
+/* Eigene Regel nötig: der Hover-Schatten verdrängte sonst den globalen Ring. */
 .hb-tpl-card:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--focus-ring);
+  box-shadow: var(--focus-shadow);
 }
 
 .hb-tpl-card--active {
@@ -4452,9 +4447,11 @@ select.hb-input option {
 /* =====================================================
    FOCUS VISIBLE (Accessibility) - FLUENT FOCUS
    ===================================================== */
+/* Das Outline ist transparent statt entfernt: im Windows-Kontrastmodus
+   (forced-colors) fällt der box-shadow weg, das Outline wird dort sichtbar. */
 :focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--focus-ring);
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-shadow);
 }
 
 /* Recharts markiert beim Maus-Klick das SVG/Segment mit dem Browser-Default-
@@ -5147,11 +5144,6 @@ select.hb-input option {
     radial-gradient(circle at center, var(--text-on-accent) 0 3px, transparent 3.5px);
 }
 
-.hb-hcat-radio:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--focus-ring);
-}
-
 .hb-hcat-radio:disabled {
   cursor: not-allowed;
   opacity: 0.5;
@@ -5192,9 +5184,7 @@ select.hb-input option {
 }
 
 .hb-hcat-expand-btn:focus-visible {
-  outline: none;
   opacity: 1;
-  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .hb-hcat-expand-btn svg {
@@ -5470,9 +5460,10 @@ select.hb-input option {
 
 .hb-segmented--md .hb-segmented__item { padding: 8px 14px; font-size: 14px; }
 
+/* Eigene Regel nötig: der Schatten des aktiven Eintrags verdrängte sonst den
+   globalen Ring. */
 .hb-segmented__item:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--focus-ring);
+  box-shadow: var(--focus-shadow);
 }
 
 .hb-segmented__item:disabled {
@@ -5659,11 +5650,6 @@ select.hb-input option {
   background: var(--hover-bg);
 }
 
-.hb-insights-tab:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent);
-}
-
 .hb-insights-tab--active {
   color: var(--accent);
 }
@@ -5818,18 +5804,9 @@ select.hb-input option {
   margin-right: 6px;
 }
 
-.hb-insight-bar-track {
-  height: 8px;
-  background: var(--bar-track-bg);
-  border-radius: var(--radius-xs);
-  overflow: hidden;
-}
-
+/* Füllung der Insight-Balken (.hb-meter--lg): wächst beim Einblenden auf --w. */
 .hb-insight-bar-fill {
-  height: 100%;
   width: 0;
-  background: var(--c, var(--accent));
-  border-radius: var(--radius-xs);
   animation: insightBarGrow 360ms var(--ease-decelerate) forwards;
 }
 
@@ -6026,9 +6003,30 @@ select.hb-input option {
   background: var(--accent-soft);
 }
 .hb-tooltip-trigger:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
   color: var(--accent);
+}
+
+/* Umschließende Form: das Kind (Pille, Wert) ist der Auslöser und bleibt
+   optisch unverändert. cursor: help gehört allein dem Fragezeichen-Icon. */
+.hb-tooltip--wrap {
+  position: static;
+}
+.hb-tooltip-target {
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+  border-radius: var(--radius-sm);
+}
+/* Fließtext, der umbrechen darf */
+.hb-tooltip--inline,
+.hb-tooltip--inline > .hb-tooltip-target {
+  display: inline;
+}
+/* Reines Textlabel: gepunktet unterstrichen, damit die Erklärung auffindbar ist */
+.hb-tooltip--underline > .hb-tooltip-target {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 3px;
 }
 
 .hb-tooltip-bubble {
@@ -6043,6 +6041,11 @@ select.hb-input option {
   line-height: 1.5;
   text-align: left;
   white-space: normal;
+  /* Die Blase hängt im Auslöser und erbt sonst dessen Schriftbild
+     (Versalien, Sperrung einer Pille). */
+  text-transform: none;
+  letter-spacing: normal;
+  font-style: normal;
   color: var(--text);
   background: var(--card);
   border: 1px solid var(--border);
@@ -6142,8 +6145,6 @@ select.hb-input option {
   background: var(--accent-soft);
 }
 .hb-spark-trigger:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
   color: var(--accent);
 }
 
@@ -6404,10 +6405,6 @@ select.hb-input option {
 }
 
 .hb-budget-total-bar {
-  height: 4px;
-  background: var(--bar-track-bg);
-  border-radius: 3px;
-  overflow: hidden;
   margin-bottom: 18px;
   flex-shrink: 0;
 }
@@ -6421,10 +6418,7 @@ select.hb-input option {
 }
 
 .hb-budget-bar-fill {
-  height: 100%;
   width: var(--w, 0%);
-  background: var(--c, var(--accent));
-  border-radius: 3px;
   transition: width 0.4s ease;
 }
 
@@ -6511,7 +6505,7 @@ select.hb-input option {
 .hb-budget-status-pill--over { color: var(--red);    background: var(--red-soft);    }
 
 .hb-full-card {
-  margin-top: 16px;
+  margin-top: var(--card-gap);
 }
 
 /* Pagination */
@@ -6793,9 +6787,11 @@ select.hb-input option {
   outline-offset: -1px;
 }
 
+/* Eigene Regel nötig: Karten- und Hover-Schatten verdrängten sonst den
+   globalen Ring. Die Elevation bleibt unter dem Ring erhalten. */
 .hb-cg-card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 2px solid transparent;
+  box-shadow: var(--shadow-sm), var(--focus-shadow);
 }
 
 .hb-cg-card .hb-pot-card-name {
@@ -6849,7 +6845,7 @@ select.hb-input option {
   /* feste Kopfhöhe: der Aktions-Button in der Planungs-Card darf die
      Titelzeile nicht gegenüber der Nachbar-Card verschieben */
   min-height: 30px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .hb-cg-section-head .hb-cg-section-title {
@@ -7010,18 +7006,9 @@ select.hb-input option {
   min-width: 42px;
 }
 
-.hb-cg-breakdown-bar {
-  height: 10px;
-  border-radius: 999px;
-  background: var(--bg-subtle);
-  overflow: hidden;
-}
-
+/* Ranglisten-Balken (.hb-meter--lg): auch der kleinste Anteil bleibt sichtbar. */
 .hb-cg-breakdown-bar-fill {
-  height: 100%;
-  border-radius: 999px;
   min-width: 2px;
-  transition: width 0.4s ease;
 }
 
 /* Zusammensetzung eines Topfs (PotsView) — Stapelbalken + Rangliste.
@@ -7079,7 +7066,7 @@ select.hb-input option {
 }
 
 .hb-cg-breakdown--compact .hb-cg-breakdown-bar {
-  height: 8px;
+  height: 6px;
 }
 
 /* Zweispaltiger Satz ab ausreichender Breite. Bewusst `columns` statt Grid:
@@ -7353,8 +7340,6 @@ select.hb-input option {
 .hb-inv-pill {
   display: inline-block;
   white-space: nowrap;
-  /* Es hängt ein title-Tooltip daran — der Zeiger kündigt ihn an. */
-  cursor: help;
 }
 
 /* Veraltet ist eine Warnung, kein Fehler. Dieselbe Kontrastkorrektur wie bei
@@ -7394,7 +7379,8 @@ select.hb-input option {
 }
 
 .hb-inv-symbol {
-  font-family: Consolas, "Courier New", monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
   font-size: 12px;
   color: var(--muted);
 }
@@ -7547,7 +7533,8 @@ select.hb-input option {
 .hb-inv-search-symbol {
   flex-shrink: 0;
   min-width: 72px;
-  font-family: Consolas, "Courier New", monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
   font-size: 12px;
   font-weight: 600;
   color: var(--text);
@@ -7615,7 +7602,7 @@ select.hb-input option {
   grid-template-areas:
     "hero   hero    alloc"
     "depots returns alloc";
-  gap: 20px;
+  gap: var(--card-gap);
   align-items: stretch;
 }
 

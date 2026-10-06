@@ -136,12 +136,9 @@ export default function EntryTemplateManagerDialog({
         {template.amount != null ? (
           <span className="hb-tpl-pill hb-tpl-pill--amount">{fmt(template.amount)}</span>
         ) : (
-          <span
-            className="hb-tpl-pill hb-tpl-pill--open"
-            title="Der Betrag wird bei jeder Buchung neu erfasst."
-          >
-            Betrag frei
-          </span>
+          <HbTooltip text="Der Betrag wird bei jeder Buchung neu erfasst." focusable={false}>
+            <span className="hb-tpl-pill hb-tpl-pill--open">Betrag frei</span>
+          </HbTooltip>
         )}
         {note && (
           <span className="hb-tpl-pill hb-tpl-pill--note" title={note}>
@@ -241,9 +238,19 @@ export default function EntryTemplateManagerDialog({
                         <div className="hb-tpl-meta">
                           {renderMetaPills(template)}
                           {issues.length > 0 && (
-                            <span className="hb-tpl-pill hb-tpl-pill--warn" title={issues.join("\n")}>
-                              ⚠ {issues.length === 1 ? "1 Hinweis" : `${issues.length} Hinweise`}
-                            </span>
+                            <HbTooltip
+                              focusable={false}
+                              text={issues.map((issue, i) => (
+                                <React.Fragment key={i}>
+                                  {i > 0 && <br />}
+                                  {issue}
+                                </React.Fragment>
+                              ))}
+                            >
+                              <span className="hb-tpl-pill hb-tpl-pill--warn">
+                                ⚠ {issues.length === 1 ? "1 Hinweis" : `${issues.length} Hinweise`}
+                              </span>
+                            </HbTooltip>
                           )}
                         </div>
                       </div>

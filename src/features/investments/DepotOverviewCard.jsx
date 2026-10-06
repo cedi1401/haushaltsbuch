@@ -33,7 +33,7 @@ export default function DepotOverviewCard({
   return (
     <Card className="hb-inv-cell--depots">
       <CardContent>
-        <div className="hb-row" style={{ alignItems: "center", marginBottom: 12, gap: 8 }}>
+        <div className="hb-card-head">
           <h3 className="hb-card-title">Vermögensübersicht</h3>
           <Button size="sm" variant="outline" onClick={onManageDepots}>
             <IconWallet /> Depots verwalten

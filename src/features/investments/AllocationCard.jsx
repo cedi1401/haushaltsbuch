@@ -51,9 +51,9 @@ export default function AllocationCard({ byClass, unpricedCount, fmt }) {
   return (
     <Card className="hb-inv-cell--alloc">
       <CardContent>
-        <h3 className="hb-card-title" style={{ marginBottom: 12 }}>
-          Aufteilung nach Anlageklasse
-        </h3>
+        <div className="hb-card-head">
+          <h3 className="hb-card-title">Aufteilung nach Anlageklasse</h3>
+        </div>
 
         <div className="hb-inv-alloc">
           <div className="hb-inv-alloc-pie">

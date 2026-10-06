@@ -20,7 +20,9 @@ export default function ReturnsCard({ total, fmt }) {
   return (
     <Card className="hb-inv-cell--returns">
       <CardContent>
-        <h3 className="hb-card-title" style={{ marginBottom: 12 }}>Rendite</h3>
+        <div className="hb-card-head">
+          <h3 className="hb-card-title">Rendite</h3>
+        </div>
 
         <div className="hb-inv-detail">
           <div className="hb-inv-detail-row">

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
+import HbTooltip from "../components/HbTooltip.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
 import DataTable from "../components/DataTable.jsx";
@@ -815,18 +816,20 @@ export default function FixedCostsView({
                   <span className="hb-fixed-total-label">Fixkosten pro Monat</span>
                   <span className="hb-fixed-total-value">{fmt(fixedMonthly)}</span>
                 </div>
-                <div
-                  className="hb-fixed-total-meta"
-                  title="Ausgaben und Rückstellungen mit Turnus, umgerechnet auf den Monat. Rücklagen ohne Turnus sind freies Sparen und zählen nicht zu den Fixkosten."
-                >
-                  {freeMonthly > 0 && (
-                    <>
-                      Ohne {fmt(freeMonthly)} freie Rücklagen aus der Tabelle „Rücklagen &amp;
-                      Rückstellungen“
-                      <span aria-hidden="true"> · </span>
-                    </>
-                  )}
-                  {bookedCount} von {recurringExpenses.length} diesen Monat gebucht
+                <div className="hb-fixed-total-meta">
+                  <HbTooltip
+                    inline
+                    text="Ausgaben und Rückstellungen mit Turnus, umgerechnet auf den Monat. Rücklagen ohne Turnus sind freies Sparen und zählen nicht zu den Fixkosten."
+                  >
+                    {freeMonthly > 0 && (
+                      <>
+                        Ohne {fmt(freeMonthly)} freie Rücklagen aus der Tabelle „Rücklagen &amp;
+                        Rückstellungen“
+                        <span aria-hidden="true"> · </span>
+                      </>
+                    )}
+                    {bookedCount} von {recurringExpenses.length} diesen Monat gebucht
+                  </HbTooltip>
                 </div>
               </div>
             </Card>

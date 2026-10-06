@@ -50,9 +50,9 @@ export default function EntriesTable({
   const hasMore = !collapsed && visibleCount < entriesSorted.length;
 
   return (
-    <Card style={{ marginTop: 16 }}>
+    <Card style={{ marginTop: "var(--card-gap)" }}>
       <CardContent>
-        <div className="hb-row" style={{ alignItems: "center" }}>
+        <div className="hb-card-head hb-card-head--flush">
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <h3 className="hb-card-title">Buchungen</h3>
             <HbTooltip
