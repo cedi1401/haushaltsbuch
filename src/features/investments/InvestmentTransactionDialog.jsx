@@ -372,7 +372,8 @@ export default function InvestmentTransactionDialog({
             value={draft.type}
             onChange={(v) => setField("type", v)}
             ariaLabel="Art der Transaktion"
-            style={{ width: "100%" }}
+            size="md"
+            full
           />
         </div>
 
@@ -407,7 +408,8 @@ export default function InvestmentTransactionDialog({
             value={draft.kind}
             onChange={switchKind}
             ariaLabel="Art der Anlage"
-            style={{ width: "100%" }}
+            size="md"
+            full
           />
         </div>
 
@@ -419,7 +421,8 @@ export default function InvestmentTransactionDialog({
               value={draft.metal}
               onChange={selectMetal}
               ariaLabel="Metall wählen"
-              style={{ width: "100%" }}
+              size="md"
+              full
             />
             <div className="hb-inv-form-hint">
               Bewertet über {METAL_SYMBOLS[draft.metal]} in USD je Feinunze. Angenommen wird

@@ -28,21 +28,31 @@ export function Button({ children, onClick, variant = "solid", size, disabled, t
   );
 }
 
-// Segmentierte Pill-Auswahl (Zeitraum-/Modus-Umschalter). Ersetzt das zuvor
-// mehrfach duplizierte `hb-pill-tabs`-Markup. `options`: [{ value, label }].
-export function RangeTabs({ options, value, onChange, ariaLabel, style }) {
+// Segmentierte Auswahl (Zeitraum-/Modus-Umschalter) auf Basis von
+// `.hb-segmented`. `options`: [{ value, label }]. `size="md"` und `full`
+// sind die Formular-Variante: größer und über die ganze Feldbreite verteilt.
+export function RangeTabs({ options, value, onChange, ariaLabel, style, size, full = false }) {
+  const cls = [
+    "hb-segmented",
+    size === "md" ? "hb-segmented--md" : null,
+    full ? "hb-segmented--full" : null,
+  ].filter(Boolean).join(" ");
   return (
-    <div className="hb-pill-tabs" role="group" aria-label={ariaLabel} style={style}>
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          className={`hb-pill-tab${value === opt.value ? " hb-pill-tab-active" : ""}`}
-          onClick={() => onChange(opt.value)}
-        >
-          {opt.label}
-        </button>
-      ))}
+    <div className={cls} role="group" aria-label={ariaLabel} style={style}>
+      {options.map((opt) => {
+        const active = value === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            aria-pressed={active}
+            className={`hb-segmented__item${active ? " hb-segmented__item--active" : ""}`}
+            onClick={() => onChange(opt.value)}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

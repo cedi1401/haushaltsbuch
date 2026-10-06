@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 import { formatPercent } from "../utils/hbUtils.js";
-import { Card, CardContent, Button } from "../components/ui.jsx";
+import { Card, CardContent, Button, RangeTabs } from "../components/ui.jsx";
 import { IconInbox } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { useCardBg } from "../hooks/useCardBg.js";
@@ -14,6 +14,12 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { makeSubcategoryColorShades, CHART_COLORS } from "../utils/hbPalette.js";
+
+const CHART_TAB_OPTIONS = [
+  { value: "expense", label: "Ausgaben" },
+  { value: "income", label: "Einnahmen" },
+  { value: "allocation", label: "Aufteilung" },
+];
 
 export default function Charts({
   expenseByHierarchy,
@@ -117,46 +123,23 @@ export default function Charts({
 
         {/* Header: Tab switch + display toggle */}
         <div className="hb-chart-tabs-header">
-          <div className="hb-tab-group">
-            <button
-              type="button"
-              className={`hb-tab${activeTab === "expense" ? " hb-tab-active" : ""}`}
-              onClick={() => handleTabChange("expense")}
-            >
-              Ausgaben
-            </button>
-            <button
-              type="button"
-              className={`hb-tab${activeTab === "income" ? " hb-tab-active" : ""}`}
-              onClick={() => handleTabChange("income")}
-            >
-              Einnahmen
-            </button>
-            <button
-              type="button"
-              className={`hb-tab${activeTab === "allocation" ? " hb-tab-active" : ""}`}
-              onClick={() => handleTabChange("allocation")}
-            >
-              Aufteilung
-            </button>
-          </div>
+          <RangeTabs
+            options={CHART_TAB_OPTIONS}
+            value={activeTab}
+            onChange={handleTabChange}
+            ariaLabel="Auswertung wählen"
+          />
 
-          <div className="hb-display-toggle">
-            <button
-              type="button"
-              className={displayMode === "chf" ? "active" : ""}
-              onClick={() => setDisplayMode("chf")}
-            >
-              {baseCurrency}
-            </button>
-            <button
-              type="button"
-              className={displayMode === "percent" ? "active" : ""}
-              onClick={() => setDisplayMode("percent")}
-            >
-              %
-            </button>
-          </div>
+          <RangeTabs
+            options={[
+              { value: "chf", label: baseCurrency },
+              { value: "percent", label: "%" },
+            ]}
+            value={displayMode}
+            onChange={setDisplayMode}
+            ariaLabel="Anzeige als Betrag oder Anteil"
+            style={{ marginLeft: "auto" }}
+          />
         </div>
 
         {/* Allocation tab */}

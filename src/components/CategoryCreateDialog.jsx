@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import EditDialog from "./EditDialog.jsx";
+import { RangeTabs } from "./ui.jsx";
 import { CUSTOM_CATEGORY_PALETTE } from "../utils/hbPalette.js";
+
+const MODE_OPTIONS = [
+  { value: "parent", label: "Oberkategorie erstellen" },
+  { value: "sub", label: "Unterkategorie erstellen" },
+];
 
 export default function CategoryCreateDialog({
   open,
@@ -51,22 +57,14 @@ export default function CategoryCreateDialog({
     >
       {/* Toggle: Ober- / Unterkategorie */}
       <div className="hb-field">
-        <div className="hb-toggle-group">
-          <button
-            type="button"
-            className={`hb-toggle-btn${mode === "parent" ? " hb-toggle-active" : ""}`}
-            onClick={() => setMode("parent")}
-          >
-            Oberkategorie erstellen
-          </button>
-          <button
-            type="button"
-            className={`hb-toggle-btn${mode === "sub" ? " hb-toggle-active" : ""}`}
-            onClick={() => setMode("sub")}
-          >
-            Unterkategorie erstellen
-          </button>
-        </div>
+        <RangeTabs
+          options={MODE_OPTIONS}
+          value={mode}
+          onChange={setMode}
+          ariaLabel="Art der Kategorie"
+          size="md"
+          full
+        />
       </div>
 
       {/* Kategoriename */}

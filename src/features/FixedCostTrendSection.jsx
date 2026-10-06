@@ -346,10 +346,11 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                   )}
                 </div>
                 {availableTags.length > 0 && (
-                  <div className="hb-pill-tabs" role="group">
+                  <div className="hb-segmented hb-segmented--wrap" role="group" aria-label="Nach Tag filtern">
                     <button
                       type="button"
-                      className={`hb-pill-tab${selectedTags.size === 0 ? " hb-pill-tab-active" : ""}`}
+                      aria-pressed={selectedTags.size === 0}
+                      className={`hb-segmented__item${selectedTags.size === 0 ? " hb-segmented__item--active" : ""}`}
                       onClick={() => setSelectedTags(new Set())}
                     >
                       Alle
@@ -358,7 +359,8 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                       <button
                         key={tag}
                         type="button"
-                        className={`hb-pill-tab${selectedTags.has(tag) ? " hb-pill-tab-active" : ""}`}
+                        aria-pressed={selectedTags.has(tag)}
+                        className={`hb-segmented__item${selectedTags.has(tag) ? " hb-segmented__item--active" : ""}`}
                         onClick={() => setSelectedTags((prev) => {
                           const next = new Set(prev);
                           if (next.has(tag)) next.delete(tag); else next.add(tag);
