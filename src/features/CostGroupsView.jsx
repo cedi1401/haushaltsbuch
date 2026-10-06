@@ -16,6 +16,7 @@ import { Card, CardContent, Button, RangeTabs, ChartScrollNav } from "../compone
 import EditDialog from "../components/EditDialog.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
+import { ChartTooltip, ChartTooltipRow } from "../components/ChartTooltip.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
@@ -718,8 +719,8 @@ export default function CostGroupsView({
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={chartWindow} margin={{ top: 4, right: 16, bottom: 0, left: 0 }} barCategoryGap="32%">
                     <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
-                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)} width={64} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: themeColors.muted }} interval={0} angle={-20} textAnchor="end" height={50} />
+                    <YAxis tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)} width={64} />
                     <Tooltip
                       wrapperStyle={{ zIndex: 10 }}
                       cursor={false}
@@ -727,18 +728,18 @@ export default function CostGroupsView({
                         if (!active || !payload?.length) return null;
                         const point = payload[0].payload;
                         return (
-                          <div className="hb-chart-tooltip">
-                            <span className="hb-chart-tooltip-label">{label}</span>
-                            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-                              <span>Kosten</span>
-                              <span>{fmt(payload[0].value)}</span>
-                            </div>
+                          <ChartTooltip title={label}>
+                            <ChartTooltipRow
+                              label="Kosten"
+                              color={activeGroup.color || themeColors.accent}
+                              value={fmt(payload[0].value)}
+                            />
                             {point?.partial && (
                               <div className="hb-chart-tooltip-note">
                                 Teilmonat: {shortDateDE(point.partialFrom)} – {shortDateDE(point.partialTo)}
                               </div>
                             )}
-                          </div>
+                          </ChartTooltip>
                         );
                       }}
                     />

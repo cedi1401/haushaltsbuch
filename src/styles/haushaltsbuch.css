@@ -48,6 +48,9 @@
   --yellow: #d97706;
   --yellow-soft: rgba(217, 119, 6, 0.09);
   --yellow-border: rgba(217, 119, 6, 0.3);
+  /* Gelb als Textfarbe: --yellow auf --yellow-soft ergibt hell nur 2.90:1,
+     abgedunkelt 4.80:1. Im Dunkelmodus ist der Rohton hell genug. */
+  --yellow-text: color-mix(in srgb, var(--yellow) 75%, #000);
   --purple: #7160e8;
   --purple-soft: rgba(113, 96, 232, 0.08);
   --orange: #ca5010;
@@ -167,6 +170,7 @@
   --yellow: #f5bd3c;
   --yellow-soft: rgba(245, 189, 60, 0.12);
   --yellow-border: rgba(245, 189, 60, 0.34);
+  --yellow-text: var(--yellow);
   --purple: #b4a0ff;
   --purple-soft: rgba(180, 160, 255, 0.12);
   --orange: #f7630c;
@@ -852,7 +856,7 @@ select.hb-input option {
 /* Danger button: used for destructive confirms */
 .hb-btn-danger {
   background: var(--red);
-  color: #ffffff;
+  color: var(--text-on-accent);
 }
 
 .hb-btn-danger:hover {
@@ -1461,7 +1465,9 @@ select.hb-input option {
     minmax(60px, 0.72fr)
     auto
     minmax(max-content, 0.61fr);
-  column-gap: 16px;
+  /* Kein column-gap: der Spaltenabstand sitzt als padding-left in den Zellen
+     (--fct-col-gap), sonst risse er die Trennlinie jeder Zeile in Segmente. */
+  --fct-col-gap: 16px;
 }
 
 /* Schmale Fenster: Der Balken darf bis auf einen Reststrich schrumpfen, bevor
@@ -1475,7 +1481,7 @@ select.hb-input option {
       minmax(40px, 0.58fr)
       auto
       minmax(max-content, 0.28fr);
-    column-gap: 12px;
+    --fct-col-gap: 12px;
   }
 
   .hb-fct-annual-label { display: none; }
@@ -1490,6 +1496,10 @@ select.hb-input option {
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-light);
   margin-bottom: 2px;
+}
+
+.hb-fct-col-head + .hb-fct-col-head {
+  padding-left: var(--fct-col-gap);
 }
 
 .hb-fct-col-head--right {
@@ -1601,7 +1611,7 @@ select.hb-input option {
 .hb-fct-pct-cell {
   display: flex;
   align-items: center;
-  padding: 12px 0;
+  padding: 12px 0 12px var(--fct-col-gap);
   border-bottom: 1px solid var(--border-light);
 }
 
@@ -1611,7 +1621,7 @@ select.hb-input option {
 
 .hb-fct-pct-cell {
   justify-content: flex-end;
-  min-width: 48px;
+  min-width: calc(48px + var(--fct-col-gap));
 }
 
 /* Proportionsbalken */
@@ -1651,7 +1661,7 @@ select.hb-input option {
   align-items: center;
   justify-content: flex-end;
   gap: 5px;
-  padding: 12px 0 12px 16px;
+  padding: 12px 0 12px calc(16px + var(--fct-col-gap));
   border-bottom: 1px solid var(--border-light);
 }
 
@@ -2818,7 +2828,7 @@ select.hb-input option {
 }
 
 .hb-res-detail--behind {
-  --hb-res-tone: color-mix(in srgb, var(--yellow) 75%, #000);
+  --hb-res-tone: var(--yellow-text);
   --hb-res-tone-mark: var(--yellow);
   --hb-res-tone-soft: var(--yellow-soft);
 }
@@ -2835,13 +2845,9 @@ select.hb-input option {
   --hb-res-tone-soft: var(--red-soft);
 }
 
-/* Wörtlich die Korrekturen von .hb-res-pill--behind / --due: --yellow auf
-   --yellow-soft und --accent auf --accent-soft fallen im hellen Theme unter AA,
-   im dunklen stehen die Rohtöne weit darüber. */
-:root.dark .hb-res-detail--behind {
-  --hb-res-tone: var(--yellow);
-}
-
+/* Wörtlich die Korrektur von .hb-res-pill--due: --accent auf --accent-soft
+   fällt im hellen Theme unter AA, im dunklen steht der Rohton weit darüber.
+   (Gelb regelt --yellow-text bereits je Theme.) */
 :root.dark .hb-res-detail--due {
   --hb-res-tone: var(--accent);
 }
@@ -2931,18 +2937,12 @@ select.hb-input option {
   border-color: var(--green-border);
 }
 
-/* --yellow (#d97706) auf --yellow-soft über --card ergibt 2.90:1 und fällt
-   damit durch WCAG AA. 75 % Schwarzanteil heben das auf 4.80:1. Im Dunkelmodus
-   steht --yellow (#fce100) weit über der Schwelle und bleibt unverändert —
-   abgedunkelt verlöre es dort seine Warnwirkung. */
+/* Textfarbe über --yellow-text: der Rohton fiele im Hellmodus auf
+   --yellow-soft durch WCAG AA (Herleitung am Token in :root). */
 .hb-res-pill--behind {
-  color: color-mix(in srgb, var(--yellow) 75%, #000);
+  color: var(--yellow-text);
   background: var(--yellow-soft);
   border-color: var(--yellow-border);
-}
-
-:root.dark .hb-res-pill--behind {
-  color: var(--yellow);
 }
 
 /* „Fällig" ist Akzentblau und nicht Rot: am Zyklusende ist die Rechnung der
@@ -3504,8 +3504,8 @@ select.hb-input option {
 }
 .hb-goal-badge--deadline {
   background: var(--yellow-soft);
-  color: var(--yellow);
-  border-color: var(--yellow);
+  color: var(--yellow-text);
+  border-color: var(--yellow-border);
 }
 .hb-goal-progress-header {
   display: flex;
@@ -3570,7 +3570,7 @@ select.hb-input option {
 }
 .hb-goal-prognosis-value--ok { color: var(--green); }
 .hb-goal-prognosis-value--bad { color: var(--red); }
-.hb-goal-prognosis-value--warn { color: var(--yellow); }
+.hb-goal-prognosis-value--warn { color: var(--yellow-text); }
 /* Füllt den verbleibenden Leerraum der im Grid gestreckten Card und
    zentriert die Pill darin vertikal — bleibt bei fehlendem Leerraum
    einfach ein 12px-Abstand unter dem Fortschritt. */
@@ -3605,14 +3605,18 @@ select.hb-input option {
    und bleibt dort rechtsbündig. */
 .hb-goal-success-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 12px;
   flex-wrap: wrap;
   width: 100%;
 }
+/* Gleiche Metrik wie der kleine Button daneben, damit beide gleich hoch sind. */
 .hb-goal-success-row .hb-goal-success {
   flex: 1 1 auto;
   justify-content: center;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
 }
 .hb-goal-success-row .hb-btn {
   flex: 0 0 auto;
@@ -5692,7 +5696,10 @@ select.hb-input option {
   border: 0;
   background: transparent;
   padding: 10px 14px 12px;
-  font: 600 13px/1.2 inherit;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
   letter-spacing: 0.1px;
   color: var(--muted);
   cursor: pointer;
@@ -6522,8 +6529,8 @@ select.hb-input option {
 }
 
 .hb-budget-status-pill--ok   { color: var(--green);  background: var(--green-soft);  }
-.hb-budget-status-pill--warn { color: var(--yellow); background: var(--yellow-soft); }
-.hb-budget-status-pill--risk { color: var(--yellow); background: var(--yellow-soft); }
+.hb-budget-status-pill--warn { color: var(--yellow-text); background: var(--yellow-soft); }
+.hb-budget-status-pill--risk { color: var(--yellow-text); background: var(--yellow-soft); }
 .hb-budget-status-pill--over { color: var(--red);    background: var(--red-soft);    }
 
 .hb-full-card {
@@ -6787,6 +6794,15 @@ select.hb-input option {
   /* Basisklasse .hb-pot-card animiert box-shadow nicht → hier ergänzen,
      damit der Reveal-Highlight (siehe .hb-cg-card:hover) sanft einblendet. */
   transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+  /* Die Basisklasse ist für den Einsatz INNERHALB einer Karte gebaut
+     (--bg-subtle, ohne Schatten). Diese Kacheln liegen direkt auf der Seite
+     und brauchen deshalb die Kartenfläche — sonst lägen sie tiefer als der
+     Hintergrund. */
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  /* Abstand zwischen Kopf, Sparkline und Fuß als gap statt margin-top, damit
+     der Fuß per margin-top: auto an die Unterkante rücken kann. */
+  gap: 16px;
   /* Mehr Luft als bei den Dashboard-Topf-Kacheln: seit dem Entfernen der
      KPI-Pills wirkten die Cards innen eingeengt. Nur hier scopen, damit
      die geteilte .hb-pot-card-Basisklasse (Töpfe) unberührt bleibt. */
@@ -6822,16 +6838,16 @@ select.hb-input option {
 }
 
 .hb-cg-card-spark {
-  margin-top: 16px;
   /* Rein dekorativ (aria-hidden): Pointer-Events durchreichen, damit der
      Button-Cursor (pointer) über der Sparkline sichtbar bleibt und Recharts
      die Maus-Events nicht abfängt. */
   pointer-events: none;
 }
 
-/* Fußbereich innerhalb der Kostengruppen-Cards etwas weiter abgesetzt */
+/* Fuß an der Unterkante: Kacheln einer Zeile sind gleich hoch, ohne Sparkline
+   säße der Fuß sonst höher als in der Nachbarkachel. */
 .hb-cg-card .hb-pot-card-foot {
-  margin-top: 16px;
+  margin-top: auto;
   padding-top: 12px;
 }
 
@@ -7392,16 +7408,11 @@ select.hb-input option {
 }
 
 /* Veraltet ist eine Warnung, kein Fehler. Dieselbe Kontrastkorrektur wie bei
-   .hb-res-pill--behind: --yellow auf --yellow-soft fällt im Hellmodus durch
-   WCAG AA, 75 % Schwarzanteil heben es darüber. */
+   .hb-res-pill--behind (--yellow-text). */
 .hb-inv-pill--stale {
-  color: color-mix(in srgb, var(--yellow) 75%, #000);
+  color: var(--yellow-text);
   background: var(--yellow-soft);
   border-color: var(--yellow-border);
-}
-
-:root.dark .hb-inv-pill--stale {
-  color: var(--yellow);
 }
 
 /* „Nicht bewertet" ist der Normalzustand vor dem ersten Abruf — neutral, nicht
@@ -7602,8 +7613,10 @@ select.hb-input option {
 
 /* Legende ohne Balken: Die 16 px Zeilenabstand von .hb-cg-breakdown sind für
    Zeilen MIT Balken gesetzt. Der Balken entfällt hier bewusst — er kodierte
-   exakt dasselbe wie der Donut daneben. */
-.hb-cg-breakdown--compact {
+   exakt dasselbe wie der Donut daneben. Eigener Modifier statt --compact:
+   dessen Name ist von der Topf-Zusammensetzung belegt, und `gap` als Shorthand
+   würde dort den Spaltenabstand von .hb-cg-breakdown--cols überschreiben. */
+.hb-cg-breakdown--legend {
   gap: 6px;
 }
 

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, Button, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import { MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 import EditDialog from "../components/EditDialog.jsx";
+import { ChartTooltip, ChartTooltipRow, ChartTooltipDivider } from "../components/ChartTooltip.jsx";
 import PotsManager, { POTS_MANAGER_TITLE } from "./PotsManager.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import {
@@ -438,7 +439,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
         </div>
         <div className="hb-stat-pill hb-stat-pill--bad">
           <div className="hb-stat-pill-label">Summe Entnahmen</div>
-          <div className="hb-stat-pill-value hb-bad" style={{ marginTop: 14 }}>-{fmt(totals.expensesOut)}</div>
+          <div className="hb-stat-pill-value hb-bad" style={{ marginTop: 14 }}>−{fmt(totals.expensesOut)}</div>
         </div>
         <div className={`hb-stat-pill ${currentBalance >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
           <div className="hb-stat-pill-label">Aktueller Stand</div>
@@ -467,7 +468,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
         <div className="hb-stat-pill hb-stat-pill--bad">
           <div className="hb-stat-pill-label">Höchste Entnahme</div>
           <div className="hb-stat-pill-value hb-bad" style={highlights ? undefined : { marginTop: 14 }}>
-            -{fmt(highlights ? highlights.topExpense.expensesOut : 0)}
+            −{fmt(highlights ? highlights.topExpense.expensesOut : 0)}
           </div>
           {highlights ? (
             <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
@@ -557,7 +558,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                         <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                         <XAxis
                           dataKey="name"
-                          tick={{ fontSize: 11 }}
+                          tick={{ fontSize: 11, fill: themeColors.muted }}
                           interval={0}
                           angle={-35}
                           textAnchor="end"
@@ -565,21 +566,17 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                         />
                         {/* Kompaktes Achsenformat (CHF10k) wie im Balkendiagramm daneben —
                             ohne width, damit beide Plotflächen auf derselben Kante beginnen. */}
-                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} />
+                        <YAxis tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} />
                         <Tooltip
                           wrapperStyle={{ zIndex: 10 }}
                           content={({ active, payload, label }) => {
                             if (!active || !payload?.length) return null;
                             return (
-                              <div className="hb-chart-tooltip">
-                                <span className="hb-chart-tooltip-label">{label}</span>
+                              <ChartTooltip title={label}>
                                 {payload.filter((p) => p.value != null).map((p) => (
-                                  <div key={p.dataKey} style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
-                                    <span style={{ color: themeColors.blue }}>Stand</span>
-                                    <span>{fmt(p.value)}</span>
-                                  </div>
+                                  <ChartTooltipRow key={p.dataKey} label="Stand" color={themeColors.blue} value={fmt(p.value)} />
                                 ))}
-                              </div>
+                              </ChartTooltip>
                             );
                           }}
                         />
@@ -588,7 +585,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                           dataKey="balance"
                           stroke={themeColors.blue}
                           strokeWidth={3}
-                          dot={{ r: 4 }}
+                          dot={{ r: 4, fill: themeColors.blue, stroke: "var(--card)", strokeWidth: 1.5 }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -639,13 +636,13 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                         <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                         <XAxis
                           dataKey="name"
-                          tick={{ fontSize: 11 }}
+                          tick={{ fontSize: 11, fill: themeColors.muted }}
                           interval={0}
                           angle={-35}
                           textAnchor="end"
                           height={62}
                         />
-                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} />
+                        <YAxis tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} />
                         <Tooltip
                           wrapperStyle={{ zIndex: 10 }}
                           content={({ active, payload, label }) => {
@@ -655,24 +652,16 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                             const outVal = Number(row.rawOut || 0);
                             const netto = inVal - outVal;
                             return (
-                              <div className="hb-chart-tooltip hb-chart-tooltip--col">
-                                <div className="hb-chart-tooltip-title">{label}</div>
-                                <div className="hb-chart-tooltip-row">
-                                  <span className="hb-chart-tooltip-key" style={{ color: themeColors.green }}>Einzahlungen</span>
-                                  <span className="hb-chart-tooltip-val">+{fmt(inVal)}</span>
-                                </div>
-                                <div className="hb-chart-tooltip-row">
-                                  <span className="hb-chart-tooltip-key" style={{ color: themeColors.red }}>Entnahmen</span>
-                                  <span className="hb-chart-tooltip-val">−{fmt(outVal)}</span>
-                                </div>
-                                <div className="hb-chart-tooltip-divider" />
-                                <div className="hb-chart-tooltip-row">
-                                  <span className="hb-chart-tooltip-key hb-muted">Netto</span>
-                                  <span className="hb-chart-tooltip-val" style={{ color: netto >= 0 ? themeColors.green : themeColors.red }}>
-                                    {netto >= 0 ? "+" : "−"}{fmt(Math.abs(netto))}
-                                  </span>
-                                </div>
-                              </div>
+                              <ChartTooltip title={label}>
+                                <ChartTooltipRow label="Einzahlungen" color={themeColors.green} value={`+${fmt(inVal)}`} />
+                                <ChartTooltipRow label="Entnahmen" color={themeColors.red} value={`−${fmt(outVal)}`} />
+                                <ChartTooltipDivider />
+                                <ChartTooltipRow
+                                  label="Netto"
+                                  value={`${netto >= 0 ? "+" : "−"}${fmt(Math.abs(netto))}`}
+                                  valueStyle={{ color: netto >= 0 ? themeColors.green : themeColors.red }}
+                                />
+                              </ChartTooltip>
                             );
                           }}
                           cursor={false}
@@ -862,7 +851,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                               </button>
                               <button
                                 type="button"
-                                className="hb-icon-btn"
+                                className="hb-icon-btn hb-icon-btn--danger"
                                 onClick={() => onRemoveEntry?.(e.id)}
                                 title="Löschen"
                                 aria-label="Löschen"

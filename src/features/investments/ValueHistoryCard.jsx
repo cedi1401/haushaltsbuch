@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import { Card, CardContent, RangeTabs } from "../../components/ui.jsx";
 import HbTooltip from "../../components/HbTooltip.jsx";
+import { ChartTooltip, ChartTooltipRow, ChartTooltipDivider } from "../../components/ChartTooltip.jsx";
 import { IconTrend } from "../../components/icons.jsx";
 import { useThemeColors } from "../../hooks/themeColors.js";
 import { useCardBg } from "../../hooks/useCardBg.js";
@@ -223,7 +224,7 @@ export default function ValueHistoryCard({
                       domain={[view.startT, view.endT]}
                       allowDataOverflow
                       ticks={view.ticks}
-                      tick={{ fontSize: 11 }}
+                      tick={{ fontSize: 11, fill: themeColors.muted }}
                       tickFormatter={(t) =>
                         new Date(t).toLocaleDateString(
                           "de-CH",
@@ -237,7 +238,7 @@ export default function ValueHistoryCard({
                     {/* Basis 0: eine Fläche kodiert Menge ab der Grundlinie; eine
                         abgeschnittene Achse dramatisierte jede Schwankung. */}
                     <YAxis
-                      tick={{ fontSize: 11 }}
+                      tick={{ fontSize: 11, fill: themeColors.muted }}
                       tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)}
                       width={64}
                       domain={[0, "auto"]}
@@ -255,26 +256,25 @@ export default function ValueHistoryCard({
                         const prev = index > 0 ? view.data[index - 1] : null;
                         const step = prev ? row.total - prev.total : null;
                         return (
-                          <div className="hb-chart-tooltip">
-                            <span className="hb-chart-tooltip-label">{formatDateDE(row.date)}</span>
-                            <TooltipRow label="Depotwert" value={fmt(row.total)} />
+                          <ChartTooltip title={formatDateDE(row.date)}>
+                            <ChartTooltipRow label="Depotwert" color={accent} value={fmt(row.total)} />
                             {step !== null && (
-                              <TooltipRow
+                              <ChartTooltipRow
                                 label="ggü. Vorpunkt"
                                 value={`${step > 0 ? "+" : ""}${fmt(step)}`}
-                                className={gainClass(step)}
+                                valueClassName={gainClass(step)}
                               />
                             )}
+                            {depotCount > 1 && <ChartTooltipDivider />}
                             {depotCount > 1 &&
                               row.byDepot.map((d) => (
-                                <TooltipRow
+                                <ChartTooltipRow
                                   key={d.depotId}
                                   label={depotNames.get(d.depotId) || "Gelöschtes Depot"}
                                   value={fmt(d.value)}
-                                  muted
                                 />
                               ))}
-                          </div>
+                          </ChartTooltip>
                         );
                       }}
                     />
@@ -299,15 +299,6 @@ export default function ValueHistoryCard({
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function TooltipRow({ label, value, className, muted }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-      <span className={muted ? "hb-muted" : undefined}>{label}</span>
-      <span className={className}>{value}</span>
-    </div>
   );
 }
 

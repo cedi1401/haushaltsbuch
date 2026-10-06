@@ -281,7 +281,7 @@ export default function Charts({
                 <span>
                   {displayMode === "percent"
                     ? "100%"
-                    : (activeTab === "expense" ? "-" : "+") + fmt(totalValue)}
+                    : (activeTab === "expense" ? "−" : "+") + fmt(totalValue)}
                 </span>
               </div>
 
@@ -291,7 +291,7 @@ export default function Charts({
                   const pct = totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : "0.0";
                   const valueStr = displayMode === "percent"
                     ? `${pct}%`
-                    : (activeTab === "expense" ? "-" : "+") + fmt(item.value);
+                    : (activeTab === "expense" ? "−" : "+") + fmt(item.value);
                   return (
                     <div
                       key={(item.id || item.name) + i}
@@ -375,7 +375,7 @@ export default function Charts({
               {(() => {
                 const centerValue = displayMode === "percent"
                   ? "100%"
-                  : (activeTab === "expense" ? "-" : "+") + fmt(totalValue);
+                  : (activeTab === "expense" ? "−" : "+") + fmt(totalValue);
                 const len = centerValue.length;
                 const fontSize = len >= 15 ? 17 : len >= 12 ? 20 : 24;
                 return (

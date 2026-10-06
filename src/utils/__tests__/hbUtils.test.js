@@ -10,6 +10,7 @@ import {
   fixedCostKind,
   migrateFixedCostKinds,
   DEFAULT_POTS,
+  formatCurrency,
 } from '../hbUtils.js';
 
 // ─── bookNeedsMigration ────────────────────────────────────────────────────
@@ -640,5 +641,21 @@ describe('migrateFixedCostKinds', () => {
     const twice = normalizeBook(once);
     expect(once.fixedCostGroups.map((g) => g.kind)).toEqual(['expense', 'transfer', 'expense', 'expense']);
     expect(JSON.stringify(twice)).toBe(JSON.stringify(once));
+  });
+});
+
+// ─── formatCurrency ────────────────────────────────────────────────────────
+
+describe('formatCurrency', () => {
+  it('puts a real minus sign before the currency affix', () => {
+    expect(formatCurrency(-65, 'CHF')).toBe(`−${formatCurrency(65, 'CHF')}`);
+    expect(formatCurrency(-65, 'EUR')).toBe('−65,00 €');
+    expect(formatCurrency(-65, 'USD')).toBe('−$65.00');
+  });
+
+  it('leaves positive amounts and zero unsigned', () => {
+    expect(formatCurrency(65, 'USD')).toBe('$65.00');
+    expect(formatCurrency(0, 'USD')).toBe('$0.00');
+    expect(formatCurrency(-0, 'USD')).toBe('$0.00');
   });
 });

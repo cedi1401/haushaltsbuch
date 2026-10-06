@@ -165,7 +165,7 @@ export default function TransactionsCard({
                           </button>
                           <button
                             type="button"
-                            className="hb-icon-btn"
+                            className="hb-icon-btn hb-icon-btn--danger"
                             onClick={() => onDelete(row)}
                             title="Löschen"
                             aria-label="Löschen"

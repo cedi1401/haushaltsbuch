@@ -39,7 +39,7 @@ export default function DepotOverviewCard({
           </Button>
         </div>
 
-        <div className="hb-cg-breakdown hb-cg-breakdown--compact">
+        <div className="hb-cg-breakdown hb-cg-breakdown--legend">
           {depotSummaries.map((d) => {
             const count = d.positions.length;
             const sub = d.note || (count === 0 ? "noch leer" : `${count} Position${count === 1 ? "" : "en"}`);

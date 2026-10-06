@@ -31,9 +31,15 @@ function toCHF(n) {
   }
 }
 
+// Negative Beträge tragen ein echtes Minus (U+2212) VOR dem Währungs-Affix:
+// „−CHF 65.00", „−65,00 €". Intl setzt es je nach Locale hinter den Code
+// („CHF-65.00") oder als Bindestrich — deshalb wird hier der Betrag ohne
+// Vorzeichen formatiert und das Minus einheitlich davorgestellt.
 export function formatCurrency(n, currency = "CHF", fractionDigits = 2) {
+  const value = Number(n || 0);
+  if (value < 0) return `−${formatCurrency(-value, currency, fractionDigits)}`;
   const cur = String(currency).toUpperCase();
-  const amount = Number(n || 0);
+  const amount = value;
   try {
     if (cur === "CHF") {
       // style:"currency" erzwingt U+0027 als Tausendertrennzeichen (schmales Apostroph)

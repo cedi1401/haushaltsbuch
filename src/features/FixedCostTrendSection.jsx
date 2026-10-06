@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import { Card, CardContent, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
+import { ChartTooltip, ChartTooltipRow } from "../components/ChartTooltip.jsx";
 import HbSparklineHover from "../components/HbSparklineHover.jsx";
 import { IconTag, IconInfo } from "../components/icons.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
@@ -70,6 +71,9 @@ const isHex = (color) => typeof color === "string" && color.startsWith("#");
 // Kategorie-Pille in der Farbe ihrer Kategorie: getönte Fläche, Rand und Text in
 // der Vollfarbe. Ersetzt den früheren Farbpunkt vor dem Namen — die Farbe sitzt
 // jetzt dort, wo auch die Bedeutung steht.
+// Bewusste Entscheidung (UI-Audit 04.10.2026, Punkt A4): Der Text bleibt in der
+// Kategoriefarbe, auch wenn dunkle Töne im Dark Mode kontrastarm sind. Nicht
+// auf neutralen Text umstellen.
 function tintedChipStyle(color) {
   if (!isHex(color)) return undefined;
   return { background: `${color}1f`, borderColor: `${color}59`, color };
@@ -311,22 +315,18 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={fctWindowData} margin={{ top: 4, right: 12, bottom: 0, left: 0 }}>
               <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)} width={64} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: themeColors.muted }} interval={0} angle={-20} textAnchor="end" height={50} />
+              <YAxis tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={(v) => formatCurrencyAxis(v, baseCurrency)} width={64} />
               <Tooltip
                 wrapperStyle={{ zIndex: 10 }}
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
                   return (
-                    <div className="hb-chart-tooltip">
-                      <span className="hb-chart-tooltip-label">{label}</span>
+                    <ChartTooltip title={label}>
                       {payload.filter((p) => p.value != null).map((p) => (
-                        <div key={p.dataKey} style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-                          <span>Gebucht</span>
-                          <span>{fmt(p.value)}</span>
-                        </div>
+                        <ChartTooltipRow key={p.dataKey} label="Gebucht" color={themeColors.accent} value={fmt(p.value)} />
                       ))}
-                    </div>
+                    </ChartTooltip>
                   );
                 }}
               />

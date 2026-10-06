@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import { IconTrend } from "../components/icons.jsx";
+import { ChartTooltip, ChartTooltipRow, ChartTooltipDivider } from "../components/ChartTooltip.jsx";
 import { getEntryFinancialMonth, formatYearMonth } from "../utils/financialMonthUtils.js";
 import {
   ResponsiveContainer,
@@ -36,48 +37,38 @@ function CashflowTooltip({ active, payload, label, fmt }) {
   // Frei-Rest des Monats: nach Ausgaben, Rücklagen und Sparen.
   const frei = income - outflow - savings;
   return (
-    <div className="hb-chart-tooltip hb-chart-tooltip--col">
-      <div className="hb-chart-tooltip-title">{label}</div>
-      <div className="hb-chart-tooltip-row">
-        <span className="hb-chart-tooltip-key" style={{ color: "var(--green)" }}>Einnahmen</span>
-        <span className="hb-chart-tooltip-val">+{fmt(income)}</span>
-      </div>
-      <div className="hb-chart-tooltip-row">
-        <span className="hb-chart-tooltip-key" style={{ color: "var(--red)" }}>Ausgaben &amp; Rücklagen</span>
-        <span className="hb-chart-tooltip-val">−{fmt(outflow)}</span>
-      </div>
-      <div className="hb-chart-tooltip-row">
-        <span className="hb-chart-tooltip-key" style={{ color: "var(--blue)" }}>Sparen (kumuliert)</span>
-        <span className="hb-chart-tooltip-val">{fmt(cumSavings)}</span>
-      </div>
-      <div className="hb-chart-tooltip-divider" />
-      <div className="hb-chart-tooltip-row">
-        <span className="hb-chart-tooltip-key hb-muted">Frei</span>
-        <span className="hb-chart-tooltip-val" style={{ color: frei >= 0 ? "var(--green)" : "var(--red)" }}>
-          {frei >= 0 ? "+" : "−"}{fmt(Math.abs(frei))}
-        </span>
-      </div>
-    </div>
+    <ChartTooltip title={label}>
+      <ChartTooltipRow label="Einnahmen" color="var(--green)" value={`+${fmt(income)}`} />
+      <ChartTooltipRow label="Ausgaben & Rücklagen" color="var(--red)" value={`−${fmt(outflow)}`} />
+      <ChartTooltipRow label="Sparen (kumuliert)" color="var(--blue)" value={fmt(cumSavings)} />
+      <ChartTooltipDivider />
+      <ChartTooltipRow
+        label="Frei"
+        value={`${frei >= 0 ? "+" : "−"}${fmt(Math.abs(frei))}`}
+        valueStyle={{ color: frei >= 0 ? "var(--green)" : "var(--red)" }}
+      />
+    </ChartTooltip>
   );
 }
 
 function YoYTooltip({ active, payload, label, fmt, avgColor }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="hb-chart-tooltip">
-      <span className="hb-chart-tooltip-label">{label}</span>
+    <ChartTooltip title={label}>
       {payload
         .filter((p) => p.value != null)
         .map((p) => {
           const isAvg = p.dataKey === "__avg";
           return (
-            <div key={p.dataKey} style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
-              <span style={{ color: isAvg ? avgColor : p.fill }}>{isAvg ? "Ø" : p.dataKey}</span>
-              <span>{fmt(p.value)}</span>
-            </div>
+            <ChartTooltipRow
+              key={p.dataKey}
+              label={isAvg ? "Ø" : p.dataKey}
+              color={isAvg ? avgColor : p.fill}
+              value={fmt(p.value)}
+            />
           );
         })}
-    </div>
+    </ChartTooltip>
   );
 }
 
@@ -407,8 +398,8 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                   <ResponsiveContainer width="100%" height={280}>
                     <LineChart data={saldoChartData}>
                       <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
-                      <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v.toFixed(0)} %`} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: themeColors.muted }} interval={0} angle={-20} textAnchor="end" height={60} />
+                      <YAxis tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={(v) => `${v.toFixed(0)} %`} />
                       <Tooltip
                         wrapperStyle={{ zIndex: 10 }}
                         content={({ active, payload, label }) => {
@@ -416,15 +407,16 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                           const labelMap = { savingsRate: "Sparquote", avg3: "3M Ø", avg6: "6M Ø" };
                           const colorMap = { savingsRate: themeColors.blue, avg3: themeColors.orange, avg6: themeColors.teal };
                           return (
-                            <div className="hb-chart-tooltip">
-                              <span className="hb-chart-tooltip-label">{label}</span>
+                            <ChartTooltip title={label}>
                               {payload.filter((p) => p.value != null).map((p) => (
-                                <div key={p.dataKey} style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
-                                  <span style={{ color: colorMap[p.dataKey] }}>{labelMap[p.dataKey] || p.dataKey}</span>
-                                  <span>{p.value.toFixed(1)} %</span>
-                                </div>
+                                <ChartTooltipRow
+                                  key={p.dataKey}
+                                  label={labelMap[p.dataKey] || p.dataKey}
+                                  color={colorMap[p.dataKey]}
+                                  value={`${p.value.toFixed(1)} %`}
+                                />
                               ))}
-                            </div>
+                            </ChartTooltip>
                           );
                         }}
                       />
@@ -488,8 +480,8 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                     <ComposedChart data={cashflowChartData} barCategoryGap="32%" stackOffset="sign">
                       {/* yAxisId="cash" nötig, weil beide Y-Achsen explizite IDs haben; sonst sucht das Grid die Default-Achse (id 0) und rendert keine horizontalen Linien */}
                       <CartesianGrid yAxisId="cash" stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
-                      <YAxis yAxisId="cash" tick={{ fontSize: 11 }} tickFormatter={fmtTick} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: themeColors.muted }} interval={0} angle={-20} textAnchor="end" height={60} />
+                      <YAxis yAxisId="cash" tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={fmtTick} />
                       {/* Rechte Achse dezent in Blau, passend zur Sparen-Linie; ohne Achsen-/Tick-Linie, damit sie nicht mit der linken Cash-Achse konkurriert */}
                       <YAxis yAxisId="savings" orientation="right" axisLine={false} tickLine={false} width={56} tick={{ fontSize: 11, fill: themeColors.blue }} tickFormatter={fmtTick} />
                       <Tooltip
@@ -560,8 +552,8 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                       <ResponsiveContainer width="100%" height={260}>
                         <ComposedChart data={yoyChartData} barCategoryGap="20%" barGap={3}>
                           <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
-                          <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                          <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtAxis} width={64} />
+                          <XAxis dataKey="label" tick={{ fontSize: 11, fill: themeColors.muted }} />
+                          <YAxis tick={{ fontSize: 11, fill: themeColors.muted }} tickFormatter={fmtAxis} width={64} />
                           <Tooltip
                             wrapperStyle={{ zIndex: 10 }}
                             content={(props) => <YoYTooltip {...props} fmt={fmt} avgColor={themeColors.orange} />}

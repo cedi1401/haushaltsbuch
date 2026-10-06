@@ -104,7 +104,7 @@ export default function EntriesTable({
                   const isWithdrawal = e.kind === "withdrawal";
 
                   let typeLabel = "Ausgabe";
-                  let sign = "-";
+                  let sign = "−";
                   let colorClass = "hb-bad";
 
                   if (isIncome) {
@@ -144,7 +144,7 @@ export default function EntriesTable({
                           </button>
                           <button
                             type="button"
-                            className="hb-icon-btn"
+                            className="hb-icon-btn hb-icon-btn--danger"
                             onClick={() => removeEntry(e.id)}
                             title="Löschen"
                             aria-label="Löschen"

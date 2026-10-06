@@ -96,7 +96,7 @@ export default function DashboardView({
   // (steuert die Delta-Färbung: Richtung × Bewertung).
   const statTiles = useMemo(() => [
     { key: "income", label: "Einnahmen", tone: "ok", valueClass: "hb-ok", prefix: "+", value: totalIncome, higherIsGood: true },
-    { key: "expense", label: "Ausgaben", tone: "bad", valueClass: "hb-bad", prefix: "-", value: totalExpense, higherIsGood: false },
+    { key: "expense", label: "Ausgaben", tone: "bad", valueClass: "hb-bad", prefix: "−", value: totalExpense, higherIsGood: false },
     { key: "reserve", label: "Rücklagen", tone: "transfer", valueClass: "hb-transfer", prefix: "", value: totalReserveTransfers ?? totalTransfers, higherIsGood: true },
     { key: "savings", label: "Gespart", tone: "ok", valueClass: "hb-ok", prefix: "", value: totalSavingsTransfers ?? 0, higherIsGood: true },
     { key: "free", label: "Frei", tone: balance >= 0 ? "ok" : "bad", valueClass: balance >= 0 ? "hb-ok" : "hb-bad", prefix: "", value: balance, higherIsGood: true },

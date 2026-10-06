@@ -98,7 +98,7 @@ export default function AllocationCard({ byClass, unpricedCount, fmt }) {
           </div>
 
           <div>
-            <div className="hb-cg-breakdown hb-cg-breakdown--compact">
+            <div className="hb-cg-breakdown hb-cg-breakdown--legend">
               {chartRows.map((row) => (
                 <div key={row.key} className="hb-cg-breakdown-row">
                   <div className="hb-cg-breakdown-top">
