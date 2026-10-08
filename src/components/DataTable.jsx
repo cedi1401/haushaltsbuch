@@ -60,6 +60,16 @@ const ACTIONS_LINGER_MS = 2500;
  *   bounded = true       // false ⇒ keine Höhenbegrenzung, kein Innen-Scroll.
  *                        // Nötig, sobald mehrere Tabellen untereinander stehen
  *                        // — sonst scrollte jede in sich und die Seite dazu.
+ *   maxRows              // Zahl ⇒ höchstens so viele Zeilen, gekappt NACH der
+ *                        // Sortierung („Weitere anzeigen" im View). Die
+ *                        // Summenzeile rechnet weiter über alle Zeilen.
+ *                        // Gedacht für Tabellen ohne Gliederungsband: die
+ *                        // Anzahl im Band zählte sonst nur die gezeigten.
+ *   emptyText            // Text einer einzelnen gedämpften Zeile, wenn keine
+ *                        // Sektion Zeilen hat — für Tabellen, deren Filter in
+ *                        // der Toolbar sitzt und deshalb stehen bleiben muss.
+ *
+ * Die Summenzeile entfällt, wenn keine Spalte des Katalogs `summarize` kennt.
  *
  * `renderDetail(row, hiddenColumns)` ist optional. Wird es übergeben, bekommt
  * die Tabelle links eine Chevron-Spalte und jede Zeile lässt sich aufklappen;
@@ -73,7 +83,8 @@ const ACTIONS_LINGER_MS = 2500;
  * die sichtbare Überschrift des Views doppeln.
  *
  * Bewusst nicht vorgesehen: Zeilen-Auswahl, Filter, Paginierung, onRowClick,
- * Dichte-Option, renderEmpty (Leerzustände liegen im View), getRowId.
+ * Dichte-Option, renderEmpty (Leerzustände mit Icon und Aktion liegen im
+ * View), getRowId.
  */
 export default function DataTable({
   columns,
@@ -85,6 +96,8 @@ export default function DataTable({
   toolbar,
   renderRowActions,
   bounded = true,
+  maxRows,
+  emptyText,
 }) {
   const { visibleIds, toggle, reset } = useTableColumns(storageKey, columns);
   const visible = useMemo(() => {
@@ -174,9 +187,25 @@ export default function DataTable({
     [sections, sortCol, sort?.dir]
   );
 
+  // Gekappt wird über alle Sektionen hinweg und erst nach dem Sortieren —
+  // sonst sortierte ein Klick auf den Spaltenkopf nur die Vorschau.
+  const shownSections = useMemo(() => {
+    if (!Number.isFinite(maxRows)) return sortedSections;
+    let left = maxRows;
+    return sortedSections.map((s) => {
+      const rows = s.rows.slice(0, left);
+      left -= rows.length;
+      return { ...s, rows };
+    });
+  }, [sortedSections, maxRows]);
+
   // Die Summenzeile liest alle Zeilen der Tabelle, nicht die einer Sektion —
   // sie beantwortet die Frage „wie viel muss insgesamt in den Töpfen liegen".
   const allRows = useMemo(() => sections.flatMap((s) => s.rows), [sections]);
+  const hasSummary = useMemo(() => columns.some((c) => c.summarize), [columns]);
+  // Nur mit `emptyText`: ohne ihn bleibt eine leere Tabelle, wie sie war
+  // (Kopf und Summenzeile), und der Leerzustand liegt beim View.
+  const isEmpty = Boolean(emptyText) && allRows.length === 0;
 
   const scrollRef = useScrollRoom(bounded);
 
@@ -235,7 +264,7 @@ export default function DataTable({
               })}
             </tr>
           </thead>
-          {sortedSections.map((section) => (
+          {shownSections.map((section) => (
             <tbody
               key={section.key}
               // Die Gruppenfarbe steht einmal an der Sektion statt an jeder
@@ -322,33 +351,42 @@ export default function DataTable({
               })}
             </tbody>
           ))}
-          <tfoot>
-            <tr className="hb-dt-summary">
-              {renderDetail && <td className="hb-dt-chevron-col" />}
-              {visible.map((col, i) => (
-                <td
-                  key={col.id}
-                  // Die erste sichtbare Spalte trägt die Beschriftung der
-                  // Summenzeile („N Positionen"), nicht einen Wert. Sie bekommt
-                  // dafür eine eigene Klasse statt sich im CSS auf
-                  // `td:first-child` zu verlassen: das ist bei aufklappbarer
-                  // Tabelle die leere Chevron-Zelle, und die Beschriftung
-                  // stünde dann fett zwischen den Summen.
-                  className={
-                    [
-                      col.align === "right" ? "hb-dt-num" : null,
-                      i === 0 ? "hb-dt-summary-label" : null,
-                      col.shrink ? "hb-dt-shrink" : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" ") || undefined
-                  }
-                >
-                  {col.summarize ? col.summarize(allRows) : null}
-                </td>
-              ))}
-            </tr>
-          </tfoot>
+          {isEmpty && (
+            <tbody>
+              <tr className="hb-dt-empty">
+                <td colSpan={colCount}>{emptyText}</td>
+              </tr>
+            </tbody>
+          )}
+          {hasSummary && !isEmpty && (
+            <tfoot>
+              <tr className="hb-dt-summary">
+                {renderDetail && <td className="hb-dt-chevron-col" />}
+                {visible.map((col, i) => (
+                  <td
+                    key={col.id}
+                    // Die erste sichtbare Spalte trägt die Beschriftung der
+                    // Summenzeile („N Positionen"), nicht einen Wert. Sie bekommt
+                    // dafür eine eigene Klasse statt sich im CSS auf
+                    // `td:first-child` zu verlassen: das ist bei aufklappbarer
+                    // Tabelle die leere Chevron-Zelle, und die Beschriftung
+                    // stünde dann fett zwischen den Summen.
+                    className={
+                      [
+                        col.align === "right" ? "hb-dt-num" : null,
+                        i === 0 ? "hb-dt-summary-label" : null,
+                        col.shrink ? "hb-dt-shrink" : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" ") || undefined
+                    }
+                  >
+                    {col.summarize ? col.summarize(allRows) : null}
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
     </div>

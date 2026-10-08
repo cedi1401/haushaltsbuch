@@ -2215,6 +2215,20 @@ select.hb-input option {
   min-width: 0;
 }
 
+/* Rechter Teil innerhalb von `toolbar` (Filter, „Hinzufügen") — rückt an die
+   Spaltenauswahl heran, der Titel bleibt links. */
+.hb-dt-toolbar-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Leerzeile (`emptyText`): eine gedämpfte Zeile in Zeilenhöhe, ohne Hover. */
+.hb-dt-table tbody .hb-dt-empty td {
+  color: var(--muted);
+}
+
 /* Spalte schrumpft auf ihren Inhalt (`col.shrink`). width: 1 % auf th, td und
    tfoot: Bei table-layout: auto wird die Spalte nie schmaler als ihr Inhalt
    (alle Zellen sind nowrap), bekommt aber keinen Anteil an der übrigen
@@ -7803,45 +7817,11 @@ select.hb-input option {
   margin-top: 2px;
 }
 
-/* Transaktionstabelle: Breiten nur hier, die Einträgetabelle bleibt unberührt. */
-.hb-inv-tx-table {
-  table-layout: fixed;
-  width: 100%;
-}
-
-.hb-inv-tx-table .hb-col-date { width: 10%; }
-.hb-inv-tx-table .hb-col-type { width: 10%; }
-
-.hb-inv-tx-table .hb-col-asset {
-  width: auto;
-  max-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hb-inv-tx-table .hb-col-depot {
-  width: 14%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hb-inv-tx-table .hb-col-qty,
-.hb-inv-tx-table .hb-col-price {
-  width: 11%;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.hb-inv-tx-table .hb-col-amount { width: 18%; }
-.hb-inv-tx-table .hb-col-actions { width: 88px; }
-
-@media (max-width: 768px) {
-  .hb-inv-tx-table .hb-col-depot,
-  .hb-inv-tx-table .hb-col-price {
-    display: none;
-  }
+/* Depot-Punkt in der Transaktionstabelle: steht inline vor dem Namen, damit
+   die Ellipse der gedeckelten Zelle greift. */
+.hb-inv-tx-dot {
+  margin-right: 8px;
+  vertical-align: -1px;
 }
 
 /* ─── Gedrückt-Zustand (:active) ─────────────────────────────────────────────
