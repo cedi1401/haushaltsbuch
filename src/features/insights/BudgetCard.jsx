@@ -1,6 +1,6 @@
 import React, { memo, useState, useEffect } from "react";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
-import { IconInbox } from "../../components/icons.jsx";
+import { IconChevronLeft, IconChevronRight, IconInbox } from "../../components/icons.jsx";
 import { formatPercent } from "../../utils/hbUtils.js";
 import { getFinancialMonthRange, getFinancialMonth } from "../../utils/financialMonthUtils.js";
 
@@ -83,7 +83,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
         onClick={() => setPage((p) => p - 1)}
         aria-label="Vorherige Seite"
       >
-        ‹
+        <IconChevronLeft />
       </button>
       <span className="hb-budget-pag-info">
         {isEmpty ? "–" : `${page + 1} / ${totalPages}`}
@@ -94,7 +94,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
         onClick={() => setPage((p) => p + 1)}
         aria-label="Nächste Seite"
       >
-        ›
+        <IconChevronRight />
       </button>
     </div>
   );

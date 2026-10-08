@@ -391,3 +391,25 @@ export function IconRefresh(props) {
     </svg>
   );
 }
+
+// Chevron nach links/rechts — Blättern (Datepicker, Chart-Fenster, Seiten).
+// Dünne Hüllen um IconChevron, damit die Drehung an einer Stelle steht.
+export function IconChevronLeft({ style, ...props }) {
+  return <IconChevron style={{ transform: "rotate(90deg)", ...style }} {...props} />;
+}
+
+export function IconChevronRight({ style, ...props }) {
+  return <IconChevron style={{ transform: "rotate(-90deg)", ...style }} {...props} />;
+}
+
+// Kalenderblatt — Auslöser des Datepickers.
+export function IconCalendar(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}

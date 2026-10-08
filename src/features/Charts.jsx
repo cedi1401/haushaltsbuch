@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 import { formatPercent } from "../utils/hbUtils.js";
 import { Card, CardContent, Button, RangeTabs } from "../components/ui.jsx";
-import { IconInbox } from "../components/icons.jsx";
+import { IconChevronRight, IconInbox } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { useCardBg } from "../hooks/useCardBg.js";
 import { useThemeColors } from "../hooks/themeColors.js";
@@ -303,7 +303,7 @@ export default function Charts({
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span className="hb-legend-value">{valueStr}</span>
                         {item.clickable && (
-                          <span style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1 }}>›</span>
+                          <IconChevronRight width={14} height={14} style={{ color: "var(--muted)" }} />
                         )}
                       </div>
                     </div>

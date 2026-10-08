@@ -15,7 +15,7 @@ import { IconTrend } from "../../components/icons.jsx";
 import { useThemeColors } from "../../hooks/themeColors.js";
 import { useCardBg } from "../../hooks/useCardBg.js";
 import { formatCurrencyCompact, formatDateDE, formatPercent, formatSigned } from "../../utils/hbUtils.js";
-import { CHART_STROKE, CHART_DASH, AMOUNT_AXIS_WIDTH, axisProps, xAxisProps } from "../../utils/chartStyle.js";
+import { CHART_STROKE, AMOUNT_AXIS_WIDTH, axisProps, xAxisProps, lineCursorProps } from "../../utils/chartStyle.js";
 import { formatFetchedAt, gainClass } from "../../utils/investmentFormat.js";
 import { windowSnapshots } from "../../utils/investmentUtils.js";
 
@@ -236,7 +236,7 @@ export default function ValueHistoryCard({
                       />
                       <Tooltip
                         wrapperStyle={{ zIndex: 10 }}
-                        cursor={{ stroke: themeColors.muted, strokeWidth: CHART_STROKE.aux, strokeDasharray: CHART_DASH.secondary }}
+                        cursor={lineCursorProps(themeColors)}
                         content={({ active, payload }) => {
                           if (!active || !payload?.length) return null;
                           const row = payload[0].payload;

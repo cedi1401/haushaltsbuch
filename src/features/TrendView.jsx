@@ -22,12 +22,16 @@ import { formatCurrencyCompact, formatPercent, formatSigned } from "../utils/hbU
 import {
   CHART_STROKE,
   CHART_DASH,
+  CHART_HEIGHT,
+  BAR_MAX_SIZE,
+  BAR_TOP_RADIUS,
   AMOUNT_AXIS_WIDTH,
   axisProps,
   xAxisProps,
   monthAxisProps,
   averageLineProps,
   zeroLineProps,
+  lineCursorProps,
 } from "../utils/chartStyle.js";
 import { useFixedCostTrend } from "../hooks/useFixedCostTrend.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
@@ -388,14 +392,15 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                   />
                 </div>
 
-                <div style={{ width: "100%", height: 280, marginTop: 16 }}>
-                  <ResponsiveContainer width="100%" height={280}>
+                <div style={{ width: "100%", height: CHART_HEIGHT, marginTop: 16 }}>
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                     <LineChart data={saldoChartData}>
                       <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                       <XAxis dataKey="name" {...monthAxisProps(themeColors)} />
                       <YAxis {...axisProps(themeColors)} tickFormatter={(v) => formatPercent(v, { digits: 0, sign: false })} />
                       <Tooltip
                         wrapperStyle={{ zIndex: 10 }}
+                        cursor={lineCursorProps(themeColors)}
                         content={({ active, payload, label }) => {
                           if (!active || !payload?.length) return null;
                           const labelMap = { savingsRate: "Sparquote", avg3: "3M Ø", avg6: "6M Ø" };
@@ -460,8 +465,8 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                   />
                 </div>
 
-                <div style={{ width: "100%", height: 280, marginTop: 16 }}>
-                  <ResponsiveContainer width="100%" height={280}>
+                <div style={{ width: "100%", height: CHART_HEIGHT, marginTop: 16 }}>
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                     <ComposedChart data={cashflowChartData} barCategoryGap="32%" stackOffset="sign">
                       {/* yAxisId="cash" nötig, weil beide Y-Achsen explizite IDs haben; sonst sucht das Grid die Default-Achse (id 0) und rendert keine horizontalen Linien */}
                       <CartesianGrid yAxisId="cash" stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
@@ -472,11 +477,11 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                       <Tooltip
                         wrapperStyle={{ zIndex: 10 }}
                         content={(props) => <CashflowTooltip {...props} fmt={fmt} />}
-                        cursor={{ fill: themeColors.blue, fillOpacity: 0.06 }}
+                        cursor={false}
                       />
                       {/* Ein grüner Balken nach oben (Einnahmen) + ein roter nach unten (Ausgaben + Rücklagen), leicht gerundet zur Nulllinie hin offen */}
-                      <Bar yAxisId="cash" dataKey="income" stackId="cf" barSize={20} fill={themeColors.green} shape={IncomeBarShape} />
-                      <Bar yAxisId="cash" dataKey="outflow" stackId="cf" barSize={20} fill={themeColors.red} shape={OutflowBarShape} />
+                      <Bar yAxisId="cash" dataKey="income" stackId="cf" maxBarSize={BAR_MAX_SIZE} fill={themeColors.green} shape={IncomeBarShape} />
+                      <Bar yAxisId="cash" dataKey="outflow" stackId="cf" maxBarSize={BAR_MAX_SIZE} fill={themeColors.red} shape={OutflowBarShape} />
                       {/* Nulllinie über den Balken, damit sie sauber abschließt */}
                       <ReferenceLine yAxisId="cash" y={0} {...zeroLineProps(themeColors)} />
                       {/* Blaue Linie: kumuliertes Sparen (rechte Achse), mit Akzent-Dot am letzten Punkt */}
@@ -525,8 +530,8 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                         { label: "Ø", type: "line", color: avgLine.stroke, strokeWidth: avgLine.strokeWidth, dash: avgLine.strokeDasharray },
                       ]}
                     />
-                    <div style={{ width: "100%", height: 260, marginTop: 16 }}>
-                      <ResponsiveContainer width="100%" height={260}>
+                    <div style={{ width: "100%", height: CHART_HEIGHT, marginTop: 16 }}>
+                      <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <ComposedChart data={yoyChartData} barCategoryGap="20%" barGap={3}>
                           <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                           <XAxis dataKey="label" {...xAxisProps(themeColors)} />
@@ -537,7 +542,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                             cursor={false}
                           />
                           {yoyYears.map((y) => (
-                            <Bar key={y} dataKey={y} fill={colorForYear(y)} barSize={18} radius={[2, 2, 0, 0]} />
+                            <Bar key={y} dataKey={y} fill={colorForYear(y)} maxBarSize={BAR_MAX_SIZE} radius={BAR_TOP_RADIUS} />
                           ))}
                           <Line type="monotone" dataKey="__avg" dot={false} {...avgLine} connectNulls isAnimationActive={false} />
                         </ComposedChart>
@@ -545,7 +550,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                     </div>
                   </>
                 ) : (
-                  <div style={{ height: 260, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ height: CHART_HEIGHT, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <span className="hb-muted" style={{ fontSize: 13, textAlign: "center" }}>
                       Noch nicht genug Daten für einen Jahresvergleich.<br />
                       Sobald Einträge aus mindestens zwei Jahren vorliegen, wird hier der Vergleich angezeigt.

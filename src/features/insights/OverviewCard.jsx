@@ -42,7 +42,7 @@ const OverviewCard = memo(function OverviewCard({ analytics }) {
                   <MomDelta momDelta={cat.momDelta} fontSize={14} />
                 </div>
                 <div
-                  className={`hb-meter hb-meter--lg${cat.color ? " hb-meter--tinted" : ""}`}
+                  className={`hb-meter hb-meter--lg${cat.color ? " hb-meter--tinted hb-meter--cat" : ""}`}
                   style={cat.color ? { "--meter-tone": cat.color } : undefined}
                 >
                   <div

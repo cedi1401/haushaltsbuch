@@ -1,7 +1,7 @@
 import React, { useId, useMemo, useState } from "react";
 import { CHART_COLORS } from "../utils/hbPalette.js";
 import { EMPTY_ARRAY } from "../utils/constants.js";
-import { IconSearch } from "./icons.jsx";
+import { IconChevron, IconSearch } from "./icons.jsx";
 
 /**
  * HierarchicalCategoryPicker
@@ -189,21 +189,7 @@ export function HierarchicalCategoryPicker({
                         : `${cat.name} aufklappen`
                     }
                   >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M4.5 6L8 9.5L11.5 6"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                    <IconChevron />
                   </button>
                 )}
               </div>

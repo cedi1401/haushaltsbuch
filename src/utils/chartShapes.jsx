@@ -1,6 +1,5 @@
 import React from "react";
-
-export const BAR_RADIUS = 3;
+import { BAR_RADIUS } from "./chartStyle.js";
 
 // Rundet nur das äußere Ende eines Balkens (weg von der Nulllinie). Recharts
 // normalisiert für negative Werte nicht zuverlässig über die radius-Prop, daher

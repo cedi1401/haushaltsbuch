@@ -27,7 +27,7 @@ import { useThemeColors } from "../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { generateId } from "../utils/idUtils.js";
 import { DEFAULT_EXPENSE_CATEGORIES, parseAmount, formatCurrencyCompact, formatDateDE, formatPercent, formatSigned, todayISO } from "../utils/hbUtils.js";
-import { CHART_STROKE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, averageLineProps } from "../utils/chartStyle.js";
+import { CHART_STROKE, CHART_HEIGHT, BAR_MAX_SIZE, BAR_TOP_RADIUS, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, averageLineProps } from "../utils/chartStyle.js";
 import { EMPTY_ARRAY, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 import { CUSTOM_CATEGORY_PALETTE } from "../utils/hbPalette.js";
 import { calcCostGroupStats, calcExpectedMonthly, formatMonthCount } from "../utils/costGroupUtils.js";
@@ -713,7 +713,7 @@ export default function CostGroupsView({
                   </div>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={240}>
+                <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                   <BarChart data={chartWindow} margin={{ top: 4, right: 16, bottom: 0, left: 0 }} barCategoryGap="32%">
                     <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                     <XAxis dataKey="label" {...monthAxisProps(themeColors)} />
@@ -750,8 +750,8 @@ export default function CostGroupsView({
                     <Bar
                       dataKey="total"
                       fill={activeGroup.color || themeColors.accent}
-                      radius={[3, 3, 0, 0]}
-                      maxBarSize={42}
+                      radius={BAR_TOP_RADIUS}
+                      maxBarSize={BAR_MAX_SIZE}
                       isAnimationActive={false}
                       activeBar={false}
                     >
@@ -1035,7 +1035,7 @@ export default function CostGroupsView({
         canSave={planItemDraft.name.trim().length > 0 && validAmount}
         saveLabel={isEdit ? "Speichern" : "Hinzufügen"}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
           <div className="hb-cg-picker-hint" style={{ marginTop: 0 }}>
             Erwartete, oft unregelmäßige Kosten. Sie werden auf einen Betrag pro Monat
             umgerechnet und den erfassten Kosten gegenübergestellt — nicht dazugerechnet.
@@ -1053,7 +1053,7 @@ export default function CostGroupsView({
             />
           </div>
 
-          <div className="hb-two hb-two--dialog" style={{ gap: 14 }}>
+          <div className="hb-two hb-two--dialog">
             <div className="hb-field">
               <div className="hb-label">Betrag ({baseCurrency})</div>
               <input
@@ -1101,7 +1101,7 @@ export default function CostGroupsView({
         saveLabel={editingGroup ? "Speichern" : "Erstellen"}
         size="medium"
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
           <div className="hb-field">
             <div className="hb-label">Name</div>
             <input

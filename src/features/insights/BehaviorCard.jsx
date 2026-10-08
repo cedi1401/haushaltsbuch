@@ -13,7 +13,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { useThemeColors } from "../../hooks/themeColors.js";
-import { CHART_STROKE, CHART_DASH, axisProps, averageLineProps } from "../../utils/chartStyle.js";
+import { CHART_STROKE, BAR_TOP_RADIUS, axisProps, averageLineProps, lineCursorProps } from "../../utils/chartStyle.js";
 import { formatDateDELong, formatPercent } from "../../utils/hbUtils.js";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { IconInbox } from "../../components/icons.jsx";
@@ -105,7 +105,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                       );
                     }}
                   />
-                  <Bar dataKey="count" radius={[2, 2, 0, 0]}>
+                  <Bar dataKey="count" radius={BAR_TOP_RADIUS}>
                     {dailySpendData.map((entry, i) => (
                       <Cell
                         key={i}
@@ -176,7 +176,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                   />
                   <Tooltip
                     wrapperStyle={{ zIndex: 10 }}
-                    cursor={{ stroke: themeColors.accent, strokeWidth: CHART_STROKE.aux, strokeDasharray: CHART_DASH.secondary }}
+                    cursor={lineCursorProps(themeColors)}
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const d = payload[0].payload;

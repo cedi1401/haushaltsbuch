@@ -134,8 +134,8 @@ export default function EntryTemplateFormDialog({
       saveLabel={template ? "Speichern" : "Erstellen"}
       size="medium"
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, width: "100%" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, width: "100%" }}>
           <div className="hb-field">
             <div className="hb-label">Name</div>
             <input

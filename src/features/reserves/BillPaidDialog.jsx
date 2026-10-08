@@ -83,7 +83,7 @@ export default function BillPaidDialog({
           {item.name} · Topf: {potName || "—"} · Zweck: {item.transferCategory || "—"}
         </div>
 
-        <div className="hb-two hb-two--dialog" style={{ gap: 16 }}>
+        <div className="hb-two hb-two--dialog">
           <div className="hb-field" style={{ minWidth: 0 }}>
             <div className="hb-label">Datum</div>
             <HbDatePicker

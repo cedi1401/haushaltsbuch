@@ -235,7 +235,7 @@ export default function DashboardView({
 
   return (
     <>
-      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         <Button onClick={() => entryActions.setAddEntryOpen(true)}>Buchung hinzufügen</Button>
         <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
           Kategorien bearbeiten

@@ -52,7 +52,7 @@ export default function BacklogCatchUpDialog({
       saveLabel={n === 1 ? "1 Rate buchen" : `${n} Raten buchen`}
       size="medium"
     >
-      <div style={{ display: "grid", gap: 14 }}>
+      <div style={{ display: "grid", gap: 16 }}>
         <div className="hb-muted" style={{ fontSize: 12 }}>
           {item.name} · Topf: {potName || "—"} · Zweck: {item.transferCategory || "—"}
         </div>

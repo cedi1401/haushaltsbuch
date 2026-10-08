@@ -20,6 +20,16 @@ export const AXIS_FONT_SIZE = 11;
 export const AMOUNT_AXIS_WIDTH = 64;
 const X_AXIS_HEIGHT = 28;
 
+// Eine Höhe für alle großen Achsen-Charts (Trend, Töpfe, Fixkosten,
+// Kostenrechner). Donuts und die kleinen Insights-Charts haben eigene Maße.
+export const CHART_HEIGHT = 260;
+
+// Balken: eine Höchstbreite und ein Radius am äußeren Ende. Höchstbreite statt
+// fester Breite, damit gruppierte Balken bei Platzmangel schmaler werden.
+export const BAR_MAX_SIZE = 24;
+export const BAR_RADIUS = 3;
+export const BAR_TOP_RADIUS = [BAR_RADIUS, BAR_RADIUS, 0, 0];
+
 // „Jan 2026" → „Jan 26". Nur für die Achse: der Datenwert bleibt lang, damit
 // der Tooltip das volle Label zeigt.
 export function shortMonthTick(label) {
@@ -63,6 +73,16 @@ export function averageLineProps(themeColors) {
     stroke: themeColors.orange,
     strokeWidth: CHART_STROKE.ref,
     strokeDasharray: CHART_DASH.derived,
+  };
+}
+
+// Tooltip-Cursor der Linien- und Flächen-Charts. Balken-Charts zeigen keinen
+// Cursor (`cursor={false}`): der Balken selbst markiert die Stelle.
+export function lineCursorProps(themeColors) {
+  return {
+    stroke: themeColors.muted,
+    strokeWidth: CHART_STROKE.aux,
+    strokeDasharray: CHART_DASH.secondary,
   };
 }
 

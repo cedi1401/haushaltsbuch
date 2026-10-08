@@ -447,7 +447,7 @@ export default function GoalsView({
 
                 <div className="hb-meter hb-meter--lg hb-meter--animated hb-goal-progress-bg">
                   <div
-                    className="hb-meter-fill"
+                    className={"hb-meter-fill" + (goal.progress.percent > 0 ? " hb-meter-fill--min" : "")}
                     style={{ width: `${Math.min(goal.progress.percent, 100)}%` }}
                   />
                 </div>
@@ -635,7 +635,7 @@ export default function GoalsView({
           }}
         >
           {/* Bereich: Grunddaten */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
             <div className="hb-field" style={{ minWidth: 0 }}>
               <div className="hb-label">Name</div>
               <input
@@ -653,7 +653,7 @@ export default function GoalsView({
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
-                gap: 14,
+                gap: 16,
               }}
             >
               <div className="hb-field" style={{ minWidth: 0 }}>
@@ -685,7 +685,7 @@ export default function GoalsView({
           <div style={{ height: 1, background: "var(--border)" }} />
 
           {/* Bereich: Topf-Zuordnung (was und wie gemessen wird) */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
             <div className="hb-field" style={{ minWidth: 0 }}>
               <div className="hb-label">Spartopf</div>
               <select
@@ -724,7 +724,7 @@ export default function GoalsView({
           <div style={{ height: 1, background: "var(--border)" }} />
 
           {/* Bereich: Startpunkt */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
             <div className="hb-field" style={{ minWidth: 0 }}>
               <div className="hb-label">Startpunkt</div>
               <select

@@ -98,10 +98,17 @@
   --input-bg: #ffffff;
   --hover-bg: rgba(0, 0, 0, 0.03);
   --active-bg: rgba(0, 0, 0, 0.06);
-  --focus-ring: rgba(0, 120, 212, 0.3);
+  --focus-ring: var(--accent);
   /* Der eine Fokus-Ring der App. Die globale :focus-visible-Regel setzt ihn;
-     wer einen eigenen box-shadow trägt (Schatten, Hover), nimmt das Token. */
-  --focus-shadow: 0 0 0 2px var(--focus-ring);
+     wer einen eigenen box-shadow trägt (Schatten, Hover), nimmt das Token.
+     WinUI-Aufbau: 1 px Trennlinie in Flächenfarbe, darum 2 px Vollton-Ring;
+     ohne die Trennlinie verschmölze der Ring mit dem Akzent-Button. */
+  --focus-shadow: 0 0 0 1px var(--card), 0 0 0 3px var(--focus-ring);
+  /* Pillen-Rahmen in der 30-%-Stufe, passend zu --green-border/--yellow-border. */
+  --accent-border: color-mix(in srgb, var(--accent) 30%, transparent);
+  --red-border: color-mix(in srgb, var(--red) 30%, transparent);
+  /* Vertikaler Abstand zwischen Feldern in Dialog-Formularen. */
+  --form-gap: 16px;
   --overlay-bg: rgba(0, 0, 0, 0.3);
   --reveal-border: rgba(0, 120, 212, 0.2);
 
@@ -206,7 +213,7 @@
   --input-bg: #151924;
   --hover-bg: rgba(255, 255, 255, 0.05);
   --active-bg: rgba(255, 255, 255, 0.08);
-  --focus-ring: rgba(96, 205, 255, 0.3);
+  --focus-ring: var(--accent);
   --overlay-bg: rgba(0, 0, 0, 0.55);
   --reveal-border: rgba(96, 205, 255, 0.25);
 
@@ -447,6 +454,19 @@ button, input, select, textarea {
   border-radius: inherit;
 }
 
+/* Mindestbreite nur auf Wunsch und nur bei > 0 % (setzt das JSX): ein
+   Fortschritt von 1 % soll als Balkenanfang lesbar sein, 0 % bleibt leer. */
+.hb-meter-fill--min {
+  min-width: 12px;
+}
+
+/* Balken in frei wählbaren Kategoriefarben: im Dark Mode hebt die Füllung
+   dunkle Töne auf eine Mindesthelligkeit, damit sie auf der Karte sichtbar
+   bleiben. Helle Farben und die Paletten selbst bleiben unverändert. */
+:root.dark .hb-meter--cat .hb-meter-fill {
+  background: oklch(from var(--meter-tone, var(--accent)) max(l, 0.62) c h);
+}
+
 .hb-meter--animated .hb-meter-fill {
   transition: width 0.4s ease;
 }
@@ -517,7 +537,7 @@ button, input, select, textarea {
 .hb-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: var(--form-gap);
   align-items: flex-end;
 }
 
@@ -667,8 +687,8 @@ select.hb-input option {
   z-index: 1100;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-dialog);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   padding: 12px;
   min-width: 264px;
   animation: hb-dp-in 0.12s var(--ease-decelerate);
@@ -1017,7 +1037,11 @@ select.hb-input option {
 .hb-chart-nav .hb-icon-btn {
   height: 34px;
   width: 34px;
-  font-size: 14px;
+}
+
+.hb-chart-nav .hb-icon-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Kompakte Variante für Aktionen innerhalb von Listenzeilen, damit die
@@ -1087,14 +1111,12 @@ select.hb-input option {
 .hb-hamburger-btn {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-md);
   font-size: 18px;
 }
 
 .hb-gear-btn {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-md);
   font-size: 18px;
 }
 
@@ -1173,7 +1195,7 @@ select.hb-input option {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
-  padding: 4px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
 }
@@ -1245,6 +1267,7 @@ select.hb-input option {
 */
 .hb-two--dialog {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--form-gap);
 }
 
 .hb-two--dialog > .hb-field {
@@ -1540,13 +1563,12 @@ select.hb-input option {
 }
 
 .hb-fct-col-head {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.2px;
   color: var(--muted);
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
   margin-bottom: 2px;
 }
 
@@ -1743,7 +1765,7 @@ select.hb-input option {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   color: var(--muted);
 }
 
@@ -2149,14 +2171,38 @@ select.hb-input option {
   margin-left: auto;
 }
 
+/* Bandsumme (`section.total`). In der geteilten Form schiebt sie sich an die
+   rechte Kante der ersten Bandzelle und damit in die Flucht ihrer Spalte. */
+.hb-dt-band-total {
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hb-dt-band-inner > .hb-dt-band-total {
+  margin-left: auto;
+}
+
+/* Zweite Bandzelle: die Aktionen stehen am rechten Tabellenrand. */
+.hb-dt-band td > .hb-dt-band-aside {
+  justify-content: flex-end;
+}
+
 .hb-dt-band-aside .hb-btn-sm {
-  padding: 3px 10px;
-  font-size: 12px;
+  padding: 4px 10px;
+  font-size: 13px;
 }
 
 .hb-dt-band-aside .hb-icon-btn--sm {
   width: 26px;
   height: 26px;
+  color: var(--text-secondary);
+}
+
+.hb-dt-band-aside .hb-icon-btn--sm svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Linker Teil des Toolbar-Streifens (`toolbar`) — schiebt die Spaltenauswahl
@@ -2338,31 +2384,6 @@ select.hb-input option {
   position: relative;
 }
 
-.hb-dt-columns-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-}
-
-.hb-dt-columns-trigger:hover {
-  background: var(--hover-bg);
-  color: var(--text);
-}
-
-.hb-dt-columns-trigger:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-}
-
 /* Elevation/Schatten wie .hb-overflow-menu. Rechts verankert, weil der
    Auslöser am rechten Rand des Streifens sitzt.
 
@@ -2408,7 +2429,7 @@ select.hb-input option {
   gap: 2px;
   /* Der Scrollport schneidet an seiner Padding-Kante ab. Ohne die
      ausgeglichene Innen-/Außenkante läge sie genau auf der Kante der
-     Einträge und stutzte den Fokusring (2 px box-shadow) links und rechts.
+     Einträge und stutzte den Fokusring (3 px box-shadow) links und rechts.
      Die Einträge stehen dadurch weiterhin bündig unter dem Titel. */
   margin: 0 -6px;
   padding: 0 6px;
@@ -2424,7 +2445,7 @@ select.hb-input option {
   text-align: left;
   padding: 8px 12px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
   color: var(--text);
   cursor: pointer;
   border-radius: var(--radius-sm);
@@ -2720,6 +2741,7 @@ select.hb-input option {
 .hb-res-fact-label {
   font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.2px;
   line-height: 1.25;
   color: var(--muted);
 }
@@ -2974,7 +2996,7 @@ select.hb-input option {
 .hb-res-pill--due {
   color: var(--accent-active);
   background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  border-color: var(--accent-border);
 }
 
 :root.dark .hb-res-pill--due {
@@ -2984,8 +3006,7 @@ select.hb-input option {
 .hb-res-pill--overdue {
   color: var(--red);
   background: var(--red-soft);
-  /* --red-border gibt es nicht; 30 % entsprechen --green-border/--yellow-border. */
-  border-color: color-mix(in srgb, var(--red) 30%, transparent);
+  border-color: var(--red-border);
 }
 
 /* =====================================================
@@ -3203,16 +3224,6 @@ select.hb-input option {
   font-size: 12px;
 }
 
-/* Fußzeile der linken Spalte: schiebt den tertiären Link an den unteren Rand,
-   damit der Leerraum unter dem Formular nicht als Abbruch wirkt. */
-.hb-entry-form__foot {
-  margin-top: auto;
-  padding-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 @media (max-height: 880px) {
   .hb-entry-form__panes {
     min-height: 320px;
@@ -3279,6 +3290,14 @@ select.hb-input option {
   gap: 8px;
 }
 
+/* Nebenaktion links im Dialogfuß (`footerStart`), auf der Zeile der
+   Hauptaktionen. */
+.hb-modal-foot-start {
+  margin-right: auto;
+  display: flex;
+  gap: 8px;
+}
+
 @media (max-width: 480px) {
   .hb-modal {
     padding: 12px;
@@ -3308,9 +3327,9 @@ select.hb-input option {
   z-index: 200;
   min-width: 200px;
   background: var(--card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-dialog);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   padding: 6px;
   display: flex;
   flex-direction: column;
@@ -3513,7 +3532,7 @@ select.hb-input option {
 .hb-goal-badge--accent {
   background: var(--accent-soft);
   color: var(--accent);
-  border-color: var(--reveal-border);
+  border-color: var(--accent-border);
 }
 .hb-goal-badge--deadline {
   background: var(--yellow-soft);
@@ -3848,34 +3867,12 @@ select.hb-input option {
 
 /* Summe einer Sektion im Band. Monatsraten in Textfarbe — Rot bleibt
    Zuständen vorbehalten, die Handeln verlangen. */
-.hb-fixed-band-total {
-  font-weight: 600;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
 /* Leere Tabelle: dezenter Hinweis statt Tabelle ohne Zeilen */
-.hb-fixed-empty {
-  padding: 24px 16px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--muted);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
-}
-
 /* Kategorie-Zelle: Farbpunkt + Klartext statt Pill */
 .hb-fixed-cat {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-}
-
-.hb-fixed-cat .hb-cat-dot {
-  width: 10px;
-  height: 10px;
 }
 
 /* Rücklage ohne Turnus in der Turnus-Spalte — zurückhaltend, mit Tooltip.
@@ -3961,7 +3958,7 @@ select.hb-input option {
   padding: 3px 9px;
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
-  border: 1px solid var(--reveal-border);
+  border: 1px solid var(--accent-border);
   font-size: 13px;
   font-weight: 600;
   color: var(--accent);
@@ -3978,7 +3975,7 @@ select.hb-input option {
   padding: 4px 5px 4px 9px;
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
-  border: 1px solid var(--reveal-border);
+  border: 1px solid var(--accent-border);
   font-size: 13px;
   font-weight: 600;
   color: var(--accent);
@@ -3999,8 +3996,6 @@ select.hb-input option {
   cursor: pointer;
   border-radius: 2px;
   padding: 0;
-  font-size: 15px;
-  line-height: 1;
   transition: color var(--transition-fast);
 }
 
@@ -4302,9 +4297,9 @@ select.hb-input option {
    (.hb-bad / .hb-withdrawal); unterschieden wird über das Wort in der Pille.
    Rahmen in der Alpha-Stufe wie .hb-res-pill. */
 .hb-tpl-pill--expense,
-.hb-tpl-pill--withdrawal { background: var(--red-soft);    color: var(--red);    border-color: color-mix(in srgb, var(--red) 30%, transparent); }
+.hb-tpl-pill--withdrawal { background: var(--red-soft);    color: var(--red);    border-color: var(--red-border); }
 .hb-tpl-pill--income     { background: var(--green-soft);  color: var(--green);  border-color: var(--green-border); }
-.hb-tpl-pill--transfer   { background: var(--accent-soft); color: var(--accent); border-color: var(--reveal-border); }
+.hb-tpl-pill--transfer   { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-border); }
 
 .hb-tpl-pill--amount {
   font-variant-numeric: tabular-nums;
@@ -4747,11 +4742,10 @@ select.hb-input option {
 }
 
 .hb-cat-chevron {
-  font-size: 11px;
   color: var(--muted);
   transition: transform 0.2s ease;
   flex-shrink: 0;
-  display: inline-block;
+  display: inline-flex;
 }
 
 .hb-cat-chevron.hb-cat-chevron-open {
@@ -5378,14 +5372,14 @@ select.hb-input option {
 }
 
 .hb-pot-card-foot-label {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--muted);
   white-space: nowrap;
 }
 
 .hb-pot-card-foot-value {
-  font-size: 12.5px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
@@ -5403,8 +5397,7 @@ select.hb-input option {
   justify-content: flex-start;
 }
 .hb-pot-card-foot--empty span {
-  font-size: 11.5px;
-  font-style: italic;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -5722,9 +5715,17 @@ select.hb-input option {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 10px;
   text-align: center;
   pointer-events: none;
+}
+
+.hb-insight-cat-empty-overlay .hb-empty-title {
+  font-size: 14px;
+}
+
+.hb-insight-cat-empty-overlay .hb-empty-text {
+  font-size: 13px;
 }
 
 .hb-insight-cat-empty-overlay .hb-empty-icon {
@@ -5840,7 +5841,7 @@ select.hb-input option {
 .hb-insight-label {
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.2px;
   color: var(--muted);
 }
 
@@ -5880,9 +5881,9 @@ select.hb-input option {
    Serienfarben als Textfarbe). */
 .hb-tooltip-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
   margin-right: 6px;
   vertical-align: middle;
   flex-shrink: 0;
@@ -6524,9 +6525,9 @@ select.hb-input option {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  font-size: 16px;
-  line-height: 1;
-  padding: 3px 10px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
   cursor: pointer;
   transition: background var(--transition-fast);
 }
@@ -6631,9 +6632,9 @@ select.hb-input option {
   border: none;
   background: transparent;
   text-align: left;
-  padding: 9px 12px;
-  font-size: 15px;
-  font-weight: 500;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 400;
   color: var(--text);
   cursor: pointer;
   border-radius: var(--radius-sm);
@@ -7361,7 +7362,7 @@ select.hb-input option {
 .hb-inv-pill--error {
   color: var(--red);
   background: var(--red-soft);
-  border-color: color-mix(in srgb, var(--red) 30%, transparent);
+  border-color: var(--red-border);
 }
 
 /* Name plus Statuspillen in einer Zelle. */
@@ -7487,7 +7488,7 @@ select.hb-input option {
 .hb-inv-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--form-gap);
 }
 
 .hb-inv-form-hint {
@@ -7507,7 +7508,7 @@ select.hb-input option {
 .hb-info-pill--total {
   color: var(--accent);
   background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  border-color: var(--accent-border);
   font-weight: 600;
 }
 
@@ -7841,4 +7842,31 @@ select.hb-input option {
   .hb-inv-tx-table .hb-col-price {
     display: none;
   }
+}
+
+/* ─── Gedrückt-Zustand (:active) ─────────────────────────────────────────────
+   Eine Sammelregel am Dateiende, damit sie die jeweiligen Hover-Regeln
+   überschreibt. Akzentgetönte Einträge (--add, --reset, Kalendertage) und
+   Link-Buttons bleiben bewusst ohne. */
+.hb-icon-btn:active:not(:disabled),
+.hb-overflow-item:active:not(:disabled),
+.hb-dt-columns-item:active:not(:disabled),
+.hb-cg-group-item:active,
+.hb-cg-group-trigger:active,
+.hb-nav-item:active,
+.hb-segmented__item:not(.hb-segmented__item--active):active,
+.hb-budget-pag-btn:active:not(:disabled),
+.hb-datepicker-nav:active,
+.hb-month-filter-clear:active,
+.hb-hcat-expand-btn:active:not(:disabled) {
+  background: var(--active-bg);
+}
+
+.hb-btn-danger:active {
+  filter: brightness(0.88);
+}
+
+.hb-icon-btn--danger:active:not(:disabled),
+.hb-overflow-item.hb-overflow-danger:active {
+  background: color-mix(in srgb, var(--red) 16%, transparent);
 }

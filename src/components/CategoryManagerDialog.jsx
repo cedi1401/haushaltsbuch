@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import EditDialog from "./EditDialog.jsx";
 import CategoryCreateDialog from "./CategoryCreateDialog.jsx";
 import CategoryEditDialog from "./CategoryEditDialog.jsx";
-import { IconEdit, IconPlus, IconDelete, IconWallet, IconLock, IconTransfer, IconSearch, IconCheck, IconClose } from "./icons.jsx";
+import { IconEdit, IconPlus, IconDelete, IconWallet, IconLock, IconTransfer, IconSearch, IconCheck, IconChevron, IconClose } from "./icons.jsx";
 import HbTooltip from "./HbTooltip.jsx";
 import { CHART_COLORS, DEFAULT_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { Button } from "./ui.jsx";
@@ -581,7 +581,7 @@ export default function CategoryManagerDialog({
               </button>
             )}
             {hasSubs && (
-              <span className={`hb-cat-chevron${isOpen ? " hb-cat-chevron-open" : ""}`}>▼</span>
+              <IconChevron className={`hb-cat-chevron${isOpen ? " hb-cat-chevron-open" : ""}`} />
             )}
           </div>
 
@@ -686,7 +686,7 @@ export default function CategoryManagerDialog({
 
     if (filter !== "custom") {
       return (
-        <div className="hb-muted" style={{ padding: "16px 0", textAlign: "center" }}>
+        <div className="hb-hcat-empty">
           Keine Kategorien gefunden.
         </div>
       );

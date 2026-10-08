@@ -37,12 +37,15 @@ const ACTIONS_LINGER_MS = 2500;
  *   }
  *
  * Sektion (vom View vorbereitet):
- *   { key, label, accent, rows, aside }  // rows brauchen je eine `id`
+ *   { key, label, accent, rows, aside, total, totalColumnId }  // rows brauchen je eine `id`
  *
  * `label === null` heißt: kein Gliederungsband. `accent` ist eine beliebige
  * CSS-Farbe (im Rückstellungs-View eine var(--group-accent-N)) und färbt Punkt und
  * 3-px-Kante. `aside` ist optional und steht rechtsbündig im Band — dort sitzen
  * Kennzahl und Aktionen, die der ganzen Sektion gelten (z.B. „Gruppe buchen").
+ * `total` ist die Bandsumme; mit `totalColumnId` endet sie an der rechten Kante
+ * dieser Spalte und fluchtet so mit den Zeilen und der Fußsumme. Ist die Spalte
+ * ausgeblendet oder die letzte, steht die Summe vorn im `aside`.
  * Eine Sektion ohne Zeilen wird trotzdem mit ihrem Band gezeigt: eine leere
  * Gruppe muss sichtbar bleiben, damit sie sich verwalten lässt.
  *
@@ -139,6 +142,14 @@ export default function DataTable({
   // Die Chevron-Spalte zählt bei jedem colSpan mit (Band, Detailzeile).
   const colCount = visible.length + (renderDetail ? 1 : 0);
 
+  // Bandsumme an einer Spalte ausrichten: das Band teilt sich dann in zwei
+  // Zellen, die erste endet an der rechten Kante der Ankerspalte. Die Spalte
+  // gilt für die ganze Tabelle, damit alle Bänder gleich geteilt sind.
+  const bandAnchorId = sections.find((s) => s.totalColumnId)?.totalColumnId;
+  const bandAnchorIndex = bandAnchorId ? visible.findIndex((col) => col.id === bandAnchorId) : -1;
+  const bandSplit = bandAnchorIndex >= 0 && bandAnchorIndex < visible.length - 1;
+  const bandLeadSpan = bandAnchorIndex + 1 + (renderDetail ? 1 : 0);
+
   const [sort, setSort] = useState(defaultSort ?? null);
   const sortCol = useMemo(
     () => (sort ? columns.find((c) => c.id === sort.columnId) : null) ?? null,
@@ -233,7 +244,7 @@ export default function DataTable({
             >
               {section.label !== null && section.label !== undefined && (
                 <tr className="hb-dt-band">
-                  <td colSpan={colCount}>
+                  <td colSpan={bandSplit ? bandLeadSpan : colCount}>
                     <div className="hb-dt-band-inner">
                       {section.accent && (
                         <span className="hb-cat-dot" style={{ background: section.accent }} />
@@ -242,9 +253,22 @@ export default function DataTable({
                       <span className="hb-dt-band-count">
                         {section.rows.length} Position{section.rows.length === 1 ? "" : "en"}
                       </span>
-                      {section.aside && <div className="hb-dt-band-aside">{section.aside}</div>}
+                      {bandSplit && hasBandTotal(section) && (
+                        <span className="hb-dt-band-total">{section.total}</span>
+                      )}
+                      {!bandSplit && (section.aside || hasBandTotal(section)) && (
+                        <div className="hb-dt-band-aside">
+                          {hasBandTotal(section) && <span className="hb-dt-band-total">{section.total}</span>}
+                          {section.aside}
+                        </div>
+                      )}
                     </div>
                   </td>
+                  {bandSplit && (
+                    <td colSpan={colCount - bandLeadSpan}>
+                      {section.aside && <div className="hb-dt-band-aside">{section.aside}</div>}
+                    </td>
+                  )}
                 </tr>
               )}
               {section.rows.map((row) => {
@@ -415,6 +439,10 @@ function sortRows(rows, col, dir) {
  * Richtungspfeil. Sichtbar nur an der aktiven Spalte; an der überfahrenen
  * blendet ihn `.hb-dt-th-btn:hover` halbtransparent ein (CSS).
  */
+function hasBandTotal(section) {
+  return section.total !== null && section.total !== undefined;
+}
+
 function SortArrow({ active, dir }) {
   const down = active && dir === "desc";
   return (

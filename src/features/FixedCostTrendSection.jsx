@@ -16,7 +16,7 @@ import HbSparklineHover from "../components/HbSparklineHover.jsx";
 import { IconTag, IconInfo } from "../components/icons.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { getCategoryLabel, formatCurrencyCompact, formatPercent, fixedCostKind } from "../utils/hbUtils.js";
-import { CHART_STROKE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps } from "../utils/chartStyle.js";
+import { CHART_STROKE, CHART_HEIGHT, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, lineCursorProps } from "../utils/chartStyle.js";
 import { FALLBACK_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { monthlyRate, annualAmount, isSinkingFund } from "../utils/fixedCostUtils.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
@@ -86,7 +86,7 @@ function tintedChipStyle(color) {
 function ProportionBar({ pct, color }) {
   return (
     <div
-      className="hb-meter hb-meter--lg hb-meter--tinted hb-meter--animated"
+      className="hb-meter hb-meter--lg hb-meter--tinted hb-meter--cat hb-meter--animated"
       style={color ? { "--meter-tone": color } : undefined}
     >
       <div
@@ -319,13 +319,14 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
           </div>
           <ChartLegend style={{ marginBottom: 16 }} items={[{ label: "Gebucht", type: "line", color: themeColors.accent }]} />
 
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             <LineChart data={fctWindowData} margin={{ top: 4, right: 12, bottom: 0, left: 0 }}>
               <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
               <XAxis dataKey="label" {...monthAxisProps(themeColors)} />
               <YAxis {...axisProps(themeColors)} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} width={AMOUNT_AXIS_WIDTH} />
               <Tooltip
                 wrapperStyle={{ zIndex: 10 }}
+                cursor={lineCursorProps(themeColors)}
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
                   return (

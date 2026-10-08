@@ -19,7 +19,7 @@ import { getFinancialMonth } from "../utils/financialMonthUtils.js";
 import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
-import { IconEdit, IconFixed, IconPlus, IconTag, IconWarning } from "../components/icons.jsx";
+import { IconClose, IconEdit, IconFixed, IconPlus, IconTag, IconWarning } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 import { buildFixedCostColumns, renderBookedStatus } from "./fixed/fixedCostColumns.jsx";
@@ -642,9 +642,10 @@ export default function FixedCostsView({
       label,
       accent,
       rows,
+      total: fmt(total),
+      totalColumnId: "monthlyRate",
       aside: (
         <>
-          <span className="hb-fixed-band-total">{fmt(total)}</span>
           <Button
             size="sm"
             variant="outline"
@@ -795,7 +796,10 @@ export default function FixedCostsView({
                       <div className="hb-dt-toolbar">
                         <div className="hb-dt-toolbar-start">{renderTableToolbar(table)}</div>
                       </div>
-                      <div className="hb-fixed-empty">{table.emptyText}</div>
+                      <div className="hb-empty hb-empty--sm">
+                        <div className="hb-empty-icon"><IconFixed /></div>
+                        <div className="hb-empty-text">{table.emptyText}</div>
+                      </div>
                     </>
                   )}
                 </CardContent>
@@ -850,11 +854,11 @@ export default function FixedCostsView({
         // HbDatePickers ab und zeigt stattdessen eine Scrollbar.
         bodyScroll={false}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
           {/* Betragszeile, Warnung und Ratenhinweis lesen als eine Gruppe — der
               engere Abstand hält sie vom 14er-Raster der übrigen Abschnitte ab. */}
           <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, width: "100%" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, width: "100%" }}>
               <div className="hb-field">
                 <div className="hb-label">Name</div>
                 <input
@@ -911,7 +915,7 @@ export default function FixedCostsView({
             ) : null}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, width: "100%" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, width: "100%" }}>
             <div className="hb-field">
               <div className="hb-label">Art</div>
               <select
@@ -963,7 +967,7 @@ export default function FixedCostsView({
                     onClick={() => handleTagRemove(tag)}
                     aria-label={`Tag ${tag} entfernen`}
                   >
-                    ×
+                    <IconClose width={12} height={12} strokeWidth={2.2} />
                   </button>
                 </span>
               ))}
@@ -1041,7 +1045,7 @@ export default function FixedCostsView({
                 </select>
               </div>
               {/* Zweck und Topf sagen wohin, Turnus und Fälligkeit wann und wie oft. */}
-              <div className="hb-two hb-two--dialog" style={{ gap: 12, width: "100%" }}>
+              <div className="hb-two hb-two--dialog" style={{ width: "100%" }}>
                 <div className="hb-field" style={{ minWidth: 0 }}>
                   <div className="hb-label">Turnus</div>
                   <select

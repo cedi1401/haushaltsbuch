@@ -14,7 +14,7 @@ import {
 import { useThemeColors } from "../../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
 import { formatCurrencyCompact, formatPercent, formatSigned } from "../../utils/hbUtils.js";
-import { CHART_STROKE, CHART_DASH, AXIS_FONT_SIZE, axisProps, zeroLineProps } from "../../utils/chartStyle.js";
+import { CHART_STROKE, CHART_DASH, AXIS_FONT_SIZE, axisProps, zeroLineProps, lineCursorProps } from "../../utils/chartStyle.js";
 import { IconInbox } from "../../components/icons.jsx";
 
 const ForecastCard = memo(function ForecastCard({ analytics }) {
@@ -145,7 +145,7 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
               />
               <Tooltip
                 wrapperStyle={{ zIndex: 10 }}
-                cursor={{ stroke: "var(--border)", strokeWidth: CHART_STROKE.aux }}
+                cursor={lineCursorProps(themeColors)}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const row = payload[0]?.payload;

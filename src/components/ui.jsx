@@ -1,4 +1,5 @@
 import React from "react";
+import { IconChevronLeft, IconChevronRight } from "./icons.jsx";
 
 export function Card({ children, style, className }) {
   return (
@@ -71,7 +72,7 @@ export function ChartScrollNav({ offset, maxOffset, onOffsetChange, label, style
         disabled={offset >= maxOffset}
         title="Älteren Bereich anzeigen"
         aria-label="Älteren Bereich anzeigen"
-      >‹</button>
+      ><IconChevronLeft /></button>
       <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{label}</span>
       <button
         type="button"
@@ -80,7 +81,7 @@ export function ChartScrollNav({ offset, maxOffset, onOffsetChange, label, style
         disabled={offset === 0}
         title="Neueren Bereich anzeigen"
         aria-label="Neueren Bereich anzeigen"
-      >›</button>
+      ><IconChevronRight /></button>
     </div>
   );
 }

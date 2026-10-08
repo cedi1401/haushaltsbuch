@@ -68,7 +68,7 @@ export default function ColumnsFlyout({ columns, visibleIds, onToggle, onReset }
       <button
         ref={triggerRef}
         type="button"
-        className="hb-dt-columns-trigger"
+        className="hb-btn hb-btn-outline hb-btn-sm hb-dt-columns-trigger"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
