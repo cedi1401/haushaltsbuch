@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useSyncExternalStore } from "react";
 import EditDialog from "../components/EditDialog.jsx";
+import { Button } from "../components/ui.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import { EntryKindSelector } from "../components/EntryKindSelector.jsx";
@@ -125,6 +126,11 @@ export default function EntryFormDialog({
       saveLabel="Hinzufügen"
       size="medium"
       bodyScroll={false}
+      footerStart={onOpenTemplateManager && (
+        <Button variant="outline" onClick={onOpenTemplateManager}>
+          Vorlagen verwalten
+        </Button>
+      )}
     >
       <div className="hb-entry-form">
       {sortedTemplates.length > 0 && (
@@ -230,14 +236,6 @@ export default function EntryFormDialog({
               Bitte Datum &amp; einen gültigen Betrag (&gt; 0) setzen.
             </div>
           ) : null}
-
-          {onOpenTemplateManager && (
-            <div className="hb-entry-form__foot">
-              <button type="button" className="hb-link-btn" onClick={onOpenTemplateManager}>
-                Vorlagen verwalten
-              </button>
-            </div>
-          )}
         </div>
 
         <div className="hb-entry-form__aside">

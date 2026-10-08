@@ -17,6 +17,9 @@ export default function EditDialog({
   saveLabel,
   size = "default",
   hideFooter = false,
+  // Optionaler Knoten links im Fuß, auf einer Zeile mit Abbrechen/Speichern
+  // (z.B. eine Nebenaktion wie „Vorlagen verwalten").
+  footerStart,
   // Bei Formular-Dialogen den Body NICHT scrollbar machen, damit
   // Popovers (z.B. HbDatePicker) sauber über den Body hinausragen
   // können statt eine Scrollbar zu erzeugen.
@@ -113,6 +116,7 @@ export default function EditDialog({
 
         {!hideFooter && (
           <div className="hb-modal-foot">
+            {footerStart && <div className="hb-modal-foot-start">{footerStart}</div>}
             <Button variant="outline" onClick={onClose}>
               Abbrechen
             </Button>
