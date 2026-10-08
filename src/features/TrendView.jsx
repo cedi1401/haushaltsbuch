@@ -365,7 +365,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
                     <h3 className="hb-card-title">Sparquote pro Monat</h3>
-                    <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div className="hb-chart-range">
                       <ChartScrollNav
                         offset={saldoScrollOffset}
                         maxOffset={saldoMaxOffset}
@@ -438,7 +438,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
                     <h3 className="hb-card-title">Cashflow</h3>
-                    <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div className="hb-chart-range">
                       <ChartScrollNav
                         offset={evaScrollOffset}
                         maxOffset={evaMaxOffset}
@@ -551,7 +551,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                   </>
                 ) : (
                   <div style={{ height: CHART_HEIGHT, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span className="hb-muted" style={{ fontSize: 13, textAlign: "center" }}>
+                    <span className="hb-muted" style={{ textAlign: "center" }}>
                       Noch nicht genug Daten für einen Jahresvergleich.<br />
                       Sobald Einträge aus mindestens zwei Jahren vorliegen, wird hier der Vergleich angezeigt.
                     </span>

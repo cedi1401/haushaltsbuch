@@ -76,28 +76,26 @@ export default function BillPaidDialog({
       // Kalender-Popover eine Scrollbar, statt über den Body hinauszuragen.
       bodyScroll={false}
     >
-      <div className="hb-form" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
+      <div className="hb-form hb-form-stack">
         {/* Topf und Zweck stehen fest — als Textzeile, nicht als gesperrtes
             Eingabefeld: es gibt nichts zu ändern, also auch nichts zu bedienen. */}
-        <div className="hb-muted" style={{ fontSize: 12, marginBottom: 4 }}>
+        <div className="hb-muted hb-muted--sm" style={{ marginBottom: 4 }}>
           {item.name} · Topf: {potName || "—"} · Zweck: {item.transferCategory || "—"}
         </div>
 
         <div className="hb-two hb-two--dialog">
-          <div className="hb-field" style={{ minWidth: 0 }}>
+          <div className="hb-field">
             <div className="hb-label">Datum</div>
             <HbDatePicker
               value={draft?.date || ""}
               onChange={(v) => set({ date: v })}
-              style={{ minWidth: 0, width: "100%" }}
             />
           </div>
 
-          <div className="hb-field" style={{ minWidth: 0 }}>
+          <div className="hb-field">
             <div className="hb-label">Betrag ({baseCurrency})</div>
             <input
               className="hb-input"
-              style={{ minWidth: 0, width: "100%" }}
               type="text"
               inputMode="decimal"
               value={draft?.amount ?? ""}
@@ -113,11 +111,10 @@ export default function BillPaidDialog({
           </div>
         </div>
 
-        <div className="hb-field" style={{ minWidth: 0 }}>
+        <div className="hb-field">
           <div className="hb-label">Notiz (optional)</div>
           <input
             className="hb-input"
-            style={{ minWidth: 0, width: "100%" }}
             type="text"
             value={draft?.note ?? ""}
             onChange={(e) => set({ note: e.target.value })}

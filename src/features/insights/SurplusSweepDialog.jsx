@@ -55,12 +55,11 @@ export default function SurplusSweepDialog({
       size="medium"
       bodyScroll={false}
     >
-      <div className="hb-form" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
-        <div className="hb-field" style={{ minWidth: 0 }}>
+      <div className="hb-form hb-form-stack">
+        <div className="hb-field">
           <div className="hb-label">Betrag ({baseCurrency})</div>
           <input
             className="hb-input"
-            style={{ minWidth: 0, width: "100%" }}
             type="text"
             inputMode="decimal"
             placeholder="z.B. 100.50"
@@ -77,11 +76,10 @@ export default function SurplusSweepDialog({
           )}
         </div>
 
-        <div className="hb-field" style={{ minWidth: 0 }}>
+        <div className="hb-field">
           <div className="hb-label">Spar-Topf</div>
           <select
             className="hb-input"
-            style={{ minWidth: 0, width: "100%" }}
             value={potId}
             onChange={(e) => setPotId(e.target.value)}
           >

@@ -13,7 +13,6 @@ import HbTooltip from "../../components/HbTooltip.jsx";
 import { ChartTooltip, ChartTooltipRow, ChartTooltipDivider } from "../../components/ChartTooltip.jsx";
 import { IconTrend } from "../../components/icons.jsx";
 import { useThemeColors } from "../../hooks/themeColors.js";
-import { useCardBg } from "../../hooks/useCardBg.js";
 import { formatCurrencyCompact, formatDateDE, formatPercent, formatSigned } from "../../utils/hbUtils.js";
 import { CHART_STROKE, AMOUNT_AXIS_WIDTH, axisProps, xAxisProps, lineCursorProps } from "../../utils/chartStyle.js";
 import { formatFetchedAt, gainClass } from "../../utils/investmentFormat.js";
@@ -98,7 +97,6 @@ export default function ValueHistoryCard({
   baseCurrency,
 }) {
   const themeColors = useThemeColors();
-  const cardBg = useCardBg();
   const gradientId = useId();
   const [range, setRange] = useState("all");
 
@@ -276,7 +274,7 @@ export default function ValueHistoryCard({
                         strokeWidth={CHART_STROKE.main}
                         fill={`url(#${gradientId})`}
                         dot={view.data.length <= DOT_LIMIT ? { r: 2.5, strokeWidth: 0, fill: accent } : false}
-                        activeDot={{ r: 4, stroke: cardBg, strokeWidth: 2, fill: accent }}
+                        activeDot={{ r: 4, stroke: themeColors.card, strokeWidth: 2, fill: accent }}
                         isAnimationActive={false}
                       />
                     </AreaChart>
@@ -302,7 +300,7 @@ function EmptyHistory({ unpricedCount }) {
         Werte, die Kurve wächst ab jetzt.
       </div>
       {unpricedCount > 0 && (
-        <div className="hb-muted" style={{ fontSize: 12, marginTop: 8 }}>
+        <div className="hb-muted hb-muted--sm" style={{ marginTop: 8 }}>
           Heute fehlt noch ein Kurs für {unpricedCount} Position{unpricedCount === 1 ? "" : "en"} —
           deshalb steht noch kein Punkt in der Kurve.
         </div>

@@ -1,7 +1,6 @@
 import React from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent } from "../../components/ui.jsx";
-import { useCardBg } from "../../hooks/useCardBg.js";
 import { useThemeColors } from "../../hooks/themeColors.js";
 import { formatPercent } from "../../utils/hbUtils.js";
 import { pieCenterFontSize } from "../../utils/chartStyle.js";
@@ -38,7 +37,6 @@ const CLASS_COLOR_KEYS = {
  * @param {(n: number) => string} props.fmt
  */
 export default function AllocationCard({ byClass, unpricedCount, fmt }) {
-  const cardBg = useCardBg();
   const themeColors = useThemeColors();
 
   const pricedTotal = byClass.reduce((s, r) => s + r.value, 0);
@@ -67,7 +65,7 @@ export default function AllocationCard({ byClass, unpricedCount, fmt }) {
                   outerRadius={134}
                   paddingAngle={0}
                   cornerRadius={4}
-                  stroke={cardBg}
+                  stroke={themeColors.card}
                   strokeWidth={3}
                   strokeLinejoin="round"
                   startAngle={90}

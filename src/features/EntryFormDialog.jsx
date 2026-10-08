@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useSyncExternalStore } from "react";
+import React, { useMemo, useRef } from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import { Button } from "../components/ui.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
@@ -11,43 +11,11 @@ import { EMPTY_ARRAY, ENTRY_KIND_LABELS } from "../utils/constants.js";
 /*
   Vorlagen-Grid: feste Spaltenzahl statt auto-fill, damit JS und CSS dieselbe
   Anzahl kennen. Nur so lässt sich exakt auf zwei Reihen kürzen — der Rest
-  wandert hinter die „+N weitere"-Ghost-Karte. Die Werte müssen mit den
-  Media-Queries von .hb-tpl-card-grid übereinstimmen.
+  wandert hinter die „+N weitere"-Ghost-Karte. Der Wert muss mit
+  grid-template-columns von .hb-tpl-card-grid übereinstimmen.
 */
-const TPL_GRID_BREAKPOINTS = [
-  { query: "(max-width: 560px)", cols: 2 },
-  { query: "(max-width: 960px)", cols: 3 },
-];
-const TPL_GRID_DEFAULT_COLS = 4;
+const TPL_GRID_COLS = 4;
 const TPL_GRID_ROWS = 2;
-
-// Einmalig erzeugte MediaQueryLists — getSnapshot läuft bei jedem Render und
-// soll dabei keine neuen Objekte anlegen.
-let tplGridMediaQueries = null;
-function getTplGridMediaQueries() {
-  if (typeof window === "undefined" || !window.matchMedia) return null;
-  if (!tplGridMediaQueries) {
-    tplGridMediaQueries = TPL_GRID_BREAKPOINTS.map((bp) => ({
-      cols: bp.cols,
-      mql: window.matchMedia(bp.query),
-    }));
-  }
-  return tplGridMediaQueries;
-}
-
-function subscribeTplGridCols(onChange) {
-  const queries = getTplGridMediaQueries();
-  if (!queries) return () => {};
-  queries.forEach(({ mql }) => mql.addEventListener("change", onChange));
-  return () => queries.forEach(({ mql }) => mql.removeEventListener("change", onChange));
-}
-
-function getTplGridCols() {
-  const queries = getTplGridMediaQueries();
-  if (!queries) return TPL_GRID_DEFAULT_COLS;
-  const hit = queries.find(({ mql }) => mql.matches);
-  return hit ? hit.cols : TPL_GRID_DEFAULT_COLS;
-}
 
 export default function EntryFormDialog({
   open,
@@ -71,12 +39,6 @@ export default function EntryFormDialog({
   const fmt = useFmt();
   const amountInputRef = useRef(null);
 
-  const gridCols = useSyncExternalStore(
-    subscribeTplGridCols,
-    getTplGridCols,
-    () => TPL_GRID_DEFAULT_COLS
-  );
-
   // Meistgenutzte Vorlagen zuerst; bei Gleichstand alphabetisch, damit die
   // Reihenfolge nicht bei jedem Render springt.
   const sortedTemplates = useMemo(
@@ -91,7 +53,7 @@ export default function EntryFormDialog({
 
   // Genau zwei Reihen. Passt nicht alles hinein, belegt die Ghost-Karte den
   // letzten Platz und führt in den Vorlagen-Manager.
-  const capacity = gridCols * TPL_GRID_ROWS;
+  const capacity = TPL_GRID_COLS * TPL_GRID_ROWS;
   const hasOverflow = sortedTemplates.length > capacity;
   const visibleTemplates = hasOverflow
     ? sortedTemplates.slice(0, capacity - 1)

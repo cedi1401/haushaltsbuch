@@ -453,7 +453,7 @@ export default function GoalsView({
                 </div>
 
                 {goal.progress.remaining > 0 && (
-                  <div className="hb-muted" style={{ marginTop: 6, fontSize: 12 }}>
+                  <div className="hb-muted hb-muted--sm" style={{ marginTop: 6 }}>
                     Noch {fmt(goal.progress.remaining)} bis zum Ziel
                   </div>
                 )}
@@ -497,7 +497,7 @@ export default function GoalsView({
                     ) : (
                       <>
                         <div className="hb-goal-prognosis-row">
-                          <span className="hb-muted" style={{ fontSize: 12 }}>
+                          <span className="hb-muted hb-muted--sm">
                             Noch keine Daten für Prognose. Buche Transfers, um eine Prognose zu erhalten.
                           </span>
                         </div>
@@ -635,12 +635,11 @@ export default function GoalsView({
           }}
         >
           {/* Bereich: Grunddaten */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
-            <div className="hb-field" style={{ minWidth: 0 }}>
+          <div className="hb-form-stack">
+            <div className="hb-field">
               <div className="hb-label">Name</div>
               <input
                 className="hb-input"
-                style={{ minWidth: 0, width: "100%" }}
                 type="text"
                 placeholder="z.B. Urlaub 2026"
                 value={draft.name}
@@ -649,18 +648,11 @@ export default function GoalsView({
             </div>
 
             {/* Zielbetrag + Deadline gehören logisch zusammen (Ziel + Zeitrahmen) */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 16,
-              }}
-            >
-              <div className="hb-field" style={{ minWidth: 0 }}>
+            <div className="hb-two hb-two--dialog">
+              <div className="hb-field">
                 <div className="hb-label">Zielbetrag ({baseCurrency})</div>
                 <input
                   className="hb-input"
-                  style={{ minWidth: 0, width: "100%" }}
                   type="text"
                   inputMode="decimal"
                   placeholder="z.B. 10000"
@@ -669,12 +661,11 @@ export default function GoalsView({
                 />
               </div>
 
-              <div className="hb-field" style={{ minWidth: 0 }}>
+              <div className="hb-field">
                 <div className="hb-label">Deadline (optional)</div>
                 <HbDatePicker
                   value={draft.deadline}
                   onChange={(v) => setDraft((d) => ({ ...d, deadline: v }))}
-                  style={{ minWidth: 0, width: "100%" }}
                   placeholder="Kein Enddatum"
                   clearable
                 />
@@ -685,12 +676,11 @@ export default function GoalsView({
           <div style={{ height: 1, background: "var(--border)" }} />
 
           {/* Bereich: Topf-Zuordnung (was und wie gemessen wird) */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
-            <div className="hb-field" style={{ minWidth: 0 }}>
+          <div className="hb-form-stack">
+            <div className="hb-field">
               <div className="hb-label">Spartopf</div>
               <select
                 className="hb-input"
-                style={{ minWidth: 0, width: "100%" }}
                 value={draft.potId}
                 onChange={(e) => setDraft((d) => ({ ...d, potId: e.target.value }))}
               >
@@ -700,11 +690,10 @@ export default function GoalsView({
               </select>
             </div>
 
-            <div className="hb-field" style={{ minWidth: 0 }}>
+            <div className="hb-field">
               <div className="hb-label">Transfer-Zweck (optional)</div>
               <select
                 className="hb-input"
-                style={{ minWidth: 0, width: "100%" }}
                 value={draft.transferCategory}
                 onChange={(e) => setDraft((d) => ({ ...d, transferCategory: e.target.value }))}
               >
@@ -724,12 +713,11 @@ export default function GoalsView({
           <div style={{ height: 1, background: "var(--border)" }} />
 
           {/* Bereich: Startpunkt */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
-            <div className="hb-field" style={{ minWidth: 0 }}>
+          <div className="hb-form-stack">
+            <div className="hb-field">
               <div className="hb-label">Startpunkt</div>
               <select
                 className="hb-input"
-                style={{ minWidth: 0, width: "100%" }}
                 value={draft.startMode}
                 onChange={(e) => setDraft((d) => ({ ...d, startMode: e.target.value }))}
               >
@@ -740,12 +728,11 @@ export default function GoalsView({
             </div>
 
             {draft.startMode === "date" && (
-              <div className="hb-field" style={{ minWidth: 0 }}>
+              <div className="hb-field">
                 <div className="hb-label">Startdatum</div>
                 <HbDatePicker
                   value={draft.startDate}
                   onChange={(v) => setDraft((d) => ({ ...d, startDate: v }))}
-                  style={{ minWidth: 0, width: "100%" }}
                 />
                 <div className="hb-muted" style={{ marginTop: 4 }}>
                   Nur Buchungen ab diesem Datum werden berücksichtigt
@@ -754,11 +741,10 @@ export default function GoalsView({
             )}
 
             {draft.startMode === "custom" && (
-              <div className="hb-field" style={{ minWidth: 0 }}>
+              <div className="hb-field">
                 <div className="hb-label">Anfangsbetrag ({baseCurrency})</div>
                 <input
                   className="hb-input"
-                  style={{ minWidth: 0, width: "100%" }}
                   type="text"
                   inputMode="decimal"
                   placeholder="z.B. 500"

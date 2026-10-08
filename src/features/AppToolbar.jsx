@@ -41,24 +41,7 @@ export default function AppToolbar({
 
   return (
     <>
-      {/* Mobile-only kompakte Toolbar (< 768px) */}
-      <div className="hb-mobile-toolbar">
-        <button className="hb-icon-btn" type="button" title="Menü" aria-label="Menü" onClick={onOpenNav}>
-          <IconMenu />
-        </button>
-        <div className="hb-mobile-toolbar-title">{title}</div>
-        <button
-          className="hb-icon-btn"
-          type="button"
-          title="Einstellungen"
-          onClick={onOpenSettings}
-          aria-label="Einstellungen"
-        >
-          <IconSettings />
-        </button>
-      </div>
-
-      <div className="hb-top hb-desktop-toolbar">
+      <div className="hb-top">
         <div className="hb-row">
           <div className="hb-title-row">
             <button

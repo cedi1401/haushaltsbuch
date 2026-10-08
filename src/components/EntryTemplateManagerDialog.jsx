@@ -134,7 +134,7 @@ export default function EntryTemplateManagerDialog({
       <>
         <span className={`hb-tpl-pill hb-tpl-pill--${kind}`}>{KIND_LABELS[kind]}</span>
         {template.amount != null ? (
-          <span className="hb-tpl-pill hb-tpl-pill--amount">{fmt(template.amount)}</span>
+          <span className="hb-tpl-pill">{fmt(template.amount)}</span>
         ) : (
           <HbTooltip text="Der Betrag wird bei jeder Buchung neu erfasst." focusable={false}>
             <span className="hb-tpl-pill hb-tpl-pill--open">Betrag frei</span>

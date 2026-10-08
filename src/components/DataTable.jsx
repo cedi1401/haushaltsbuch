@@ -23,7 +23,7 @@ const ACTIONS_LINGER_MS = 2500;
  *   {
  *     id,                       // Persistenz- und Sortierschlüssel
  *     label,
- *     align,                    // "right" ⇒ rechtsbündig + tabular-nums
+ *     align,                    // "right" ⇒ rechtsbündig
  *     maxWidth,                 // px ⇒ Text wird gedeckelt und mit … gekürzt
  *     shrink,                   // true ⇒ Spalte nur so breit wie ihr Inhalt;
  *                               // die übrige Breite geht an die anderen Spalten

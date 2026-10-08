@@ -130,9 +130,9 @@ export default function SettingsDialog({
       {/* App-Updates (nur Electron) */}
       {isElectronEnv && (
         <div className="hb-field">
-          <div style={{ fontWeight: 600, marginBottom: 6 }}>App-Updates</div>
+          <div className="hb-settings-heading">App-Updates</div>
           {appVersion && (
-            <div className="hb-muted" style={{ marginBottom: 8, fontSize: 13 }}>
+            <div className="hb-muted" style={{ marginBottom: 8 }}>
               Aktuelle Version: <strong>v{appVersion}</strong>
             </div>
           )}
@@ -166,12 +166,12 @@ export default function SettingsDialog({
                 </>
               )}
               {update.available && update.downloading && (
-                <span className="hb-muted" style={{ fontSize: 13 }}>
+                <span className="hb-muted">
                   Wird heruntergeladen…
                 </span>
               )}
               {update.checkStatus === "up-to-date" && (
-                <span className="hb-muted" style={{ fontSize: 13 }}>
+                <span className="hb-muted">
                   Bereits auf dem neuesten Stand.
                 </span>
               )}
@@ -186,7 +186,7 @@ export default function SettingsDialog({
       )}
 
       <div className="hb-field" style={{ marginTop: isElectronEnv ? 24 : 0 }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>Backup</div>
+        <div className="hb-settings-heading">Backup</div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <Button variant="outline" onClick={doExportBackup}>
@@ -213,7 +213,7 @@ export default function SettingsDialog({
 
       {/* BASISWÄHRUNG */}
       <div className="hb-field" style={{ marginTop: 24 }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>Basiswährung</div>
+        <div className="hb-settings-heading">Basiswährung</div>
         <select
           className="hb-input"
           style={{ width: 90, minWidth: 0 }}

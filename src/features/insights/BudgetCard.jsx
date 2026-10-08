@@ -135,9 +135,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
             <span className="hb-budget-total-sub">
               / {fmt(totalBudget, 0)}
               {" · "}
-              <span style={{ fontVariantNumeric: "tabular-nums" }}>
-                {formatPercent(Math.min(Math.round(totalPct * 100), 150), { digits: 0, sign: false })} verbraucht
-              </span>
+              {formatPercent(Math.min(Math.round(totalPct * 100), 150), { digits: 0, sign: false })} verbraucht
             </span>
           </div>
         </div>
@@ -184,7 +182,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
           return (
             <div key={item.id} className="hb-budget-row">
               <div className="hb-budget-row-head">
-                <span className="hb-dot" style={{ background: item.color || "var(--muted)", flexShrink: 0 }} />
+                <span className="hb-dot" style={{ background: item.color || "var(--muted)" }} />
                 <span className="hb-budget-row-name">
                   {item.isParent ? item.name : `${item.parentName} › ${item.name}`}
                 </span>

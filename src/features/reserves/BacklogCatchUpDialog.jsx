@@ -53,7 +53,7 @@ export default function BacklogCatchUpDialog({
       size="medium"
     >
       <div style={{ display: "grid", gap: 16 }}>
-        <div className="hb-muted" style={{ fontSize: 12 }}>
+        <div className="hb-muted hb-muted--sm">
           {item.name} · Topf: {potName || "—"} · Zweck: {item.transferCategory || "—"}
         </div>
 
@@ -106,7 +106,7 @@ export default function BacklogCatchUpDialog({
           </div>
         )}
 
-        <div className="hb-muted" style={{ fontSize: 12 }}>
+        <div className="hb-muted hb-muted--sm">
           Diese Aktion steht nur einmal zur Verfügung. Sobald eine Monatsrate gebucht ist,
           verschwindet sie — was danach fehlt, gehört in die normale monatliche Buchung.
         </div>

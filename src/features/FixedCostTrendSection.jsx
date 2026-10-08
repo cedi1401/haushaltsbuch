@@ -299,7 +299,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
         <CardContent>
           <div className="hb-card-head hb-card-head--legend">
             <h3 className="hb-card-title">Verlauf über Zeit</h3>
-            <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="hb-chart-range">
               <ChartScrollNav
                 offset={fctScrollOffset}
                 maxOffset={fctMaxOffset}
@@ -385,7 +385,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                   </div>
                 )}
               </div>
-              <span className="hb-muted" style={{ fontSize: 12, alignSelf: "flex-start", paddingTop: 2 }}>
+              <span className="hb-muted hb-muted--sm" style={{ alignSelf: "flex-start", paddingTop: 2 }}>
                 Summe der Liste: {fmt(visibleMonthlyTotal)} pro Monat
               </span>
             </div>

@@ -37,6 +37,9 @@
   --green-border: rgba(15, 123, 15, 0.3);
   --red: #c42b1c;
   --red-soft: rgba(196, 43, 28, 0.08);
+  /* --blue ist eine Datenfarbe (Sparen, Rücklagen, Transfer, Topf-Stand),
+     --accent die Farbe der Bedienelemente und der neutralen Einzelreihe in
+     Charts. Hell sind beide derselbe Ton, dunkel bewusst zwei. */
   --blue: #0078d4;
   --blue-soft: rgba(0, 120, 212, 0.08);
   --teal: #038387;
@@ -127,6 +130,23 @@
   --radius-lg: 8px;
   --radius-xl: 12px;
   --radius-pill: 999px;
+  /* Farbpunkte in Listen (12 px); Chart-Marken (10 px) nehmen --radius-xs. */
+  --radius-dot: 3px;
+
+  /* Deckkraft deaktivierter Bedienelemente. Felder und Auswahlfelder zeigen
+     auch deaktiviert noch einen Wert und bleiben darum lesbarer. */
+  --disabled-opacity: 0.4;
+  --disabled-opacity-value: 0.5;
+
+  /* Ebenen. Menüs liegen über dem Modal, weil sie auch darin aufgehen;
+     Popover und Tooltips werden an den body gehängt und liegen über allem. */
+  --z-sticky: 2;
+  --z-modal: 50;
+  --z-menu: 80;
+  --z-nav: 200;
+  --z-toast: 200;
+  --z-popover: 1100;
+  --z-tooltip: 9999;
 
   /* Abstand zwischen Karten (und zwischen KPI-Reihe und erster Karte) */
   --card-gap: 20px;
@@ -241,8 +261,11 @@ body {
   background: var(--bg);
 }
 
+/* Formularelemente erben Schrift und Ziffernvariante nicht von selbst; so
+   gelten die Tabellenziffern des body überall, ohne Klasse. */
 button, input, select, textarea {
   font-family: inherit;
+  font-variant-numeric: inherit;
 }
 
 /* =====================================================
@@ -269,18 +292,6 @@ button, input, select, textarea {
   max-width: 1744px;
   margin: 0 auto;
   width: 100%;
-}
-
-@media (max-width: 768px) {
-  .hb-page {
-    padding: 16px;
-  }
-}
-
-@media (max-width: 480px) {
-  .hb-page {
-    padding: 12px;
-  }
 }
 
 /* =====================================================
@@ -420,6 +431,13 @@ button, input, select, textarea {
 }
 
 .hb-card-head--legend { margin-bottom: 6px; }
+
+/* Rechte Gruppe im Chart-Kopf: Blättern und Zeitraum-Auswahl */
+.hb-chart-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .hb-card-head--flush { margin-bottom: 0; }
 
 /* =====================================================
@@ -482,23 +500,6 @@ button, input, select, textarea {
   align-items: center;
 }
 
-@media (max-width: 768px) {
-  .hb-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .hb-group {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .hb-title {
-    font-size: 22px;
-  }
-}
-
 /* =====================================================
    CARD COMPONENT - FLUENT SURFACE
    ===================================================== */
@@ -519,16 +520,6 @@ button, input, select, textarea {
 
 .hb-card-content {
   padding: 20px;
-}
-
-@media (max-width: 480px) {
-  .hb-card {
-    border-radius: var(--radius-md);
-  }
-
-  .hb-card-content {
-    padding: 16px;
-  }
 }
 
 /* =====================================================
@@ -608,7 +599,7 @@ select.hb-input option {
 }
 
 .hb-input:disabled {
-  opacity: 0.5;
+  opacity: var(--disabled-opacity-value);
   cursor: not-allowed;
   background: var(--bg-subtle);
 }
@@ -684,7 +675,7 @@ select.hb-input option {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  z-index: 1100;
+  z-index: var(--z-popover);
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -781,9 +772,10 @@ select.hb-input option {
   color: var(--accent);
 }
 
-.hb-datepicker-day--selected {
-  background: var(--accent) !important;
-  color: var(--text-on-accent) !important;
+.hb-datepicker-day--selected,
+.hb-datepicker-day--selected:hover {
+  background: var(--accent);
+  color: var(--text-on-accent);
   font-weight: 600;
 }
 
@@ -908,7 +900,7 @@ select.hb-input option {
 }
 
 .hb-btn:disabled {
-  opacity: 0.4;
+  opacity: var(--disabled-opacity);
   cursor: not-allowed;
 }
 
@@ -990,24 +982,6 @@ select.hb-input option {
   border-radius: var(--radius-sm);
 }
 
-@media (max-width: 480px) {
-  .hb-btn {
-    padding: 10px 16px;
-    font-size: 15px;
-    min-height: 44px;
-  }
-
-  .hb-icon-btn {
-    width: 44px;
-    height: 44px;
-  }
-
-  .hb-cat-edit-btn {
-    min-width: 44px;
-    min-height: 44px;
-  }
-}
-
 /* =====================================================
    ICON BUTTONS
    ===================================================== */
@@ -1056,15 +1030,6 @@ select.hb-input option {
   height: 15px;
 }
 
-/* Auf Touch-Breiten wieder auf ein sicher treffbares Ziel wachsen
-   (steht nach der 480px-Regel für .hb-icon-btn und muss sie überschreiben). */
-@media (max-width: 480px) {
-  .hb-icon-btn--sm {
-    width: 40px;
-    height: 40px;
-  }
-}
-
 /* Rahmenlose Variante für dauerhaft sichtbare Aktionen in Listenzeilen:
    die Affordanz ist immer da, dominiert die Zeile aber nicht (Fluent
    "subtle button" — Kontur erst beim Hover durch die Füllung). */
@@ -1093,7 +1058,7 @@ select.hb-input option {
 /* Deaktiviert: identische Abschwächung wie .hb-btn:disabled, und kein
    Hover-Feedback mehr (sonst wirkt der Button trotzdem klickbar). */
 .hb-icon-btn:disabled {
-  opacity: 0.4;
+  opacity: var(--disabled-opacity);
   cursor: not-allowed;
 }
 
@@ -1108,12 +1073,7 @@ select.hb-input option {
   border-color: transparent;
 }
 
-.hb-hamburger-btn {
-  width: 40px;
-  height: 40px;
-  font-size: 18px;
-}
-
+.hb-hamburger-btn,
 .hb-gear-btn {
   width: 40px;
   height: 40px;
@@ -1189,7 +1149,7 @@ select.hb-input option {
   position: absolute;
   right: 0;
   top: calc(100% + 4px);
-  z-index: 80;
+  z-index: var(--z-menu);
   min-width: 180px;
   background: var(--card);
   border: 1px solid var(--border);
@@ -1216,33 +1176,9 @@ select.hb-input option {
 }
 
 .hb-overflow-item:hover { background: var(--hover-bg); }
-.hb-overflow-item:disabled { opacity: 0.4; cursor: not-allowed; }
+.hb-overflow-item:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
 .hb-overflow-item.hb-overflow-danger { color: var(--red); }
 .hb-overflow-item.hb-overflow-danger:hover { background: var(--red-soft); }
-
-/* Mobile-only toolbar (hamburger + title + gear) */
-.hb-mobile-toolbar { display: none; }
-
-@media (max-width: 768px) {
-  .hb-mobile-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 12px;
-  }
-  .hb-mobile-toolbar-title {
-    flex: 1;
-    text-align: center;
-    font-weight: 600;
-    font-size: 16px;
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .hb-desktop-toolbar { display: none; }
-}
 
 /* =====================================================
    GRID LAYOUTS
@@ -1253,36 +1189,34 @@ select.hb-input option {
   gap: var(--card-gap);
 }
 
-@media (max-width: 900px) {
-  .hb-two {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-}
-
 /*
   Dialog-Variante: zwei gleich breite Spalten, deren Inhalt schrumpfen darf
   (minmax(0, 1fr) verhindert horizontales Überlaufen bei min-width-Inputs).
-  Bricht innerhalb des schmalen Dialog-Bodys früh auf eine Spalte um.
 */
 .hb-two--dialog {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--form-gap);
 }
 
-.hb-two--dialog > .hb-field {
+/* Dialog-Formular: Felder untereinander in voller Breite. Steht nach .hb-form,
+   damit beide Klassen zusammen gesetzt werden können. */
+.hb-form-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--form-gap);
+}
+
+.hb-two--dialog > .hb-field,
+.hb-form-stack .hb-field {
   min-width: 0;
 }
 
-.hb-two--dialog .hb-input {
+.hb-two--dialog .hb-input,
+.hb-two--dialog .hb-datepicker,
+.hb-form-stack .hb-input,
+.hb-form-stack .hb-datepicker {
   min-width: 0;
   width: 100%;
-}
-
-@media (max-width: 560px) {
-  .hb-two--dialog {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* =====================================================
@@ -1294,7 +1228,6 @@ select.hb-input option {
 .hb-stat-pill-value,
 .hb-fct-kpi-value {
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Stat pills (used e.g. in Pots highlights) */
@@ -1314,7 +1247,8 @@ select.hb-input option {
    reicht darunter bis an die Aussenkante, die Rahmenbreiten bleiben ringsum
    gleich (sonst entsteht an den Ecken genau derselbe Keil) und die Geometrie
    der Karte — und damit das Textraster — ändert sich nicht. */
-.hb-stat-pill {
+.hb-stat-pill,
+.hb-fct-kpi {
   --pill-edge: var(--border-light);
   display: flex;
   flex-direction: column;
@@ -1349,7 +1283,8 @@ select.hb-input option {
 
 /* Kopfzeile der Pill: Label links, Graph-Icon (Sparkline-Hover) rechts.
    min-height hält die Wert-Zeilen bündig, falls einzelne Pills ohne Icon rendern. */
-.hb-stat-pill-top {
+.hb-stat-pill-top,
+.hb-fct-kpi-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1357,7 +1292,8 @@ select.hb-input option {
   min-height: 19px;
 }
 
-.hb-stat-pill-label {
+.hb-stat-pill-label,
+.hb-fct-kpi-label {
   font-size: 11px;
   font-weight: 600;
   color: var(--muted);
@@ -1374,8 +1310,8 @@ select.hb-input option {
   margin-top: 2px;
 }
 
-
-.hb-stat-pill-sub {
+.hb-stat-pill-sub,
+.hb-fct-kpi-sub {
   font-size: 12px;
   color: var(--muted);
   line-height: 1.3;
@@ -1383,7 +1319,7 @@ select.hb-input option {
 }
 
 /* Vormonatsdelta: signierte Veränderung ggü. Vormonat. Farbe = Richtung ×
-   Bewertung (via inline style), Pfeil trägt die Richtung, Wert in tabular-nums. */
+   Bewertung (via inline style), Pfeil trägt die Richtung. */
 .hb-stat-pill-delta {
   display: flex;
   align-items: center;
@@ -1391,7 +1327,6 @@ select.hb-input option {
   margin-top: 4px;
   font-size: 12px;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
@@ -1451,68 +1386,15 @@ select.hb-input option {
   gap: 12px;
 }
 
-@media (max-width: 1100px) {
-  .hb-fct-kpis { grid-template-columns: repeat(2, 1fr); }
-}
-
-@media (max-width: 600px) {
-  .hb-fct-kpis { grid-template-columns: 1fr; }
-}
-
-/* Farbkante links wie bei .hb-stat-pill — Rezept und Begründung stehen dort.
-   Die Farbe setzt KpiCard je Kennzahl per --pill-edge. */
-.hb-fct-kpi {
-  --pill-edge: var(--border-light);
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 14px 16px;
-  background-color: var(--card);
-  background-image: linear-gradient(var(--pill-edge), var(--pill-edge));
-  background-repeat: no-repeat;
-  background-origin: border-box;
-  background-clip: border-box;
-  background-position: left top;
-  background-size: 4px 100%;
-  border: 1px solid var(--border-light);
-  border-left-color: transparent;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
-
-/* Kopfzeile der KPI-Karte: Label links, Graph-Icon (Sparkline-Hover) rechts.
-   min-height reserviert die Trigger-Höhe, damit die Wert-Zeilen aller Karten
-   fluchten — auch wenn nur ein Teil der Karten ein Graph-Icon trägt. */
-.hb-fct-kpi-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 19px;
-}
-
-.hb-fct-kpi-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--muted);
-  line-height: 1.2;
-}
-
+/* Karte, Kopfzeile, Label und Unterzeile der KPI-Karte teilen sich die Regeln
+   von .hb-stat-pill (siehe dort); die Farbe setzt KpiCard je Kennzahl per
+   --pill-edge. Eigen ist nur die Größe des Werts. */
 .hb-fct-kpi-value {
   font-size: 24px;
   letter-spacing: -0.3px;
   color: var(--text);
   line-height: 1.2;
   margin-top: 2px;
-}
-
-.hb-fct-kpi-sub {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.3;
-  margin-top: 1px;
 }
 
 /* Bewertete Veränderung in der Unterzeile: Farbe ja, aber nicht das Gewicht
@@ -1545,23 +1427,6 @@ select.hb-input option {
   --fct-col-gap: 16px;
 }
 
-/* Schmale Fenster: Der Balken darf bis auf einen Reststrich schrumpfen, bevor
-   der Name gekürzt wird — die Zahlen daneben bleiben in jedem Fall lesbar.
-   Die Luft vor der Jahresspalte gibt hier als Erstes nach. */
-@media (max-width: 1100px) {
-  .hb-fct-five-grid {
-    grid-template-columns:
-      minmax(0, 0.82fr)
-      auto
-      minmax(40px, 0.58fr)
-      auto
-      minmax(max-content, 0.28fr);
-    --fct-col-gap: 12px;
-  }
-
-  .hb-fct-annual-label { display: none; }
-}
-
 .hb-fct-col-head {
   font-size: 12px;
   font-weight: 600;
@@ -1590,15 +1455,14 @@ select.hb-input option {
   min-width: 0;
 }
 
-/* Laufnummer der Zeile. Feste Breite mit tabular-nums, damit die Namen ab der
-   zehnten Position nicht um eine Ziffernbreite einrücken. */
+/* Laufnummer der Zeile. Feste Breite, damit die Namen ab der zehnten Position
+   nicht um eine Ziffernbreite einrücken. */
 .hb-fct-index {
   flex-shrink: 0;
   width: 20px;
   text-align: right;
   font-size: 12px;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
   color: var(--muted);
   opacity: 0.75;
 }
@@ -1707,13 +1571,11 @@ select.hb-input option {
 .hb-fct-overview-amount {
   font-size: 15px;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
   color: var(--text);
 }
 
 .hb-fct-overview-pct {
   font-size: 12px;
-  font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
 
@@ -1743,7 +1605,6 @@ select.hb-input option {
 .hb-fct-annual-amount {
   font-size: 15px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
   color: var(--text);
 }
 
@@ -1772,7 +1633,6 @@ select.hb-input option {
 .hb-fct-annual-total-value {
   font-size: 18px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
   color: var(--text);
 }
 
@@ -1870,11 +1730,6 @@ select.hb-input option {
   opacity: 1;
 }
 
-@media (max-width: 768px) {
-  /* Always show actions on touch devices to avoid hover trap */
-  .hb-table tbody tr .hb-actions-hover { opacity: 1; }
-}
-
 /* =====================================================
    ENTRIES TABLE - COLUMN WIDTHS (percentage-based)
    ===================================================== */
@@ -1907,7 +1762,6 @@ select.hb-input option {
   width: auto;
   white-space: nowrap;
   overflow: hidden;
-  font-variant-numeric: tabular-nums;
 }
 
 .hb-sign {
@@ -1921,43 +1775,6 @@ select.hb-input option {
   white-space: nowrap;
   overflow: hidden;
   text-align: right;
-}
-
-@media (max-width: 768px) {
-  .hb-table {
-    font-size: 13px;
-  }
-
-  .hb-table th,
-  .hb-table td {
-    padding: 10px 8px;
-  }
-
-  .hb-actions {
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .hb-entries-table .hb-col-note {
-    display: none;
-  }
-
-  .hb-entries-table .hb-col-date { width: 18%; }
-  .hb-entries-table .hb-col-type { width: 14%; }
-  .hb-entries-table .hb-col-category { width: 24%; }
-  .hb-entries-table .hb-col-amount { width: auto; }
-  .hb-entries-table .hb-col-actions { width: 60px; }
-}
-
-@media (max-width: 480px) {
-  .hb-entries-table .hb-col-type {
-    display: none;
-  }
-
-  .hb-entries-table .hb-col-date { width: 22%; }
-  .hb-entries-table .hb-col-category { width: 28%; }
-  .hb-entries-table .hb-col-amount { width: auto; }
-  .hb-entries-table .hb-col-actions { width: 60px; }
 }
 
 /* =====================================================
@@ -2025,7 +1842,7 @@ select.hb-input option {
 .hb-dt-table thead th {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: var(--z-sticky);
   /* Ohne eigenen Hintergrund scheinen die Zeilen beim Scrollen durch den Kopf.
      Und weil .hb-dt-table border-collapse: separate setzt, wandert der
      Unterstrich mit — bei collapse gehört er der Tabelle und bliebe stehen. */
@@ -2176,7 +1993,6 @@ select.hb-input option {
 .hb-dt-band-total {
   font-weight: 600;
   color: var(--text);
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -2359,7 +2175,7 @@ select.hb-input option {
 .hb-dt-table tfoot td {
   position: sticky;
   bottom: 0;
-  z-index: 2;
+  z-index: var(--z-sticky);
   background: var(--card);
   border-top: 1px solid var(--border);
   padding: 10px 10px;
@@ -2409,7 +2225,7 @@ select.hb-input option {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  z-index: 80;
+  z-index: var(--z-menu);
   min-width: 240px;
   max-height: min(420px, calc(100vh - 180px));
   background: var(--card);
@@ -2518,12 +2334,9 @@ select.hb-input option {
   background: var(--accent-soft);
 }
 
-/* Rechtsbündige Spalte (`col.align === "right"`) — greift auf th und td.
-   tabular-nums trifft die Beträge, für die die Klasse gedacht ist; an der
-   Status-Spalte, die nur rechts anschließen soll, läuft es ins Leere. */
+/* Rechtsbündige Spalte (`col.align === "right"`) — greift auf th und td. */
 .hb-dt-table .hb-dt-num {
   text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Platzhalter für leere Werte */
@@ -2572,7 +2385,6 @@ select.hb-input option {
   text-align: right;
   color: var(--text-secondary);
   font-size: 13px;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Die ganze Zeile schaltet den Detailbereich — der Zeiger sagt das an. Nur
@@ -2766,11 +2578,10 @@ select.hb-input option {
 .hb-res-fact-value {
   margin-top: auto;
   min-width: 0;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.3;
   color: var(--text);
-  font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 
@@ -2798,7 +2609,7 @@ select.hb-input option {
 .hb-res-fact .hb-dt-progress-value {
   min-width: 0;
   text-align: left;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text);
 }
@@ -2855,7 +2666,7 @@ select.hb-input option {
 .hb-res-note-text {
   margin: 0;
   max-width: 78ch;
-  font-size: 14.5px;
+  font-size: 14px;
   line-height: 1.55;
   color: var(--text-secondary);
 }
@@ -2939,30 +2750,6 @@ select.hb-input option {
   border-top: 1px solid var(--border-light);
 }
 
-/* Die Seite hat eine Mindestbreite und der Tisch scrollt horizontal statt
-   umzubrechen — diese Stufen greifen deshalb praktisch nie und stehen als
-   Sicherung für den Fall, dass der Bereich einmal woanders landet. */
-@media (max-width: 1500px) {
-  .hb-res-detail {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .hb-res-detail .hb-res-facts,
-  .hb-res-detail .hb-res-side {
-    grid-column: 1;
-  }
-
-  .hb-res-side {
-    max-width: 78ch;
-  }
-}
-
-@media (max-width: 900px) {
-  .hb-res-facts {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  }
-}
-
 /* =====================================================
    BADGES
    ===================================================== */
@@ -3029,7 +2816,7 @@ select.hb-input option {
 .hb-modal {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3250,20 +3037,6 @@ select.hb-input option {
   }
 }
 
-@media (max-width: 960px) {
-  .hb-modal-panel--form:has(.hb-entry-form) {
-    max-width: 640px;
-  }
-  .hb-entry-form__panes {
-    grid-template-columns: 1fr;
-    min-height: 0;
-  }
-  .hb-entry-form__aside .hb-hcat-box {
-    flex: none;
-    max-height: 280px;
-  }
-}
-
 @keyframes modalSlideIn {
   from {
     opacity: 0;
@@ -3312,33 +3085,18 @@ select.hb-input option {
   gap: 8px;
 }
 
-@media (max-width: 480px) {
-  .hb-modal {
-    padding: 12px;
-  }
-
-  .hb-modal-panel {
-    border-radius: var(--radius-lg);
-    max-height: 90vh;
-  }
-
-  .hb-modal-body {
-    max-height: 50vh;
-  }
-}
-
 /* =====================================================
    NAVIGATION POPUP - DROPDOWN POPOVER
    ===================================================== */
 .hb-nav-popup-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 199;
+  z-index: calc(var(--z-nav) - 1);
 }
 
 .hb-nav-popup {
   position: fixed;
-  z-index: 200;
+  z-index: var(--z-nav);
   min-width: 200px;
   background: var(--card);
   border: 1px solid var(--border);
@@ -3425,6 +3183,17 @@ select.hb-input option {
   font-size: 13px;
 }
 
+/* Kleinere Stufe für Hinweise unter Feldern und Kennzahlen. */
+.hb-muted--sm {
+  font-size: 12px;
+}
+
+/* Abschnittsüberschrift im Einstellungs-Dialog */
+.hb-settings-heading {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
 /* Dezente Info-Pills (z.B. Buchungs-Header: Anzahl, Monat, Zeitraum) */
 .hb-info-pills {
   display: flex;
@@ -3475,10 +3244,6 @@ select.hb-input option {
   font-weight: 700;
 }
 
-.hb-amount-value {
-  font-variant-numeric: tabular-nums;
-}
-
 .hb-withdrawal {
   color: var(--red);
   font-weight: 700;
@@ -3486,10 +3251,6 @@ select.hb-input option {
 
 .hb-sign-right {
   transform: rotate(-90deg);
-}
-
-.hb-small {
-  font-size: 13px;
 }
 
 .hb-full {
@@ -3568,7 +3329,6 @@ select.hb-input option {
 .hb-goal-amount-current {
   font-size: 18px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
   letter-spacing: -0.3px;
   color: var(--text);
 }
@@ -3580,7 +3340,6 @@ select.hb-input option {
 .hb-goal-percent {
   font-size: 28px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
   letter-spacing: -0.5px;
   line-height: 1;
   color: var(--text);
@@ -3678,10 +3437,6 @@ select.hb-input option {
   color: var(--green);
   border-color: var(--green-border);
 }
-.hb-goal-badge--done svg {
-  width: 14px;
-  height: 14px;
-}
 
 /* Abgeschlossene Ziele lesen sich ruhiger als die aktiven Karten: leicht
    zurückgenommene Fläche + dezenter grüner Akzent links als „erledigt"-Signal,
@@ -3733,7 +3488,6 @@ select.hb-input option {
 .hb-goal-archive-stat-value {
   font-weight: 600;
   color: var(--text);
-  font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
@@ -3783,7 +3537,6 @@ select.hb-input option {
   font-size: 16px;
   font-weight: 600;
   color: var(--text);
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -3793,14 +3546,6 @@ select.hb-input option {
   font-size: 12px;
   line-height: 1.4;
   color: var(--muted);
-}
-
-/* .hb-card-content wird unter 480 px auf 16 px Padding reduziert — die
-   Gesamtzeile zieht mit, damit die Flucht zu den Zellkanten bleibt. */
-@media (max-width: 480px) {
-  .hb-fixed-total {
-    padding-inline: 26px;
-  }
 }
 
 /* Tabellentitel links im Toolbar-Streifen der DataTable */
@@ -3824,7 +3569,6 @@ select.hb-input option {
   align-items: center;
   gap: 6px;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -3903,7 +3647,6 @@ select.hb-input option {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-variant-numeric: tabular-nums;
 }
 
 .hb-fixed-state-icon {
@@ -3923,7 +3666,7 @@ select.hb-input option {
 
 /* Der Haken ist mit der Kartenfarbe gestrichen — eine echte Aussparung in
    beiden Themes. Kontrast Haken zu Kreis: hell #ffffff auf #0f7b0f 5.4:1,
-   dunkel #272b35 auf #58cf49 7.1:1 (Grafik-Minimum 3:1). */
+   dunkel #1e2330 auf #58cf49 7.8:1 (Grafik-Minimum 3:1). */
 .hb-fixed-state-check {
   stroke: var(--card);
 }
@@ -3953,7 +3696,6 @@ select.hb-input option {
 .hb-fixed-field-hint strong {
   font-weight: 700;
   color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
 }
 
 /* Fehlerzeile unter einem Dialog-Feld — gleiche Rolle wie der Hint daneben,
@@ -4008,7 +3750,7 @@ select.hb-input option {
   background: transparent;
   color: var(--accent);
   cursor: pointer;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   padding: 0;
   transition: color var(--transition-fast);
 }
@@ -4111,7 +3853,7 @@ select.hb-input option {
 /*
   Feste Spaltenzahl statt auto-fill: EntryFormDialog kürzt die Kartenliste in
   JS auf exakt zwei Reihen (cols * 2, letzter Platz für die Ghost-Karte).
-  Die Werte hier MÜSSEN mit TPL_GRID_BREAKPOINTS in EntryFormDialog.jsx
+  Die Spaltenzahl MUSS mit TPL_GRID_COLS in EntryFormDialog.jsx
   übereinstimmen — sonst entstehen Lücken oder eine dritte Reihe.
   Der column-gap folgt dem 4px-Raster und bleibt im selben Rhythmus wie der
   24px-Spaltenabstand der Formular-Panes darunter (halber Schritt).
@@ -4120,14 +3862,6 @@ select.hb-input option {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
-}
-
-@media (max-width: 960px) {
-  .hb-tpl-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-
-@media (max-width: 560px) {
-  .hb-tpl-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .hb-tpl-card {
@@ -4225,7 +3959,6 @@ select.hb-input option {
 
 .hb-tpl-card-amount {
   flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -4315,10 +4048,6 @@ select.hb-input option {
 .hb-tpl-pill--income     { background: var(--green-soft);  color: var(--green);  border-color: var(--green-border); }
 .hb-tpl-pill--transfer   { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-border); }
 
-.hb-tpl-pill--amount {
-  font-variant-numeric: tabular-nums;
-}
-
 /* Ohne festen Betrag ist die Angabe nur ein Hinweis — zurückhaltender */
 .hb-tpl-pill--open {
   background: transparent;
@@ -4358,20 +4087,6 @@ select.hb-input option {
 /* =====================================================
    LEGEND (Charts)
    ===================================================== */
-.hb-legend {
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  background: var(--card);
-}
-
-.hb-legend-title {
-  font-weight: 600;
-  margin-bottom: 8px;
-  font-size: 14px;
-  color: var(--text);
-}
-
 .hb-legend-row {
   display: flex;
   align-items: center;
@@ -4385,10 +4100,12 @@ select.hb-input option {
   border-bottom: none;
 }
 
-.hb-dot {
+/* Farbpunkt in Listen; die Farbe kommt per Inline-Style. */
+.hb-dot,
+.hb-cat-dot {
   width: 12px;
   height: 12px;
-  border-radius: 3px;
+  border-radius: var(--radius-dot);
   display: inline-block;
   flex-shrink: 0;
 }
@@ -4705,14 +4422,6 @@ select.hb-input option {
   color: var(--text-secondary);
 }
 
-.hb-cat-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  flex-shrink: 0;
-  display: inline-block;
-}
-
 .hb-cat-name {
   flex: 1;
   font-size: 14px;
@@ -4843,10 +4552,6 @@ select.hb-input option {
   background: var(--hover-bg);
 }
 
-@media (max-width: 768px) {
-  .hb-cat-budget-btn { opacity: 1; }
-}
-
 /* Chip: zeigt gesetztes Budget dauerhaft an */
 .hb-cat-budget-chip {
   font-size: 11px;
@@ -4857,7 +4562,6 @@ select.hb-input option {
   padding: 2px 7px;
   white-space: nowrap;
   flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Inline-Editor: erscheint unter dem Header/Subitem beim Klick auf den Budget-Button */
@@ -4873,7 +4577,6 @@ select.hb-input option {
 
 .hb-cat-budget-input {
   width: 150px;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Entfernen-Button im Budget-Editor */
@@ -4934,7 +4637,7 @@ select.hb-input option {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 200;
+  z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -5001,15 +4704,6 @@ select.hb-input option {
 
 .hb-toast-error { border-left-color: var(--red); }
 .hb-toast-error .hb-toast-icon { color: var(--red); }
-
-@media (max-width: 480px) {
-  .hb-toast-container {
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    max-width: none;
-  }
-}
 
 /* =====================================================
    COLOR PICKER
@@ -5154,7 +4848,7 @@ select.hb-input option {
 
 .hb-hcat-radio:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: var(--disabled-opacity);
 }
 
 /*
@@ -5205,7 +4899,7 @@ select.hb-input option {
 
 .hb-hcat-expand-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.25;
+  opacity: var(--disabled-opacity);
 }
 
 /* Die Box liegt selbst auf --bg-subtle; die Unterkategorien setzen sich
@@ -5251,27 +4945,6 @@ select.hb-input option {
   white-space: nowrap;
 }
 
-@media (max-width: 640px) {
-  .hb-hcat-box {
-    max-height: 240px;
-  }
-
-  .hb-hcat-radio-label {
-    padding: 10px 8px 10px 10px;
-    font-size: 15px;
-  }
-
-  .hb-hcat-sub-row {
-    padding: 8px 10px 8px 32px;
-    font-size: 14px;
-  }
-
-  .hb-hcat-expand-btn {
-    width: 36px;
-    height: 36px;
-  }
-}
-
 /* =====================================================
    ANALYSIS GRID (Charts + InsightsPanel, 55/45 split)
    ===================================================== */
@@ -5289,10 +4962,6 @@ select.hb-input option {
   min-height: 0;
 }
 
-@media (max-width: 1100px) {
-  .hb-analysis-grid { grid-template-columns: 1fr; }
-}
-
 /* =====================================================
    POT TILES (Flex-Zeile, bis 5 nebeneinander)
    ===================================================== */
@@ -5303,14 +4972,6 @@ select.hb-input option {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
-}
-
-/* responsiv: 4 → 2 → 1 Spalte */
-@media (max-width: 1300px) {
-  .hb-pot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 720px) {
-  .hb-pot-grid { grid-template-columns: 1fr; }
 }
 
 .hb-pot-card {
@@ -5355,7 +5016,6 @@ select.hb-input option {
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.5px;
-  font-variant-numeric: tabular-nums;
   line-height: 1.1;
   color: var(--text);
 }
@@ -5363,13 +5023,13 @@ select.hb-input option {
 /* --- Spar-Indikator: dezentes, monochromes Akzent-Pill --- */
 .hb-pot-savings-tag {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.4px;
   text-transform: uppercase;
   color: var(--accent);
   background: var(--accent-soft);
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: var(--radius-sm);
   line-height: 1.5;
 }
@@ -5394,7 +5054,6 @@ select.hb-input option {
 
 .hb-pot-card-foot-value {
   font-size: 13px;
-  font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
 }
@@ -5474,7 +5133,7 @@ select.hb-input option {
 }
 
 .hb-segmented__item:disabled {
-  opacity: 0.5;
+  opacity: var(--disabled-opacity-value);
   cursor: not-allowed;
 }
 
@@ -5528,12 +5187,6 @@ select.hb-input option {
   align-self: center;
   min-height: 0;
   overflow: hidden;
-}
-
-@media (max-width: 860px) {
-  .hb-chart-body { flex-direction: column; align-items: center; }
-  /* In der Spalten-Richtung würde die flex-basis als Höhe wirken — zurücksetzen. */
-  .hb-chart-legend { flex: 0 0 auto; width: 100%; max-width: 400px; }
 }
 
 .hb-legend-section-title {
@@ -5667,7 +5320,7 @@ select.hb-input option {
   bottom: -1px;
   height: 2px;
   background: var(--accent);
-  border-radius: 2px 2px 0 0;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
   transition: left 220ms var(--ease-decelerate),
               width 220ms var(--ease-decelerate);
   pointer-events: none;
@@ -5814,7 +5467,6 @@ select.hb-input option {
 .hb-insight-cat-amt {
   font-size: 14px;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
   margin-right: 6px;
 }
@@ -5863,7 +5515,6 @@ select.hb-input option {
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.3px;
-  font-variant-numeric: tabular-nums;
   color: var(--text);
   line-height: 1.2;
 }
@@ -5883,7 +5534,6 @@ select.hb-input option {
   display: flex;
   gap: 6px;
   align-items: center;
-  font-variant-numeric: tabular-nums;
 }
 
 .hb-chart-tooltip-label {
@@ -5897,7 +5547,7 @@ select.hb-input option {
   display: inline-block;
   width: 10px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   margin-right: 6px;
   vertical-align: middle;
   flex-shrink: 0;
@@ -5933,7 +5583,6 @@ select.hb-input option {
   margin-left: auto;
   text-align: right;
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
 }
 /* Trennlinie vor der "Frei"-Zeile */
 .hb-chart-tooltip-divider {
@@ -5974,7 +5623,7 @@ select.hb-input option {
 .hb-series-legend-box {
   width: 10px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
 }
 .hb-series-legend-line {
@@ -6046,7 +5695,7 @@ select.hb-input option {
 
 .hb-tooltip-bubble {
   position: fixed;
-  z-index: 9999;
+  z-index: var(--z-tooltip);
   width: max-content;
   /* 16px = 2×8px Mindestabstand zum Fensterrand (vgl. EDGE_GAP in HbTooltip) */
   max-width: min(300px, calc(100vw - 16px));
@@ -6165,7 +5814,7 @@ select.hb-input option {
 
 .hb-spark-panel {
   position: fixed;
-  z-index: 9999;
+  z-index: var(--z-tooltip);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -6208,7 +5857,6 @@ select.hb-input option {
   border-radius: var(--radius-pill);
   font-size: 11px;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
   background: var(--bg-subtle);
   color: var(--muted);
 }
@@ -6228,7 +5876,6 @@ select.hb-input option {
   font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.5px;
-  font-variant-numeric: tabular-nums;
   line-height: 1.15;
   color: var(--text);
 }
@@ -6259,7 +5906,6 @@ select.hb-input option {
 .hb-insight-mom {
   font-size: 11px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
   min-width: 44px;
   text-align: right;
   flex-shrink: 0;
@@ -6355,7 +6001,6 @@ select.hb-input option {
 .hb-behavior-kpi-val {
   font-size: 16px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
   color: var(--text);
   line-height: 1.25;
   white-space: nowrap;
@@ -6414,7 +6059,6 @@ select.hb-input option {
   font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.3px;
-  font-variant-numeric: tabular-nums;
   color: var(--muted);
   line-height: 1.2;
 }
@@ -6482,7 +6126,6 @@ select.hb-input option {
 .hb-budget-row-amounts {
   font-size: 13px;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -6510,7 +6153,6 @@ select.hb-input option {
   padding: 1px 7px;
   border-radius: var(--radius-pill);
   flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -6551,14 +6193,13 @@ select.hb-input option {
 }
 
 .hb-budget-pag-btn:disabled {
-  opacity: 0.35;
+  opacity: var(--disabled-opacity);
   cursor: default;
 }
 
 .hb-budget-pag-info {
   font-size: 12px;
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
   min-width: 40px;
   text-align: center;
 }
@@ -6624,7 +6265,7 @@ select.hb-input option {
   position: absolute;
   left: 0;
   top: calc(100% + 6px);
-  z-index: 80;
+  z-index: var(--z-menu);
   min-width: 240px;
   max-height: 360px;
   overflow-y: auto;
@@ -6717,7 +6358,7 @@ select.hb-input option {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  z-index: 80;
+  z-index: var(--z-menu);
   /* Breit genug für den Kalender der beiden HbDatePicker (min-width: 264px),
      damit er nicht über den Popover-Rand hinausragt. */
   width: 292px;
@@ -6741,16 +6382,6 @@ select.hb-input option {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-}
-
-/* Auf schmalen Fenstern die Kopfzeilenbreite nutzen, sonst ragt das Popover
-   aus dem Viewport. */
-@media (max-width: 600px) {
-  .hb-cg-range-popover {
-    right: auto;
-    left: 0;
-    width: min(292px, calc(100vw - 32px));
-  }
 }
 
 /* Linke Kopfzeilen-Hälfte im Detail: Zurück-Button + Gruppen-Dropdown */
@@ -6912,7 +6543,6 @@ select.hb-input option {
   font-size: 15px;
   font-weight: 600;
   color: var(--text);
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-align: right;
   min-width: 96px;
@@ -6931,17 +6561,12 @@ select.hb-input option {
   font-weight: 700;
 }
 
-.hb-cg-planned-total span:last-child {
-  font-variant-numeric: tabular-nums;
-}
-
 /* Kategorien im Zeitraum — Ist-Aufschlüsselung mit Anteilsbalken.
    Ist-Gesamtsumme dezent im Sektionskopf. */
 .hb-cg-catlist-total {
   font-size: 13px;
   font-weight: 600;
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
 }
 
 .hb-cg-breakdown {
@@ -7009,14 +6634,12 @@ select.hb-input option {
   font-size: 15px;
   font-weight: 600;
   color: var(--text);
-  font-variant-numeric: tabular-nums;
 }
 
 .hb-cg-breakdown-share {
   font-size: 14px;
   font-weight: 500;
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
   text-align: right;
   min-width: 42px;
 }
@@ -7039,7 +6662,7 @@ select.hb-input option {
   display: flex;
   width: 100%;
   height: 25px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--bg-subtle);
 }
@@ -7068,7 +6691,7 @@ select.hb-input option {
    direkt über dem Cursor und folgt ihm. */
 .hb-potcomp-tip {
   position: fixed;
-  z-index: 9999;
+  z-index: var(--z-tooltip);
   transform: translate(-50%, -100%);
   margin-top: -10px;
   pointer-events: none;
@@ -7088,21 +6711,19 @@ select.hb-input option {
    die Liste ist nach Betrag sortiert, mit Spaltensatz läuft Rang 1..n die
    linke Spalte hinunter und erst dann die rechte (Zeitungssatz). Ein Grid
    würde zeilenweise füllen und Rang 1 neben Rang 2 setzen. */
-@media (min-width: 1100px) {
-  .hb-cg-breakdown--cols {
-    display: block;
-    columns: 2;
-    column-gap: 36px;
-  }
+.hb-cg-breakdown--cols {
+  display: block;
+  columns: 2;
+  column-gap: 36px;
+}
 
-  .hb-cg-breakdown--cols > .hb-cg-breakdown-row {
-    break-inside: avoid;
-    margin-bottom: 14px;
-  }
+.hb-cg-breakdown--cols > .hb-cg-breakdown-row {
+  break-inside: avoid;
+  margin-bottom: 14px;
+}
 
-  .hb-cg-breakdown--cols > .hb-cg-breakdown-row:last-child {
-    margin-bottom: 0;
-  }
+.hb-cg-breakdown--cols > .hb-cg-breakdown-row:last-child {
+  margin-bottom: 0;
 }
 
 /* Vorschau des Rücklagenbedarfs im Posten-Dialog */
@@ -7113,7 +6734,6 @@ select.hb-input option {
 
 .hb-cg-plan-expected strong {
   color: var(--accent);
-  font-variant-numeric: tabular-nums;
 }
 
 
@@ -7147,7 +6767,7 @@ select.hb-input option {
 
 .hb-switch:disabled {
   cursor: not-allowed;
-  opacity: 0.35;
+  opacity: var(--disabled-opacity);
 }
 
 .hb-switch-knob {
@@ -7225,15 +6845,6 @@ select.hb-input option {
 .hb-switch--theme[aria-checked="true"] .hb-switch-knob {
   background: var(--card);
   transform: translateX(3px);
-}
-
-/* Auf Touch-Breiten das Klickziel vergrößern, ohne die Optik zu ändern. */
-@media (max-width: 480px) {
-  .hb-switch::before {
-    content: "";
-    position: absolute;
-    inset: -10px;
-  }
 }
 
 /* =====================================================
@@ -7322,7 +6933,6 @@ select.hb-input option {
 .hb-potmgr-counter {
   margin-left: auto;
   flex: none;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Der Schalter bleibt immer an seinem Platz, tritt bei nicht markierten
@@ -7394,7 +7004,6 @@ select.hb-input option {
 }
 
 .hb-inv-symbol {
-  font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   font-size: 12px;
   color: var(--muted);
@@ -7417,7 +7026,6 @@ select.hb-input option {
 /* Kennzahl im Gliederungsband der Tabelle (Depotsumme). */
 .hb-dt-band-value {
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
 /* --- Kennzahl-Zeilen (Rendite-Karte) ---------------- */
@@ -7445,7 +7053,6 @@ select.hb-input option {
 
 .hb-inv-detail-value {
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
@@ -7548,7 +7155,6 @@ select.hb-input option {
 .hb-inv-search-symbol {
   flex-shrink: 0;
   min-width: 72px;
-  font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   font-size: 12px;
   font-weight: 600;
@@ -7679,14 +7285,11 @@ select.hb-input option {
   color: var(--text-secondary);
 }
 
-/* Anders als .hb-stat-pill-value mit tabular-nums: die Ziffern sollen beim
-   Aktualisieren der Kurse nicht springen. */
 .hb-inv-hero-value {
   font-size: 30px;
   font-weight: 700;
   letter-spacing: -0.5px;
   color: var(--text);
-  font-variant-numeric: tabular-nums;
   margin-top: 4px;
 }
 
@@ -7694,7 +7297,6 @@ select.hb-input option {
   font-size: 14px;
   font-weight: 600;
   margin-top: 6px;
-  font-variant-numeric: tabular-nums;
 }
 
 .hb-inv-hero-gain .hb-muted {
@@ -7707,7 +7309,6 @@ select.hb-input option {
   font-size: 13px;
   color: var(--muted);
   margin-top: 4px;
-  font-variant-numeric: tabular-nums;
 }
 
 .hb-inv-hero-meta {
@@ -7764,7 +7365,6 @@ select.hb-input option {
   min-width: 56px;
   text-align: right;
   font-size: 13px;
-  font-variant-numeric: tabular-nums;
 }
 
 .hb-inv-legend-gain.hb-ok,
@@ -7800,14 +7400,12 @@ select.hb-input option {
 .hb-inv-overview-total-value {
   font-size: 15px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
 }
 
 .hb-inv-return-value {
   font-size: 22px;
   font-weight: 700;
   text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 .hb-inv-return-sub {

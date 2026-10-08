@@ -66,7 +66,7 @@ const OverviewCard = memo(function OverviewCard({ analytics }) {
           <div className="hb-insight-label">Größte Veränderung</div>
           {biggestMomChange ? (
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap", marginTop: 2 }}>
-              <span className="hb-dot" style={{ background: biggestMomChange.color || "var(--muted)", flexShrink: 0 }} />
+              <span className="hb-dot" style={{ background: biggestMomChange.color || "var(--muted)" }} />
               <span className="hb-insight-kpi" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {biggestMomChange.name}
               </span>

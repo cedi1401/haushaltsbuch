@@ -454,7 +454,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
             +{fmt(highlights ? highlights.topTransfer.transfersIn : 0)}
           </div>
           {highlights ? (
-            <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
+            <div className="hb-muted hb-muted--sm" style={{ marginTop: 4 }}>
               {highlights.topTransfer.label}
             </div>
           ) : null}
@@ -465,7 +465,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
             −{fmt(highlights ? highlights.topExpense.expensesOut : 0)}
           </div>
           {highlights ? (
-            <div className="hb-muted" style={{ marginTop: 4, fontSize: 12 }}>
+            <div className="hb-muted hb-muted--sm" style={{ marginTop: 4 }}>
               {highlights.topExpense.label}
             </div>
           ) : null}
@@ -519,7 +519,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     <div className="hb-row" style={{ alignItems: "center" }}>
                       <h3 className="hb-card-title">Entwicklung</h3>
-                      <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div className="hb-chart-range">
                         <ChartScrollNav
                           offset={lineScrollOffset}
                           maxOffset={lineMaxOffset}
@@ -580,7 +580,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     <div className="hb-row" style={{ alignItems: "center" }}>
                       <h3 className="hb-card-title">Ein-/Auszahlungen</h3>
-                      <div className="hb-chart-range" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div className="hb-chart-range">
                         <ChartScrollNav
                           offset={barScrollOffset}
                           maxOffset={barMaxOffset}
@@ -902,26 +902,24 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
         size="medium"
         bodyScroll={false}
       >
-        <div className="hb-form" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
-          <div className="hb-muted" style={{ fontSize: 12, marginBottom: 4 }}>
+        <div className="hb-form hb-form-stack">
+          <div className="hb-muted hb-muted--sm" style={{ marginBottom: 4 }}>
             Topf: {selectedPot?.name}
           </div>
 
           <div className="hb-two hb-two--dialog">
-            <div className="hb-field" style={{ minWidth: 0 }}>
+            <div className="hb-field">
               <div className="hb-label">Datum</div>
               <HbDatePicker
                 value={newEntryDraft.date}
                 onChange={(v) => setNewEntryDraft((d) => ({ ...d, date: v }))}
-                style={{ minWidth: 0, width: "100%" }}
               />
             </div>
 
-            <div className="hb-field" style={{ minWidth: 0 }}>
+            <div className="hb-field">
               <div className="hb-label">Betrag ({baseCurrency})</div>
               <input
                 className="hb-input"
-                style={{ minWidth: 0, width: "100%" }}
                 type="text"
                 inputMode="decimal"
                 placeholder="z.B. 100.50"
@@ -931,11 +929,10 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
             </div>
           </div>
 
-          <div className="hb-field" style={{ minWidth: 0 }}>
+          <div className="hb-field">
             <div className="hb-label">Transfer-Zweck</div>
             <select
               className="hb-input"
-              style={{ minWidth: 0, width: "100%" }}
               value={newEntryDraft.category}
               onChange={(e) => setNewEntryDraft((d) => ({ ...d, category: e.target.value }))}
             >
@@ -947,11 +944,10 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
             </select>
           </div>
 
-          <div className="hb-field" style={{ minWidth: 0 }}>
+          <div className="hb-field">
             <div className="hb-label">Notiz (optional)</div>
             <input
               className="hb-input"
-              style={{ minWidth: 0, width: "100%" }}
               type="text"
               placeholder="z.B. Anfangsbestand, Übertrag..."
               value={newEntryDraft.note}

@@ -129,7 +129,7 @@ export default function EntriesTable({
                       <td className="hb-col-note">{e.note || "—"}</td>
                       <td className={`hb-col-amount hb-right ${colorClass}`}>
                         <span className={`hb-sign${isTransfer ? " hb-sign-right" : ""}`}>{sign}</span>
-                        <span className="hb-amount-value">{fmt(Number(e.amount || 0))}</span>
+                        <span>{fmt(Number(e.amount || 0))}</span>
                       </td>
                       <td className="hb-col-actions">
                         <div className="hb-actions hb-actions-hover">

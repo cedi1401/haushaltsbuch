@@ -1046,11 +1046,10 @@ export default function FixedCostsView({
               </div>
               {/* Zweck und Topf sagen wohin, Turnus und Fälligkeit wann und wie oft. */}
               <div className="hb-two hb-two--dialog" style={{ width: "100%" }}>
-                <div className="hb-field" style={{ minWidth: 0 }}>
+                <div className="hb-field">
                   <div className="hb-label">Turnus</div>
                   <select
                     className="hb-input"
-                    style={{ minWidth: 0, width: "100%" }}
                     value={draft.turnus ?? ""}
                     onChange={(e) => handleTurnusChange(e.target.value)}
                   >
@@ -1064,7 +1063,7 @@ export default function FixedCostsView({
                     Ohne Turnus ist es eine Rücklage — freies Sparen ohne festen Termin.
                   </div>
                 </div>
-                <div className="hb-field" style={{ minWidth: 0 }}>
+                <div className="hb-field">
                   <div className="hb-label">Nächste Fälligkeit</div>
                   {/* Ohne Turnus hat das Datum keine Funktion — deaktiviert statt
                       stumm ignoriert. Der erklärende Text steht im Hint, nicht im
@@ -1074,7 +1073,6 @@ export default function FixedCostsView({
                     disabled={!draft.turnus}
                     value={draft.faelligkeit}
                     onChange={(v) => setDraft((d) => ({ ...d, faelligkeit: v }))}
-                    style={{ minWidth: 0, width: "100%" }}
                   />
                   <div className="hb-fixed-field-hint">
                     {draft.turnus

@@ -978,7 +978,7 @@ export default function CostGroupsView({
               <div className="hb-pot-card-top">
                 <div className="hb-pot-card-head">
                   <div className="hb-pot-card-name">
-                    <span className="hb-cat-dot" style={{ background: group.color || "var(--accent)", flexShrink: 0 }} />
+                    <span className="hb-cat-dot" style={{ background: group.color || "var(--accent)" }} />
                     <span className="hb-cg-card-name-text">{group.name}</span>
                   </div>
                   <div className="hb-pot-card-amount">{fmt(gStats.avgMonthly)}</div>
@@ -1148,7 +1148,7 @@ export default function CostGroupsView({
                           checked={catChecked}
                           onChange={() => toggleCategory(cat.id)}
                         />
-                        <span className="hb-cat-dot" style={{ background: cat.color || "var(--accent)", flexShrink: 0 }} />
+                        <span className="hb-cat-dot" style={{ background: cat.color || "var(--muted)" }} />
                         <span className="hb-hcat-parent-name">{cat.name}</span>
                       </label>
                       {hasSubs && (
@@ -1176,7 +1176,7 @@ export default function CostGroupsView({
                                 onChange={() => toggleSubcategory(sub.id)}
                                 disabled={catChecked}
                               />
-                              <span className="hb-cat-dot" style={{ background: cat.color || "var(--accent)", opacity: 0.55, flexShrink: 0 }} />
+                              <span className="hb-cat-dot" style={{ background: cat.color || "var(--muted)", opacity: 0.55 }} />
                               <span className="hb-hcat-sub-name">{sub.name}</span>
                             </label>
                           );

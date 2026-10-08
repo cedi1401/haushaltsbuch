@@ -4,7 +4,6 @@ import { formatPercent } from "../utils/hbUtils.js";
 import { Card, CardContent, Button, RangeTabs } from "../components/ui.jsx";
 import { IconChevronRight, IconInbox } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
-import { useCardBg } from "../hooks/useCardBg.js";
 import { useThemeColors } from "../hooks/themeColors.js";
 import {
   PieChart,
@@ -33,7 +32,6 @@ export default function Charts({
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
-  const cardBg = useCardBg();
   const themeColors = useThemeColors();
   const [activeTab, setActiveTab] = useState("expense"); // "expense" | "income" | "allocation"
   const [drilldownId, setDrilldownId] = useState(null);  // null = overview, else categoryId
@@ -171,7 +169,7 @@ export default function Charts({
                     return (
                       <div key={item.name} className="hb-legend-row">
                         <div className="hb-legend-left">
-                          <span className="hb-dot" style={{ background: item.color, flexShrink: 0 }} />
+                          <span className="hb-dot" style={{ background: item.color }} />
                           <span className="hb-legend-name">{item.name}</span>
                         </div>
                         <span className="hb-legend-value">{valueStr}</span>
@@ -191,7 +189,7 @@ export default function Charts({
                       outerRadius={153}
                       paddingAngle={0}
                       cornerRadius={4}
-                      stroke={cardBg}
+                      stroke={themeColors.card}
                       strokeWidth={3}
                       strokeLinejoin="round"
                       startAngle={90}
@@ -295,7 +293,7 @@ export default function Charts({
                       <div className="hb-legend-left">
                         <span
                           className="hb-dot"
-                          style={{ background: item.color, flexShrink: 0 }}
+                          style={{ background: item.color }}
                         />
                         <span className="hb-legend-name">{item.name}</span>
                         <span className="hb-legend-count">({item.entryCount})</span>
@@ -324,7 +322,7 @@ export default function Charts({
                     outerRadius={153}
                     paddingAngle={0}
                     cornerRadius={4}
-                    stroke={cardBg}
+                    stroke={themeColors.card}
                     strokeWidth={3}
                     strokeLinejoin="round"
                     startAngle={90}
