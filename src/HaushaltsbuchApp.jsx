@@ -64,6 +64,10 @@ export default function HaushaltsbuchApp() {
   // Navigation, aber bewusst nur zur Laufzeit: ein Neustart beginnt wieder bei
   // "Gesamt". `active` merkt sich, ob der Bereich zuletzt auch ausgewählt war.
   const [costGroupRange, setCostGroupRange] = useState({ from: "", to: "", active: false });
+  // Gewählter Topf der Töpfe-Ansicht. Liegt aus demselben Grund hier: er
+  // überlebt den Ansichtswechsel, aber nur zur Laufzeit. Eine unbekannte ID
+  // (anderes Buch, gelöschter Topf) fällt in PotsView auf den ersten Topf zurück.
+  const [selectedPotId, setSelectedPotId] = useState("");
 
   const bookManager = useBookManager({ toast, confirm });
   const {
@@ -286,6 +290,8 @@ export default function HaushaltsbuchApp() {
             ) : view === "pots" ? (
               <PotsView
                 activeBook={activeBook}
+                selectedPotId={selectedPotId}
+                onSelectPot={setSelectedPotId}
                 entries={entries}
                 onAddTransferEntry={entryActions.addTransferEntry}
                 onUpdateBook={updateBook}

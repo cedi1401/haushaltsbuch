@@ -21,7 +21,7 @@ import {
 import { calcPotSeries, potPurposeBalances } from "../utils/potUtils.js";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
-import { CHART_STROKE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, zeroLineProps } from "../utils/chartStyle.js";
+import { CHART_STROKE, CHART_HEIGHT, BAR_MAX_SIZE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, zeroLineProps, lineCursorProps } from "../utils/chartStyle.js";
 import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact, formatSigned } from "../utils/hbUtils.js";
 import { formatYearMonth, getEntryFinancialMonth } from "../utils/financialMonthUtils.js";
 import { generateId } from "../utils/idUtils.js";
@@ -35,6 +35,7 @@ import {
   IconPlus,
   IconInbox,
   IconCheck,
+  IconChevron,
 } from "../components/icons.jsx";
 
 const fmtYearMonth = formatYearMonth;
@@ -78,11 +79,10 @@ function tipCoords(e) {
   return { x, y: rect.top };
 }
 
-export default function PotsView({ activeBook, entries, onAddTransferEntry, onUpdateBook, transferCategories, onEditEntry, onRemoveEntry, monthStartDay = 1, monthFilter, monthLabel }) {
+export default function PotsView({ activeBook, selectedPotId, onSelectPot, entries, onAddTransferEntry, onUpdateBook, transferCategories, onEditEntry, onRemoveEntry, monthStartDay = 1, monthFilter, monthLabel }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const pots = useMemo(() => activeBook?.pots || [], [activeBook?.pots]);
-  const [selectedPotId, setSelectedPotId] = useState(pots[0]?.id || "");
   const themeColors = useThemeColors();
   const [addEntryOpen, setAddEntryOpen] = useState(false);
   const [managePotsOpen, setManagePotsOpen] = useState(false);
@@ -150,7 +150,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
   }
 
   function selectPot(id) {
-    setSelectedPotId(id);
+    onSelectPot(id);
     setShowAllEntries(false);
     setLineScrollOffset(0);
     setBarScrollOffset(0);
@@ -367,12 +367,11 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
             title="Topf wechseln"
           >
             <span className="hb-cg-group-trigger-name">{selectedPot.name}</span>
-            <svg
+            <IconChevron
               className={"hb-cg-group-chevron" + (menuOpen ? " hb-cg-group-chevron--open" : "")}
-              width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true"
-            >
-              <path d="M4.5 6L8 9.5L11.5 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+              width={18}
+              height={18}
+            />
           </button>
           {menuOpen && (
             <div
@@ -541,14 +540,15 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                     <ChartLegend items={[{ label: "Stand", type: "line", color: themeColors.blue }]} />
                   </div>
 
-                  <div style={{ width: "100%", height: 260, marginTop: 16 }}>
-                    <ResponsiveContainer width="100%" height={260}>
+                  <div style={{ width: "100%", height: CHART_HEIGHT, marginTop: 16 }}>
+                    <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                       <LineChart data={lineChartData}>
                         <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                         <XAxis dataKey="name" {...monthAxisProps(themeColors)} />
                         <YAxis {...axisProps(themeColors)} width={AMOUNT_AXIS_WIDTH} tickFormatter={(v) => formatCurrencyCompact(v, baseCurrency)} />
                         <Tooltip
                           wrapperStyle={{ zIndex: 10 }}
+                          cursor={lineCursorProps(themeColors)}
                           content={({ active, payload, label }) => {
                             if (!active || !payload?.length) return null;
                             return (
@@ -606,8 +606,8 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                     />
                   </div>
 
-                  <div style={{ width: "100%", height: 260, marginTop: 16 }}>
-                    <ResponsiveContainer width="100%" height={260}>
+                  <div style={{ width: "100%", height: CHART_HEIGHT, marginTop: 16 }}>
+                    <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                       <BarChart data={barChartData} barCategoryGap="32%" stackOffset="sign">
                         <CartesianGrid stroke={themeColors.muted} strokeOpacity={0.15} vertical={false} />
                         <XAxis dataKey="name" {...monthAxisProps(themeColors)} />
@@ -635,8 +635,8 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                           }}
                           cursor={false}
                         />
-                        <Bar dataKey="transfersIn" stackId="pf" barSize={20} fill={themeColors.green} shape={IncomeBarShape} />
-                        <Bar dataKey="expensesOut" stackId="pf" barSize={20} fill={themeColors.red} shape={OutflowBarShape} />
+                        <Bar dataKey="transfersIn" stackId="pf" maxBarSize={BAR_MAX_SIZE} fill={themeColors.green} shape={IncomeBarShape} />
+                        <Bar dataKey="expensesOut" stackId="pf" maxBarSize={BAR_MAX_SIZE} fill={themeColors.red} shape={OutflowBarShape} />
                         <ReferenceLine y={0} {...zeroLineProps(themeColors)} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -721,7 +721,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                           </div>
                         </div>
                         <div
-                          className="hb-meter hb-meter--lg hb-meter--tinted hb-meter--animated hb-cg-breakdown-bar"
+                          className="hb-meter hb-meter--lg hb-meter--tinted hb-meter--cat hb-meter--animated hb-cg-breakdown-bar"
                           style={{ "--meter-tone": r.color }}
                         >
                           <div
@@ -750,8 +750,10 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
                   <div className="hb-card-head">
                     <h3 className="hb-card-title">Zusammensetzung</h3>
                   </div>
-                  <div className="hb-muted" style={{ textAlign: "center", padding: "32px 8px" }}>
-                    Noch keine positiven Netto-Beträge je Zweck vorhanden.
+                  <div className="hb-empty hb-empty--sm">
+                    <div className="hb-empty-icon"><IconInbox /></div>
+                    <div className="hb-empty-title">Noch keine Zusammensetzung</div>
+                    <div className="hb-empty-text">Noch keine positiven Netto-Beträge je Zweck vorhanden.</div>
                   </div>
                 </CardContent>
               </Card>
@@ -905,7 +907,7 @@ export default function PotsView({ activeBook, entries, onAddTransferEntry, onUp
             Topf: {selectedPot?.name}
           </div>
 
-          <div className="hb-two hb-two--dialog" style={{ gap: 16 }}>
+          <div className="hb-two hb-two--dialog">
             <div className="hb-field" style={{ minWidth: 0 }}>
               <div className="hb-label">Datum</div>
               <HbDatePicker
