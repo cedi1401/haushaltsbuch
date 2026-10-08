@@ -22,7 +22,17 @@ export const SETTING_SCHEMA = new Map([
   ['monthStartDay', (v) => typeof v === 'string' || typeof v === 'number'],
 ]);
 
+// Spaltenauswahl der Tabellen (`useTableColumns`): ein Schlüssel je Tabelle,
+// `table.columns.<storageKey>`, Wert ist die JSON-Liste der sichtbaren Spalten.
+// Als Muster statt als Einzeleinträge, damit eine neue Tabelle nicht still
+// ihre Auswahl verliert, weil ihr Schlüssel hier fehlt.
+const TABLE_COLUMNS_KEY_PATTERN = /^table\.columns\.[A-Za-z0-9._-]{1,64}$/;
+const MAX_TABLE_COLUMNS_LENGTH = 4000;
+
 export function isValidSetting(key, value) {
+  if (typeof key === 'string' && TABLE_COLUMNS_KEY_PATTERN.test(key)) {
+    return typeof value === 'string' && value.length <= MAX_TABLE_COLUMNS_LENGTH;
+  }
   const validator = SETTING_SCHEMA.get(key);
   return validator ? validator(value) : false;
 }

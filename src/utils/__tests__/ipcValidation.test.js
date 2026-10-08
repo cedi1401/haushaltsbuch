@@ -89,6 +89,25 @@ describe('isValidSetting', () => {
   it('rejects theme with non-string value', () => {
     expect(isValidSetting('theme', 42)).toBe(false);
   });
+
+  it.each(['table.columns.reserves', 'table.columns.fixed-fixed', 'table.columns.hb.investments.transactions'])(
+    'accepts table column selection %s',
+    (key) => {
+      expect(isValidSetting(key, '["date","amount"]')).toBe(true);
+    }
+  );
+
+  it('rejects table column selection with non-string value', () => {
+    expect(isValidSetting('table.columns.reserves', ['date'])).toBe(false);
+  });
+
+  it('rejects table column key without table name', () => {
+    expect(isValidSetting('table.columns.', '[]')).toBe(false);
+  });
+
+  it('rejects oversized table column selection', () => {
+    expect(isValidSetting('table.columns.reserves', 'x'.repeat(4001))).toBe(false);
+  });
 });
 
 describe('isValidSymbol', () => {
