@@ -511,7 +511,24 @@ export default function FixedCostsView({
     return entry;
   }
 
-  function bookNow(item) {
+  // Eine in diesem Finanzmonat schon gebuchte Position lässt sich weiterhin
+  // buchen (Nachzahlung, Korrektur) — aber nur nach Rückfrage, damit ein
+  // zweiter Klick nicht unbemerkt doppelt bucht.
+  async function bookNow(item) {
+    const booked = bookedThisMonth.get(bookingKey(fixedCostKind(item), item.id));
+    if (booked) {
+      const last = formatDateDE(booked.lastDate);
+      const ok = await confirm({
+        title: "Bereits gebucht",
+        message:
+          (booked.count === 1
+            ? `„${item.name}“ wurde in diesem Finanzmonat bereits am ${last} gebucht.`
+            : `„${item.name}“ wurde in diesem Finanzmonat bereits ${booked.count}-mal gebucht, zuletzt am ${last}.`) +
+          "\n\nWirklich noch einmal buchen?",
+        confirmLabel: "Erneut buchen",
+      });
+      if (!ok) return;
+    }
     onAddEntry(buildEntryFromItem(item, todayISO()));
     toast.success(`„${item.name}“ wurde gebucht.`);
   }
