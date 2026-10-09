@@ -2122,7 +2122,7 @@ select.hb-input option {
      geklickte Button den Fokus behält),
    - ein Kebab-Menü der Leiste offen ist (es wird inline gerendert, kein
      Portal; der Auslöser trägt dann aria-expanded="true"),
-   - kurz nach einem Mausklick (--linger, von DataTable nach 2,5 s entfernt).
+   - kurz nach einem Mausklick (--linger, von DataTable nach 0,3 s entfernt).
    Beim Ausblenden greift die Transition oben. */
 .hb-dt-row:hover .hb-dt-row-actions,
 .hb-dt-row-actions:has(:focus-visible),

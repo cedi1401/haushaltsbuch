@@ -8,8 +8,9 @@ import { IconChevron } from "./icons.jsx";
 const EMPTY_SET = new Set();
 
 // Wie lange die Zeilenaktionen nach einem Mausklick sichtbar bleiben, bevor sie
-// ausblenden (sofern die Maus die Zeile verlassen hat).
-const ACTIONS_LINGER_MS = 2500;
+// ausblenden (sofern die Maus die Zeile verlassen hat). Zusammen mit der
+// Ausblend-Transition (--transition-fast) bleibt das unter einer halben Sekunde.
+const ACTIONS_LINGER_MS = 300;
 
 /**
  * Generische Tabelle. Fachfrei: sie kennt weder Rückstellungen noch Währungen.
