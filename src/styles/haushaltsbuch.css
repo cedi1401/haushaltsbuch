@@ -1292,6 +1292,18 @@ select.hb-input option {
   min-height: 19px;
 }
 
+/* Hilfe-Icon in der oberen rechten Ecke einer einzelnen Pill. Absolut statt
+   über .hb-stat-pill-top, damit die Pill nicht höher wird als ihre Nachbarn
+   ohne Icon und die Wert-Zeilen der Reihe bündig bleiben. */
+.hb-stat-pill--has-help {
+  position: relative;
+}
+.hb-stat-pill > .hb-stat-pill-help {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
 .hb-stat-pill-label,
 .hb-fct-kpi-label {
   font-size: 11px;

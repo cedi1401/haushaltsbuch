@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import { IconTrend } from "../components/icons.jsx";
+import HbTooltip from "../components/HbTooltip.jsx";
 import { ChartTooltip, ChartTooltipRow, ChartTooltipDivider } from "../components/ChartTooltip.jsx";
 import { ChartLegend } from "../components/ChartLegend.jsx";
 import { getEntryFinancialMonth, formatYearMonth } from "../utils/financialMonthUtils.js";
@@ -322,8 +323,13 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
             <span className="hb-stat-pill-label">Ø Ausgaben pro Monat</span>
             <span className="hb-stat-pill-value hb-bad" style={{ marginTop: 14 }}>{fmt(avg.expense)}</span>
           </div>
-          <div className={`hb-stat-pill ${savingsRate >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
+          <div className={`hb-stat-pill hb-stat-pill--has-help ${savingsRate >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
             <span className="hb-stat-pill-label">Sparquote (Ø)</span>
+            <HbTooltip
+              size={16}
+              className="hb-stat-pill-help"
+              text="Einzahlungen in Spar-Töpfe geteilt durch die Einnahmen, über alle erfassten Monate."
+            />
             <span className={`hb-stat-pill-value ${savingsRate >= 0 ? "hb-ok" : "hb-bad"}`}>{formatPercent(savingsRate, { sign: false })}</span>
             <div className="hb-meter hb-meter--sm hb-meter--animated hb-stat-pill-gauge-track">
               <div
