@@ -233,7 +233,7 @@ export default function FixedCostsView({
   }, [allBookTags, draft.tags, tagInput]);
 
   // Sektions-Schlüssel einer Position: nur eine existierende Gruppe derselben
-  // Art zählt — sonst „Ohne Gruppe".
+  // Art zählt — sonst „Sonstige".
   function sectionKeyOfItem(item) {
     const gid = item.groupId || null;
     return gid && groupKindById.get(gid) === fixedCostKind(item) ? gid : UNGROUPED_KEY;
@@ -274,7 +274,7 @@ export default function FixedCostsView({
     const ok = await confirm({
       title: "Gruppe löschen",
       message: itemCount > 0
-        ? `Gruppe „${group.name}“ löschen? Die ${itemCount === 1 ? "enthaltene Position wird" : `${itemCount} enthaltenen Positionen werden`} nach „Ohne Gruppe“ verschoben.`
+        ? `Gruppe „${group.name}“ löschen? Die ${itemCount === 1 ? "enthaltene Position wird" : `${itemCount} enthaltenen Positionen werden`} nach „Sonstige“ verschoben.`
         : `Gruppe „${group.name}“ wirklich löschen?`,
       confirmLabel: "Löschen",
       danger: true,
@@ -365,7 +365,7 @@ export default function FixedCostsView({
   }
 
   // Art wechseln: die Gruppe gehört fest zu einer Tabelle, die Position wandert
-  // also nach „Ohne Gruppe" der anderen Tabelle. Turnus und Fälligkeit sind
+  // also nach „Sonstige" der anderen Tabelle. Turnus und Fälligkeit sind
   // Transfer-Felder und werden beim Wechsel auf „Ausgabe" zurückgesetzt — sonst
   // bliebe ein unsichtbarer Wert stehen, der die Speichern-Sperre auslöst.
   function handleKindChange(kind) {
@@ -636,10 +636,11 @@ export default function FixedCostsView({
     );
   }
 
-  // Eine Sektion = eine Gruppe oder „Ohne Gruppe". Summe, Sammelbuchung und
+  // Eine Sektion = eine Gruppe oder „Sonstige" (Positionen ohne Gruppe). Die
+  // Sammelbuchung behandelt beide gleich. Summe, Sammelbuchung und
   // Gruppenverwaltung sitzen rechts im Band.
   function buildSection(kind, group, rows, accent) {
-    const label = group ? group.name : "Ohne Gruppe";
+    const label = group ? group.name : "Sonstige";
     const items = rows.map((r) => r.item);
     const total = items.reduce((sum, item) => sum + monthlyRate(item), 0);
     const menuItems = [
@@ -666,10 +667,10 @@ export default function FixedCostsView({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => bookSection(label, items, !!group)}
+            onClick={() => bookSection(label, items, true)}
             disabled={items.length === 0}
           >
-            {group ? "Gruppe buchen" : "Alle buchen"}
+            Gruppe buchen
           </Button>
           <OverflowMenu
             label={group ? `Aktionen für Gruppe „${label}“` : "Aktionen für Positionen ohne Gruppe"}
@@ -957,7 +958,7 @@ export default function FixedCostsView({
                 value={draft.groupId || ""}
                 onChange={(e) => setDraft((d) => ({ ...d, groupId: e.target.value || null }))}
               >
-                <option value="">Ohne Gruppe</option>
+                <option value="">Sonstige</option>
                 {dialogGroupOptions.map((g) => (
                   <option key={g.id} value={g.id}>{g.name}</option>
                 ))}

@@ -325,7 +325,7 @@ function groupRowsByTransferGroup(rows, transferGroups) {
   }
 
   // Ohne jede Gruppe bleibt es bei der einen Sektion ohne Band. Ein einzelnes
-  // Band „Ohne Gruppe" über der gesamten Tabelle wäre reine Dekoration.
+  // Band „Sonstige" über der gesamten Tabelle wäre reine Dekoration.
   if (byKey.size === 1 && byKey.has(UNGROUPED_KEY)) {
     return [{ key: UNGROUPED_KEY, label: null, accent: null, rows }];
   }
@@ -345,13 +345,13 @@ function groupRowsByTransferGroup(rows, transferGroups) {
     });
   });
 
-  // „Ohne Gruppe" immer ans Ende und ohne Farbe — es ist keine Gruppe, sondern
+  // „Sonstige" immer ans Ende und ohne Farbe — es ist keine Gruppe, sondern
   // ihr Fehlen.
   const ungrouped = byKey.get(UNGROUPED_KEY);
   if (ungrouped) {
     result.push({
       key: UNGROUPED_KEY,
-      label: "Ohne Gruppe",
+      label: "Sonstige",
       accent: null,
       rows: ungrouped,
     });
