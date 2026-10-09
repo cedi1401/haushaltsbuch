@@ -1116,9 +1116,9 @@ export default function FixedCostsView({
               style={{ accentColor: "var(--accent)" }}
             />
             <div>
-              <div style={{ fontWeight: 600, fontSize: 13 }}>In Übersicht anzeigen</div>
+              <div style={{ fontWeight: 600, fontSize: 13 }}>Im Trend auflisten</div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
-                Position in der Fixkosten-Übersicht im Trendview anzeigen (inkl. Jahresbetrag)
+                Die Position erscheint in der Liste unter „Fixkosten-Entwicklung“. Auf die Kennzahlen hat das keinen Einfluss.
               </div>
             </div>
           </label>

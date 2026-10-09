@@ -13,7 +13,7 @@ import HbTooltip from "../components/HbTooltip.jsx";
 import { ChartTooltip, ChartTooltipRow } from "../components/ChartTooltip.jsx";
 import { ChartLegend } from "../components/ChartLegend.jsx";
 import HbSparklineHover from "../components/HbSparklineHover.jsx";
-import { IconTag, IconInfo } from "../components/icons.jsx";
+import { IconTag, IconInfo, IconInbox } from "../components/icons.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { getCategoryLabel, formatCurrencyCompact, formatPercent, fixedCostKind } from "../utils/hbUtils.js";
 import { CHART_STROKE, CHART_HEIGHT, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, lineCursorProps } from "../utils/chartStyle.js";
@@ -25,10 +25,14 @@ import { MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 // Der zentrale Erklärtext der Kostenregel. Der letzte Satz löst auf, warum
 // in der Übersichtsliste Zeilen stehen, die in keiner Summe auftauchen (D6).
 const HELP_FCT =
-  'Zeigt, wie viel du für Fixkosten gebucht hast, und darunter alle hinterlegten Positionen. ' +
+  'Zeigt, wie viel du für Fixkosten gebucht hast, und darunter die hinterlegten Positionen. ' +
   'In die Kennzahlen zählen Ausgaben und Rückstellungen, Letztere mit ihrer Monatsrate. ' +
   'Rücklagen ohne Turnus gelten als freies Sparen: Sie stehen in der Übersicht, zählen aber ' +
   'nicht mit.';
+
+const HELP_OVERVIEW =
+  'Welche Positionen hier stehen, legst du in den Fixkosten beim Bearbeiten der Position fest ' +
+  '(„Im Trend auflisten“). Auf die Kennzahlen hat das keinen Einfluss.';
 
 // Die drei Arten von Fixkosten, in der Reihenfolge, in der sie in der Übersicht
 // als Blöcke untereinander stehen: erst die echten Ausgaben, dann die
@@ -341,14 +345,19 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
         </CardContent>
       </Card>
 
-      {/* Fixkosten-Übersicht: 3 gleiche Spalten */}
-      {activeItems.length > 0 && (
+      {/* Fixkosten-Übersicht. Die Karte bleibt auch stehen, wenn alle Positionen
+          ausgeblendet sind — sonst verschwände mit ihr der Hinweis, wo man sie
+          wieder einschaltet. */}
+      {(recurringExpenses || []).length > 0 && (
         <Card>
           <CardContent>
             <div className="hb-card-head" style={{ alignItems: "flex-start" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <h3 className="hb-card-title">Übersicht</h3>
+                  <div className="hb-title-with-help">
+                    <h3 className="hb-card-title">Übersicht</h3>
+                    <HbTooltip size={16} text={HELP_OVERVIEW} />
+                  </div>
                   {selectedTags.size > 0 && (
                     <span className="hb-fct-filter-hint">{activeItems.length} von {totalOverviewCount}</span>
                   )}
@@ -382,82 +391,96 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                   </div>
                 )}
               </div>
-              <span className="hb-muted hb-muted--sm" style={{ alignSelf: "flex-start", paddingTop: 2 }}>
-                Summe der Liste: {fmt(visibleMonthlyTotal)} pro Monat
-              </span>
-            </div>
-
-            {/* CSS-Grid, fünf Spalten: Position │ pro Monat │ Balken │ Anteil │ Jahr.
-                Alle Zellen liegen im Auto-Flow — pro Item werden die fünf Zellen
-                nacheinander gerendert, deshalb braucht keine davon eine explizite
-                Zeile. Nur das Jahres-Total unten bekommt seine Spalte gesetzt. */}
-            <div className="hb-fct-five-grid">
-              {/* Spalten-Header */}
-              <div className="hb-fct-col-head">Position</div>
-              <div className="hb-fct-col-head hb-fct-col-head--right">Pro Monat</div>
-              <div className="hb-fct-col-head" style={{ gridColumn: "span 2" }}>Anteil an Fixkosten</div>
-              <div className="hb-fct-col-head hb-fct-col-head--right">Jahresbetrag</div>
-
-              {activeItems.map((item, i) => {
-                // Der Blockabstand hängt am Wechsel der Art, nicht an einer festen
-                // Position: Fällt eine Gruppe durch den Tag-Filter ganz weg, fällt
-                // ihr Abstand mit weg.
-                const startsGroup = i > 0 && activeItems[i - 1].group !== item.group;
-                const rowClass = startsGroup ? " hb-fct-row--group-start" : "";
-                return (
-                  <React.Fragment key={item.id}>
-                    <div className={`hb-fct-name-cell${rowClass}`}>
-                      <span className="hb-fct-index">{i + 1}</span>
-                      <div className="hb-fct-name-block">
-                        <span className="hb-fct-overview-name">{item.name}</span>
-                        <div className="hb-fct-name-pills">
-                          <span className="hb-fct-overview-cat" style={tintedChipStyle(item.color)}>
-                            {item.categoryLabel}
-                          </span>
-                          {item.isFreeSaving && (
-                            <HbTooltip text="Ohne Turnus — zählt nicht in die Fixkostenbelastung">
-                              <span className="hb-fct-overview-cat hb-fct-overview-cat--free">
-                                Freies Sparen
-                              </span>
-                            </HbTooltip>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className={`hb-fct-month-cell${rowClass}`}>
-                      <span className="hb-fct-overview-amount">{fmt(item.amount)}</span>
-                    </div>
-
-                    <div className={`hb-fct-bar-cell${rowClass}`}>
-                      <ProportionBar pct={item.pct} color={item.color} />
-                    </div>
-
-                    <div className={`hb-fct-pct-cell${rowClass}`}>
-                      <span className="hb-fct-overview-pct">{item.pct.toFixed(1)}&nbsp;%</span>
-                    </div>
-
-                    <div className={`hb-fct-annual-cell${rowClass}`}>
-                      <span className="hb-fct-annual-amount">{fmt(item.annual)}</span>
-                      <span className="hb-fct-annual-label">pro Jahr</span>
-                    </div>
-                  </React.Fragment>
-                );
-              })}
-
-              {/* Jahres-Total unter allen Items */}
-              {annualTotal > 0 && (
-                <div
-                  className="hb-fct-annual-total"
-                  // Die einzige Zelle mit expliziter Position: Sie gehört in die
-                  // Jahresspalte der Zeile NACH dem letzten Item (Kopfzeile + n Items).
-                  style={{ gridColumn: 5, gridRow: activeItems.length + 2 }}
-                >
-                  <span className="hb-fct-annual-total-label">Total</span>
-                  <span className="hb-fct-annual-total-value">{fmt(annualTotal)} pro Jahr</span>
-                </div>
+              {activeItems.length > 0 && (
+                <span className="hb-muted hb-muted--sm" style={{ alignSelf: "flex-start", paddingTop: 2 }}>
+                  Summe der Liste: {fmt(visibleMonthlyTotal)} pro Monat
+                </span>
               )}
             </div>
+
+            {activeItems.length === 0 ? (
+              <div className="hb-empty hb-empty--sm">
+                <div className="hb-empty-icon"><IconInbox /></div>
+                <div className="hb-empty-title">Keine Positionen eingeblendet</div>
+                <div className="hb-empty-text">
+                  Setze in den Fixkosten beim Bearbeiten einer Position den Haken „Im Trend auflisten“.
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* CSS-Grid, fünf Spalten: Position │ pro Monat │ Balken │ Anteil │ Jahr.
+                    Alle Zellen liegen im Auto-Flow — pro Item werden die fünf Zellen
+                    nacheinander gerendert, deshalb braucht keine davon eine explizite
+                    Zeile. Nur das Jahres-Total unten bekommt seine Spalte gesetzt. */}
+                <div className="hb-fct-five-grid">
+                  {/* Spalten-Header */}
+                  <div className="hb-fct-col-head">Position</div>
+                  <div className="hb-fct-col-head hb-fct-col-head--right">Pro Monat</div>
+                  <div className="hb-fct-col-head" style={{ gridColumn: "span 2" }}>Anteil an Fixkosten</div>
+                  <div className="hb-fct-col-head hb-fct-col-head--right">Jahresbetrag</div>
+
+                  {activeItems.map((item, i) => {
+                    // Der Blockabstand hängt am Wechsel der Art, nicht an einer festen
+                    // Position: Fällt eine Gruppe durch den Tag-Filter ganz weg, fällt
+                    // ihr Abstand mit weg.
+                    const startsGroup = i > 0 && activeItems[i - 1].group !== item.group;
+                    const rowClass = startsGroup ? " hb-fct-row--group-start" : "";
+                    return (
+                      <React.Fragment key={item.id}>
+                        <div className={`hb-fct-name-cell${rowClass}`}>
+                          <span className="hb-fct-index">{i + 1}</span>
+                          <div className="hb-fct-name-block">
+                            <span className="hb-fct-overview-name">{item.name}</span>
+                            <div className="hb-fct-name-pills">
+                              <span className="hb-fct-overview-cat" style={tintedChipStyle(item.color)}>
+                                {item.categoryLabel}
+                              </span>
+                              {item.isFreeSaving && (
+                                <HbTooltip text="Ohne Turnus — zählt nicht in die Fixkostenbelastung">
+                                  <span className="hb-fct-overview-cat hb-fct-overview-cat--free">
+                                    Freies Sparen
+                                  </span>
+                                </HbTooltip>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className={`hb-fct-month-cell${rowClass}`}>
+                          <span className="hb-fct-overview-amount">{fmt(item.amount)}</span>
+                        </div>
+
+                        <div className={`hb-fct-bar-cell${rowClass}`}>
+                          <ProportionBar pct={item.pct} color={item.color} />
+                        </div>
+
+                        <div className={`hb-fct-pct-cell${rowClass}`}>
+                          <span className="hb-fct-overview-pct">{item.pct.toFixed(1)}&nbsp;%</span>
+                        </div>
+
+                        <div className={`hb-fct-annual-cell${rowClass}`}>
+                          <span className="hb-fct-annual-amount">{fmt(item.annual)}</span>
+                          <span className="hb-fct-annual-label">pro Jahr</span>
+                        </div>
+                      </React.Fragment>
+                    );
+                  })}
+
+                  {/* Jahres-Total unter allen Items */}
+                  {annualTotal > 0 && (
+                    <div
+                      className="hb-fct-annual-total"
+                      // Die einzige Zelle mit expliziter Position: Sie gehört in die
+                      // Jahresspalte der Zeile NACH dem letzten Item (Kopfzeile + n Items).
+                      style={{ gridColumn: 5, gridRow: activeItems.length + 2 }}
+                    >
+                      <span className="hb-fct-annual-total-label">Total</span>
+                      <span className="hb-fct-annual-total-value">{fmt(annualTotal)} pro Jahr</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
           </CardContent>
         </Card>
