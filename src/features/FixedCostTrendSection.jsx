@@ -25,13 +25,10 @@ import { MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 // Der zentrale Erklärtext der Kostenregel. Der letzte Satz löst auf, warum
 // in der Übersichtsliste Zeilen stehen, die in keiner Summe auftauchen (D6).
 const HELP_FCT =
-  'Gebuchte Fixkosten über den gewählten Zeitraum (via „Jetzt buchen") und Übersicht aller ' +
-  'konfigurierten Positionen. Als Belastung zählen Ausgaben-Fixkosten und Rückstellungen: ' +
-  'Transfers mit Turnus gehen mit ihrer Monatsrate ein, nicht mit dem Rechnungsbetrag des ganzen ' +
-  'Zyklus. Ein Transfer ohne Turnus ist eine Rücklage — er bleibt in der Übersicht, zählt aber ' +
-  'in keiner Kennzahl der KPI-Kacheln mit. Die Übersichtsliste selbst zeigt alle drei Arten: ' +
-  'Ausgaben, Rückstellungen und Rücklagen stehen dort als eigene Blöcke untereinander, und der ' +
-  'Prozentwert ist der Anteil an der Summe genau dieser Liste — zusammen also 100 %.';
+  'Zeigt, wie viel du für Fixkosten gebucht hast, und darunter alle hinterlegten Positionen. ' +
+  'In die Kennzahlen zählen Ausgaben und Rückstellungen, Letztere mit ihrer Monatsrate. ' +
+  'Rücklagen ohne Turnus gelten als freies Sparen: Sie stehen in der Übersicht, zählen aber ' +
+  'nicht mit.';
 
 // Die drei Arten von Fixkosten, in der Reihenfolge, in der sie in der Übersicht
 // als Blöcke untereinander stehen: erst die echten Ausgaben, dann die
