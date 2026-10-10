@@ -434,6 +434,7 @@ export default function DashboardView({
           totalSavingsTransfers={totalSavingsTransfers ?? 0}
           totalReserveTransfers={totalReserveTransfers ?? 0}
           expenseCategories={expenseCategories}
+          recurringExpenses={activeBook?.recurringExpenses}
           savingsPots={savingsPots}
           onSweepSurplus={handleSweepSurplus}
         />

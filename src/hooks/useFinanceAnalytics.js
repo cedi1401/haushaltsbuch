@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getEntryFinancialMonth, getFinancialMonthRange, getFinancialMonth } from "../utils/financialMonthUtils.js";
+import { getEntryFinancialMonth, getFinancialMonthInfo } from "../utils/financialMonthUtils.js";
 import { formatPercent, toLocalISO } from "../utils/hbUtils.js";
 import { BURNRATE_DELTA_THRESHOLD_PCT } from "../utils/constants.js";
 
@@ -14,47 +14,6 @@ function getPrevMonthKey(monthFilter) {
   const prevY = m === 1 ? y - 1 : y;
   const prevM = m === 1 ? 12 : m - 1;
   return `${prevY}-${String(prevM).padStart(2, "0")}`;
-}
-
-// Liefert Länge und Verlaufsstatus eines finanziellen Monats unter Berücksichtigung
-// des konfigurierten Monatsbeginns.
-function getFinancialMonthInfo(monthFilter, monthStartDay) {
-  if (!monthFilter) return null;
-  const startDay = monthStartDay ?? 1;
-  const range = getFinancialMonthRange(monthFilter, startDay);
-  if (!range) return null;
-
-  const today = new Date();
-  const todayStr = toLocalISO(today);
-  const isCurrentMonth = getFinancialMonth(todayStr, startDay)?.yyyymm === monthFilter;
-
-  const msPerDay = 86400000;
-  const startDate = new Date(range.startDate + "T00:00:00");
-  const endDate = new Date(range.endDate + "T00:00:00");
-  const daysInMonth = Math.round((endDate - startDate) / msPerDay) + 1;
-
-  const isFutureMonth = !isCurrentMonth && startDate > today;
-
-  let daysElapsed;
-  if (isCurrentMonth) {
-    daysElapsed = Math.min(
-      Math.round((today - startDate) / msPerDay) + 1,
-      daysInMonth
-    );
-  } else if (isFutureMonth) {
-    daysElapsed = 0;
-  } else {
-    daysElapsed = daysInMonth;
-  }
-
-  return {
-    startDate: range.startDate,
-    daysInMonth,
-    daysElapsed,
-    daysRemaining: Math.max(0, daysInMonth - daysElapsed),
-    isCurrentMonth,
-    isFutureMonth,
-  };
 }
 
 export function useFinanceAnalytics({

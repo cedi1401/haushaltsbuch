@@ -1,7 +1,7 @@
 // src/utils/financialMonthUtils.js
 // Berechnet den "finanziellen Monat" basierend auf einem konfigurierbaren Monatsbeginn-Tag.
 // Beispiel: monthStartDay=24 → Einträge ab dem 24. Mai zählen zum finanziellen Juni (24. Mai – 23. Jun = "Juni").
-import { validateMonthStartDay } from "./hbUtils.js";
+import { validateMonthStartDay, toLocalISO } from "./hbUtils.js";
 import { MONTHS_SHORT } from "./constants.js";
 
 /**
@@ -85,6 +85,57 @@ export function getFinancialMonthRange(yyyymm, monthStartDay = 1) {
   const endDate = `${year}-${String(month).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`;
 
   return { startDate, endDate };
+}
+
+/**
+ * Liefert Länge und Verlaufsstatus eines finanziellen Monats unter
+ * Berücksichtigung des konfigurierten Monatsbeginns. Gerechnet wird in lokaler
+ * Zeit — `toISOString()` würde kurz nach Mitternacht noch den Vortag liefern.
+ * @param {string} monthFilter - Finanzmonat "YYYY-MM"; leer ⇒ null
+ * @param {number} monthStartDay
+ * @param {Date} [today] - Bezugstag, nur für Tests abweichend
+ * @returns {{ startDate: string, daysInMonth: number, daysElapsed: number,
+ *   daysRemaining: number, isCurrentMonth: boolean, isFutureMonth: boolean } | null}
+ */
+export function getFinancialMonthInfo(monthFilter, monthStartDay, today = new Date()) {
+  if (!monthFilter) return null;
+  const startDay = monthStartDay ?? 1;
+  const range = getFinancialMonthRange(monthFilter, startDay);
+  if (!range) return null;
+
+  const todayStr = toLocalISO(today);
+  const isCurrentMonth = getFinancialMonth(todayStr, startDay)?.yyyymm === monthFilter;
+
+  const msPerDay = 86400000;
+  const startDate = new Date(range.startDate + "T00:00:00");
+  const endDate = new Date(range.endDate + "T00:00:00");
+  const daysInMonth = Math.round((endDate - startDate) / msPerDay) + 1;
+
+  const isFutureMonth = !isCurrentMonth && startDate > today;
+
+  let daysElapsed;
+  if (isCurrentMonth) {
+    // Ab Mitternacht zählen, nicht ab der Uhrzeit: sonst rundet der Nachmittag
+    // auf den nächsten Tag auf. Math.round fängt nur noch die Sommerzeit ab.
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    daysElapsed = Math.min(
+      Math.round((todayStart - startDate) / msPerDay) + 1,
+      daysInMonth
+    );
+  } else if (isFutureMonth) {
+    daysElapsed = 0;
+  } else {
+    daysElapsed = daysInMonth;
+  }
+
+  return {
+    startDate: range.startDate,
+    daysInMonth,
+    daysElapsed,
+    daysRemaining: Math.max(0, daysInMonth - daysElapsed),
+    isCurrentMonth,
+    isFutureMonth,
+  };
 }
 
 export function formatYearMonth(yyyymm) {

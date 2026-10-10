@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Card, CardContent } from "../components/ui.jsx";
 import { useFinanceAnalytics } from "../hooks/useFinanceAnalytics.js";
-import { calcBudgetStatus } from "../utils/budgetUtils.js";
+import { buildBudgetRows } from "../utils/budgetUtils.js";
 import InsightTabs from "./insights/InsightTabs.jsx";
 import OverviewCard from "./insights/OverviewCard.jsx";
 import BehaviorCard from "./insights/BehaviorCard.jsx";
@@ -19,6 +19,7 @@ export default function InsightsPanel({
   totalSavingsTransfers,
   totalReserveTransfers,
   expenseCategories,
+  recurringExpenses,
 }) {
   const [activeCard, setActiveCard] = useState("overview");
   const analytics = useFinanceAnalytics({
@@ -33,9 +34,9 @@ export default function InsightsPanel({
     totalReserveTransfers,
   });
 
-  const budgetItems = useMemo(
-    () => calcBudgetStatus(filteredEntries, expenseCategories),
-    [filteredEntries, expenseCategories]
+  const budget = useMemo(
+    () => buildBudgetRows({ entries, expenseCategories, recurringExpenses, monthFilter, monthStartDay }),
+    [entries, expenseCategories, recurringExpenses, monthFilter, monthStartDay]
   );
 
   return (
@@ -47,7 +48,12 @@ export default function InsightsPanel({
             <OverviewCard analytics={analytics.overview} />
           )}
           {activeCard === "budget" && (
-            <BudgetCard budgetItems={budgetItems} monthFilter={monthFilter} monthStartDay={monthStartDay} />
+            <BudgetCard
+              budgetItems={budget.budgeted}
+              totals={budget.totals}
+              monthInfo={budget.monthInfo}
+              isAverage={budget.isAverage}
+            />
           )}
           {activeCard === "behavior" && (
             <BehaviorCard analytics={analytics.behavior} />

@@ -6171,6 +6171,7 @@ select.hb-input option {
 .hb-budget-status-pill--ok   { color: var(--green);  background: var(--green-soft);  }
 .hb-budget-status-pill--warn { color: var(--yellow-text); background: var(--yellow-soft); }
 .hb-budget-status-pill--risk { color: var(--yellow-text); background: var(--yellow-soft); }
+.hb-budget-status-pill--full { color: var(--muted);  background: var(--bg-subtle);  }
 .hb-budget-status-pill--over { color: var(--red);    background: var(--red-soft);    }
 
 .hb-full-card {

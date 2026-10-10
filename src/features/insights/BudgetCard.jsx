@@ -2,71 +2,19 @@ import React, { memo, useState, useEffect } from "react";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { IconChevronLeft, IconChevronRight, IconInbox } from "../../components/icons.jsx";
 import { formatPercent } from "../../utils/hbUtils.js";
-import { getFinancialMonthRange, getFinancialMonth } from "../../utils/financialMonthUtils.js";
-
-function getBudgetStatus(pct) {
-  if (pct >= 1.0) return "over";
-  if (pct >= 0.95) return "risk";
-  return "ok";
-}
+import { BUDGET_STATUS_LABEL } from "../../utils/budgetUtils.js";
 
 const STATUS_COLOR = {
   ok:   "var(--green)",
   warn: "var(--yellow)",
   risk: "var(--yellow)",
+  full: "var(--muted)",
   over: "var(--red)",
 };
 
-const STATUS_LABEL = {
-  ok:   "Im Budget",
-  warn: "Aufpassen",
-  risk: "Knapp",
-  over: "Überschritten",
-};
-
-function getMonthTimeInfo(monthFilter, monthStartDay) {
-  if (!monthFilter) return null;
-  const startDay = monthStartDay ?? 1;
-  const range = getFinancialMonthRange(monthFilter, startDay);
-  if (!range) return null;
-
-  const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
-  const isCurrentMonth = getFinancialMonth(todayStr, startDay)?.yyyymm === monthFilter;
-  if (!isCurrentMonth) return null;
-
-  const msPerDay = 86400000;
-  const startDate = new Date(range.startDate + "T00:00:00");
-  const endDate = new Date(range.endDate + "T00:00:00");
-  const daysInMonth = Math.round((endDate - startDate) / msPerDay) + 1;
-  const dayOfMonth = Math.min(
-    Math.round((today - startDate) / msPerDay) + 1,
-    daysInMonth
-  );
-  return {
-    dayOfMonth,
-    daysInMonth,
-    remaining: daysInMonth - dayOfMonth,
-    expectedPct: dayOfMonth / daysInMonth,
-  };
-}
-
-function calcItemMetrics(spent, budget, timeInfo) {
-  if (!timeInfo || timeInfo.dayOfMonth < 3) return null;
-
-  const rate = spent / timeInfo.dayOfMonth;
-  const forecastMonthEnd = rate * timeInfo.daysInMonth;
-
-  return {
-    rate,
-    forecastMonthEnd,
-    forecastDelta: forecastMonthEnd - budget,
-  };
-}
-
 const PAGE_SIZE = 4;
 
-const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthStartDay }) {
+const BudgetCard = memo(function BudgetCard({ budgetItems, totals, monthInfo, isAverage }) {
   const fmt = useFmt();
   const [page, setPage] = useState(0);
 
@@ -114,13 +62,13 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
     );
   }
 
-  const totalBudget  = budgetItems.reduce((s, i) => s + i.budget, 0);
-  const totalSpent   = budgetItems.reduce((s, i) => s + i.spent,  0);
-  const totalPct     = totalBudget > 0 ? totalSpent / totalBudget : 0;
-  const overCount    = budgetItems.filter((i) => i.spent > i.budget).length;
-  const timeInfo     = getMonthTimeInfo(monthFilter, monthStartDay);
+  const totalBudget  = totals.budget;
+  const totalSpent   = totals.spent;
+  const totalPct     = totals.pct;
+  const overCount    = totals.overCount;
+  const timeInfo     = monthInfo?.isCurrentMonth ? monthInfo : null;
 
-  const totalStatus  = getBudgetStatus(totalPct);
+  const totalStatus  = totals.status;
 
   const pagedItems = budgetItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -129,7 +77,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
       {/* Gesamt-Header */}
       <div className="hb-budget-summary">
         <div>
-          <div className="hb-insight-label">Gesamt</div>
+          <div className="hb-insight-label">{isAverage ? "Ø pro Monat" : "Gesamt"}</div>
           <div className="hb-budget-total-inline">
             <span className="hb-insight-kpi">{fmt(totalSpent, 0)}</span>
             <span className="hb-budget-total-sub">
@@ -144,7 +92,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
           <div style={{ textAlign: "right" }}>
             <div className="hb-insight-label">Restmonat</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 5, justifyContent: "flex-end" }}>
-              <span className="hb-insight-kpi">{timeInfo.remaining}</span>
+              <span className="hb-insight-kpi">{timeInfo.daysRemaining}</span>
               <span className="hb-budget-total-sub">von {timeInfo.daysInMonth} Tagen</span>
             </div>
           </div>
@@ -169,15 +117,14 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
       {/* Kategorie-Liste */}
       <div className="hb-budget-list">
         {pagedItems.map((item) => {
-          const pct      = item.budget > 0 ? item.spent / item.budget : 0;
-          const metrics  = calcItemMetrics(item.spent, item.budget, timeInfo);
-          const status   = getBudgetStatus(pct);
+          const { pct, status, remaining } = item;
           const color    = STATUS_COLOR[status];
-          const remaining = item.budget - item.spent;
-          const isOver   = remaining < 0;
+          const isOver   = status === "over";
 
           const pctDisplay = Math.round(pct * 100);
-          const pillText   = pctDisplay > 150 ? STATUS_LABEL[status] : formatPercent(pctDisplay, { digits: 0, sign: false });
+          const pillText   = pctDisplay > 150 || status === "full"
+            ? BUDGET_STATUS_LABEL[status]
+            : formatPercent(pctDisplay, { digits: 0, sign: false });
 
           return (
             <div key={item.id} className="hb-budget-row">
@@ -211,17 +158,17 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
                   `${fmt(remaining, 0)} verbleibend`
                 )}
 
-                {metrics && metrics.rate > 0 && (
+                {item.dailyRate > 0 && (
                   <span className="hb-budget-row-meta-sep">
-                    · ø {fmt(metrics.rate, 1)} pro Tag
+                    · ø {fmt(item.dailyRate, 1)} pro Tag
                   </span>
                 )}
 
-                {metrics && item.budget > 0 && (
+                {item.forecast != null && (
                   <span className="hb-budget-row-meta-sep">
                     · Prognose:{" "}
-                    <span style={{ color: metrics.forecastMonthEnd > item.budget ? "var(--red)" : "var(--green)" }}>
-                      {fmt(metrics.forecastMonthEnd, 0)}
+                    <span style={{ color: item.forecastDelta > 0.005 ? "var(--red)" : "var(--green)" }}>
+                      {fmt(item.forecast, 0)}
                     </span>
                   </span>
                 )}
