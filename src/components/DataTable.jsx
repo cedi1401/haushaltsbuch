@@ -38,7 +38,7 @@ const ACTIONS_LINGER_MS = 300;
  *   }
  *
  * Sektion (vom View vorbereitet):
- *   { key, label, accent, rows, aside, total, totalColumnId }  // rows brauchen je eine `id`
+ *   { key, label, accent, rows, aside, total, totalColumnId, countLabel }  // rows brauchen je eine `id`
  *
  * `label === null` heißt: kein Gliederungsband. `accent` ist eine beliebige
  * CSS-Farbe (im Rückstellungs-View eine var(--group-accent-N)) und färbt Punkt und
@@ -47,6 +47,8 @@ const ACTIONS_LINGER_MS = 300;
  * `total` ist die Bandsumme; mit `totalColumnId` endet sie an der rechten Kante
  * dieser Spalte und fluchtet so mit den Zeilen und der Fußsumme. Ist die Spalte
  * ausgeblendet oder die letzte, steht die Summe vorn im `aside`.
+ * `countLabel(n)` ersetzt das Zählwort im Band („3 Positionen"), wo die Zeilen
+ * keine Positionen sind.
  * Eine Sektion ohne Zeilen wird trotzdem mit ihrem Band gezeigt: eine leere
  * Gruppe muss sichtbar bleiben, damit sie sich verwalten lässt.
  *
@@ -281,7 +283,9 @@ export default function DataTable({
                       )}
                       <span className="hb-dt-band-name">{section.label}</span>
                       <span className="hb-dt-band-count">
-                        {section.rows.length} Position{section.rows.length === 1 ? "" : "en"}
+                        {section.countLabel
+                          ? section.countLabel(section.rows.length)
+                          : `${section.rows.length} Position${section.rows.length === 1 ? "" : "en"}`}
                       </span>
                       {bandSplit && hasBandTotal(section) && (
                         <span className="hb-dt-band-total">{section.total}</span>

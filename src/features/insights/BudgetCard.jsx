@@ -2,15 +2,7 @@ import React, { memo, useState, useEffect } from "react";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { IconChevronLeft, IconChevronRight, IconInbox } from "../../components/icons.jsx";
 import { formatPercent } from "../../utils/hbUtils.js";
-import { BUDGET_STATUS_LABEL } from "../../utils/budgetUtils.js";
-
-const STATUS_COLOR = {
-  ok:   "var(--green)",
-  warn: "var(--yellow)",
-  risk: "var(--yellow)",
-  full: "var(--muted)",
-  over: "var(--red)",
-};
+import { BUDGET_STATUS_COLOR as STATUS_COLOR, BUDGET_STATUS_LABEL } from "../../utils/budgetUtils.js";
 
 const PAGE_SIZE = 4;
 

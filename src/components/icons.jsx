@@ -63,6 +63,17 @@ export function IconGoals(props) {
   );
 }
 
+// Tacho — Budget-View. IconWallet ist für Depots belegt.
+export function IconBudget(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path d="M5.64 19.36a9 9 0 1 1 12.72 0" />
+      <line x1="12" y1="13" x2="16" y2="9" />
+      <circle cx="12" cy="13" r="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function IconFixed(props) {
   return (
     <svg {...baseProps} {...props}>

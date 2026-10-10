@@ -8,6 +8,7 @@ import { useConfirm } from "./components/ConfirmDialog.jsx";
 import { IconInfo, IconClose } from "./components/icons.jsx";
 
 import SettingsDialog from "./features/SettingsDialog.jsx";
+import BudgetView from "./features/BudgetView.jsx";
 import TrendView from "./features/TrendView.jsx";
 import PotsView from "./features/PotsView.jsx";
 import GoalsView from "./features/GoalsView.jsx";
@@ -274,11 +275,19 @@ export default function HaushaltsbuchApp() {
             isViewWithoutMonth={isViewWithoutMonth}
           />
 
-          <ErrorBoundary context={view === "marketdebug" ? "Marktdaten (Debug)" : view === "book" ? "Dashboard" : view === "trend" ? "Trend" : view === "pots" ? "Töpfe" : view === "goals" ? "Sparziele" : view === "costgroups" ? "Kostenrechner" : view === "investments" ? "Investments" : view === "reserves" ? "Rückstellungen" : "Fixkosten"}>
+          <ErrorBoundary context={view === "marketdebug" ? "Marktdaten (Debug)" : view === "book" ? "Dashboard" : view === "budget" ? "Budgets" : view === "trend" ? "Trend" : view === "pots" ? "Töpfe" : view === "goals" ? "Sparziele" : view === "costgroups" ? "Kostenrechner" : view === "investments" ? "Investments" : view === "reserves" ? "Rückstellungen" : "Fixkosten"}>
             {view === "marketdebug" && MarketDebugView ? (
               <Suspense fallback={<div style={{ padding: 16 }}>Lädt…</div>}>
                 <MarketDebugView baseCurrency={baseCurrency} />
               </Suspense>
+            ) : view === "budget" ? (
+              <BudgetView
+                entries={entries}
+                expenseCategories={expenseCategories}
+                recurringExpenses={activeBook?.recurringExpenses || EMPTY_ARRAY}
+                monthFilter={monthFilter}
+                monthStartDay={monthStartDay}
+              />
             ) : view === "trend" ? (
               <TrendView
                 entries={entries}

@@ -26,6 +26,15 @@ export const BUDGET_STATUS_LABEL = {
   over: "Überschritten",
 };
 
+// Ton für Meter und Kennzahlen; die Pillen färbt .hb-budget-status-pill--*.
+export const BUDGET_STATUS_COLOR = {
+  ok: "var(--green)",
+  warn: "var(--yellow)",
+  risk: "var(--yellow)",
+  full: "var(--muted)",
+  over: "var(--red)",
+};
+
 const hasBudget = (node) => node?.budget != null && node.budget > 0;
 const round2 = (n) => Math.round(n * 100) / 100;
 

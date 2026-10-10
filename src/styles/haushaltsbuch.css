@@ -6174,6 +6174,42 @@ select.hb-input option {
 .hb-budget-status-pill--full { color: var(--muted);  background: var(--bg-subtle);  }
 .hb-budget-status-pill--over { color: var(--red);    background: var(--red-soft);    }
 
+/* Namenszelle der Budget-Tabelle: Kategoriepunkt, Name und — bei einer
+   Unterkategorie — der Elternname darunter. Die Zelle ist gedeckelt
+   (.hb-dt-clamp); gekürzt wird je Textzeile, deshalb min-width: 0. */
+.hb-budget-cell-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hb-budget-cell-names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  /* Zwei Textzeilen (18 + 14 px) in der 44-px-Zeile: ohne den negativen
+     Rand würde eine Zeile mit Unterkategorie höher als ihre Nachbarn. */
+  margin-block: -2px;
+}
+
+.hb-budget-cell-label {
+  line-height: 18px;
+}
+
+.hb-budget-cell-label,
+.hb-budget-cell-parent {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-budget-cell-parent {
+  font-size: 12px;
+  line-height: 14px;
+  color: var(--muted);
+}
+
 .hb-full-card {
   margin-top: var(--card-gap);
 }

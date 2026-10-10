@@ -7,7 +7,7 @@ import HbSwitch from "../components/HbSwitch.jsx";
 import { IconMenu, IconClose, IconSettings, IconSun, IconMoon } from "../components/icons.jsx";
 import { HbMonthPicker } from "../components/HbDatePicker.jsx";
 
-const VIEW_TITLES = { book: "Dashboard", trend: "Trend", pots: "Töpfe", goals: "Sparziele", fixed: "Fixkosten", reserves: "Rückstellungen", costgroups: "Kostenrechner", investments: "Investments" };
+const VIEW_TITLES = { book: "Dashboard", budget: "Budgets", trend: "Trend", pots: "Töpfe", goals: "Sparziele", fixed: "Fixkosten", reserves: "Rückstellungen", costgroups: "Kostenrechner", investments: "Investments" };
 
 export default function AppToolbar({
   books,

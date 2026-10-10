@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   IconBook,
+  IconBudget,
   IconPots,
   IconGoals,
   IconFixed,
@@ -13,6 +14,7 @@ import {
 
 const NAV_ITEMS = [
   { id: "book", label: "Dashboard", Icon: IconBook },
+  { id: "budget", label: "Budgets", Icon: IconBudget },
   { id: "pots", label: "Töpfe", Icon: IconPots },
   { id: "goals", label: "Sparziele", Icon: IconGoals },
   { id: "fixed", label: "Fixkosten", Icon: IconFixed },
