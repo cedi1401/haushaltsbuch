@@ -1797,15 +1797,10 @@ select.hb-input option {
    weicht aber in drei Punkten bewusst ab (siehe Kommentare an .hb-dt-table). */
 
 .hb-dt {
-  /* Hält den Scroll-Kasten schmal, falls der View die Tabelle je in einen
-     Flex-/Grid-Container hängt. Ohne min-width: 0 wüchse ein auto-Layout-
-     Tisch am Container vorbei, statt zu scrollen. */
+  /* Falls der View die Tabelle je in einen Flex-/Grid-Container hängt: ohne
+     min-width: 0 dehnte ein auto-Layout-Tisch dessen Spur über die Karte
+     hinaus. */
   min-width: 0;
-  /* Was unter dem Scrollkasten noch Platz braucht, bis das Fenster zu Ende
-     ist: 20 px Karten-Padding + 1 px Karten-Rahmen + 24 px Seiten-Padding.
-     Steht die Tabelle einmal in einer anderen Umgebung, ist das die eine
-     Zahl, die der View überschreibt. */
-  --hb-dt-gap: 45px;
   /* Breite der Chevron-Spalte. Als Variable, weil der Detailbereich sich um
      genau diesen Betrag einrücken muss, damit sein erstes Label unter der
      Bezeichnung der Zeile darüber steht. Zwei getrennte Zahlen wären früher
@@ -1814,27 +1809,12 @@ select.hb-input option {
 }
 
 .hb-dt-scroll {
-  /* Desktop-App: die Tabelle darf horizontal scrollen, es gibt bewusst kein
-     responsives Umschalten.
-
-     Die Höhenbegrenzung ist zugleich die Voraussetzung für den sticky Kopf:
-     .hb-table-wrap taugt dafür nicht, weil dort zwar overflow-y per Spec auf
-     auto rechnet, der Kasten aber nie vertikal scrollt — ein sticky <th> hätte
-     nichts, woran es kleben könnte.
-
-     --hb-dt-room ist der Abstand von der Oberkante des Kastens bis zur
-     Unterkante des Fensters; `DataTable` misst ihn und schreibt ihn hier
-     hinein. Raten lässt er sich nicht: über dem Kasten stehen je nach Zustand
-     Toolbar, Hinweisstreifen und Karten-Padding. Ein zu großer Wert schiebt
-     die Summenzeile unter den Fensterrand (und die Seite bekommt eine zweite
-     Bildlaufleiste), ein zu kleiner lässt unter der Karte Luft und erzeugt die
-     innere Leiste früher als nötig. Der Fallback greift nur im allerersten
-     Layout-Durchgang; die Untergrenze verhindert, dass der Kasten in einem
-     niedrigen Fenster auf ein paar Zeilen zusammenfällt — dann scrollt
-     lieber die Seite. */
-  overflow: auto;
-  max-height: max(280px, calc(var(--hb-dt-room, 60vh) - var(--hb-dt-gap)));
-  -webkit-overflow-scrolling: touch;
+  /* Keine Höhenbegrenzung und kein eigener Scrollkasten: die Karte wächst mit
+     den Zeilen, gescrollt wird die Seite — auch waagrecht, falls die Spalten
+     einmal breiter sind als die Karte. overflow: visible, damit Kebab-Menüs in
+     den letzten Zeilen nicht am Kasten abgeschnitten werden. Kopf und
+     Summenzeile kleben deshalb nicht: es gibt nichts, woran sie haften. */
+  overflow: visible;
 }
 
 .hb-dt-table {
@@ -1842,9 +1822,8 @@ select.hb-input option {
   /* Eine Stufe über dem Fließtext der App (14 px): die Tabelle ist die
      Lesefläche ihres Views, nicht Beiwerk. */
   font-size: 15px;
-  /* separate statt collapse (anders als .hb-table): Beim kollabierten
-     Rahmenmodell wandert die border-bottom eines sticky <th> nicht mit dem
-     Kopf mit — der Strich bliebe beim Scrollen stehen. */
+  /* separate statt collapse (anders als .hb-table): Die Linien gehören so
+     den einzelnen Zellen — Band, Detail- und Summenzeile setzen ihre eigenen. */
   border-collapse: separate;
   border-spacing: 0;
   /* auto statt fixed (anders als .hb-table): Die Spaltenzahl variiert mit der
@@ -1854,13 +1833,6 @@ select.hb-input option {
 
 /* Kopfzeile — Typografie identisch zu .hb-table th */
 .hb-dt-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-sticky);
-  /* Ohne eigenen Hintergrund scheinen die Zeilen beim Scrollen durch den Kopf.
-     Und weil .hb-dt-table border-collapse: separate setzt, wandert der
-     Unterstrich mit — bei collapse gehört er der Tabelle und bliebe stehen. */
-  background: var(--card);
   text-align: left;
   padding: 11px 12px;
   border-bottom: 1px solid var(--border);
@@ -2154,20 +2126,6 @@ select.hb-input option {
   }
 }
 
-/* Ohne Höhenbegrenzung (`bounded={false}`): mehrere Tabellen untereinander
-   scrollen mit der Seite. overflow: visible, damit Kebab-Menüs in den letzten
-   Zeilen nicht am Kasten abgeschnitten werden; Kopf und Summenzeile kleben
-   dann nicht mehr — es gibt keinen eigenen Scrollkasten, an dem sie haften. */
-.hb-dt-scroll--unbounded {
-  overflow: visible;
-  max-height: none;
-}
-
-.hb-dt-scroll--unbounded .hb-dt-table thead th,
-.hb-dt-scroll--unbounded .hb-dt-table tfoot td {
-  position: static;
-}
-
 /* Farbkante der Gruppe, 3 px an der ersten Zelle jeder Datenzeile.
 
    Als inset box-shadow und nicht als border-left: ein Rahmen zählt zur
@@ -2187,10 +2145,6 @@ select.hb-input option {
    heraus, weil die Komponente summarize() nur für sichtbare Spalten aufruft.
    Der Trennstrich sitzt oben, weil die letzte Datenzeile ihren verliert. */
 .hb-dt-table tfoot td {
-  position: sticky;
-  bottom: 0;
-  z-index: var(--z-sticky);
-  background: var(--card);
   border-top: 1px solid var(--border);
   padding: 11px 12px;
   font-weight: 600;

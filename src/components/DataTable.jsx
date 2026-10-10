@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTableColumns } from "../hooks/useTableColumns.js";
 import ColumnsFlyout from "./ColumnsFlyout.jsx";
 import { IconChevron } from "./icons.jsx";
@@ -60,9 +60,6 @@ const ACTIONS_LINGER_MS = 300;
  *                        // Überfahren oder bei Tastaturfokus. Bewusst keine
  *                        // eigene Spalte: die reservierte sonst dauerhaft die
  *                        // Breite der unsichtbaren Buttons als Leerstreifen.
- *   bounded = true       // false ⇒ keine Höhenbegrenzung, kein Innen-Scroll.
- *                        // Nötig, sobald mehrere Tabellen untereinander stehen
- *                        // — sonst scrollte jede in sich und die Seite dazu.
  *   maxRows              // Zahl ⇒ höchstens so viele Zeilen, gekappt NACH der
  *                        // Sortierung („Weitere anzeigen" im View). Die
  *                        // Summenzeile rechnet weiter über alle Zeilen.
@@ -85,6 +82,9 @@ const ACTIONS_LINGER_MS = 300;
  * Screenreader nur „Tabelle" an; ein <caption> wäre die Alternative, würde aber
  * die sichtbare Überschrift des Views doppeln.
  *
+ * Die Tabelle begrenzt ihre Höhe nicht und scrollt nie in sich: die Karte
+ * wächst mit den Zeilen, gescrollt wird die Seite.
+ *
  * Bewusst nicht vorgesehen: Zeilen-Auswahl, Filter, Paginierung, onRowClick,
  * Dichte-Option, renderEmpty (Leerzustände mit Icon und Aktion liegen im
  * View), getRowId.
@@ -98,7 +98,6 @@ export default function DataTable({
   label,
   toolbar,
   renderRowActions,
-  bounded = true,
   maxRows,
   emptyText,
 }) {
@@ -210,8 +209,6 @@ export default function DataTable({
   // (Kopf und Summenzeile), und der Leerzustand liegt beim View.
   const isEmpty = Boolean(emptyText) && allRows.length === 0;
 
-  const scrollRef = useScrollRoom(bounded);
-
   return (
     <div className="hb-dt">
       {/* Außerhalb von .hb-dt-scroll: innerhalb wanderte der Streifen beim
@@ -226,10 +223,7 @@ export default function DataTable({
           onReset={reset}
         />
       </div>
-      <div
-        className={"hb-dt-scroll" + (bounded ? "" : " hb-dt-scroll--unbounded")}
-        ref={scrollRef}
-      >
+      <div className="hb-dt-scroll">
         <table
           className={"hb-dt-table" + (renderDetail ? " hb-dt-table--expandable" : "")}
           aria-label={label}
@@ -396,56 +390,6 @@ export default function DataTable({
       </div>
     </div>
   );
-}
-
-/**
- * Misst, wie viel Fensterhöhe unterhalb der Oberkante des Scrollkastens noch
- * übrig ist, und legt das Ergebnis als `--hb-dt-room` auf dem Kasten ab. Das
- * CSS zieht davon `--hb-dt-gap` ab (was unter der Tabelle noch folgt) und macht
- * daraus die `max-height`.
- *
- * Warum überhaupt gemessen wird: Über der Tabelle stehen je nach Zustand
- * Toolbar-Streifen, Hinweisstreifen und Karten-Padding. Ein fester
- * `calc(100vh - X)` ist deshalb entweder zu groß — dann steht die Summenzeile
- * unter dem Fensterrand und die Seite bekommt eine zweite Bildlaufleiste neben
- * der des Kastens — oder zu klein, dann bleibt unter der Karte Luft und die
- * innere Leiste erscheint früher als nötig. Sitzt der Wert dagegen genau,
- * scrollt ausschließlich die Tabelle, und Kopf- wie Summenzeile bleiben
- * stehen: das ist der eigentliche Zweck der Messung.
- *
- * Gemessen wird der Abstand zum *Dokumentanfang* (`+ scrollY`), nicht der
- * aktuelle Abstand zum Fensterrand — sonst schrumpfte der Kasten mit jedem
- * Scrollen weiter. `clientHeight` statt `innerHeight`, weil eine waagrechte
- * Bildlaufleiste des Dokuments (schmales Fenster, `.hb-page-container` hat
- * 1600 px Mindestbreite) sonst nicht abgezogen würde.
- *
- * Bewusst ohne ResizeObserver: Der Effekt läuft nach jedem Render und damit
- * auch dann, wenn der Hinweisstreifen des Views auf- oder zugeht; für alles
- * Übrige genügt `resize`. Der Vergleich mit dem zuletzt geschriebenen Wert
- * hält die Schreibzugriffe aus dem Layout-Pfad heraus.
- */
-function useScrollRoom(enabled = true) {
-  const ref = useRef(null);
-  const lastRoom = useRef(null);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    // Ohne Höhenbegrenzung (`bounded={false}`) liest das CSS die Variable nicht
-    // — dann gibt es nichts zu messen.
-    if (!el || !enabled) return undefined;
-    const measure = () => {
-      const top = el.getBoundingClientRect().top + window.scrollY;
-      const room = Math.round(document.documentElement.clientHeight - top);
-      if (room === lastRoom.current) return;
-      lastRoom.current = room;
-      el.style.setProperty("--hb-dt-room", `${room}px`);
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  });
-
-  return ref;
 }
 
 /**

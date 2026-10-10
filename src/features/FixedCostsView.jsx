@@ -807,7 +807,6 @@ export default function FixedCostsView({
                       label={table.title}
                       toolbar={renderTableToolbar(table)}
                       renderRowActions={renderRowActions}
-                      bounded={false}
                     />
                   ) : (
                     <>

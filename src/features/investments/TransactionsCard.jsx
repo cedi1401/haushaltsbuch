@@ -185,7 +185,6 @@ export default function TransactionsCard({
           storageKey="hb.investments.transactions"
           defaultSort={{ columnId: "date", dir: "desc" }}
           label="Transaktionen"
-          bounded={false}
           maxRows={showAll ? undefined : PREVIEW_ROWS}
           emptyText="Keine Buchung dieser Art erfasst."
           toolbar={

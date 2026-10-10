@@ -504,7 +504,6 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
               )}
               label="Positionen"
               toolbar={<h3 className="hb-card-title">Positionen</h3>}
-              bounded={false}
             />
           </CardContent>
         </Card>
