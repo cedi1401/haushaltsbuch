@@ -106,7 +106,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, monthFilter, monthSta
           <div className="hb-empty-icon"><IconInbox /></div>
           <div className="hb-empty-title">Kein Budget gesetzt</div>
           <div className="hb-empty-text">
-            Öffne den Kategorien-Dialog und setze ein Monatsbudget für eine Ausgaben-Kategorie.
+            Öffne den Kategorien-Dialog und lege ein Budget für eine Ausgaben-Kategorie fest.
           </div>
         </div>
         {pagination}

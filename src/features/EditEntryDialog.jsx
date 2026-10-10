@@ -37,7 +37,7 @@ export default function EditEntryDialog({
                 onChange={(kind) => setEditDraft((d) => ({ ...d, kind }))}
               />
               {editDraft.kind === "expense" && (
-                <div className="hb-entry-form__hint">Quelle: Monatsbudget</div>
+                <div className="hb-entry-form__hint">Quelle: Monat</div>
               )}
             </div>
 

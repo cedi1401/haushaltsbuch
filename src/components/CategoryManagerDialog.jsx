@@ -50,7 +50,7 @@ function BudgetEditor({ inputRef, value, onChange, onSave, onRemove, onCancel })
         type="number"
         min="0"
         step="1"
-        placeholder="Monatsbudget..."
+        placeholder="Budget pro Monat..."
         value={value}
         onChange={onChange}
         onKeyDown={(e) => {
@@ -562,7 +562,7 @@ export default function CategoryManagerDialog({
                   }
                   openBudgetEdit(cat);
                 }}
-                title={cat.budget != null ? "Budget ändern" : "Monatsbudget setzen"}
+                title={cat.budget != null ? "Budget ändern" : "Budget festlegen"}
                 aria-label="Budget bearbeiten"
               >
                 {canParent ? <IconWallet /> : <IconLock />}
@@ -633,7 +633,7 @@ export default function CategoryManagerDialog({
                             }
                             openBudgetEdit(cat, sub);
                           }}
-                          title={sub.budget != null ? "Budget ändern" : "Monatsbudget setzen"}
+                          title={sub.budget != null ? "Budget ändern" : "Budget festlegen"}
                           aria-label="Sub-Budget bearbeiten"
                         >
                           {canSub ? <IconWallet /> : <IconLock />}
@@ -732,7 +732,7 @@ export default function CategoryManagerDialog({
             Kategorien bearbeiten
             <HbTooltip
               placement="bottom"
-              text="Um einer Ober- oder Unterkategorie ein Monatsbudget zu setzen, fahre mit der Maus über die jeweilige Zeile und klicke auf das Geldbörsen-Symbol rechts. Ein Budget lässt sich entweder für die Oberkategorie oder für ihre Unterkategorien festlegen – nicht für beide gleichzeitig."
+              text="Um einer Ober- oder Unterkategorie ein Budget festzulegen, fahre mit der Maus über die jeweilige Zeile und klicke auf das Geldbörsen-Symbol rechts. Ein Budget lässt sich entweder für die Oberkategorie oder für ihre Unterkategorien festlegen – nicht für beide gleichzeitig."
             />
           </span>
         }

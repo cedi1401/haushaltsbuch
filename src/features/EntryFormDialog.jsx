@@ -150,7 +150,7 @@ export default function EntryFormDialog({
             <div className="hb-label">Art</div>
             <EntryKindSelector value={kind} onChange={(v) => setField("kind", v)} />
             {kind === "expense" && (
-              <div className="hb-entry-form__hint">Quelle: Monatsbudget</div>
+              <div className="hb-entry-form__hint">Quelle: Monat</div>
             )}
           </div>
 

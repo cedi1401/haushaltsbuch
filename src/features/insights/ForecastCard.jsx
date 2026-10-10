@@ -162,7 +162,7 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
                         <span>{fmt(val)}</span>
                       </div>
                       <div className="hb-chart-tooltip-row">
-                        <span className="hb-chart-tooltip-key">Budget</span>
+                        <span className="hb-chart-tooltip-key">Soll</span>
                         <span style={{ color: "var(--muted)" }}>{fmt(row.soll)}</span>
                       </div>
                       <div className="hb-chart-tooltip-row">
@@ -256,7 +256,7 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
       <div className="hb-insight-kpi-grid">
         {/* Block 1: Frei-Budget (Startwert des Burn-Downs) */}
         <div className="hb-insight-block">
-          <div className="hb-insight-label">Frei-Budget</div>
+          <div className="hb-insight-label">Frei verfügbar</div>
           <div className="hb-insight-kpi">{fmt(freiBudget)}</div>
         </div>
 
@@ -271,7 +271,7 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
         {/* Block 3: Soll/Tag (Soll-Tempo) oder Sparquote (vergangen) */}
         <div className="hb-insight-block">
           <div className="hb-insight-label">
-            {isPastMonth ? "Sparquote" : "Budget pro Tag"}
+            {isPastMonth ? "Sparquote" : "Soll pro Tag"}
           </div>
           <div className="hb-insight-kpi">
             {isPastMonth

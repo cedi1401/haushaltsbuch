@@ -42,7 +42,7 @@ export default function SurplusSweepDialog({
           Überschuss sparen
           <HbTooltip
             placement="bottom"
-            text='Bucht den am Monatsende übrig gebliebenen Frei-Betrag als Sparen-Transfer auf den gewählten Topf, datiert auf den letzten Tag des Monats. So zählt der Überschuss zur Sparquote und das Frei-Budget des Monats geht auf 0. Ohne eigenen Spar-Topf wird automatisch ein „Überschuss"-Topf angelegt.'
+            text='Bucht den am Monatsende übrig gebliebenen Frei-Betrag als Sparen-Transfer auf den gewählten Topf, datiert auf den letzten Tag des Monats. So zählt der Überschuss zur Sparquote und der frei verfügbare Betrag des Monats geht auf 0. Ohne eigenen Spar-Topf wird automatisch ein „Überschuss"-Topf angelegt.'
           />
         </span>
       }

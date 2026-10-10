@@ -50,7 +50,7 @@ function intervalLabel(months) {
 // Kern des Konzepts sind: die beiden Zahlen werden nie addiert.
 const HELP_ACTUAL =
   "Summe aller Buchungen in den zugeordneten Kategorien im gewählten Zeitraum, geteilt durch die Anzahl Monate. " +
-  "Das sind tatsächlich erfasste Ausgaben — unabhängig davon, ob sie aus dem Monatsbudget oder aus einem Topf bezahlt wurden.";
+  "Das sind tatsächlich erfasste Ausgaben — unabhängig davon, ob sie aus dem Monat oder aus einem Topf bezahlt wurden.";
 
 const HELP_PLAN =
   "Reine Vorschau für unregelmäßige Kosten: Jeder Posten wird auf einen Betrag pro Monat heruntergerechnet. " +

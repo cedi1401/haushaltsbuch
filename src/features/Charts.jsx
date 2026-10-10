@@ -153,7 +153,7 @@ export default function Charts({
             <div className="hb-chart-body">
               <div className="hb-chart-legend">
                 <div className="hb-legend-total-row">
-                  <span>Budget</span>
+                  <span>Einnahmen</span>
                 </div>
                 {allocationData.isOverbudget && (
                   <div style={{ fontSize: 11, color: themeColors.red, padding: "4px 0 2px" }}>
