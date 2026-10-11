@@ -446,6 +446,81 @@ export function buildBudgetRows({
   };
 }
 
+// ============================================
+// Budget: Pflegen (Vorschlagswerte, Schreiben)
+// ============================================
+
+/**
+ * Vorschlagswerte für den Bearbeiten-Dialog: Ø 6 Monate und Median 12 Monate
+ * je Oberkategorie (inklusive ihrer Unterkategorien) und je Unterkategorie.
+ * Gleiche Monate wie `avg6`/`median12` der Zeilen — die Zeilen kennen aber nur
+ * ihre eigene Ebene, der Dialog braucht beide.
+ *
+ * @param {object} args
+ * @param {Array} args.entries - alle Einträge des Buchs (ungefiltert)
+ * @param {Array} args.expenseCategories
+ * @param {number} [args.monthStartDay]
+ * @param {Date} [args.today] - Bezugstag, nur für Tests abweichend
+ * @returns {{ byCategory: Map<string, {avg6: number|null, median12: number|null}>,
+ *   bySubcategory: Map<string, {avg6: number|null, median12: number|null}> }}
+ */
+export function calcBudgetSuggestions({ entries, expenseCategories, monthStartDay = 1, today = new Date() }) {
+  const categories = expenseCategories || [];
+  const spend = calcCategoryMonthlySpend(entries, categories, monthStartDay);
+  const currentMonth = getFinancialMonth(toLocalISO(today), monthStartDay)?.yyyymm;
+  const months6 = listCompletedMonths(currentMonth, 6, spend.firstMonth);
+  const months12 = listCompletedMonths(currentMonth, 12, spend.firstMonth);
+  const stats = (monthMap) => ({
+    avg6: calcSpendStats(monthMap, months6)?.avg ?? null,
+    median12: calcSpendStats(monthMap, months12)?.median ?? null,
+  });
+
+  const byCategory = new Map();
+  const bySubcategory = new Map();
+  for (const cat of categories) {
+    byCategory.set(cat.id, stats(spend.byCategory.get(cat.id)));
+    for (const sub of cat.subcategories || []) {
+      bySubcategory.set(sub.id, stats(spend.bySubcategory.get(sub.id)));
+    }
+  }
+  return { byCategory, bySubcategory };
+}
+
+const toBudget = (value) => {
+  const n = Number(value);
+  return value != null && value !== "" && Number.isFinite(n) && n > 0 ? round2(n) : null;
+};
+
+/**
+ * Setzt das Budget einer Ausgaben-Kategorie und hält dabei die Regel
+ * „Oberkategorie oder Unterkategorien, nie beides" ein: Die jeweils andere
+ * Ebene wird geleert.
+ *
+ * - `subBudgets` gesetzt: Budgets je Unterkategorie (`{ [subId]: Betrag }`),
+ *   das Budget der Oberkategorie entfällt. Fehlende, leere oder nicht positive
+ *   Beträge heißen „kein Budget".
+ * - sonst: `budget` gilt für die ganze Kategorie, alle Unterkategorie-Budgets
+ *   entfallen. `budget` leer oder 0 entfernt das Budget ganz.
+ *
+ * @param {Array} expenseCategories
+ * @param {string} categoryId - ID der Oberkategorie
+ * @param {{ budget?: number|null, subBudgets?: object|null }} change
+ * @returns {Array} neue Liste; andere Kategorien bleiben dieselben Objekte
+ */
+export function setCategoryBudgets(expenseCategories, categoryId, { budget = null, subBudgets = null } = {}) {
+  return (expenseCategories || []).map((cat) => {
+    if (cat.id !== categoryId) return cat;
+    return {
+      ...cat,
+      budget: subBudgets ? null : toBudget(budget),
+      subcategories: (cat.subcategories || []).map((sub) => ({
+        ...sub,
+        budget: subBudgets ? toBudget(subBudgets[sub.id]) : null,
+      })),
+    };
+  });
+}
+
 /**
  * Aggregiert Einträge in eine 2-stufige Kategorie-Hierarchie (Top-Kategorie →
  * Unterkategorien), inkl. Unkategorisiert-Split. Gemeinsame Basis für Ausgaben-

@@ -3,9 +3,11 @@ import {
   UNCATEGORIZED_ID,
   buildBudgetRows,
   calcBudgetMetrics,
+  calcBudgetSuggestions,
   calcCategoryMonthlySpend,
   calcSpendStats,
   listCompletedMonths,
+  setCategoryBudgets,
 } from '../budgetUtils.js';
 import { getFinancialMonthInfo } from '../financialMonthUtils.js';
 
@@ -452,5 +454,86 @@ describe('buildBudgetRows', () => {
     expect(r.budgeted).toEqual([]);
     expect(r.unbudgeted).toEqual([]);
     expect(r.totals).toMatchObject({ budget: 0, spent: 0, overCount: 0 });
+  });
+});
+
+describe('calcBudgetSuggestions', () => {
+  const categories = [
+    { id: 'cat-freizeit', name: 'Freizeit', subcategories: [{ id: 'sub-kino', name: 'Kino' }, { id: 'sub-sport', name: 'Sport' }] },
+    { id: 'cat-leer', name: 'Leer', subcategories: [] },
+  ];
+  const entries = [
+    expense('2026-08-05', 100, 'cat-freizeit', { subcategoryId: 'sub-kino' }),
+    expense('2026-09-05', 60, 'cat-freizeit', { subcategoryId: 'sub-kino' }),
+    expense('2026-09-06', 40, 'cat-freizeit'),
+    // laufender Monat zählt nicht mit
+    expense('2026-10-02', 999, 'cat-freizeit', { subcategoryId: 'sub-kino' }),
+  ];
+
+  it('liefert Ø und Median je Oberkategorie (inkl. Unterkategorien) und je Unterkategorie', () => {
+    const r = calcBudgetSuggestions({ entries, expenseCategories: categories, today: TODAY });
+    expect(r.byCategory.get('cat-freizeit')).toEqual({ avg6: 100, median12: 100 });
+    expect(r.bySubcategory.get('sub-kino')).toEqual({ avg6: 80, median12: 80 });
+    expect(r.bySubcategory.get('sub-sport')).toEqual({ avg6: 0, median12: 0 });
+    expect(r.byCategory.get('cat-leer')).toEqual({ avg6: 0, median12: 0 });
+  });
+
+  it('ohne abgeschlossenen Monat gibt es keine Vorschläge', () => {
+    const r = calcBudgetSuggestions({
+      entries: [expense('2026-10-02', 50, 'cat-freizeit')],
+      expenseCategories: categories,
+      today: TODAY,
+    });
+    expect(r.byCategory.get('cat-freizeit')).toEqual({ avg6: null, median12: null });
+  });
+});
+
+describe('setCategoryBudgets', () => {
+  const categories = [
+    {
+      id: 'cat-freizeit',
+      name: 'Freizeit',
+      budget: null,
+      subcategories: [
+        { id: 'sub-kino', name: 'Kino', budget: 50 },
+        { id: 'sub-sport', name: 'Sport' },
+      ],
+    },
+    { id: 'cat-essen', name: 'Essen', budget: 600, subcategories: [] },
+  ];
+  const freizeit = (list) => list.find((c) => c.id === 'cat-freizeit');
+
+  it('Budget für die ganze Kategorie leert die Unterkategorien', () => {
+    const next = setCategoryBudgets(categories, 'cat-freizeit', { budget: 200 });
+    expect(freizeit(next).budget).toBe(200);
+    expect(freizeit(next).subcategories.map((s) => s.budget)).toEqual([null, null]);
+  });
+
+  it('Budgets je Unterkategorie leeren die Oberkategorie', () => {
+    const start = setCategoryBudgets(categories, 'cat-freizeit', { budget: 200 });
+    const next = setCategoryBudgets(start, 'cat-freizeit', { subBudgets: { 'sub-sport': 80.456 } });
+    expect(freizeit(next).budget).toBeNull();
+    expect(freizeit(next).subcategories.map((s) => s.budget)).toEqual([null, 80.46]);
+  });
+
+  it('leere, ungültige und nicht positive Beträge heißen „kein Budget“', () => {
+    const next = setCategoryBudgets(categories, 'cat-freizeit', {
+      subBudgets: { 'sub-kino': 0, 'sub-sport': 'abc' },
+    });
+    expect(freizeit(next).subcategories.map((s) => s.budget)).toEqual([null, null]);
+    expect(freizeit(setCategoryBudgets(categories, 'cat-freizeit', { budget: -5 })).budget).toBeNull();
+  });
+
+  it('ohne Angabe wird das Budget auf beiden Ebenen entfernt', () => {
+    const next = setCategoryBudgets(categories, 'cat-freizeit');
+    expect(freizeit(next).budget).toBeNull();
+    expect(freizeit(next).subcategories.map((s) => s.budget)).toEqual([null, null]);
+  });
+
+  it('lässt andere Kategorien und die Eingabe unangetastet', () => {
+    const next = setCategoryBudgets(categories, 'cat-freizeit', { budget: 200 });
+    expect(next[1]).toBe(categories[1]);
+    expect(categories[0].subcategories[0].budget).toBe(50);
+    expect(setCategoryBudgets(null, 'x', { budget: 1 })).toEqual([]);
   });
 });
