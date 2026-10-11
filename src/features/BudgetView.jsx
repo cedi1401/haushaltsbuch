@@ -1,13 +1,15 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Button, Card, CardContent } from "../components/ui.jsx";
 import DataTable from "../components/DataTable.jsx";
 import { IconBudget, IconEdit, IconInfo, IconPlus } from "../components/icons.jsx";
 import { useToast } from "../components/toastContext.js";
 import { formatPercent } from "../utils/hbUtils.js";
-import { buildBudgetRows, calcBudgetSuggestions, setCategoryBudgets } from "../utils/budgetUtils.js";
+import { buildBudgetHistory, buildBudgetRows, calcBudgetSuggestions, setCategoryBudgets } from "../utils/budgetUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { buildBudgetColumns, budgetMoney } from "./budget/budgetColumns.jsx";
 import BudgetEditDialog from "./budget/BudgetEditDialog.jsx";
+import BudgetDetail from "./budget/BudgetDetail.jsx";
+import BudgetHistoryCard from "./budget/BudgetHistoryCard.jsx";
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const percent = (ratio) => formatPercent(ratio * 100, { digits: 0, sign: false });
@@ -23,6 +25,9 @@ const percent = (ratio) => formatPercent(ratio * 100, { digits: 0, sign: false }
  *
  * Budgets werden nur hier gepflegt: über die Zeilenaktionen und den
  * Bearbeiten-Dialog. Der Kategorien-Dialog zeigt sie bloß an.
+ *
+ * Jede Zeile klappt auf (`BudgetDetail`): Kennzahlen, Verlauf der Kategorie
+ * und die Buchungen des Monats.
  */
 export default function BudgetView({
   entries,
@@ -41,7 +46,31 @@ export default function BudgetView({
     () => buildBudgetRows({ entries, expenseCategories, recurringExpenses, monthFilter, monthStartDay }),
     [entries, expenseCategories, recurringExpenses, monthFilter, monthStartDay]
   );
-  const { budgeted, unbudgeted, totals, unbudgetedSpent, monthInfo, isAverage } = model;
+  const { budgeted, unbudgeted, totals, unbudgetedSpent, monthInfo, isAverage, firstMonth, currentMonth } = model;
+
+  // Verlauf über alle budgetierten Zeilen — unabhängig vom Monatsfilter.
+  const history = useMemo(
+    () => buildBudgetHistory(budgeted.map((row) => row.monthly), firstMonth, currentMonth),
+    [budgeted, firstMonth, currentMonth]
+  );
+
+  const renderDetail = useCallback(
+    (row, hiddenColumns) => (
+      <BudgetDetail
+        row={row}
+        hiddenColumns={hiddenColumns}
+        fmt={fmt}
+        entries={entries}
+        expenseCategories={expenseCategories}
+        monthFilter={monthFilter}
+        monthStartDay={monthStartDay}
+        monthInfo={monthInfo}
+        firstMonth={firstMonth}
+        currentMonth={currentMonth}
+      />
+    ),
+    [fmt, entries, expenseCategories, monthFilter, monthStartDay, monthInfo, firstMonth, currentMonth]
+  );
 
   // Vorschlagswerte beider Ebenen für den Dialog — die Zeilen kennen nur ihre eigene.
   const suggestions = useMemo(
@@ -289,6 +318,8 @@ export default function BudgetView({
         </div>
       )}
 
+      {hasBudgets && <BudgetHistoryCard series={history} budget={totals.budget} />}
+
       <Card>
         <CardContent>
           <DataTable
@@ -297,6 +328,7 @@ export default function BudgetView({
             storageKey="hb.budget.table"
             label="Budgets"
             toolbar={<h3 className="hb-card-title">Kategorien</h3>}
+            renderDetail={renderDetail}
             renderRowActions={renderRowActions}
           />
         </CardContent>

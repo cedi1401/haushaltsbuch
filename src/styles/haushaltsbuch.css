@@ -2595,7 +2595,7 @@ select.hb-input option {
 .hb-res-fact .hb-dt-progress-track {
   flex: 0 0 4px;
   height: 4px;
-  background: color-mix(in srgb, var(--accent) 20%, var(--border-light));
+  background: color-mix(in srgb, var(--meter-tone, var(--accent)) 20%, var(--border-light));
 }
 
 .hb-res-fact .hb-dt-tags {
@@ -6188,6 +6188,68 @@ select.hb-input option {
   flex-wrap: wrap;
   gap: 0 12px;
   font-variant-numeric: tabular-nums;
+}
+
+/* --- Detailbereich einer Budget-Zeile ---------------- */
+/* Gerüst, Kacheln und Notizblock kommen von .hb-res-detail; hier steht nur,
+   was Verlauf und Buchungsliste zusätzlich brauchen. Die linke Zone stapelt
+   Kacheln und Chart — ohne Kacheln (Zeile ohne Budget, alle Spalten sichtbar)
+   steht der Chart allein und die Zone bleibt trotzdem gefüllt. */
+.hb-budget-detail-main {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Dieselbe Fläche wie eine Kachel (.hb-res-fact): der Chart ist eine Zahl in
+   anderer Form, kein Erklärtext. */
+.hb-budget-detail-chart {
+  min-width: 0;
+  padding: 12px 12px 4px;
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+/* Ein Raster für die ganze Liste, die Zeilen übernehmen es als Subgrid: Badge
+   und Betrag stehen so über alle Zeilen in einer Flucht, egal wie breit der
+   einzelne Betrag ist. */
+.hb-budget-detail-entries {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  column-gap: 10px;
+  row-gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hb-budget-detail-entry {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  padding: 3px 4px;
+  font-size: 13px;
+}
+
+.hb-budget-detail-entry-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-budget-detail-entry-amount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.hb-budget-detail-more {
+  margin-top: 8px;
+  padding: 0 4px;
 }
 
 .hb-full-card {
