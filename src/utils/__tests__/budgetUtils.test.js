@@ -1,11 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
   UNCATEGORIZED_ID,
+  buildBudgetHistory,
   buildBudgetRows,
   calcBudgetMetrics,
   calcBudgetSuggestions,
   calcCategoryMonthlySpend,
+  calcHistoryAverage,
   calcSpendStats,
+  listBudgetRowEntries,
   listCompletedMonths,
   setCategoryBudgets,
 } from '../budgetUtils.js';
@@ -454,6 +457,58 @@ describe('buildBudgetRows', () => {
     expect(r.budgeted).toEqual([]);
     expect(r.unbudgeted).toEqual([]);
     expect(r.totals).toMatchObject({ budget: 0, spent: 0, overCount: 0 });
+  });
+
+  it('Verlauf: Summe der budgetierten Zeilen je Monat, laufender Monat markiert', () => {
+    const r = build('2026-10');
+    expect(r).toMatchObject({ firstMonth: '2026-08', currentMonth: '2026-10' });
+    const series = buildBudgetHistory(r.budgeted.map((x) => x.monthly), r.firstMonth, r.currentMonth);
+    expect(series).toEqual([
+      { ym: '2026-08', label: 'Aug 2026', total: 500, isCurrent: false },
+      { ym: '2026-09', label: 'Sep 2026', total: 2280, isCurrent: false },
+      { ym: '2026-10', label: 'Okt 2026', total: 1950, isCurrent: true },
+    ]);
+    expect(calcHistoryAverage(series)).toBe(1390);
+  });
+
+  it('Verlauf: der Monatsfilter ändert die Reihe nicht, das Limit zählt vom laufenden Monat rückwärts', () => {
+    const r = build('2026-08');
+    const rest = byId(r.unbudgeted, 'cat-freizeit');
+    const series = buildBudgetHistory([rest.monthly], r.firstMonth, r.currentMonth, 2);
+    expect(series.map((p) => [p.ym, p.total])).toEqual([['2026-09', 60], ['2026-10', 30]]);
+  });
+
+  it('Verlauf: ohne Buchungen leer, Ø ohne abgeschlossenen Monat null', () => {
+    expect(buildBudgetHistory([], null, '2026-10')).toEqual([]);
+    expect(buildBudgetHistory([undefined], '2026-10', '2026-10')).toEqual([
+      { ym: '2026-10', label: 'Okt 2026', total: 0, isCurrent: true },
+    ]);
+    expect(calcHistoryAverage([{ total: 80, isCurrent: true }])).toBeNull();
+    expect(calcHistoryAverage([])).toBeNull();
+  });
+
+  it('Buchungen einer Zeile: gleiche Zuordnung wie das Ist, neueste zuerst', () => {
+    const r = build('2026-09');
+    const list = (row, monthFilter = '2026-09') =>
+      listBudgetRowEntries({ entries, expenseCategories: categories, row, monthFilter, monthStartDay: 1 })
+        .map((e) => e.amount);
+    expect(list(byId(r.budgeted, 'sub-kino'))).toEqual([80]);
+    // Rest der Oberkategorie: ohne die budgetierte Unterkategorie Kino
+    expect(list(byId(r.unbudgeted, 'cat-freizeit'))).toEqual([20, 40]);
+    expect(list(byId(r.unbudgeted, UNCATEGORIZED_ID))).toEqual([12]);
+    // Topf-Ausgabe im Oktober zählt nicht
+    expect(list(byId(r.budgeted, 'cat-essen'), '2026-10')).toEqual([300]);
+    expect(list(byId(r.budgeted, 'cat-wohnen'), '2026-10')).toEqual([150, 1500]);
+    expect(list(byId(r.budgeted, 'cat-essen'), '')).toEqual([]);
+  });
+
+  it('Buchungen einer Zeile summieren sich zum Ist', () => {
+    const r = build('2026-09');
+    for (const row of [...r.budgeted, ...r.unbudgeted]) {
+      const sum = listBudgetRowEntries({ entries, expenseCategories: categories, row, monthFilter: '2026-09' })
+        .reduce((s, e) => s + e.amount, 0);
+      expect(sum).toBe(row.spent);
+    }
   });
 });
 

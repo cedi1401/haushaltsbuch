@@ -1,5 +1,5 @@
 // src/utils/budgetUtils.js
-import { getEntryFinancialMonth, getFinancialMonth, getFinancialMonthInfo } from "./financialMonthUtils.js";
+import { formatYearMonth, getEntryFinancialMonth, getFinancialMonth, getFinancialMonthInfo } from "./financialMonthUtils.js";
 import { monthlyRate } from "./fixedCostUtils.js";
 import { toLocalISO } from "./hbUtils.js";
 
@@ -36,6 +36,7 @@ export const BUDGET_STATUS_COLOR = {
 };
 
 const hasBudget = (node) => node?.budget != null && node.budget > 0;
+const EMPTY_MAP = new Map();
 const round2 = (n) => Math.round(n * 100) / 100;
 
 /**
@@ -198,6 +199,44 @@ export function calcSpendStats(monthMap, months) {
   return { avg: round2(avg), median: round2(median), count: values.length };
 }
 
+/**
+ * Monatsreihe für die Verlaufs-Charts: vom ersten Monat des Buchs bis zum
+ * laufenden, älteste zuerst. Mehrere Monats-Maps werden je Monat summiert (die
+ * Gesamtreihe ist die Summe aller budgetierten Zeilen). Monate ohne Ausgaben
+ * stehen mit 0 in der Reihe — eine Lücke läse sich wie fehlende Daten.
+ *
+ * @param {Array<Map<string, number>|undefined>} monthMaps
+ * @param {string|null} firstMonth
+ * @param {string|null} currentMonth - laufender Finanzmonat, letzter Punkt
+ * @param {number} [limit] - höchstens so viele Monate, vom laufenden rückwärts
+ * @returns {Array<{ ym: string, label: string, total: number, isCurrent: boolean }>}
+ */
+export function buildBudgetHistory(monthMaps, firstMonth, currentMonth, limit = Infinity) {
+  if (!firstMonth || !currentMonth) return [];
+  const series = [];
+  let ym = currentMonth;
+  while (series.length < limit && ym >= firstMonth) {
+    let total = 0;
+    for (const monthMap of monthMaps || []) total += monthMap?.get(ym) || 0;
+    series.push({ ym, label: formatYearMonth(ym), total: round2(total), isCurrent: ym === currentMonth });
+    ym = shiftMonth(ym, -1);
+  }
+  return series.reverse();
+}
+
+/**
+ * Ø Ist einer Monatsreihe. Der laufende Monat zählt nicht mit: er ist noch
+ * nicht zu Ende und zöge den Durchschnitt nach unten.
+ *
+ * @param {Array<{ total: number, isCurrent: boolean }>} series
+ * @returns {number|null} null ohne abgeschlossenen Monat
+ */
+export function calcHistoryAverage(series) {
+  const completed = (series || []).filter((p) => !p.isCurrent);
+  if (completed.length === 0) return null;
+  return round2(completed.reduce((s, p) => s + p.total, 0) / completed.length);
+}
+
 // ============================================
 // Budget: Zeilenmodell für View und Dashboard-Card
 // ============================================
@@ -234,6 +273,9 @@ function subtractMonthMaps(base, parts) {
  * `avg6`/`median12` beziehen sich immer auf die abgeschlossenen Monate vor
  * dem heutigen Finanzmonat, unabhängig vom Filter.
  *
+ * Jede Zeile trägt in `monthly` ihre Ausgaben je Finanzmonat — die Grundlage
+ * für `buildBudgetHistory()`.
+ *
  * @param {object} args
  * @param {Array} args.entries - alle Einträge des Buchs (ungefiltert)
  * @param {Array} args.expenseCategories
@@ -242,7 +284,8 @@ function subtractMonthMaps(base, parts) {
  * @param {number} [args.monthStartDay]
  * @param {Date} [args.today] - Bezugstag, nur für Tests abweichend
  * @returns {{ budgeted: Array, unbudgeted: Array, totals: object,
- *   unbudgetedSpent: number, monthInfo: object|null, isAverage: boolean }}
+ *   unbudgetedSpent: number, monthInfo: object|null, isAverage: boolean,
+ *   firstMonth: string|null, currentMonth: string }}
  */
 export function buildBudgetRows({
   entries,
@@ -310,6 +353,7 @@ export function buildBudgetRows({
       ...base,
       spent,
       isAverage,
+      monthly: monthMap || EMPTY_MAP,
       fixedBooked,
       fixedOpen,
       ...stats(monthMap),
@@ -390,6 +434,7 @@ export function buildBudgetRows({
       budget: null,
       spent,
       isAverage,
+      monthly: restMap || EMPTY_MAP,
       ...rowStats,
     });
   }
@@ -414,6 +459,7 @@ export function buildBudgetRows({
         budget: null,
         spent,
         isAverage,
+        monthly: monthMap || EMPTY_MAP,
         ...rowStats,
       });
     }
@@ -443,7 +489,52 @@ export function buildBudgetRows({
     unbudgetedSpent: sum(unbudgeted, "spent"),
     monthInfo,
     isAverage,
+    firstMonth: spend.firstMonth,
+    currentMonth,
   };
+}
+
+/**
+ * Die Buchungen hinter dem Ist einer Zeile im gewählten Monat, neueste zuerst.
+ * Gleiche Zuordnung wie `calcCategoryMonthlySpend()`: nur Ausgaben aus dem
+ * Monat, Buchungen ohne gültige Kategorie gehören zur Zeile „Unkategorisiert“,
+ * und die Rest-Zeile einer Oberkategorie lässt die budgetierten
+ * Unterkategorien aus.
+ *
+ * @param {object} args
+ * @param {Array} args.entries - alle Einträge des Buchs (ungefiltert)
+ * @param {Array} args.expenseCategories
+ * @param {object} args.row - Zeile aus buildBudgetRows()
+ * @param {string} args.monthFilter - "YYYY-MM"; leer liefert nichts
+ * @param {number} [args.monthStartDay]
+ * @returns {Array}
+ */
+export function listBudgetRowEntries({ entries, expenseCategories, row, monthFilter, monthStartDay = 1 }) {
+  if (!row || !monthFilter) return [];
+  const categories = expenseCategories || [];
+  const validIds = new Set(categories.map((c) => c.id));
+  const category = categories.find((c) => c.id === row.categoryId);
+  const budgetedSubIds = new Set((category?.subcategories || []).filter(hasBudget).map((s) => s.id));
+
+  const belongs = (e) => {
+    if (row.level === "uncategorized") return !validIds.has(e.categoryId);
+    if (e.categoryId !== row.categoryId) return false;
+    if (row.level === "subcategory") return e.subcategoryId === row.subcategoryId;
+    return !row.isRemainder || !budgetedSubIds.has(e.subcategoryId);
+  };
+
+  return (entries || [])
+    .filter(
+      (e) =>
+        e.kind === "expense" &&
+        e.source === "month" &&
+        getEntryFinancialMonth(e, monthStartDay) === monthFilter &&
+        belongs(e)
+    )
+    .sort(
+      (a, b) =>
+        String(b.date).localeCompare(String(a.date)) || Number(b.amount || 0) - Number(a.amount || 0)
+    );
 }
 
 // ============================================
