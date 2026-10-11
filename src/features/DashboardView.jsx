@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { Button, Card, CardContent } from "../components/ui.jsx";
-import CategoryManagerDialog from "../components/CategoryManagerDialog.jsx";
 import EntryTemplateManagerDialog from "../components/EntryTemplateManagerDialog.jsx";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
@@ -44,11 +43,11 @@ export default function DashboardView({
   entryActions,
   patchActiveBook,
   indicateTransferCategories,
+  onOpenCategoryManager,
 }) {
   const fmt = useFmt();
   const themeColors = useThemeColors();
   const [showAllPots, setShowAllPots] = useState(false);
-  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
   const [sweepOpen, setSweepOpen] = useState(false);
 
@@ -137,42 +136,6 @@ export default function DashboardView({
     return arr;
   }, [potBalances, lastTxByPot]);
 
-  // Transfer-Zwecke werden überall als Klartext referenziert (Buchungen, Fixkosten,
-  // Sparziele). Ein Umbenennen muss diese Referenzen im selben Patch mitziehen,
-  // sonst zeigen bestehende Daten auf einen Zweck, den es nicht mehr gibt.
-  const renameTransferCategory = useCallback(
-    (oldName, newName) => {
-      if (!oldName || !newName || oldName === newName) return;
-      patchActiveBook((b) => ({
-        ...b,
-        transferCategories: (b.transferCategories || []).map((c) =>
-          c === oldName ? newName : c
-        ),
-        entries: (b.entries || []).map((e) =>
-          (e.kind === "transfer" || e.kind === "withdrawal") && e.category === oldName
-            ? { ...e, category: newName }
-            : e
-        ),
-        recurringExpenses: (b.recurringExpenses || []).map((r) =>
-          r.kind === "transfer" && r.transferCategory === oldName
-            ? { ...r, transferCategory: newName }
-            : r
-        ),
-        goals: (b.goals || []).map((g) =>
-          g.transferCategory === oldName ? { ...g, transferCategory: newName } : g
-        ),
-        // Ohne das biegt der Fallback in templateToDraftPatch still auf einen
-        // falschen Zweck um — schlimmer als ein sichtbarer Fehler.
-        entryTemplates: (b.entryTemplates || []).map((t) =>
-          (t.kind === "transfer" || t.kind === "withdrawal") && t.category === oldName
-            ? { ...t, category: newName }
-            : t
-        ),
-      }));
-    },
-    [patchActiveBook]
-  );
-
   // Übrigen Frei-Betrag als Sparen-Transfer auf den letzten Tag des Finanzmonats
   // verbuchen. Ohne eigenen Spar-Topf wird ein „Überschuss"-Topf (isSavings) angelegt.
   const handleSweepSurplus = useCallback(
@@ -237,7 +200,7 @@ export default function DashboardView({
     <>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         <Button onClick={() => entryActions.setAddEntryOpen(true)}>Buchung hinzufügen</Button>
-        <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
+        <Button variant="outline" onClick={onOpenCategoryManager}>
           Kategorien bearbeiten
         </Button>
         <Button variant="outline" onClick={() => setTemplateManagerOpen(true)}>
@@ -278,7 +241,7 @@ export default function DashboardView({
         availableWithdrawalCategories={entryActions.availableWithdrawalCategories}
         onOpenCategoryManager={() => {
           entryActions.setAddEntryOpen(false);
-          setCategoryManagerOpen(true);
+          onOpenCategoryManager();
         }}
         onOpenTemplateManager={() => {
           entryActions.setAddEntryOpen(false);
@@ -447,24 +410,6 @@ export default function DashboardView({
         startEdit={entryActions.startEdit}
         removeEntry={entryActions.removeEntry}
         onAddEntry={() => entryActions.setAddEntryOpen(true)}
-      />
-
-      <CategoryManagerDialog
-        open={categoryManagerOpen}
-        onClose={() => setCategoryManagerOpen(false)}
-        expenseCategories={expenseCategories}
-        incomeCategories={incomeCategories}
-        transferCategories={indicateTransferCategories}
-        onUpdateExpenseCategories={(newCats) =>
-          patchActiveBook((b) => ({ ...b, expenseCategories: newCats }))
-        }
-        onUpdateIncomeCategories={(newCats) =>
-          patchActiveBook((b) => ({ ...b, incomeCategories: newCats }))
-        }
-        onUpdateTransferCategories={(newCats) =>
-          patchActiveBook((b) => ({ ...b, transferCategories: newCats }))
-        }
-        onRenameTransferCategory={renameTransferCategory}
       />
 
       <EntryTemplateManagerDialog

@@ -1,11 +1,13 @@
-import React, { useMemo } from "react";
-import { Card, CardContent } from "../components/ui.jsx";
+import React, { useMemo, useState } from "react";
+import { Button, Card, CardContent } from "../components/ui.jsx";
 import DataTable from "../components/DataTable.jsx";
-import { IconBudget, IconInfo } from "../components/icons.jsx";
+import { IconBudget, IconEdit, IconInfo, IconPlus } from "../components/icons.jsx";
+import { useToast } from "../components/toastContext.js";
 import { formatPercent } from "../utils/hbUtils.js";
-import { buildBudgetRows } from "../utils/budgetUtils.js";
+import { buildBudgetRows, calcBudgetSuggestions, setCategoryBudgets } from "../utils/budgetUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { buildBudgetColumns, budgetMoney } from "./budget/budgetColumns.jsx";
+import BudgetEditDialog from "./budget/BudgetEditDialog.jsx";
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const percent = (ratio) => formatPercent(ratio * 100, { digits: 0, sign: false });
@@ -19,7 +21,8 @@ const percent = (ratio) => formatPercent(ratio * 100, { digits: 0, sign: false }
  * gibt es nicht, vergangene Monate sind deshalb ein Realitätscheck und keine
  * Historie.
  *
- * Dieser Stand ist nur lesend: gepflegt werden Budgets im Kategorien-Dialog.
+ * Budgets werden nur hier gepflegt: über die Zeilenaktionen und den
+ * Bearbeiten-Dialog. Der Kategorien-Dialog zeigt sie bloß an.
  */
 export default function BudgetView({
   entries,
@@ -27,8 +30,11 @@ export default function BudgetView({
   recurringExpenses,
   monthFilter,
   monthStartDay = 1,
+  onUpdateExpenseCategories,
+  onOpenCategoryManager,
 }) {
   const fmt = useFmt();
+  const toast = useToast();
   const money = useMemo(() => (value) => budgetMoney(fmt, value), [fmt]);
 
   const model = useMemo(
@@ -36,6 +42,74 @@ export default function BudgetView({
     [entries, expenseCategories, recurringExpenses, monthFilter, monthStartDay]
   );
   const { budgeted, unbudgeted, totals, unbudgetedSpent, monthInfo, isAverage } = model;
+
+  // Vorschlagswerte beider Ebenen für den Dialog — die Zeilen kennen nur ihre eigene.
+  const suggestions = useMemo(
+    () => calcBudgetSuggestions({ entries, expenseCategories, monthStartDay }),
+    [entries, expenseCategories, monthStartDay]
+  );
+
+  // Bearbeitet wird immer die Oberkategorie; die Ebene wählt der Dialog. Über
+  // die ID statt das Objekt, damit eine inzwischen gelöschte Kategorie den
+  // Dialog schließt statt ihn mit veralteten Daten offen zu halten.
+  const [editCategoryId, setEditCategoryId] = useState(null);
+  const editCategory = editCategoryId
+    ? (expenseCategories || []).find((c) => c.id === editCategoryId) || null
+    : null;
+
+  function saveBudget(change) {
+    onUpdateExpenseCategories(setCategoryBudgets(expenseCategories, editCategory.id, change));
+    toast.success(`Budget für „${editCategory.name}“ gespeichert.`);
+    setEditCategoryId(null);
+  }
+
+  function removeBudget() {
+    onUpdateExpenseCategories(setCategoryBudgets(expenseCategories, editCategory.id));
+    toast.success(`Budget für „${editCategory.name}“ entfernt.`);
+    setEditCategoryId(null);
+  }
+
+  // „Ø übernehmen“: der Durchschnitt der letzten sechs Monate wird ohne Umweg
+  // über den Dialog zum Budget der ganzen Kategorie.
+  function adoptAverage(row) {
+    const budget = Math.round(row.avg6);
+    onUpdateExpenseCategories(setCategoryBudgets(expenseCategories, row.categoryId, { budget }));
+    toast.success(`Budget für „${row.name}“ auf ${money(budget)} festgelegt.`);
+  }
+
+  // Aktionen am Zeilenende — DataTable blendet sie beim Überfahren ein.
+  // Unkategorisierte Ausgaben haben keine Kategorie, an der ein Budget hängen könnte.
+  function renderRowActions(row) {
+    if (!row.categoryId) return null;
+    const isNew = row.budget == null && !row.isRemainder;
+    const title = isNew ? "Budget festlegen" : "Budget bearbeiten";
+    const target = row.parentName || row.name;
+    // Der Betrag steht im Button: die Leiste verdeckt die Spalte, aus der er stammt.
+    const average = Math.round(row.avg6 || 0);
+    return (
+      <>
+        {isNew && average > 0 && (
+          <button
+            type="button"
+            className="hb-btn hb-btn-outline hb-btn-sm"
+            onClick={() => adoptAverage(row)}
+            aria-label={`Durchschnitt ${money(average)} als Budget für „${row.name}“ übernehmen`}
+          >
+            Ø {money(average)} übernehmen
+          </button>
+        )}
+        <button
+          type="button"
+          className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+          onClick={() => setEditCategoryId(row.categoryId)}
+          title={title}
+          aria-label={`${title}: „${target}“`}
+        >
+          {isNew ? <IconPlus /> : <IconEdit />}
+        </button>
+      </>
+    );
+  }
 
   const isCurrent = Boolean(monthInfo?.isCurrentMonth);
   const isFuture = Boolean(monthInfo?.isFutureMonth);
@@ -85,9 +159,10 @@ export default function BudgetView({
             <div className="hb-empty-icon"><IconBudget /></div>
             <div className="hb-empty-title">Noch keine Ausgaben-Kategorien</div>
             <div className="hb-empty-text">
-              Budgets hängen an Ausgaben-Kategorien. Lege im Kategorien-Dialog auf dem
-              Dashboard eine Kategorie an und gib ihr ein Budget.
+              Budgets hängen an Ausgaben-Kategorien. Lege zuerst eine Kategorie an, danach
+              kannst du ihr hier ein Budget geben.
             </div>
+            <Button onClick={onOpenCategoryManager}>Kategorien bearbeiten</Button>
           </div>
         </CardContent>
       </Card>
@@ -149,6 +224,12 @@ export default function BudgetView({
 
   return (
     <>
+      <div className="hb-view-actions">
+        <Button variant="outline" onClick={onOpenCategoryManager}>
+          Kategorien bearbeiten
+        </Button>
+      </div>
+
       <div className="hb-stat-pills">
         <StatPill
           tone=" hb-stat-pill--accent"
@@ -200,9 +281,9 @@ export default function BudgetView({
           <div className="hb-infobar-content">
             <div className="hb-infobar-title">Noch kein Budget festgelegt</div>
             <div className="hb-infobar-message">
-              Öffne auf dem Dashboard den Kategorien-Dialog und lege ein Budget für eine
-              Ausgaben-Kategorie fest. Der Durchschnitt der letzten Monate in der Tabelle
-              hilft bei der Höhe.
+              In der Tabelle stehen alle Ausgaben-Kategorien mit ihrem Durchschnitt der letzten
+              Monate. Fahre über eine Zeile und wähle „Ø … übernehmen“ oder lege mit dem Plus
+              einen eigenen Betrag fest.
             </div>
           </div>
         </div>
@@ -216,9 +297,21 @@ export default function BudgetView({
             storageKey="hb.budget.table"
             label="Budgets"
             toolbar={<h3 className="hb-card-title">Kategorien</h3>}
+            renderRowActions={renderRowActions}
           />
         </CardContent>
       </Card>
+
+      {editCategory && (
+        <BudgetEditDialog
+          key={editCategory.id}
+          category={editCategory}
+          suggestions={suggestions}
+          onSave={saveBudget}
+          onRemove={removeBudget}
+          onClose={() => setEditCategoryId(null)}
+        />
+      )}
     </>
   );
 }

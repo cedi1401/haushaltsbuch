@@ -916,6 +916,13 @@ select.hb-input option {
   color: var(--accent);
 }
 
+/* Entfernende Nebenaktion: neutral in Ruhe, rot erst beim Überfahren. */
+.hb-btn-outline.hb-btn-outline--danger:hover {
+  background: var(--red-soft);
+  border-color: var(--red);
+  color: var(--red);
+}
+
 .hb-btn-outline:active {
   background: var(--active-bg);
 }
@@ -4477,50 +4484,8 @@ select.hb-input option {
   word-break: break-word;
 }
 
-/* =====================================================
-   KATEGORIE-BUDGET: Button, Chip, Inline-Editor
-   ===================================================== */
-
-/* Hover-Reveal — analog zu .hb-actions-hover in der Eintrags-Tabelle */
-.hb-cat-budget-btn {
-  border: none;
-  background: transparent;
-  padding: 4px 6px;
-  cursor: pointer;
-  color: var(--muted);
-  border-radius: var(--radius-sm);
-  opacity: 0;
-  transition: opacity var(--transition-fast),
-              color var(--transition-fast),
-              background var(--transition-fast);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hb-cat-accordion-header:hover .hb-cat-budget-btn,
-.hb-cat-accordion-header:focus-within .hb-cat-budget-btn,
-.hb-cat-subitem:hover .hb-cat-budget-btn,
-.hb-cat-subitem:focus-within .hb-cat-budget-btn {
-  opacity: 1;
-}
-
-.hb-cat-budget-btn:hover {
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.hb-cat-budget-btn--locked {
-  cursor: default;
-}
-
-.hb-cat-budget-btn--locked:hover {
-  color: var(--muted);
-  background: var(--hover-bg);
-}
-
-/* Chip: zeigt gesetztes Budget dauerhaft an */
+/* Kategorien-Dialog: Chip mit dem gesetzten Budget (reine Anzeige, gepflegt
+   wird im Budget-View) */
 .hb-cat-budget-chip {
   font-size: 11px;
   font-weight: 600;
@@ -4530,33 +4495,6 @@ select.hb-input option {
   padding: 2px 7px;
   white-space: nowrap;
   flex-shrink: 0;
-}
-
-/* Inline-Editor: erscheint unter dem Header/Subitem beim Klick auf den Budget-Button */
-.hb-cat-budget-editor {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: var(--bg-subtle);
-  border-top: 1px solid var(--border-light);
-  flex-wrap: wrap;
-}
-
-.hb-cat-budget-input {
-  width: 150px;
-}
-
-/* Entfernen-Button im Budget-Editor */
-.hb-cat-budget-remove-btn {
-  background: transparent;
-  color: var(--red);
-  border: 1px solid var(--red);
-}
-
-.hb-cat-budget-remove-btn:hover {
-  background: var(--red-soft);
-  color: var(--red);
 }
 
 /* =====================================================
@@ -6164,6 +6102,92 @@ select.hb-input option {
   font-size: 12px;
   line-height: 14px;
   color: var(--muted);
+}
+
+/* Bearbeiten-Dialog des Budget-Views: Umschalter, Betrag und die
+   übernehmbaren Vorschlagswerte. */
+.hb-budget-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.hb-budget-edit-hint {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Die Übernehmen-Links sind sonst nur eine Textzeile hoch. */
+.hb-budget-edit .hb-link-btn {
+  padding: 4px 0;
+  white-space: nowrap;
+}
+
+.hb-budget-edit-hint strong {
+  color: var(--text);
+}
+
+.hb-budget-edit-suggest {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Bezeichnung, Betrag rechtsbündig, Aktion — die Beträge der beiden Zeilen
+   stehen untereinander und direkt neben ihrer Bezeichnung. */
+.hb-budget-edit-suggest-row {
+  display: grid;
+  grid-template-columns: 136px 104px auto;
+  justify-content: start;
+  align-items: baseline;
+  column-gap: 16px;
+  font-size: 14px;
+}
+
+.hb-budget-edit-suggest-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Je Unterkategorie eine Zeile: Name, Betragsfeld, Vorschlagswerte. */
+.hb-budget-edit-subs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hb-budget-edit-subs-head,
+.hb-budget-edit-subs-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px 232px;
+  align-items: center;
+  column-gap: 12px;
+}
+
+.hb-budget-edit-subs-head {
+  align-items: end;
+}
+
+.hb-budget-edit-subs-name {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-budget-edit-subs-row .hb-input {
+  min-width: 0;
+  width: 100%;
+}
+
+.hb-budget-edit-subs-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .hb-full-card {

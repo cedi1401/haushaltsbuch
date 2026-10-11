@@ -2,13 +2,12 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import EditDialog from "./EditDialog.jsx";
 import CategoryCreateDialog from "./CategoryCreateDialog.jsx";
 import CategoryEditDialog from "./CategoryEditDialog.jsx";
-import { IconEdit, IconPlus, IconDelete, IconWallet, IconLock, IconTransfer, IconSearch, IconCheck, IconChevron, IconClose } from "./icons.jsx";
+import { IconEdit, IconPlus, IconDelete, IconTransfer, IconSearch, IconCheck, IconChevron, IconClose } from "./icons.jsx";
 import HbTooltip from "./HbTooltip.jsx";
 import { CHART_COLORS, DEFAULT_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { Button } from "./ui.jsx";
 import { useToast } from "./toastContext.js";
 import { useConfirm } from "./ConfirmDialog.jsx";
-import { canSetParentBudget, canSetSubBudget } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 
@@ -39,36 +38,6 @@ function filterCategories(categories, search, filter) {
   }
 
   return result;
-}
-
-function BudgetEditor({ inputRef, value, onChange, onSave, onRemove, onCancel }) {
-  return (
-    <div className="hb-cat-budget-editor" onClick={(e) => e.stopPropagation()}>
-      <input
-        ref={inputRef}
-        className="hb-input hb-cat-budget-input"
-        type="number"
-        min="0"
-        step="1"
-        placeholder="Budget pro Monat..."
-        value={value}
-        onChange={onChange}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") onSave();
-          if (e.key === "Escape") onCancel();
-        }}
-      />
-      <Button size="sm" onClick={onSave}>OK</Button>
-      {onRemove && (
-        <Button size="sm" className="hb-cat-budget-remove-btn" onClick={onRemove}>
-          Entfernen
-        </Button>
-      )}
-      <button className="hb-btn-ghost hb-btn-sm" onClick={onCancel}>
-        Abbrechen
-      </button>
-    </div>
-  );
 }
 
 // -------------------------------------------------------
@@ -110,18 +79,6 @@ export default function CategoryManagerDialog({
   const [editTarget, setEditTarget] = useState(null);
   // editTarget: { category, isSubcategory, parentCategory? }
 
-  // Budget-Inline-Editor
-  // budgetTarget: { type: "parent"|"sub", categoryId, parentCategoryId? }
-  const [budgetTarget, setBudgetTarget] = useState(null);
-  const [budgetDraft, setBudgetDraft] = useState("");
-  const budgetInputRef = useRef(null);
-
-  useEffect(() => {
-    if (budgetTarget) {
-      setTimeout(() => budgetInputRef.current?.focus(), 50);
-    }
-  }, [budgetTarget]);
-
   useEffect(() => {
     if (!editingTransfer) return;
     const el = transferInputRef.current;
@@ -147,8 +104,6 @@ export default function CategoryManagerDialog({
       setNewTransferName("");
       setEditingTransfer(null);
       setTransferDraft("");
-      setBudgetTarget(null);
-      setBudgetDraft("");
     }
   }
 
@@ -431,68 +386,6 @@ export default function CategoryManagerDialog({
   }
 
   // -------------------------------------------------------
-  // Budget-Handling
-  // -------------------------------------------------------
-  function openBudgetEdit(cat, sub = null) {
-    if (sub) {
-      setBudgetTarget({ type: "sub", categoryId: sub.id, parentCategoryId: cat.id });
-      setBudgetDraft(sub.budget != null ? String(sub.budget) : "");
-    } else {
-      setBudgetTarget({ type: "parent", categoryId: cat.id });
-      setBudgetDraft(cat.budget != null ? String(cat.budget) : "");
-    }
-  }
-
-  function closeBudgetEdit() {
-    setBudgetTarget(null);
-    setBudgetDraft("");
-  }
-
-  function applyBudget(budget) {
-    if (!budgetTarget) return;
-    if (budgetTarget.type === "parent") {
-      const updateList = (list) =>
-        list.map((cat) =>
-          cat.id === budgetTarget.categoryId ? { ...cat, budget } : cat
-        );
-      const inExpense = (expenseCategories || []).some((c) => c.id === budgetTarget.categoryId);
-      if (inExpense) onUpdateExpenseCategories(updateList(expenseCategories || []));
-      else onUpdateIncomeCategories(updateList(incomeCategories || []));
-    } else {
-      const updateList = (list) =>
-        list.map((cat) =>
-          cat.id === budgetTarget.parentCategoryId
-            ? {
-                ...cat,
-                subcategories: (cat.subcategories || []).map((sub) =>
-                  sub.id === budgetTarget.categoryId ? { ...sub, budget } : sub
-                ),
-              }
-            : cat
-        );
-      const inExpense = (expenseCategories || []).some((c) => c.id === budgetTarget.parentCategoryId);
-      if (inExpense) onUpdateExpenseCategories(updateList(expenseCategories || []));
-      else onUpdateIncomeCategories(updateList(incomeCategories || []));
-    }
-    closeBudgetEdit();
-    toast.success(budget != null ? "Budget gespeichert." : "Budget entfernt.");
-  }
-
-  function saveBudget() {
-    const raw = budgetDraft.trim().replace(",", ".");
-    if (raw === "") {
-      applyBudget(null);
-      return;
-    }
-    const value = Number(raw);
-    if (!Number.isFinite(value) || value < 0) {
-      toast.warning("Bitte einen gültigen Betrag eingeben.");
-      return;
-    }
-    applyBudget(value === 0 ? null : value);
-  }
-
-  // -------------------------------------------------------
   // Hilfsfunktionen
   // -------------------------------------------------------
   function openEditForParent(cat) {
@@ -510,7 +403,7 @@ export default function CategoryManagerDialog({
   // -------------------------------------------------------
 
   // Kategorie-Liste rendern
-  // isExpense: nur Ausgabenkategorien erhalten Budget-Buttons
+  // isExpense: nur Ausgabenkategorien zeigen ihr Budget als Chip
   function renderCategoryList(categories, isExpense = false) {
     return categories.map((cat) => {
       const isOpen = isFiltering
@@ -521,52 +414,30 @@ export default function CategoryManagerDialog({
       // Im Custom-Filter ist eine Standard-Oberkategorie nie selbst ein
       // Treffer, sondern nur Einordnung — sie bekommt deshalb keine Aktionen.
       const isContextRow = filter === "custom" && cat.isDefault;
-      const isBudgetEditorOpen = budgetTarget?.type === "parent" && budgetTarget?.categoryId === cat.id;
-      const canParent = isExpense ? canSetParentBudget(cat) : false;
 
       return (
         <div key={cat.id} className={`hb-cat-accordion-item${isOpen ? " hb-cat-accordion-open" : ""}`}>
           {/* Accordion Header */}
           <div
             className={`hb-cat-accordion-header${isContextRow ? " hb-cat-accordion-header--context" : ""}`}
-            onClick={() => !isBudgetEditorOpen && toggleAccordion(cat.id)}
+            onClick={() => toggleAccordion(cat.id)}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
-              if ((e.key === "Enter" || e.key === " ") && !isBudgetEditorOpen)
-                toggleAccordion(cat.id);
+              if (e.key === "Enter" || e.key === " ") toggleAccordion(cat.id);
             }}
           >
             <span className="hb-cat-dot" style={{ background: cat.color || CHART_COLORS.transfer }} />
             <span className="hb-cat-name">{cat.name}</span>
 
-            {/* Budget-Chip: dauerhaft sichtbar wenn Budget gesetzt */}
-            {isExpense && cat.budget != null && !isBudgetEditorOpen && (
-              <span className="hb-cat-budget-chip">
-                {fmt ? fmt(cat.budget, 0) : cat.budget}
-              </span>
-            )}
-
-            {/* Budget-Button (nur Ausgaben, hover-reveal). Kontext-Zeilen
-                bleiben aktionsfrei: dort sind die Standard-Unterkategorien
-                ausgeblendet, das Budget-Schloss wäre nicht nachvollziehbar. */}
-            {isExpense && !isBudgetEditorOpen && !isContextRow && (
-              <button
-                type="button"
-                className={`hb-cat-budget-btn${!canParent ? " hb-cat-budget-btn--locked" : ""}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!canParent) {
-                    toast.warning("Entferne zuerst die Sub-Kategorien-Budgets.");
-                    return;
-                  }
-                  openBudgetEdit(cat);
-                }}
-                title={cat.budget != null ? "Budget ändern" : "Budget festlegen"}
-                aria-label="Budget bearbeiten"
+            {/* Budget-Chip: reine Anzeige, gepflegt wird im Budget-View */}
+            {isExpense && cat.budget != null && (
+              <span
+                className="hb-cat-budget-chip"
+                title={`Budget pro Monat: ${fmt(cat.budget, 0)}`}
               >
-                {canParent ? <IconWallet /> : <IconLock />}
-              </button>
+                {fmt(cat.budget, 0)}
+              </span>
             )}
 
             {isCustom && (
@@ -585,86 +456,41 @@ export default function CategoryManagerDialog({
             )}
           </div>
 
-          {/* Budget-Editor für Oberkategorie */}
-          {isExpense && isBudgetEditorOpen && (
-            <BudgetEditor
-              inputRef={budgetInputRef}
-              value={budgetDraft}
-              onChange={(e) => setBudgetDraft(e.target.value)}
-              onSave={saveBudget}
-              onRemove={cat.budget != null ? () => applyBudget(null) : null}
-              onCancel={closeBudgetEdit}
-            />
-          )}
-
           {/* Unterkategorien */}
           {isOpen && hasSubs && (
             <div className="hb-cat-sublist">
               {(cat.subcategories || []).map((sub) => {
                 const isCustomSub = !sub.isDefault;
-                const canSub = isExpense ? canSetSubBudget(cat) : false;
-                const isSubEditorOpen = budgetTarget?.type === "sub" && budgetTarget?.categoryId === sub.id;
                 return (
-                  <React.Fragment key={sub.id}>
-                    <div className="hb-cat-subitem">
+                  <div key={sub.id} className="hb-cat-subitem">
+                    <span
+                      className="hb-cat-dot"
+                      style={{ background: cat.color || CHART_COLORS.transfer, opacity: 0.65 }}
+                    />
+                    <span className="hb-cat-subitem-name">{sub.name}</span>
+
+                    {/* Budget-Chip Sub */}
+                    {isExpense && sub.budget != null && (
                       <span
-                        className="hb-cat-dot"
-                        style={{ background: cat.color || CHART_COLORS.transfer, opacity: 0.65 }}
-                      />
-                      <span className="hb-cat-subitem-name">{sub.name}</span>
-
-                      {/* Budget-Chip Sub */}
-                      {isExpense && sub.budget != null && !isSubEditorOpen && (
-                        <span className="hb-cat-budget-chip">
-                          {fmt ? fmt(sub.budget, 0) : sub.budget}
-                        </span>
-                      )}
-
-                      {/* Budget-Button Sub (hover-reveal) */}
-                      {isExpense && !isSubEditorOpen && (
-                        <button
-                          type="button"
-                          className={`hb-cat-budget-btn${!canSub ? " hb-cat-budget-btn--locked" : ""}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!canSub) {
-                              toast.warning(`„${cat.name}“ hat bereits ein Oberkategorien-Budget.`);
-                              return;
-                            }
-                            openBudgetEdit(cat, sub);
-                          }}
-                          title={sub.budget != null ? "Budget ändern" : "Budget festlegen"}
-                          aria-label="Sub-Budget bearbeiten"
-                        >
-                          {canSub ? <IconWallet /> : <IconLock />}
-                        </button>
-                      )}
-
-                      {isCustomSub && (
-                        <button
-                          type="button"
-                          className="hb-cat-edit-btn"
-                          onClick={() => openEditForSub(sub, cat)}
-                          aria-label={`${sub.name} bearbeiten`}
-                          title="Bearbeiten"
-                        >
-                          <IconEdit />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Budget-Editor für Unterkategorie */}
-                    {isExpense && isSubEditorOpen && (
-                      <BudgetEditor
-                        inputRef={budgetInputRef}
-                        value={budgetDraft}
-                        onChange={(e) => setBudgetDraft(e.target.value)}
-                        onSave={saveBudget}
-                        onRemove={sub.budget != null ? () => applyBudget(null) : null}
-                        onCancel={closeBudgetEdit}
-                      />
+                        className="hb-cat-budget-chip"
+                        title={`Budget pro Monat: ${fmt(sub.budget, 0)}`}
+                      >
+                        {fmt(sub.budget, 0)}
+                      </span>
                     )}
-                  </React.Fragment>
+
+                    {isCustomSub && (
+                      <button
+                        type="button"
+                        className="hb-cat-edit-btn"
+                        onClick={() => openEditForSub(sub, cat)}
+                        aria-label={`${sub.name} bearbeiten`}
+                        title="Bearbeiten"
+                      >
+                        <IconEdit />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -732,7 +558,7 @@ export default function CategoryManagerDialog({
             Kategorien bearbeiten
             <HbTooltip
               placement="bottom"
-              text="Um einer Ober- oder Unterkategorie ein Budget festzulegen, fahre mit der Maus über die jeweilige Zeile und klicke auf das Geldbörsen-Symbol rechts. Ein Budget lässt sich entweder für die Oberkategorie oder für ihre Unterkategorien festlegen – nicht für beide gleichzeitig."
+              text="Budgets legst du in der Ansicht „Budgets“ fest. Hier siehst du nur, welche Kategorien eines haben."
             />
           </span>
         }
