@@ -19,7 +19,6 @@ export default function InsightsPanel({
   totalSavingsTransfers,
   totalReserveTransfers,
   expenseCategories,
-  recurringExpenses,
 }) {
   const [activeCard, setActiveCard] = useState("overview");
   const analytics = useFinanceAnalytics({
@@ -35,8 +34,8 @@ export default function InsightsPanel({
   });
 
   const budget = useMemo(
-    () => buildBudgetRows({ entries, expenseCategories, recurringExpenses, monthFilter, monthStartDay }),
-    [entries, expenseCategories, recurringExpenses, monthFilter, monthStartDay]
+    () => buildBudgetRows({ entries, expenseCategories, monthFilter, monthStartDay }),
+    [entries, expenseCategories, monthFilter, monthStartDay]
   );
 
   return (
@@ -52,7 +51,7 @@ export default function InsightsPanel({
               budgetItems={budget.budgeted}
               totals={budget.totals}
               monthInfo={budget.monthInfo}
-              isAverage={budget.isAverage}
+              isFallbackMonth={!monthFilter}
             />
           )}
           {activeCard === "behavior" && (

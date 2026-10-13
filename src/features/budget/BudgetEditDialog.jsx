@@ -14,17 +14,6 @@ const MODE_OPTIONS = [
 const hasBudget = (node) => node?.budget != null && node.budget > 0;
 const toDraft = (node) => (hasBudget(node) ? String(node.budget) : "");
 
-// Vorschlagswerte sind Richtgrößen — auf ganze Beträge gerundet, und nur
-// angeboten, wenn es überhaupt etwas zu übernehmen gibt.
-function suggestionsOf(stats) {
-  return [
-    { key: "avg6", label: "Ø 6 Monate", short: "Ø", value: stats?.avg6 },
-    { key: "median12", label: "Median 12 Monate", short: "Median", value: stats?.median12 },
-  ]
-    .map((s) => ({ ...s, value: s.value == null ? null : Math.round(s.value) }))
-    .filter((s) => s.value > 0);
-}
-
 /**
  * Budget einer Ausgaben-Kategorie festlegen, ändern oder entfernen.
  *
@@ -38,12 +27,11 @@ function suggestionsOf(stats) {
  *
  * @param {object} props
  * @param {object} props.category - Oberkategorie mit `subcategories`
- * @param {{ byCategory: Map, bySubcategory: Map }} props.suggestions
  * @param {(change: { budget?: number, subBudgets?: object }) => void} props.onSave
  * @param {() => void} props.onRemove
  * @param {() => void} props.onClose
  */
-export default function BudgetEditDialog({ category, suggestions, onSave, onRemove, onClose }) {
+export default function BudgetEditDialog({ category, onSave, onRemove, onClose }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const money = (value) => budgetMoney(fmt, value);
@@ -94,8 +82,6 @@ export default function BudgetEditDialog({ category, suggestions, onSave, onRemo
     switchHint = `Beim Speichern entfällt das Budget der ganzen Kategorie (${money(category.budget)}).`;
   }
 
-  const categorySuggestions = suggestionsOf(suggestions?.byCategory.get(category.id));
-
   return (
     <EditDialog
       open
@@ -138,100 +124,54 @@ export default function BudgetEditDialog({ category, suggestions, onSave, onRemo
         )}
 
         {mode === "category" ? (
-          <>
-            <div className="hb-field">
-              <label className="hb-label" htmlFor="hb-budget-edit-amount">
-                Budget pro Monat ({baseCurrency})
-              </label>
-              <input
-                id="hb-budget-edit-amount"
-                className="hb-input hb-full"
-                style={{ minWidth: 0 }}
-                type="text"
-                inputMode="decimal"
-                placeholder="z.B. 400"
-                value={amount}
-                aria-invalid={amountInvalid || undefined}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-              {amountInvalid && (
-                <div className="hb-budget-edit-hint">Bitte einen Betrag über 0 eingeben.</div>
-              )}
-            </div>
-
-            {categorySuggestions.length > 0 ? (
-              <div className="hb-budget-edit-suggest">
-                <div className="hb-label">Bisher ausgegeben</div>
-                {categorySuggestions.map((s) => (
-                  <div key={s.key} className="hb-budget-edit-suggest-row">
-                    <span>{s.label}</span>
-                    <span className="hb-budget-edit-suggest-value">{money(s.value)}</span>
-                    <button
-                      type="button"
-                      className="hb-link-btn"
-                      onClick={() => setAmount(String(s.value))}
-                      aria-label={`${s.label} übernehmen: ${money(s.value)}`}
-                    >
-                      Übernehmen
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="hb-budget-edit-hint">
-                Für diese Kategorie gibt es noch keine Ausgaben in abgeschlossenen Monaten,
-                aus denen sich ein Vorschlag ableiten ließe.
-              </div>
+          <div className="hb-field">
+            <label className="hb-label" htmlFor="hb-budget-edit-amount">
+              Budget pro Monat ({baseCurrency})
+            </label>
+            <input
+              id="hb-budget-edit-amount"
+              className="hb-input hb-full"
+              style={{ minWidth: 0 }}
+              type="text"
+              inputMode="decimal"
+              placeholder="z.B. 400"
+              value={amount}
+              aria-invalid={amountInvalid || undefined}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+            {amountInvalid && (
+              <div className="hb-budget-edit-hint">Bitte einen Betrag über 0 eingeben.</div>
             )}
-          </>
+          </div>
         ) : (
           <>
             <div className="hb-budget-edit-subs">
               <div className="hb-budget-edit-subs-head">
                 <span className="hb-label">Unterkategorie</span>
                 <span className="hb-label" id="hb-budget-edit-col-amount">Pro Monat ({baseCurrency})</span>
-                <span className="hb-label">Übernehmen</span>
               </div>
-              {subs.map((sub, index) => {
-                const subSuggestions = suggestionsOf(suggestions?.bySubcategory.get(sub.id));
-                return (
-                  <div key={sub.id} className="hb-budget-edit-subs-row">
-                    <label
-                      className="hb-budget-edit-subs-name"
-                      htmlFor={`hb-budget-edit-${sub.id}`}
-                      title={sub.name}
-                    >
-                      {sub.name}
-                    </label>
-                    <input
-                      id={`hb-budget-edit-${sub.id}`}
-                      className="hb-input"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="kein Budget"
-                      value={subAmounts[sub.id] || ""}
-                      aria-describedby="hb-budget-edit-col-amount"
-                      aria-invalid={subInvalid(parsedSubs[index]) || undefined}
-                      onChange={(e) => setSubAmount(sub.id, e.target.value)}
-                    />
-                    <span className="hb-budget-edit-subs-suggest">
-                      {subSuggestions.length === 0 && <span className="hb-dt-dash">—</span>}
-                      {subSuggestions.map((s) => (
-                        <button
-                          key={s.key}
-                          type="button"
-                          className="hb-link-btn"
-                          onClick={() => setSubAmount(sub.id, String(s.value))}
-                          title={`${s.label} übernehmen`}
-                          aria-label={`${s.label} für ${sub.name} übernehmen: ${money(s.value)}`}
-                        >
-                          {s.short} {money(s.value)}
-                        </button>
-                      ))}
-                    </span>
-                  </div>
-                );
-              })}
+              {subs.map((sub, index) => (
+                <div key={sub.id} className="hb-budget-edit-subs-row">
+                  <label
+                    className="hb-budget-edit-subs-name"
+                    htmlFor={`hb-budget-edit-${sub.id}`}
+                    title={sub.name}
+                  >
+                    {sub.name}
+                  </label>
+                  <input
+                    id={`hb-budget-edit-${sub.id}`}
+                    className="hb-input"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="kein Budget"
+                    value={subAmounts[sub.id] || ""}
+                    aria-describedby="hb-budget-edit-col-amount"
+                    aria-invalid={subInvalid(parsedSubs[index]) || undefined}
+                    onChange={(e) => setSubAmount(sub.id, e.target.value)}
+                  />
+                </div>
+              ))}
             </div>
 
             <div className="hb-budget-edit-hint" aria-live="polite">

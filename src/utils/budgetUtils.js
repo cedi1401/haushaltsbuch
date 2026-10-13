@@ -1,10 +1,9 @@
 // src/utils/budgetUtils.js
-import { formatYearMonth, getEntryFinancialMonth, getFinancialMonth, getFinancialMonthInfo } from "./financialMonthUtils.js";
-import { monthlyRate } from "./fixedCostUtils.js";
+import { getEntryFinancialMonth, getFinancialMonth, getFinancialMonthInfo } from "./financialMonthUtils.js";
 import { toLocalISO } from "./hbUtils.js";
 
 // ============================================
-// Budget: Status, Zeitvergleich, Prognose
+// Budget: Status
 // ============================================
 
 export const UNCATEGORIZED_ID = "cat_unkategorisiert";
@@ -13,14 +12,9 @@ export const UNCATEGORIZED_ID = "cat_unkategorisiert";
 const EPS = 0.005;
 // Ab dieser Auslastung gilt ein Budget als knapp.
 export const BUDGET_RISK_PCT = 0.95;
-// So viele Prozentpunkte darf der variable Teil dem Zeitfortschritt voraus sein.
-export const BUDGET_PACE_TOLERANCE = 0.1;
-// Vorher ist eine Hochrechnung aus ein, zwei Buchungen reines Raten.
-export const BUDGET_MIN_DAYS = 3;
 
 export const BUDGET_STATUS_LABEL = {
   ok: "Im Budget",
-  warn: "Aufpassen",
   risk: "Knapp",
   full: "Ausgeschöpft",
   over: "Überschritten",
@@ -29,75 +23,31 @@ export const BUDGET_STATUS_LABEL = {
 // Ton für Meter und Kennzahlen; die Pillen färbt .hb-budget-status-pill--*.
 export const BUDGET_STATUS_COLOR = {
   ok: "var(--green)",
-  warn: "var(--yellow)",
   risk: "var(--yellow)",
   full: "var(--muted)",
   over: "var(--red)",
 };
 
 const hasBudget = (node) => node?.budget != null && node.budget > 0;
-const EMPTY_MAP = new Map();
 const round2 = (n) => Math.round(n * 100) / 100;
 
 /**
- * Kennzahlen eines Budgets für einen Monat.
+ * Kennzahlen eines Budgets für einen Monat. Der Status hängt allein am
+ * Verbrauch — einen Zeitvergleich oder eine Prognose gibt es bewusst nicht.
  *
- * Fixkosten werden aus Zeitvergleich und Prognose herausgerechnet: Eine Miete
- * ist am 3. des Monats zu 100 % verbraucht, ohne dass irgendetwas aus dem Ruder
- * läuft. Linear hochgerechnet wird deshalb nur der variable Teil; die
- * Fixkosten gehen mit ihrem bekannten Betrag ein (gebucht + noch offen).
- *
- * Zeitvergleich und Prognose gibt es nur im laufenden Monat und erst ab
- * BUDGET_MIN_DAYS — sonst bleiben die Felder null.
- *
- * @param {{ budget: number, spent: number, fixedBooked?: number, fixedOpen?: number }} item
- * @param {object|null} monthInfo - Ergebnis von getFinancialMonthInfo()
- * @returns {object}
+ * @param {{ budget: number, spent: number }} item
+ * @returns {{ pct: number, remaining: number, status: string }}
  */
-export function calcBudgetMetrics({ budget, spent, fixedBooked = 0, fixedOpen = 0 }, monthInfo) {
+export function calcBudgetMetrics({ budget, spent }) {
   const pct = budget > 0 ? spent / budget : 0;
-  const variableSpent = Math.max(0, spent - fixedBooked);
-  const variableBudget = budget - fixedBooked - fixedOpen;
-
-  let expectedPct = null;
-  let dailyRate = null;
-  let forecast = null;
-  let forecastDelta = null;
-  let variablePct = null;
-  let paceDelta = null;
-
-  if (monthInfo?.isCurrentMonth && monthInfo.daysElapsed >= BUDGET_MIN_DAYS) {
-    expectedPct = monthInfo.daysElapsed / monthInfo.daysInMonth;
-    dailyRate = variableSpent / monthInfo.daysElapsed;
-    forecast = fixedBooked + fixedOpen + dailyRate * monthInfo.daysInMonth;
-    forecastDelta = forecast - budget;
-    // Ein Budget, das die Fixkosten ganz aufbrauchen, hat keinen variablen
-    // Teil — dort gibt es nichts, was zu schnell laufen könnte.
-    if (variableBudget > EPS) {
-      variablePct = variableSpent / variableBudget;
-      paceDelta = variableSpent - variableBudget * expectedPct;
-    }
-  }
 
   let status;
   if (spent > budget + EPS) status = "over";
   else if (spent >= budget - EPS) status = "full";
   else if (pct >= BUDGET_RISK_PCT) status = "risk";
-  else if (variablePct != null && variablePct - expectedPct > BUDGET_PACE_TOLERANCE) status = "warn";
   else status = "ok";
 
-  return {
-    pct,
-    remaining: budget - spent,
-    status,
-    variableSpent,
-    variableBudget,
-    expectedPct,
-    paceDelta,
-    dailyRate,
-    forecast,
-    forecastDelta,
-  };
+  return { pct, remaining: budget - spent, status };
 }
 
 // ============================================
@@ -125,8 +75,7 @@ function addTo(outer, key, ym, amount) {
  * @param {Array} expenseCategories
  * @param {number} monthStartDay
  * @returns {{ byCategory: Map<string, Map<string, number>>,
- *   bySubcategory: Map<string, Map<string, number>>, firstMonth: string|null }}
- *   firstMonth = frühester Finanzmonat mit irgendeiner Buchung im Buch
+ *   bySubcategory: Map<string, Map<string, number>> }}
  */
 export function calcCategoryMonthlySpend(entries, expenseCategories, monthStartDay = 1) {
   const subIdsByCat = new Map(
@@ -134,13 +83,11 @@ export function calcCategoryMonthlySpend(entries, expenseCategories, monthStartD
   );
   const byCategory = new Map();
   const bySubcategory = new Map();
-  let firstMonth = null;
 
   for (const e of entries || []) {
+    if (e.kind !== "expense" || e.source !== "month") continue;
     const ym = getEntryFinancialMonth(e, monthStartDay);
     if (!ym) continue;
-    if (firstMonth === null || ym < firstMonth) firstMonth = ym;
-    if (e.kind !== "expense" || e.source !== "month") continue;
 
     const catId = subIdsByCat.has(e.categoryId) ? e.categoryId : UNCATEGORIZED_ID;
     const amount = Number(e.amount || 0);
@@ -150,115 +97,18 @@ export function calcCategoryMonthlySpend(entries, expenseCategories, monthStartD
     }
   }
 
-  return { byCategory, bySubcategory, firstMonth };
-}
-
-function shiftMonth(yyyymm, n) {
-  const [y, m] = yyyymm.split("-").map(Number);
-  const total = y * 12 + (m - 1) + n;
-  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, "0")}`;
-}
-
-/**
- * Die letzten `count` abgeschlossenen Finanzmonate vor `refMonth`, älteste
- * zuerst — aber nie vor `firstMonth`: Ein Buch, das erst seit drei Monaten
- * geführt wird, hat einen Ø über drei Monate, nicht über sechs mit drei Nullen.
- *
- * @param {string} refMonth - laufender Finanzmonat "YYYY-MM" (zählt selbst nicht)
- * @param {number} count - Obergrenze; Infinity = alle seit firstMonth
- * @param {string|null} firstMonth
- * @returns {string[]}
- */
-export function listCompletedMonths(refMonth, count, firstMonth) {
-  if (!refMonth || !firstMonth) return [];
-  const months = [];
-  let ym = shiftMonth(refMonth, -1);
-  while (months.length < count && ym >= firstMonth) {
-    months.push(ym);
-    ym = shiftMonth(ym, -1);
-  }
-  return months.reverse();
-}
-
-/**
- * Durchschnitt und Median über die genannten Monate. Monate ohne Ausgaben
- * zählen als 0 — sonst sähe eine Kategorie mit einer einzigen großen Buchung
- * im Jahr wie eine monatliche Belastung aus.
- *
- * @param {Map<string, number>|undefined} monthMap
- * @param {string[]} months
- * @returns {{ avg: number, median: number, count: number }|null} null ohne Monate
- */
-export function calcSpendStats(monthMap, months) {
-  if (!months || months.length === 0) return null;
-  const values = months.map((ym) => monthMap?.get(ym) || 0);
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-  const avg = values.reduce((s, v) => s + v, 0) / values.length;
-  return { avg: round2(avg), median: round2(median), count: values.length };
-}
-
-/**
- * Monatsreihe für die Verlaufs-Charts: vom ersten Monat des Buchs bis zum
- * laufenden, älteste zuerst. Mehrere Monats-Maps werden je Monat summiert (die
- * Gesamtreihe ist die Summe aller budgetierten Zeilen). Monate ohne Ausgaben
- * stehen mit 0 in der Reihe — eine Lücke läse sich wie fehlende Daten.
- *
- * @param {Array<Map<string, number>|undefined>} monthMaps
- * @param {string|null} firstMonth
- * @param {string|null} currentMonth - laufender Finanzmonat, letzter Punkt
- * @param {number} [limit] - höchstens so viele Monate, vom laufenden rückwärts
- * @returns {Array<{ ym: string, label: string, total: number, isCurrent: boolean }>}
- */
-export function buildBudgetHistory(monthMaps, firstMonth, currentMonth, limit = Infinity) {
-  if (!firstMonth || !currentMonth) return [];
-  const series = [];
-  let ym = currentMonth;
-  while (series.length < limit && ym >= firstMonth) {
-    let total = 0;
-    for (const monthMap of monthMaps || []) total += monthMap?.get(ym) || 0;
-    series.push({ ym, label: formatYearMonth(ym), total: round2(total), isCurrent: ym === currentMonth });
-    ym = shiftMonth(ym, -1);
-  }
-  return series.reverse();
-}
-
-/**
- * Ø Ist einer Monatsreihe. Der laufende Monat zählt nicht mit: er ist noch
- * nicht zu Ende und zöge den Durchschnitt nach unten.
- *
- * @param {Array<{ total: number, isCurrent: boolean }>} series
- * @returns {number|null} null ohne abgeschlossenen Monat
- */
-export function calcHistoryAverage(series) {
-  const completed = (series || []).filter((p) => !p.isCurrent);
-  if (completed.length === 0) return null;
-  return round2(completed.reduce((s, p) => s + p.total, 0) / completed.length);
+  return { byCategory, bySubcategory };
 }
 
 // ============================================
 // Budget: Zeilenmodell für View und Dashboard-Card
 // ============================================
 
-// Kategorie-Verlauf abzüglich einzelner Unterkategorien — der Rest einer
-// Oberkategorie, deren Budgets auf Unterkategorien liegen.
-function subtractMonthMaps(base, parts) {
-  const result = new Map(base || []);
-  for (const part of parts) {
-    for (const [ym, amount] of part || []) {
-      result.set(ym, (result.get(ym) || 0) - amount);
-    }
-  }
-  return result;
-}
-
 /**
  * Baut die Zeilen des Budget-Views: eine Sektion mit, eine ohne Budget.
  *
  * Mit Budget: eine Zeile je budgetierter Ebene — die Oberkategorie oder ihre
- * einzelnen Unterkategorien (hat eine Unterkategorie ein Budget, gilt das der
- * Oberkategorie nicht, siehe canSetParentBudget/canSetSubBudget).
+ * einzelnen Unterkategorien.
  *
  * Ohne Budget: eine Zeile je Oberkategorie, auch ohne Ausgaben. Liegen Budgets
  * auf einzelnen Unterkategorien, zeigt die Zeile den Rest der Oberkategorie
@@ -266,105 +116,43 @@ function subtractMonthMaps(base, parts) {
  * Unkategorisierte Ausgaben bekommen eine eigene Zeile (`level:
  * "uncategorized"`), damit die Summe der Sektion zu den Ausgaben passt.
  *
- * `monthFilter` leer („Alle Monate“): `spent` ist der Ø pro abgeschlossenem
- * Monat (`isAverage`), nie eine Summe gegen ein Monatsbudget; Fixanteil,
- * Zeitvergleich und Prognose entfallen.
- *
- * `avg6`/`median12` beziehen sich immer auf die abgeschlossenen Monate vor
- * dem heutigen Finanzmonat, unabhängig vom Filter.
- *
- * Jede Zeile trägt in `monthly` ihre Ausgaben je Finanzmonat — die Grundlage
- * für `buildBudgetHistory()`.
+ * Gemessen wird immer ein einzelner Finanzmonat. Ohne `monthFilter` („Alle
+ * Monate“) ist das der laufende — ein Budget gilt pro Monat, eine Summe über
+ * alle Monate hätte kein Gegenstück.
  *
  * @param {object} args
  * @param {Array} args.entries - alle Einträge des Buchs (ungefiltert)
  * @param {Array} args.expenseCategories
- * @param {Array} [args.recurringExpenses]
- * @param {string} args.monthFilter - "YYYY-MM" oder "" für alle Monate
+ * @param {string} [args.monthFilter] - "YYYY-MM"; leer = laufender Finanzmonat
  * @param {number} [args.monthStartDay]
  * @param {Date} [args.today] - Bezugstag, nur für Tests abweichend
  * @returns {{ budgeted: Array, unbudgeted: Array, totals: object,
- *   unbudgetedSpent: number, monthInfo: object|null, isAverage: boolean,
- *   firstMonth: string|null, currentMonth: string }}
+ *   unbudgetedSpent: number, month: string, monthInfo: object|null }}
  */
 export function buildBudgetRows({
   entries,
   expenseCategories,
-  recurringExpenses,
-  monthFilter,
+  monthFilter = "",
   monthStartDay = 1,
   today = new Date(),
 }) {
   const categories = expenseCategories || [];
   const spend = calcCategoryMonthlySpend(entries, categories, monthStartDay);
-  const currentMonth = getFinancialMonth(toLocalISO(today), monthStartDay)?.yyyymm;
-  const months6 = listCompletedMonths(currentMonth, 6, spend.firstMonth);
-  const months12 = listCompletedMonths(currentMonth, 12, spend.firstMonth);
-
-  const isAverage = !monthFilter;
-  const monthInfo = getFinancialMonthInfo(monthFilter, monthStartDay, today);
-  // Ohne einen einzigen abgeschlossenen Monat bleibt nur der laufende.
-  let averageMonths = null;
-  if (isAverage) {
-    const completed = listCompletedMonths(currentMonth, Infinity, spend.firstMonth);
-    averageMonths = completed.length > 0 ? completed : [currentMonth];
-  }
-  const spentOf = (monthMap) =>
-    isAverage ? calcSpendStats(monthMap, averageMonths)?.avg || 0 : monthMap?.get(monthFilter) || 0;
-
-  // Fixanteil des gewählten Monats: gebuchte Fixkosten über `recurringId`,
-  // offene über die Positionen, die in diesem Monat noch keine Buchung haben.
-  const fixedBookedByCat = new Map();
-  const fixedBookedBySub = new Map();
-  const fixedOpenByCat = new Map();
-  const fixedOpenBySub = new Map();
-  if (!isAverage) {
-    const bookedIds = new Set();
-    for (const e of entries || []) {
-      if (!e.recurringId || e.kind !== "expense" || e.source !== "month") continue;
-      if (getEntryFinancialMonth(e, monthStartDay) !== monthFilter) continue;
-      bookedIds.add(e.recurringId);
-      const amount = Number(e.amount || 0);
-      if (e.categoryId) fixedBookedByCat.set(e.categoryId, (fixedBookedByCat.get(e.categoryId) || 0) + amount);
-      if (e.subcategoryId) fixedBookedBySub.set(e.subcategoryId, (fixedBookedBySub.get(e.subcategoryId) || 0) + amount);
-    }
-    // In einem vergangenen Monat kommt nichts mehr nach.
-    if (monthInfo?.isCurrentMonth || monthInfo?.isFutureMonth) {
-      for (const item of recurringExpenses || []) {
-        if (!item?.id || item.kind === "transfer" || bookedIds.has(item.id)) continue;
-        const rate = monthlyRate(item);
-        if (item.categoryId) fixedOpenByCat.set(item.categoryId, (fixedOpenByCat.get(item.categoryId) || 0) + rate);
-        if (item.subcategoryId) fixedOpenBySub.set(item.subcategoryId, (fixedOpenBySub.get(item.subcategoryId) || 0) + rate);
-      }
-    }
-  }
-
-  const stats = (monthMap) => ({
-    avg6: calcSpendStats(monthMap, months6)?.avg ?? null,
-    median12: calcSpendStats(monthMap, months12)?.median ?? null,
-  });
+  const month = monthFilter || getFinancialMonth(toLocalISO(today), monthStartDay)?.yyyymm;
+  const monthInfo = getFinancialMonthInfo(month, monthStartDay, today);
+  const spentOf = (monthMap) => round2(monthMap?.get(month) || 0);
 
   const budgeted = [];
   const unbudgeted = [];
 
-  const pushBudgeted = (base, monthMap, fixedBooked, fixedOpen) => {
-    const spent = spentOf(monthMap);
-    budgeted.push({
-      ...base,
-      spent,
-      isAverage,
-      monthly: monthMap || EMPTY_MAP,
-      fixedBooked,
-      fixedOpen,
-      ...stats(monthMap),
-      ...calcBudgetMetrics({ budget: base.budget, spent, fixedBooked, fixedOpen }, monthInfo),
-    });
+  const pushBudgeted = (base, spent) => {
+    budgeted.push({ ...base, spent, ...calcBudgetMetrics({ budget: base.budget, spent }) });
   };
 
   for (const cat of categories) {
     const subs = cat.subcategories || [];
     const budgetedSubs = subs.filter(hasBudget);
-    const catMap = spend.byCategory.get(cat.id);
+    const catSpent = spentOf(spend.byCategory.get(cat.id));
 
     if (budgetedSubs.length === 0 && hasBudget(cat)) {
       pushBudgeted(
@@ -379,14 +167,15 @@ export function buildBudgetRows({
           isParent: true,
           budget: cat.budget,
         },
-        catMap,
-        fixedBookedByCat.get(cat.id) || 0,
-        fixedOpenByCat.get(cat.id) || 0
+        catSpent
       );
       continue;
     }
 
+    let subSpent = 0;
     for (const sub of budgetedSubs) {
+      const spent = spentOf(spend.bySubcategory.get(sub.id));
+      subSpent += spent;
       pushBudgeted(
         {
           id: sub.id,
@@ -399,28 +188,15 @@ export function buildBudgetRows({
           isParent: false,
           budget: sub.budget,
         },
-        spend.bySubcategory.get(sub.id),
-        fixedBookedBySub.get(sub.id) || 0,
-        fixedOpenBySub.get(sub.id) || 0
+        spent
       );
     }
 
     const isRemainder = budgetedSubs.length > 0;
-    const restMap = isRemainder
-      ? subtractMonthMaps(catMap, budgetedSubs.map((s) => spend.bySubcategory.get(s.id)))
-      : catMap;
-    const spent = spentOf(restMap);
-    const rowStats = stats(restMap);
+    const spent = round2(catSpent - subSpent);
     // Sind alle Unterkategorien budgetiert und nichts läuft direkt auf die
     // Oberkategorie, gibt es keinen Rest zu zeigen.
-    if (
-      isRemainder &&
-      budgetedSubs.length === subs.length &&
-      spent <= EPS &&
-      !(rowStats.avg6 > EPS)
-    ) {
-      continue;
-    }
+    if (isRemainder && budgetedSubs.length === subs.length && spent <= EPS) continue;
     unbudgeted.push({
       id: cat.id,
       level: "category",
@@ -433,19 +209,14 @@ export function buildBudgetRows({
       isRemainder,
       budget: null,
       spent,
-      isAverage,
-      monthly: restMap || EMPTY_MAP,
-      ...rowStats,
     });
   }
 
   // Die ausgemusterte Oberkategorie „Unkategorisiert“ kann noch als echte
   // Kategorie existieren — dann ist sie oben bereits eine normale Zeile.
   if (!categories.some((c) => c.id === UNCATEGORIZED_ID)) {
-    const monthMap = spend.byCategory.get(UNCATEGORIZED_ID);
-    const spent = spentOf(monthMap);
-    const rowStats = stats(monthMap);
-    if (spent > EPS || rowStats.avg6 > EPS) {
+    const spent = spentOf(spend.byCategory.get(UNCATEGORIZED_ID));
+    if (spent > EPS) {
       unbudgeted.push({
         id: UNCATEGORIZED_ID,
         level: "uncategorized",
@@ -458,124 +229,33 @@ export function buildBudgetRows({
         isRemainder: false,
         budget: null,
         spent,
-        isAverage,
-        monthly: monthMap || EMPTY_MAP,
-        ...rowStats,
       });
     }
   }
 
   budgeted.sort((a, b) => b.pct - a.pct);
-  unbudgeted.sort(
-    (a, b) => b.spent - a.spent || (b.avg6 || 0) - (a.avg6 || 0) || a.name.localeCompare(b.name, "de")
-  );
+  unbudgeted.sort((a, b) => b.spent - a.spent || a.name.localeCompare(b.name, "de"));
 
-  const sum = (rows, key) => rows.reduce((s, r) => s + (r[key] || 0), 0);
-  const totalBase = {
-    budget: sum(budgeted, "budget"),
-    spent: sum(budgeted, "spent"),
-    fixedBooked: sum(budgeted, "fixedBooked"),
-    fixedOpen: sum(budgeted, "fixedOpen"),
-  };
+  const sum = (rows, key) => round2(rows.reduce((s, r) => s + (r[key] || 0), 0));
+  const totalBase = { budget: sum(budgeted, "budget"), spent: sum(budgeted, "spent") };
 
   return {
     budgeted,
     unbudgeted,
     totals: {
       ...totalBase,
-      ...calcBudgetMetrics(totalBase, monthInfo),
+      ...calcBudgetMetrics(totalBase),
       overCount: budgeted.filter((r) => r.status === "over").length,
     },
     unbudgetedSpent: sum(unbudgeted, "spent"),
+    month,
     monthInfo,
-    isAverage,
-    firstMonth: spend.firstMonth,
-    currentMonth,
   };
 }
 
-/**
- * Die Buchungen hinter dem Ist einer Zeile im gewählten Monat, neueste zuerst.
- * Gleiche Zuordnung wie `calcCategoryMonthlySpend()`: nur Ausgaben aus dem
- * Monat, Buchungen ohne gültige Kategorie gehören zur Zeile „Unkategorisiert“,
- * und die Rest-Zeile einer Oberkategorie lässt die budgetierten
- * Unterkategorien aus.
- *
- * @param {object} args
- * @param {Array} args.entries - alle Einträge des Buchs (ungefiltert)
- * @param {Array} args.expenseCategories
- * @param {object} args.row - Zeile aus buildBudgetRows()
- * @param {string} args.monthFilter - "YYYY-MM"; leer liefert nichts
- * @param {number} [args.monthStartDay]
- * @returns {Array}
- */
-export function listBudgetRowEntries({ entries, expenseCategories, row, monthFilter, monthStartDay = 1 }) {
-  if (!row || !monthFilter) return [];
-  const categories = expenseCategories || [];
-  const validIds = new Set(categories.map((c) => c.id));
-  const category = categories.find((c) => c.id === row.categoryId);
-  const budgetedSubIds = new Set((category?.subcategories || []).filter(hasBudget).map((s) => s.id));
-
-  const belongs = (e) => {
-    if (row.level === "uncategorized") return !validIds.has(e.categoryId);
-    if (e.categoryId !== row.categoryId) return false;
-    if (row.level === "subcategory") return e.subcategoryId === row.subcategoryId;
-    return !row.isRemainder || !budgetedSubIds.has(e.subcategoryId);
-  };
-
-  return (entries || [])
-    .filter(
-      (e) =>
-        e.kind === "expense" &&
-        e.source === "month" &&
-        getEntryFinancialMonth(e, monthStartDay) === monthFilter &&
-        belongs(e)
-    )
-    .sort(
-      (a, b) =>
-        String(b.date).localeCompare(String(a.date)) || Number(b.amount || 0) - Number(a.amount || 0)
-    );
-}
-
 // ============================================
-// Budget: Pflegen (Vorschlagswerte, Schreiben)
+// Budget: Pflegen
 // ============================================
-
-/**
- * Vorschlagswerte für den Bearbeiten-Dialog: Ø 6 Monate und Median 12 Monate
- * je Oberkategorie (inklusive ihrer Unterkategorien) und je Unterkategorie.
- * Gleiche Monate wie `avg6`/`median12` der Zeilen — die Zeilen kennen aber nur
- * ihre eigene Ebene, der Dialog braucht beide.
- *
- * @param {object} args
- * @param {Array} args.entries - alle Einträge des Buchs (ungefiltert)
- * @param {Array} args.expenseCategories
- * @param {number} [args.monthStartDay]
- * @param {Date} [args.today] - Bezugstag, nur für Tests abweichend
- * @returns {{ byCategory: Map<string, {avg6: number|null, median12: number|null}>,
- *   bySubcategory: Map<string, {avg6: number|null, median12: number|null}> }}
- */
-export function calcBudgetSuggestions({ entries, expenseCategories, monthStartDay = 1, today = new Date() }) {
-  const categories = expenseCategories || [];
-  const spend = calcCategoryMonthlySpend(entries, categories, monthStartDay);
-  const currentMonth = getFinancialMonth(toLocalISO(today), monthStartDay)?.yyyymm;
-  const months6 = listCompletedMonths(currentMonth, 6, spend.firstMonth);
-  const months12 = listCompletedMonths(currentMonth, 12, spend.firstMonth);
-  const stats = (monthMap) => ({
-    avg6: calcSpendStats(monthMap, months6)?.avg ?? null,
-    median12: calcSpendStats(monthMap, months12)?.median ?? null,
-  });
-
-  const byCategory = new Map();
-  const bySubcategory = new Map();
-  for (const cat of categories) {
-    byCategory.set(cat.id, stats(spend.byCategory.get(cat.id)));
-    for (const sub of cat.subcategories || []) {
-      bySubcategory.set(sub.id, stats(spend.bySubcategory.get(sub.id)));
-    }
-  }
-  return { byCategory, bySubcategory };
-}
 
 const toBudget = (value) => {
   const n = Number(value);

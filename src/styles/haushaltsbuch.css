@@ -6048,10 +6048,6 @@ select.hb-input option {
   line-height: 1.4;
 }
 
-.hb-budget-row-meta-sep {
-  margin-left: 2px;
-}
-
 /* Status-Pill */
 .hb-budget-status-pill {
   font-size: 11px;
@@ -6063,7 +6059,6 @@ select.hb-input option {
 }
 
 .hb-budget-status-pill--ok   { color: var(--green);  background: var(--green-soft);  }
-.hb-budget-status-pill--warn { color: var(--yellow-text); background: var(--yellow-soft); }
 .hb-budget-status-pill--risk { color: var(--yellow-text); background: var(--yellow-soft); }
 .hb-budget-status-pill--full { color: var(--muted);  background: var(--bg-subtle);  }
 .hb-budget-status-pill--over { color: var(--red);    background: var(--red-soft);    }
@@ -6104,8 +6099,7 @@ select.hb-input option {
   color: var(--muted);
 }
 
-/* Bearbeiten-Dialog des Budget-Views: Umschalter, Betrag und die
-   übernehmbaren Vorschlagswerte. */
+/* Bearbeiten-Dialog des Budget-Views: Umschalter und Beträge. */
 .hb-budget-edit {
   display: flex;
   flex-direction: column;
@@ -6119,40 +6113,11 @@ select.hb-input option {
   color: var(--muted);
 }
 
-/* Die Übernehmen-Links sind sonst nur eine Textzeile hoch. */
-.hb-budget-edit .hb-link-btn {
-  padding: 4px 0;
-  white-space: nowrap;
-}
-
 .hb-budget-edit-hint strong {
   color: var(--text);
 }
 
-.hb-budget-edit-suggest {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/* Bezeichnung, Betrag rechtsbündig, Aktion — die Beträge der beiden Zeilen
-   stehen untereinander und direkt neben ihrer Bezeichnung. */
-.hb-budget-edit-suggest-row {
-  display: grid;
-  grid-template-columns: 136px 104px auto;
-  justify-content: start;
-  align-items: baseline;
-  column-gap: 16px;
-  font-size: 14px;
-}
-
-.hb-budget-edit-suggest-value {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  text-align: right;
-}
-
-/* Je Unterkategorie eine Zeile: Name, Betragsfeld, Vorschlagswerte. */
+/* Je Unterkategorie eine Zeile: Name und Betragsfeld. */
 .hb-budget-edit-subs {
   display: flex;
   flex-direction: column;
@@ -6162,7 +6127,7 @@ select.hb-input option {
 .hb-budget-edit-subs-head,
 .hb-budget-edit-subs-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 132px 232px;
+  grid-template-columns: minmax(0, 1fr) 132px;
   align-items: center;
   column-gap: 12px;
 }
@@ -6181,75 +6146,6 @@ select.hb-input option {
 .hb-budget-edit-subs-row .hb-input {
   min-width: 0;
   width: 100%;
-}
-
-.hb-budget-edit-subs-suggest {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 12px;
-  font-variant-numeric: tabular-nums;
-}
-
-/* --- Detailbereich einer Budget-Zeile ---------------- */
-/* Gerüst, Kacheln und Notizblock kommen von .hb-res-detail; hier steht nur,
-   was Verlauf und Buchungsliste zusätzlich brauchen. Die linke Zone stapelt
-   Kacheln und Chart — ohne Kacheln (Zeile ohne Budget, alle Spalten sichtbar)
-   steht der Chart allein und die Zone bleibt trotzdem gefüllt. */
-.hb-budget-detail-main {
-  grid-column: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-/* Dieselbe Fläche wie eine Kachel (.hb-res-fact): der Chart ist eine Zahl in
-   anderer Form, kein Erklärtext. */
-.hb-budget-detail-chart {
-  min-width: 0;
-  padding: 12px 12px 4px;
-  background: var(--card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-}
-
-/* Ein Raster für die ganze Liste, die Zeilen übernehmen es als Subgrid: Badge
-   und Betrag stehen so über alle Zeilen in einer Flucht, egal wie breit der
-   einzelne Betrag ist. */
-.hb-budget-detail-entries {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  column-gap: 10px;
-  row-gap: 2px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.hb-budget-detail-entry {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: subgrid;
-  align-items: center;
-  padding: 3px 4px;
-  font-size: 13px;
-}
-
-.hb-budget-detail-entry-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hb-budget-detail-entry-amount {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.hb-budget-detail-more {
-  margin-top: 8px;
-  padding: 0 4px;
 }
 
 .hb-full-card {

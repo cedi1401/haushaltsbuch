@@ -1,39 +1,31 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Button, Card, CardContent } from "../components/ui.jsx";
 import DataTable from "../components/DataTable.jsx";
 import { IconBudget, IconEdit, IconInfo, IconPlus } from "../components/icons.jsx";
 import { useToast } from "../components/toastContext.js";
 import { formatPercent } from "../utils/hbUtils.js";
-import { buildBudgetHistory, buildBudgetRows, calcBudgetSuggestions, setCategoryBudgets } from "../utils/budgetUtils.js";
+import { buildBudgetRows, setCategoryBudgets } from "../utils/budgetUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { buildBudgetColumns, budgetMoney } from "./budget/budgetColumns.jsx";
 import BudgetEditDialog from "./budget/BudgetEditDialog.jsx";
-import BudgetDetail from "./budget/BudgetDetail.jsx";
-import BudgetHistoryCard from "./budget/BudgetHistoryCard.jsx";
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const percent = (ratio) => formatPercent(ratio * 100, { digits: 0, sign: false });
 
 /**
- * Budget-View — was darf je Kategorie passieren, und wird es eingehalten?
+ * Budget-View — welche Kategorie hat ein Budget, welche nicht, und wie viel
+ * davon ist im laufenden Finanzmonat verbraucht?
  *
- * Abgrenzung zum Dashboard: dort steht das Budget nur als Ampel, hier als
- * Planungstabelle mit allen Ausgaben-Kategorien, auch denen ohne Budget.
- * Gemessen wird immer am heutigen Budget — einen Verlauf der Budgets selbst
- * gibt es nicht, vergangene Monate sind deshalb ein Realitätscheck und keine
- * Historie.
+ * Der View ist bewusst schmal: kein Verlauf, keine Vorschlagswerte, keine
+ * Prognose. Er zeigt immer den laufenden Finanzmonat, unabhängig vom
+ * Monatsfilter der Toolbar.
  *
  * Budgets werden nur hier gepflegt: über die Zeilenaktionen und den
  * Bearbeiten-Dialog. Der Kategorien-Dialog zeigt sie bloß an.
- *
- * Jede Zeile klappt auf (`BudgetDetail`): Kennzahlen, Verlauf der Kategorie
- * und die Buchungen des Monats.
  */
 export default function BudgetView({
   entries,
   expenseCategories,
-  recurringExpenses,
-  monthFilter,
   monthStartDay = 1,
   onUpdateExpenseCategories,
   onOpenCategoryManager,
@@ -43,40 +35,10 @@ export default function BudgetView({
   const money = useMemo(() => (value) => budgetMoney(fmt, value), [fmt]);
 
   const model = useMemo(
-    () => buildBudgetRows({ entries, expenseCategories, recurringExpenses, monthFilter, monthStartDay }),
-    [entries, expenseCategories, recurringExpenses, monthFilter, monthStartDay]
-  );
-  const { budgeted, unbudgeted, totals, unbudgetedSpent, monthInfo, isAverage, firstMonth, currentMonth } = model;
-
-  // Verlauf über alle budgetierten Zeilen — unabhängig vom Monatsfilter.
-  const history = useMemo(
-    () => buildBudgetHistory(budgeted.map((row) => row.monthly), firstMonth, currentMonth),
-    [budgeted, firstMonth, currentMonth]
-  );
-
-  const renderDetail = useCallback(
-    (row, hiddenColumns) => (
-      <BudgetDetail
-        row={row}
-        hiddenColumns={hiddenColumns}
-        fmt={fmt}
-        entries={entries}
-        expenseCategories={expenseCategories}
-        monthFilter={monthFilter}
-        monthStartDay={monthStartDay}
-        monthInfo={monthInfo}
-        firstMonth={firstMonth}
-        currentMonth={currentMonth}
-      />
-    ),
-    [fmt, entries, expenseCategories, monthFilter, monthStartDay, monthInfo, firstMonth, currentMonth]
-  );
-
-  // Vorschlagswerte beider Ebenen für den Dialog — die Zeilen kennen nur ihre eigene.
-  const suggestions = useMemo(
-    () => calcBudgetSuggestions({ entries, expenseCategories, monthStartDay }),
+    () => buildBudgetRows({ entries, expenseCategories, monthStartDay }),
     [entries, expenseCategories, monthStartDay]
   );
+  const { budgeted, unbudgeted, totals, unbudgetedSpent, monthInfo } = model;
 
   // Bearbeitet wird immer die Oberkategorie; die Ebene wählt der Dialog. Über
   // die ID statt das Objekt, damit eine inzwischen gelöschte Kategorie den
@@ -98,14 +60,6 @@ export default function BudgetView({
     setEditCategoryId(null);
   }
 
-  // „Ø übernehmen“: der Durchschnitt der letzten sechs Monate wird ohne Umweg
-  // über den Dialog zum Budget der ganzen Kategorie.
-  function adoptAverage(row) {
-    const budget = Math.round(row.avg6);
-    onUpdateExpenseCategories(setCategoryBudgets(expenseCategories, row.categoryId, { budget }));
-    toast.success(`Budget für „${row.name}“ auf ${money(budget)} festgelegt.`);
-  }
-
   // Aktionen am Zeilenende — DataTable blendet sie beim Überfahren ein.
   // Unkategorisierte Ausgaben haben keine Kategorie, an der ein Budget hängen könnte.
   function renderRowActions(row) {
@@ -113,43 +67,20 @@ export default function BudgetView({
     const isNew = row.budget == null && !row.isRemainder;
     const title = isNew ? "Budget festlegen" : "Budget bearbeiten";
     const target = row.parentName || row.name;
-    // Der Betrag steht im Button: die Leiste verdeckt die Spalte, aus der er stammt.
-    const average = Math.round(row.avg6 || 0);
     return (
-      <>
-        {isNew && average > 0 && (
-          <button
-            type="button"
-            className="hb-btn hb-btn-outline hb-btn-sm"
-            onClick={() => adoptAverage(row)}
-            aria-label={`Durchschnitt ${money(average)} als Budget für „${row.name}“ übernehmen`}
-          >
-            Ø {money(average)} übernehmen
-          </button>
-        )}
-        <button
-          type="button"
-          className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
-          onClick={() => setEditCategoryId(row.categoryId)}
-          title={title}
-          aria-label={`${title}: „${target}“`}
-        >
-          {isNew ? <IconPlus /> : <IconEdit />}
-        </button>
-      </>
+      <button
+        type="button"
+        className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+        onClick={() => setEditCategoryId(row.categoryId)}
+        title={title}
+        aria-label={`${title}: „${target}“`}
+      >
+        {isNew ? <IconPlus /> : <IconEdit />}
+      </button>
     );
   }
 
-  const isCurrent = Boolean(monthInfo?.isCurrentMonth);
-  const isFuture = Boolean(monthInfo?.isFutureMonth);
-  // Im zukünftigen Monat gibt es nur das Soll — ein Ist von 0 läse sich dort
-  // wie ein eingehaltenes Budget.
-  const showActual = !isFuture;
-
-  const columns = useMemo(
-    () => buildBudgetColumns({ fmt, isAverage, showActual }),
-    [fmt, isAverage, showActual]
-  );
+  const columns = useMemo(() => buildBudgetColumns({ fmt }), [fmt]);
 
   const sections = useMemo(() => {
     const result = [];
@@ -162,9 +93,7 @@ export default function BudgetView({
         accent: null,
         rows: budgeted,
         countLabel: (n) => plural(n, "Budget", "Budgets"),
-        total: showActual
-          ? `${isAverage ? "Ø " : ""}${money(totals.spent)} von ${money(totals.budget)}`
-          : money(totals.budget),
+        total: `${money(totals.spent)} von ${money(totals.budget)}`,
       });
     }
     if (unbudgeted.length > 0) {
@@ -174,11 +103,11 @@ export default function BudgetView({
         accent: null,
         rows: unbudgeted,
         countLabel: (n) => plural(n, "Kategorie", "Kategorien"),
-        total: showActual ? `${isAverage ? "Ø " : ""}${money(unbudgetedSpent)}` : null,
+        total: money(unbudgetedSpent),
       });
     }
     return result;
-  }, [budgeted, unbudgeted, totals, unbudgetedSpent, showActual, isAverage, money]);
+  }, [budgeted, unbudgeted, totals, unbudgetedSpent, money]);
 
   if (budgeted.length === 0 && unbudgeted.length === 0) {
     return (
@@ -199,51 +128,21 @@ export default function BudgetView({
   }
 
   const hasBudgets = budgeted.length > 0;
-  const totalSpent = totals.spent + unbudgetedSpent;
-  const unbudgetedShare = totalSpent > 0 ? unbudgetedSpent / totalSpent : null;
-  const pending = "Monat hat noch nicht begonnen";
 
   let budgetSub = plural(budgeted.length, "Budget", "Budgets");
-  if (showActual && totals.overCount > 0) budgetSub += ` · ${totals.overCount} überschritten`;
+  if (totals.overCount > 0) budgetSub += ` · ${totals.overCount} überschritten`;
 
-  // Vergangene Monate und der Ø messen am heutigen Budget, nicht an dem von
-  // damals — das steht dort, wo gemessen wird.
-  let spentSub = pending;
-  if (showActual) {
-    if (!hasBudgets) spentSub = "kein Budget festgelegt";
-    else if (isCurrent) {
-      spentSub =
-        `${percent(totals.pct)} des Budgets` +
-        ` · Monat zu ${percent(monthInfo.daysElapsed / monthInfo.daysInMonth)} um`;
-    } else spentSub = `${percent(totals.pct)} des heutigen Budgets`;
+  const spentSub = hasBudgets ? `${percent(totals.pct)} des Budgets` : "kein Budget festgelegt";
+
+  let remainingSub = "kein Budget festgelegt";
+  if (hasBudgets && monthInfo) {
+    remainingSub =
+      monthInfo.daysRemaining === 0
+        ? "letzter Tag des Monats"
+        : `noch ${plural(monthInfo.daysRemaining, "Tag", "Tage")}`;
   }
 
-  let remainingSub = pending;
-  if (showActual) {
-    if (!hasBudgets) remainingSub = "kein Budget festgelegt";
-    else if (isCurrent && totals.paceDelta != null) {
-      const pace = Math.round(totals.paceDelta);
-      remainingSub =
-        pace === 0
-          ? "genau im Zeitplan"
-          : pace > 0
-            ? `${money(pace)} über Zeitplan`
-            : `${money(-pace)} unter Zeitplan`;
-    } else {
-      remainingSub =
-        totals.overCount > 0
-          ? `${plural(totals.overCount, "Budget", "Budgets")} überschritten`
-          : "kein Budget überschritten";
-    }
-    if (isCurrent && hasBudgets) {
-      remainingSub +=
-        monthInfo.daysRemaining === 0
-          ? " · letzter Tag"
-          : ` · noch ${plural(monthInfo.daysRemaining, "Tag", "Tage")}`;
-    }
-  }
-
-  const spentTone = !showActual || !hasBudgets
+  const spentTone = !hasBudgets
     ? ""
     : totals.status === "over"
       ? " hb-stat-pill--bad"
@@ -268,41 +167,16 @@ export default function BudgetView({
         />
         <StatPill
           tone={spentTone}
-          label={isAverage ? "Verbraucht Ø/Monat" : "Verbraucht"}
-          value={showActual && hasBudgets ? money(totals.spent) : "—"}
+          label="Verbraucht"
+          value={hasBudgets ? money(totals.spent) : "—"}
           sub={spentSub}
         />
         <StatPill
           label="Verbleibend"
-          value={showActual && hasBudgets ? money(totals.remaining) : "—"}
+          value={hasBudgets ? money(totals.remaining) : "—"}
           sub={remainingSub}
         />
-        <StatPill
-          label={isAverage ? "Ohne Budget Ø/Monat" : "Ohne Budget"}
-          value={showActual ? money(unbudgetedSpent) : "—"}
-          sub={
-            !showActual
-              ? pending
-              : unbudgetedShare == null
-                ? plural(unbudgeted.length, "Kategorie", "Kategorien")
-                : `${percent(unbudgetedShare)} der Ausgaben`
-          }
-        />
       </div>
-
-      {isAverage && hasBudgets && (
-        <div className="hb-infobar" role="status">
-          <div className="hb-infobar-icon"><IconInfo /></div>
-          <div className="hb-infobar-content">
-            <div className="hb-infobar-title">Alle Monate: Durchschnitt statt Summe</div>
-            <div className="hb-infobar-message">
-              Die Spalte „Ø Ist“ zeigt, was du im Durchschnitt pro abgeschlossenem Monat
-              ausgegeben hast, gemessen am heutigen Budget. Zeitvergleich und Prognose gibt
-              es nur für einen einzelnen Monat.
-            </div>
-          </div>
-        </div>
-      )}
 
       {!hasBudgets && (
         <div className="hb-infobar" role="status">
@@ -310,15 +184,12 @@ export default function BudgetView({
           <div className="hb-infobar-content">
             <div className="hb-infobar-title">Noch kein Budget festgelegt</div>
             <div className="hb-infobar-message">
-              In der Tabelle stehen alle Ausgaben-Kategorien mit ihrem Durchschnitt der letzten
-              Monate. Fahre über eine Zeile und wähle „Ø … übernehmen“ oder lege mit dem Plus
-              einen eigenen Betrag fest.
+              In der Tabelle stehen alle Ausgaben-Kategorien. Fahre über eine Zeile und lege
+              mit dem Plus ein Budget fest.
             </div>
           </div>
         </div>
       )}
-
-      {hasBudgets && <BudgetHistoryCard series={history} budget={totals.budget} />}
 
       <Card>
         <CardContent>
@@ -328,7 +199,6 @@ export default function BudgetView({
             storageKey="hb.budget.table"
             label="Budgets"
             toolbar={<h3 className="hb-card-title">Kategorien</h3>}
-            renderDetail={renderDetail}
             renderRowActions={renderRowActions}
           />
         </CardContent>
@@ -338,7 +208,6 @@ export default function BudgetView({
         <BudgetEditDialog
           key={editCategory.id}
           category={editCategory}
-          suggestions={suggestions}
           onSave={saveBudget}
           onRemove={removeBudget}
           onClose={() => setEditCategoryId(null)}

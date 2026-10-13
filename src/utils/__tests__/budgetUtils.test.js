@@ -1,15 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   UNCATEGORIZED_ID,
-  buildBudgetHistory,
   buildBudgetRows,
   calcBudgetMetrics,
-  calcBudgetSuggestions,
   calcCategoryMonthlySpend,
-  calcHistoryAverage,
-  calcSpendStats,
-  listBudgetRowEntries,
-  listCompletedMonths,
   setCategoryBudgets,
 } from '../budgetUtils.js';
 import { getFinancialMonthInfo } from '../financialMonthUtils.js';
@@ -78,106 +72,33 @@ describe('getFinancialMonthInfo', () => {
   });
 });
 
-describe('calcBudgetMetrics — Status', () => {
-  const past = info('2026-09');
-
+describe('calcBudgetMetrics', () => {
   it('unter 95 % ist im Budget', () => {
-    expect(calcBudgetMetrics({ budget: 200, spent: 100 }, past).status).toBe('ok');
+    expect(calcBudgetMetrics({ budget: 200, spent: 100 })).toMatchObject({ status: 'ok', pct: 0.5, remaining: 100 });
   });
 
   it('ab 95 % ist knapp', () => {
-    expect(calcBudgetMetrics({ budget: 200, spent: 190 }, past).status).toBe('risk');
+    expect(calcBudgetMetrics({ budget: 200, spent: 190 }).status).toBe('risk');
   });
 
   it('genau 100 % ist ausgeschöpft, nicht überschritten', () => {
-    const m = calcBudgetMetrics({ budget: 1500, spent: 1500 }, past);
+    const m = calcBudgetMetrics({ budget: 1500, spent: 1500 });
     expect(m.status).toBe('full');
     expect(m.remaining).toBe(0);
   });
 
   it('Rechenrauschen unter einem Rappen kippt den Status nicht', () => {
-    expect(calcBudgetMetrics({ budget: 0.3, spent: 0.1 + 0.2 }, past).status).toBe('full');
+    expect(calcBudgetMetrics({ budget: 0.3, spent: 0.1 + 0.2 }).status).toBe('full');
   });
 
   it('erst über 100 % ist überschritten', () => {
-    const m = calcBudgetMetrics({ budget: 200, spent: 200.01 }, past);
+    const m = calcBudgetMetrics({ budget: 200, spent: 200.01 });
     expect(m.status).toBe('over');
     expect(m.remaining).toBeCloseTo(-0.01);
   });
 
-  it('außerhalb des laufenden Monats gibt es weder Zeitvergleich noch Prognose', () => {
-    for (const monthInfo of [past, info('2026-11'), null]) {
-      const m = calcBudgetMetrics({ budget: 200, spent: 150 }, monthInfo);
-      expect(m.status).toBe('ok');
-      expect(m.forecast).toBeNull();
-      expect(m.paceDelta).toBeNull();
-      expect(m.expectedPct).toBeNull();
-    }
-  });
-});
-
-describe('calcBudgetMetrics — Zeitvergleich und Prognose', () => {
-  // 15 von 31 Tagen ⇒ Zeitfortschritt 48,4 %
-  const current = info('2026-10');
-
-  it('mehr als 10 Prozentpunkte über dem Zeitfortschritt: Aufpassen', () => {
-    const m = calcBudgetMetrics({ budget: 310, spent: 200 }, current);
-    expect(m.status).toBe('warn');
-    expect(m.expectedPct).toBeCloseTo(15 / 31);
-    // 310 * 15/31 = 150 wären im Zeitplan
-    expect(m.paceDelta).toBeCloseTo(50);
-    expect(m.forecast).toBeCloseTo((200 / 15) * 31);
-    expect(m.forecastDelta).toBeCloseTo((200 / 15) * 31 - 310);
-  });
-
-  it('innerhalb der Toleranz bleibt es im Budget', () => {
-    // 170 / 310 = 54,8 % — 6,4 Punkte über dem Zeitfortschritt
-    expect(calcBudgetMetrics({ budget: 310, spent: 170 }, current).status).toBe('ok');
-  });
-
-  it('vor Tag 3 wird nicht hochgerechnet', () => {
-    const day2 = info('2026-10', 1, new Date(2026, 9, 2, 12, 0, 0));
-    const m = calcBudgetMetrics({ budget: 310, spent: 200 }, day2);
-    expect(m.status).toBe('ok');
-    expect(m.forecast).toBeNull();
-  });
-
-  it('reine Fixkosten-Kategorie: Miete am 3. ist ausgeschöpft, Prognose = Miete', () => {
-    const day3 = info('2026-10', 1, new Date(2026, 9, 3, 12, 0, 0));
-    const m = calcBudgetMetrics({ budget: 1500, spent: 1500, fixedBooked: 1500 }, day3);
-    expect(m.status).toBe('full');
-    expect(m.forecast).toBe(1500);
-    expect(m.dailyRate).toBe(0);
-    // Kein variabler Teil ⇒ kein Zeitvergleich
-    expect(m.paceDelta).toBeNull();
-  });
-
-  it('gemischte Kategorie: nur der variable Teil wird linear hochgerechnet', () => {
-    // Budget 2000, davon 1500 Miete gebucht; variabel 500, davon 150 verbraucht
-    const m = calcBudgetMetrics({ budget: 2000, spent: 1650, fixedBooked: 1500 }, current);
-    expect(m.variableBudget).toBe(500);
-    expect(m.variableSpent).toBe(150);
-    // 150 / 500 = 30 % bei 48 % Zeitfortschritt ⇒ nicht „Aufpassen“
-    expect(m.status).toBe('ok');
-    expect(m.forecast).toBeCloseTo(1500 + (150 / 15) * 31);
-    expect(m.paceDelta).toBeCloseTo(150 - 500 * (15 / 31));
-  });
-
-  it('noch offene Fixkosten gehen mit vollem Betrag in die Prognose ein', () => {
-    // Miete 1500 noch nicht gebucht, 150 variabel verbraucht
-    const m = calcBudgetMetrics({ budget: 2000, spent: 150, fixedOpen: 1500 }, current);
-    expect(m.forecast).toBeCloseTo(1500 + (150 / 15) * 31);
-    expect(m.variableBudget).toBe(500);
-    expect(m.status).toBe('ok');
-  });
-
-  it('variabler Teil läuft davon: Aufpassen trotz hohem Fixanteil', () => {
-    // variabel 400 von 500 = 80 % bei 48 % Zeitfortschritt
-    const m = calcBudgetMetrics({ budget: 2000, spent: 1900, fixedBooked: 1500 }, current);
-    // 95 % Gesamtauslastung hat Vorrang vor dem Zeitvergleich
-    expect(m.status).toBe('risk');
-    const m2 = calcBudgetMetrics({ budget: 2000, spent: 1850, fixedBooked: 1500 }, current);
-    expect(m2.status).toBe('warn');
+  it('ohne Budget: Auslastung 0', () => {
+    expect(calcBudgetMetrics({ budget: 0, spent: 0 }).pct).toBe(0);
   });
 });
 
@@ -200,10 +121,9 @@ describe('calcCategoryMonthlySpend', () => {
     expect(Object.fromEntries(r.byCategory.get('cat-essen'))).toEqual({ '2026-08': 100, '2026-09': 25 });
     expect(Object.fromEntries(r.bySubcategory.get('sub-rest'))).toEqual({ '2026-08': 60, '2026-09': 25 });
     expect(r.byCategory.get('cat-wohnen').get('2026-09')).toBe(1500);
-    expect(r.firstMonth).toBe('2026-08');
   });
 
-  it('zählt Topf-Ausgaben, Einnahmen und Transfers nicht — sie setzen aber den ersten Monat', () => {
+  it('zählt Topf-Ausgaben, Einnahmen und Transfers nicht', () => {
     const r = calcCategoryMonthlySpend(
       [
         { id: 'i', date: '2026-05-25', amount: 5000, kind: 'income' },
@@ -213,7 +133,7 @@ describe('calcCategoryMonthlySpend', () => {
       categories
     );
     expect(r.byCategory.size).toBe(0);
-    expect(r.firstMonth).toBe('2026-05');
+    expect(r.bySubcategory.size).toBe(0);
   });
 
   it('unbekannte Kategorie landet unter Unkategorisiert, unbekannte Unterkategorie nur in der Oberkategorie', () => {
@@ -236,52 +156,7 @@ describe('calcCategoryMonthlySpend', () => {
   });
 
   it('leeres Buch', () => {
-    expect(calcCategoryMonthlySpend([], categories).firstMonth).toBeNull();
-  });
-});
-
-describe('listCompletedMonths', () => {
-  it('liefert die letzten n Monate vor dem laufenden, älteste zuerst', () => {
-    expect(listCompletedMonths('2026-02', 3, '2020-01')).toEqual(['2025-11', '2025-12', '2026-01']);
-  });
-
-  it('geht nie vor die erste Buchung zurück', () => {
-    expect(listCompletedMonths('2026-10', 6, '2026-08')).toEqual(['2026-08', '2026-09']);
-  });
-
-  it('ohne abgeschlossenen Monat: leer', () => {
-    expect(listCompletedMonths('2026-10', 6, '2026-10')).toEqual([]);
-    expect(listCompletedMonths('2026-10', 6, null)).toEqual([]);
-    expect(listCompletedMonths('2026-10', Infinity, null)).toEqual([]);
-  });
-
-  it('Infinity liefert alle Monate seit der ersten Buchung', () => {
-    expect(listCompletedMonths('2026-10', Infinity, '2025-08')).toHaveLength(14);
-  });
-});
-
-describe('calcSpendStats', () => {
-  const map = new Map([['2026-07', 100], ['2026-08', 400], ['2026-09', 130]]);
-
-  it('Durchschnitt und Median, Monate ohne Ausgaben zählen als 0', () => {
-    expect(calcSpendStats(map, ['2026-06', '2026-07', '2026-08', '2026-09'])).toEqual({
-      avg: 157.5,
-      median: 115,
-      count: 4,
-    });
-  });
-
-  it('ungerade Anzahl: mittlerer Wert', () => {
-    expect(calcSpendStats(map, ['2026-07', '2026-08', '2026-09']).median).toBe(130);
-  });
-
-  it('rundet auf zwei Stellen', () => {
-    expect(calcSpendStats(new Map([['2026-07', 100]]), ['2026-07', '2026-08', '2026-09']).avg).toBe(33.33);
-  });
-
-  it('ohne Monate: null; ohne Daten: 0', () => {
-    expect(calcSpendStats(map, [])).toBeNull();
-    expect(calcSpendStats(undefined, ['2026-09'])).toEqual({ avg: 0, median: 0, count: 1 });
+    expect(calcCategoryMonthlySpend([], categories).byCategory.size).toBe(0);
   });
 });
 
@@ -301,10 +176,6 @@ describe('buildBudgetRows', () => {
     { id: 'cat-gesundheit', name: 'Gesundheit', color: '#444', subcategories: [] },
     { id: 'cat-leer', name: 'Abos', color: '#555', subcategories: [] },
   ];
-  const miete = { id: 'r-miete', name: 'Miete', kind: 'expense', amount: 1500, categoryId: 'cat-wohnen' };
-  const strom = { id: 'r-strom', name: 'Strom', kind: 'expense', amount: 100, categoryId: 'cat-wohnen' };
-  const steuern = { id: 'r-steuern', name: 'Steuern', kind: 'transfer', amount: 1200, turnus: 12, potId: 'p' };
-
   const entries = [
     // August und September: abgeschlossene Monate
     expense('2026-08-10', 500, 'cat-essen'),
@@ -327,7 +198,6 @@ describe('buildBudgetRows', () => {
     buildBudgetRows({
       entries,
       expenseCategories: categories,
-      recurringExpenses: [miete, strom, steuern],
       monthFilter,
       monthStartDay: 1,
       today: TODAY,
@@ -356,7 +226,8 @@ describe('buildBudgetRows', () => {
 
   it('ohne Budget: alle Oberkategorien, auch ohne Ausgaben; Ausgaben zuerst', () => {
     const r = build('2026-10');
-    expect(r.unbudgeted.map((x) => x.id)).toEqual(['cat-freizeit', 'cat-gesundheit', UNCATEGORIZED_ID, 'cat-leer']);
+    // Ohne Ausgaben im Monat nach Name: „Abos“ vor „Gesundheit“
+    expect(r.unbudgeted.map((x) => x.id)).toEqual(['cat-freizeit', 'cat-leer', 'cat-gesundheit']);
     expect(byId(r.unbudgeted, 'cat-leer')).toMatchObject({ spent: 0, budget: null, isRemainder: false });
     expect(r.unbudgetedSpent).toBe(30);
   });
@@ -379,7 +250,7 @@ describe('buildBudgetRows', () => {
     expect(direct.unbudgeted[0]).toMatchObject({ id: 'cat-a', isRemainder: true, spent: 5 });
   });
 
-  it('Unkategorisiert erscheint nur mit Ausgaben oder Durchschnitt', () => {
+  it('Unkategorisiert erscheint nur mit Ausgaben im Monat', () => {
     const row = byId(build('2026-09').unbudgeted, UNCATEGORIZED_ID);
     expect(row).toMatchObject({ level: 'uncategorized', spent: 12, categoryId: null });
     const none = buildBudgetRows({
@@ -389,60 +260,25 @@ describe('buildBudgetRows', () => {
       today: TODAY,
     });
     expect(byId(none.unbudgeted, UNCATEGORIZED_ID)).toBeUndefined();
+    expect(byId(build('2026-10').unbudgeted, UNCATEGORIZED_ID)).toBeUndefined();
   });
 
-  it('Ø und Median nur über abgeschlossene Monate seit der ersten Buchung', () => {
-    const essen = byId(build('2026-10').budgeted, 'cat-essen');
-    // August 500, September 700 — der laufende Oktober zählt nicht
-    expect(essen.avg6).toBe(600);
-    expect(essen.median12).toBe(600);
-    const leer = byId(build('2026-10').unbudgeted, 'cat-leer');
-    expect(leer.avg6).toBe(0);
+  it('gemessen wird allein am Verbrauch, in jedem Monat', () => {
+    expect(byId(build('2026-10').budgeted, 'cat-wohnen')).toMatchObject({ spent: 1650, remaining: 350, status: 'ok' });
+    expect(byId(build('2026-09').budgeted, 'cat-wohnen')).toMatchObject({ spent: 1500, status: 'ok' });
+    expect(byId(build('2026-09').budgeted, 'cat-essen')).toMatchObject({ spent: 700, status: 'over' });
+    expect(byId(build('2026-11').budgeted, 'cat-wohnen')).toMatchObject({ spent: 0, status: 'ok' });
   });
 
-  it('Buch ohne abgeschlossenen Monat: kein Durchschnitt', () => {
-    const r = buildBudgetRows({
-      entries: [expense('2026-10-03', 5, 'cat-essen')],
-      expenseCategories: categories,
-      monthFilter: '2026-10',
-      today: TODAY,
-    });
-    expect(byId(r.budgeted, 'cat-essen')).toMatchObject({ avg6: null, median12: null });
-  });
-
-  it('laufender Monat: gebuchte und offene Fixkosten, Prognose ohne Hochrechnung der Miete', () => {
-    const wohnen = byId(build('2026-10').budgeted, 'cat-wohnen');
-    // Miete gebucht, Strom (100) noch offen; die Rücklage ist kein Ausgaben-Fixposten
-    expect(wohnen).toMatchObject({ spent: 1650, fixedBooked: 1500, fixedOpen: 100, status: 'ok' });
-    expect(wohnen.forecast).toBeCloseTo(1600 + (150 / 15) * 31);
-  });
-
-  it('vergangener Monat: keine offenen Fixkosten, keine Prognose', () => {
-    const wohnen = byId(build('2026-09').budgeted, 'cat-wohnen');
-    expect(wohnen).toMatchObject({ spent: 1500, fixedBooked: 1500, fixedOpen: 0, forecast: null, status: 'ok' });
-    expect(byId(build('2026-09').budgeted, 'cat-essen').status).toBe('over');
-  });
-
-  it('zukünftiger Monat: nur Soll, Fixkosten als offen', () => {
-    const r = build('2026-11');
-    expect(byId(r.budgeted, 'cat-wohnen')).toMatchObject({ spent: 0, fixedOpen: 1600, forecast: null, status: 'ok' });
-    expect(r.monthInfo.isFutureMonth).toBe(true);
-  });
-
-  it('alle Monate: Ø pro abgeschlossenem Monat statt Summe, ohne Fixanteil und Prognose', () => {
+  it('ohne Monatsfilter gilt der laufende Finanzmonat', () => {
     const r = build('');
-    expect(r.isAverage).toBe(true);
-    expect(r.monthInfo).toBeNull();
-    expect(byId(r.budgeted, 'cat-essen')).toMatchObject({
-      spent: 600,
-      isAverage: true,
-      fixedBooked: 0,
-      fixedOpen: 0,
-      forecast: null,
-      status: 'full',
-    });
-    // Kino: 80 im September, 0 im August
-    expect(byId(r.budgeted, 'sub-kino')).toMatchObject({ spent: 40, status: 'ok' });
+    expect(r.month).toBe('2026-10');
+    expect(r.monthInfo).toMatchObject({ isCurrentMonth: true, daysRemaining: 16 });
+    expect(byId(r.budgeted, 'cat-essen').spent).toBe(300);
+    expect(build('2026-09').month).toBe('2026-09');
+    // Monatsbeginn am 24.: der 15. Oktober gehört noch zum Finanzmonat Oktober
+    expect(build('', { monthStartDay: 24 }).month).toBe('2026-10');
+    expect(build('', { monthStartDay: 10 }).month).toBe('2026-11');
   });
 
   it('Summen und Sortierung nach Auslastung', () => {
@@ -459,88 +295,6 @@ describe('buildBudgetRows', () => {
     expect(r.totals).toMatchObject({ budget: 0, spent: 0, overCount: 0 });
   });
 
-  it('Verlauf: Summe der budgetierten Zeilen je Monat, laufender Monat markiert', () => {
-    const r = build('2026-10');
-    expect(r).toMatchObject({ firstMonth: '2026-08', currentMonth: '2026-10' });
-    const series = buildBudgetHistory(r.budgeted.map((x) => x.monthly), r.firstMonth, r.currentMonth);
-    expect(series).toEqual([
-      { ym: '2026-08', label: 'Aug 2026', total: 500, isCurrent: false },
-      { ym: '2026-09', label: 'Sep 2026', total: 2280, isCurrent: false },
-      { ym: '2026-10', label: 'Okt 2026', total: 1950, isCurrent: true },
-    ]);
-    expect(calcHistoryAverage(series)).toBe(1390);
-  });
-
-  it('Verlauf: der Monatsfilter ändert die Reihe nicht, das Limit zählt vom laufenden Monat rückwärts', () => {
-    const r = build('2026-08');
-    const rest = byId(r.unbudgeted, 'cat-freizeit');
-    const series = buildBudgetHistory([rest.monthly], r.firstMonth, r.currentMonth, 2);
-    expect(series.map((p) => [p.ym, p.total])).toEqual([['2026-09', 60], ['2026-10', 30]]);
-  });
-
-  it('Verlauf: ohne Buchungen leer, Ø ohne abgeschlossenen Monat null', () => {
-    expect(buildBudgetHistory([], null, '2026-10')).toEqual([]);
-    expect(buildBudgetHistory([undefined], '2026-10', '2026-10')).toEqual([
-      { ym: '2026-10', label: 'Okt 2026', total: 0, isCurrent: true },
-    ]);
-    expect(calcHistoryAverage([{ total: 80, isCurrent: true }])).toBeNull();
-    expect(calcHistoryAverage([])).toBeNull();
-  });
-
-  it('Buchungen einer Zeile: gleiche Zuordnung wie das Ist, neueste zuerst', () => {
-    const r = build('2026-09');
-    const list = (row, monthFilter = '2026-09') =>
-      listBudgetRowEntries({ entries, expenseCategories: categories, row, monthFilter, monthStartDay: 1 })
-        .map((e) => e.amount);
-    expect(list(byId(r.budgeted, 'sub-kino'))).toEqual([80]);
-    // Rest der Oberkategorie: ohne die budgetierte Unterkategorie Kino
-    expect(list(byId(r.unbudgeted, 'cat-freizeit'))).toEqual([20, 40]);
-    expect(list(byId(r.unbudgeted, UNCATEGORIZED_ID))).toEqual([12]);
-    // Topf-Ausgabe im Oktober zählt nicht
-    expect(list(byId(r.budgeted, 'cat-essen'), '2026-10')).toEqual([300]);
-    expect(list(byId(r.budgeted, 'cat-wohnen'), '2026-10')).toEqual([150, 1500]);
-    expect(list(byId(r.budgeted, 'cat-essen'), '')).toEqual([]);
-  });
-
-  it('Buchungen einer Zeile summieren sich zum Ist', () => {
-    const r = build('2026-09');
-    for (const row of [...r.budgeted, ...r.unbudgeted]) {
-      const sum = listBudgetRowEntries({ entries, expenseCategories: categories, row, monthFilter: '2026-09' })
-        .reduce((s, e) => s + e.amount, 0);
-      expect(sum).toBe(row.spent);
-    }
-  });
-});
-
-describe('calcBudgetSuggestions', () => {
-  const categories = [
-    { id: 'cat-freizeit', name: 'Freizeit', subcategories: [{ id: 'sub-kino', name: 'Kino' }, { id: 'sub-sport', name: 'Sport' }] },
-    { id: 'cat-leer', name: 'Leer', subcategories: [] },
-  ];
-  const entries = [
-    expense('2026-08-05', 100, 'cat-freizeit', { subcategoryId: 'sub-kino' }),
-    expense('2026-09-05', 60, 'cat-freizeit', { subcategoryId: 'sub-kino' }),
-    expense('2026-09-06', 40, 'cat-freizeit'),
-    // laufender Monat zählt nicht mit
-    expense('2026-10-02', 999, 'cat-freizeit', { subcategoryId: 'sub-kino' }),
-  ];
-
-  it('liefert Ø und Median je Oberkategorie (inkl. Unterkategorien) und je Unterkategorie', () => {
-    const r = calcBudgetSuggestions({ entries, expenseCategories: categories, today: TODAY });
-    expect(r.byCategory.get('cat-freizeit')).toEqual({ avg6: 100, median12: 100 });
-    expect(r.bySubcategory.get('sub-kino')).toEqual({ avg6: 80, median12: 80 });
-    expect(r.bySubcategory.get('sub-sport')).toEqual({ avg6: 0, median12: 0 });
-    expect(r.byCategory.get('cat-leer')).toEqual({ avg6: 0, median12: 0 });
-  });
-
-  it('ohne abgeschlossenen Monat gibt es keine Vorschläge', () => {
-    const r = calcBudgetSuggestions({
-      entries: [expense('2026-10-02', 50, 'cat-freizeit')],
-      expenseCategories: categories,
-      today: TODAY,
-    });
-    expect(r.byCategory.get('cat-freizeit')).toEqual({ avg6: null, median12: null });
-  });
 });
 
 describe('setCategoryBudgets', () => {

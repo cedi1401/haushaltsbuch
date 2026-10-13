@@ -6,7 +6,7 @@ import { BUDGET_STATUS_COLOR as STATUS_COLOR, BUDGET_STATUS_LABEL } from "../../
 
 const PAGE_SIZE = 4;
 
-const BudgetCard = memo(function BudgetCard({ budgetItems, totals, monthInfo, isAverage }) {
+const BudgetCard = memo(function BudgetCard({ budgetItems, totals, monthInfo, isFallbackMonth }) {
   const fmt = useFmt();
   const [page, setPage] = useState(0);
 
@@ -46,7 +46,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, totals, monthInfo, is
           <div className="hb-empty-icon"><IconInbox /></div>
           <div className="hb-empty-title">Kein Budget gesetzt</div>
           <div className="hb-empty-text">
-            Öffne den Kategorien-Dialog und lege ein Budget für eine Ausgaben-Kategorie fest.
+            Lege unter „Budgets“ ein Budget für eine Ausgaben-Kategorie fest.
           </div>
         </div>
         {pagination}
@@ -69,7 +69,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, totals, monthInfo, is
       {/* Gesamt-Header */}
       <div className="hb-budget-summary">
         <div>
-          <div className="hb-insight-label">{isAverage ? "Ø pro Monat" : "Gesamt"}</div>
+          <div className="hb-insight-label">{isFallbackMonth ? "Laufender Monat" : "Gesamt"}</div>
           <div className="hb-budget-total-inline">
             <span className="hb-insight-kpi">{fmt(totalSpent, 0)}</span>
             <span className="hb-budget-total-sub">
@@ -148,21 +148,6 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, totals, monthInfo, is
                   </span>
                 ) : (
                   `${fmt(remaining, 0)} verbleibend`
-                )}
-
-                {item.dailyRate > 0 && (
-                  <span className="hb-budget-row-meta-sep">
-                    · ø {fmt(item.dailyRate, 1)} pro Tag
-                  </span>
-                )}
-
-                {item.forecast != null && (
-                  <span className="hb-budget-row-meta-sep">
-                    · Prognose:{" "}
-                    <span style={{ color: item.forecastDelta > 0.005 ? "var(--red)" : "var(--green)" }}>
-                      {fmt(item.forecast, 0)}
-                    </span>
-                  </span>
                 )}
               </div>
             </div>

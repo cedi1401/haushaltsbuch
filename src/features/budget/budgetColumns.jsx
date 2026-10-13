@@ -1,5 +1,4 @@
 import React from "react";
-import HbTooltip from "../../components/HbTooltip.jsx";
 import { formatPercent } from "../../utils/hbUtils.js";
 import { BUDGET_STATUS_COLOR, BUDGET_STATUS_LABEL } from "../../utils/budgetUtils.js";
 
@@ -9,14 +8,12 @@ import { BUDGET_STATUS_COLOR, BUDGET_STATUS_LABEL } from "../../utils/budgetUtil
  *
  * Zeilen sind die Objekte aus `buildBudgetRows()` — budgetierte und nicht
  * budgetierte in einer Tabelle. Alles, was ein Budget voraussetzt (Auslastung,
- * Rest, Prognose, Status), bleibt in den Zeilen ohne Budget leer.
+ * Rest, Status), bleibt in den Zeilen ohne Budget leer.
  */
-
-const DEFAULT_COLUMNS = ["name", "budget", "spent", "usage", "remaining", "forecast", "avg6", "status"];
 
 // Sortierrang nach Handlungsbedarf, nicht alphabetisch — aufsteigend steht
 // oben, was zuerst Aufmerksamkeit braucht.
-const STATUS_ORDER = { over: 0, full: 1, risk: 2, warn: 3, ok: 4 };
+const STATUS_ORDER = { over: 0, full: 1, risk: 2, ok: 3 };
 
 const hasBudget = (row) => row.budget != null;
 
@@ -60,40 +57,14 @@ function clampTitle(e) {
 }
 
 /**
- * Der Tooltip an der Status-Pille: der Zeitvergleich als Text. Den gibt es nur
- * im laufenden Monat und erst nach ein paar Tagen — sonst bleibt die Pille ohne
- * Blase.
- */
-function statusTooltip(row, fmt) {
-  if (row.expectedPct == null) return undefined;
-  const elapsed = `Monat zu ${formatPercent(row.expectedPct * 100, { digits: 0, sign: false })} um.`;
-  // Ohne variablen Teil (das Budget besteht ganz aus Fixkosten) gibt es keinen
-  // Zeitplan, dem die Ausgaben voraus sein könnten.
-  if (row.paceDelta == null) return `${elapsed} Das Budget ist ganz durch Fixkosten gebunden.`;
-  const fixed = row.fixedBooked + row.fixedOpen > 0 ? " Fixkosten sind herausgerechnet." : "";
-  const pace =
-    Math.round(row.paceDelta) === 0
-      ? "Genau im Zeitplan."
-      : row.paceDelta > 0
-        ? `${budgetMoney(fmt, row.paceDelta)} über Zeitplan.`
-        : `${budgetMoney(fmt, -row.paceDelta)} unter Zeitplan.`;
-  return `${pace} ${elapsed}${fixed}`;
-}
-
-/**
  * @param {object} ctx
  * @param {Function} ctx.fmt
- * @param {boolean} ctx.isAverage - „Alle Monate“: das Ist ist ein Ø pro Monat
- * @param {boolean} ctx.showActual - false im zukünftigen Monat: nur das Soll
  */
-export function buildBudgetColumns({ fmt, isAverage, showActual }) {
-  const defaults = new Set(DEFAULT_COLUMNS);
-  const actual = (pick) => (row) => (showActual ? pick(row) : null);
-  const spent = actual((row) => row.spent);
-  const pct = actual((row) => (hasBudget(row) ? row.pct : null));
-  const remaining = actual((row) => (hasBudget(row) ? row.remaining : null));
-  const forecast = actual((row) => (hasBudget(row) ? row.forecast : null));
-  const status = actual((row) => (hasBudget(row) ? row.status : null));
+export function buildBudgetColumns({ fmt }) {
+  const spent = (row) => row.spent;
+  const pct = (row) => (hasBudget(row) ? row.pct : null);
+  const remaining = (row) => (hasBudget(row) ? row.remaining : null);
+  const status = (row) => (hasBudget(row) ? row.status : null);
   const money = (value) => budgetMoney(fmt, value);
 
   return [
@@ -126,7 +97,7 @@ export function buildBudgetColumns({ fmt, isAverage, showActual }) {
     },
     {
       id: "spent",
-      label: isAverage ? "Ø Ist" : "Ist",
+      label: "Ist",
       align: "right",
       sortValue: spent,
       render: (row) => money(spent(row)),
@@ -167,29 +138,6 @@ export function buildBudgetColumns({ fmt, isAverage, showActual }) {
       summarize: (rows) => money(sumOrNull(rows, remaining)),
     },
     {
-      id: "forecast",
-      label: "Prognose",
-      align: "right",
-      sortValue: forecast,
-      render: (row) => money(forecast(row)),
-      summarize: (rows) => money(sumOrNull(rows, forecast)),
-    },
-    {
-      id: "avg6",
-      label: "Ø 6 Monate",
-      align: "right",
-      sortValue: (row) => row.avg6,
-      render: (row) => money(row.avg6),
-      summarize: (rows) => money(sumOrNull(budgetedOnly(rows), (r) => r.avg6)),
-    },
-    {
-      id: "median12",
-      label: "Median 12 Monate",
-      align: "right",
-      sortValue: (row) => row.median12,
-      render: (row) => money(row.median12),
-    },
-    {
       id: "status",
       label: "Status",
       // Rechtsbündig wie in der Rückstellungs-Tabelle: der letzten Spalte fällt
@@ -199,14 +147,12 @@ export function buildBudgetColumns({ fmt, isAverage, showActual }) {
       render: (row) => {
         const value = status(row);
         if (!value) return null;
-        const pill = (
+        return (
           <span className={`hb-budget-status-pill hb-budget-status-pill--${value}`}>
             {BUDGET_STATUS_LABEL[value]}
           </span>
         );
-        const tip = statusTooltip(row, fmt);
-        return tip ? <HbTooltip text={tip} focusable={false}>{pill}</HbTooltip> : pill;
       },
     },
-  ].map((col) => ({ ...col, defaultVisible: defaults.has(col.id) }));
+  ].map((col) => ({ ...col, defaultVisible: true }));
 }

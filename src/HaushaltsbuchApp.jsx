@@ -50,7 +50,7 @@ const InvestmentsView = import.meta.env.DEV
   ? lazy(() => import("./features/InvestmentsView.jsx"))
   : null;
 
-const VIEW_LABELS = { trend: "Trend", goals: "Sparziele", fixed: "Fixkosten", reserves: "Rückstellungen", costgroups: "Kostenrechner", investments: "Investments", marketdebug: "Marktdaten (Debug)" };
+const VIEW_LABELS = { budget: "Budgets", trend: "Trend", goals: "Sparziele", fixed: "Fixkosten", reserves: "Rückstellungen", costgroups: "Kostenrechner", investments: "Investments", marketdebug: "Marktdaten (Debug)" };
 
 export default function HaushaltsbuchApp() {
   const toast = useToast();
@@ -320,8 +320,6 @@ export default function HaushaltsbuchApp() {
               <BudgetView
                 entries={entries}
                 expenseCategories={expenseCategories}
-                recurringExpenses={activeBook?.recurringExpenses || EMPTY_ARRAY}
-                monthFilter={monthFilter}
                 monthStartDay={monthStartDay}
                 onUpdateExpenseCategories={(newCats) =>
                   patchActiveBook((b) => ({ ...b, expenseCategories: newCats }))
