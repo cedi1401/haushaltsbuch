@@ -1,170 +1,209 @@
-import React, { memo, useState, useEffect } from "react";
+import React, { memo, useMemo } from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
-import { IconChevronLeft, IconChevronRight, IconInbox } from "../../components/icons.jsx";
+import { useThemeColors } from "../../hooks/themeColors.js";
+import { IconChevronRight, IconInbox, IconWarning } from "../../components/icons.jsx";
 import { formatPercent } from "../../utils/hbUtils.js";
-import { BUDGET_STATUS_COLOR as STATUS_COLOR, BUDGET_STATUS_LABEL } from "../../utils/budgetUtils.js";
+import { BUDGET_STATUS_LABEL } from "../../utils/budgetUtils.js";
+import { budgetMoney } from "../budget/budgetFormat.js";
 
-const PAGE_SIZE = 4;
+// Reihenfolge der Zähler: was zuerst Aufmerksamkeit braucht, steht vorn.
+const STATUS_ORDER = ["over", "full", "risk", "ok"];
+// So viele überschrittene Kategorien nennt die Warnung beim Namen.
+const ALERT_NAMES = 3;
 
-const BudgetCard = memo(function BudgetCard({ budgetItems, totals, monthInfo, isFallbackMonth }) {
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+/**
+ * Insights-Tab „Budget“ — wie weit ist die Summe aller Budgets im Monat
+ * aufgebraucht?
+ *
+ * Bewusst keine Kategorienliste: die steht im Budget-View. Die Card zeigt
+ * links einen Halbkreis-Meter über alle Budgets, rechts die Summen und die
+ * Budgets je Status, darunter eine Warnung bei Überschreitungen und immer
+ * den Sprung in den Budget-View. Der Status hängt allein am Verbrauch, ohne
+ * Zeitvergleich. In einem schmalen Panel stehen die Spalten untereinander.
+ */
+const BudgetCard = memo(function BudgetCard({ budgetItems, totals, isFallbackMonth, onNavigateToBudget }) {
   const fmt = useFmt();
-  const [page, setPage] = useState(0);
-
-  useEffect(() => { setPage(0); }, [budgetItems]);
+  const themeColors = useThemeColors();
+  const money = (value) => budgetMoney(fmt, value);
 
   const isEmpty = !budgetItems || budgetItems.length === 0;
-  const totalPages = isEmpty ? 1 : Math.ceil(budgetItems.length / PAGE_SIZE);
 
-  const pagination = (
-    <div className="hb-budget-pagination" style={{ marginTop: "auto" }}>
-      <button
-        className="hb-budget-pag-btn"
-        disabled={isEmpty || page === 0}
-        onClick={() => setPage((p) => p - 1)}
-        aria-label="Vorherige Seite"
-      >
-        <IconChevronLeft />
-      </button>
-      <span className="hb-budget-pag-info">
-        {isEmpty ? "–" : `${page + 1} / ${totalPages}`}
-      </span>
-      <button
-        className="hb-budget-pag-btn"
-        disabled={isEmpty || page >= totalPages - 1}
-        onClick={() => setPage((p) => p + 1)}
-        aria-label="Nächste Seite"
-      >
-        <IconChevronRight />
-      </button>
-    </div>
+  const counts = useMemo(() => {
+    const result = { over: 0, full: 0, risk: 0, ok: 0 };
+    for (const item of budgetItems || []) result[item.status] += 1;
+    return result;
+  }, [budgetItems]);
+
+  // Überschrittene Budgets, die größte Überschreitung zuerst.
+  const overItems = useMemo(
+    () => (budgetItems || []).filter((item) => item.status === "over").sort((a, b) => a.remaining - b.remaining),
+    [budgetItems]
   );
+
+  const goToBudget = onNavigateToBudget ? (
+    <button type="button" className="hb-link-btn hb-budget-gauge-link" onClick={onNavigateToBudget}>
+      Zum Budget-View <IconChevronRight />
+    </button>
+  ) : null;
 
   if (isEmpty) {
     return (
-      <div className="hb-insights-pane">
+      <div className="hb-insights-pane hb-insights-pane--active">
         <div className="hb-empty hb-empty--sm" style={{ flex: 1 }}>
           <div className="hb-empty-icon"><IconInbox /></div>
           <div className="hb-empty-title">Kein Budget gesetzt</div>
           <div className="hb-empty-text">
             Lege unter „Budgets“ ein Budget für eine Ausgaben-Kategorie fest.
           </div>
+          {goToBudget}
         </div>
-        {pagination}
       </div>
     );
   }
 
-  const totalBudget  = totals.budget;
-  const totalSpent   = totals.spent;
-  const totalPct     = totals.pct;
-  const overCount    = totals.overCount;
-  const timeInfo     = monthInfo?.isCurrentMonth ? monthInfo : null;
+  const { budget, spent, pct, remaining, status } = totals;
+  const isOver = status === "over";
 
-  const totalStatus  = totals.status;
+  // Statuston aus dem Theme, nicht als CSS-Variable: Recharts setzt die
+  // Farbe als SVG-Attribut, und dort greift var() nicht verlässlich.
+  const statusColor = {
+    ok: themeColors.green,
+    risk: themeColors.yellow,
+    full: themeColors.muted,
+    over: themeColors.red,
+  }[status];
 
-  const pagedItems = budgetItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  // Zwei Segmente: verbraucht und frei. Bei Überschreitung ist der Bogen voll,
+  // der echte Prozentwert steht in der Mitte. Segmente ohne Wert entfallen,
+  // sonst zeichnet der Trennstrich einen Splitter an der Kante.
+  const used = Math.min(spent, budget);
+  const gaugeData = [
+    { key: "used", value: used, fill: statusColor },
+    { key: "free", value: Math.max(budget - spent, 0), fill: themeColors.border },
+  ].filter((d) => d.value > 0);
+
+  const pctText = formatPercent(Math.round(pct * 100), { digits: 0, sign: false });
+
+  const alertNames = overItems
+    .slice(0, ALERT_NAMES)
+    .map((item) => `${item.name} +${money(-item.remaining)}`)
+    .join(", ");
+  const alertRest = overItems.length - ALERT_NAMES;
+  const alertTitle = `${plural(overItems.length, "Budget", "Budgets")} überschritten`;
+  const alertMessage = alertRest > 0 ? `${alertNames} und ${alertRest} weitere` : alertNames;
+
+  const alertBody = (
+    <>
+      <span className="hb-infobar-icon"><IconWarning /></span>
+      <span className="hb-infobar-content">
+        <span className="hb-infobar-title">{alertTitle}</span>
+        <span className="hb-infobar-message">{alertMessage}</span>
+      </span>
+    </>
+  );
 
   return (
-    <div className="hb-insights-pane">
-      {/* Gesamt-Header */}
-      <div className="hb-budget-summary">
-        <div>
-          <div className="hb-insight-label">{isFallbackMonth ? "Laufender Monat" : "Gesamt"}</div>
-          <div className="hb-budget-total-inline">
-            <span className="hb-insight-kpi">{fmt(totalSpent, 0)}</span>
-            <span className="hb-budget-total-sub">
-              / {fmt(totalBudget, 0)}
-              {" · "}
-              {formatPercent(Math.min(Math.round(totalPct * 100), 150), { digits: 0, sign: false })} verbraucht
-            </span>
+    <div className="hb-insights-pane hb-insights-pane--active hb-budget-insight">
+      <div className="hb-budget-gauge-head">
+        <span className="hb-insight-label">{isFallbackMonth ? "Laufender Monat" : "Gesamt"}</span>
+        <span className={`hb-budget-status-pill hb-budget-status-pill--${status}`}>
+          {BUDGET_STATUS_LABEL[status]}
+        </span>
+      </div>
+
+      <div className="hb-budget-insight-main">
+        <div className="hb-budget-gauge">
+          {/* Seitenverhältnis statt fester Höhe: der Bogen wächst mit der
+              Spalte. Die Radien sind Prozent des halben Containers (Höhe),
+              der Mittelpunkt sitzt knapp über der Unterkante, damit die
+              abgerundeten Enden nicht angeschnitten werden. */}
+          <ResponsiveContainer width="100%" aspect={1.9}>
+            <PieChart>
+              <Pie
+                data={gaugeData}
+                dataKey="value"
+                nameKey="key"
+                cx="50%"
+                cy="97%"
+                innerRadius="150%"
+                outerRadius="182%"
+                paddingAngle={0}
+                cornerRadius={4}
+                stroke={themeColors.card}
+                strokeWidth={3}
+                strokeLinejoin="round"
+                startAngle={180}
+                endAngle={0}
+              >
+                {gaugeData.map((d) => (
+                  <Cell key={d.key} fill={d.fill} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="hb-budget-gauge-center">
+            <div className="hb-budget-gauge-value">{pctText}</div>
+            <div className="hb-budget-gauge-sub">verbraucht</div>
           </div>
         </div>
 
-        {timeInfo && (
-          <div style={{ textAlign: "right" }}>
-            <div className="hb-insight-label">Restmonat</div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 5, justifyContent: "flex-end" }}>
-              <span className="hb-insight-kpi">{timeInfo.daysRemaining}</span>
-              <span className="hb-budget-total-sub">von {timeInfo.daysInMonth} Tagen</span>
+        <div className="hb-budget-insight-facts">
+          <dl className="hb-budget-insight-kpis">
+            <div className="hb-budget-insight-kpi">
+              <dt>Budgetiert</dt>
+              <dd>{money(budget)}</dd>
             </div>
-          </div>
-        )}
+            <div className="hb-budget-insight-kpi">
+              <dt>Verbraucht</dt>
+              <dd>{money(spent)}</dd>
+            </div>
+            <div className="hb-budget-insight-kpi">
+              <dt>{isOver ? "Über Budget" : "Verbleibend"}</dt>
+              <dd className={isOver ? "hb-pot-foot-out" : undefined}>
+                {isOver ? `+${money(-remaining)}` : money(remaining)}
+              </dd>
+            </div>
+          </dl>
 
-        {overCount > 0 && (
-          <div style={{ textAlign: "right" }}>
-            <div className="hb-insight-label">Überschritten</div>
-            <div className="hb-insight-kpi">{overCount}</div>
+          {/* Zähler je Status: Budgets über dem Limit fallen auf, auch wenn
+              die Summe noch im Rahmen ist. Status ohne Budget entfallen. */}
+          <div>
+            <div className="hb-insight-label">
+              {plural(budgetItems.length, "Budget", "Budgets")} nach Status
+            </div>
+            <ul className="hb-budget-gauge-counts">
+              {STATUS_ORDER.filter((s) => counts[s] > 0).map((s) => (
+                <li key={s} className={`hb-budget-status-pill hb-budget-status-pill--${s}`}>
+                  {counts[s]} {BUDGET_STATUS_LABEL[s]}
+                </li>
+              ))}
+            </ul>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Gesamtbalken */}
-      <div className="hb-meter hb-meter--sm hb-budget-total-bar">
-        <div
-          className="hb-meter-fill hb-budget-bar-fill"
-          style={{ "--w": `${Math.min(totalPct * 100, 100)}%`, "--meter-tone": STATUS_COLOR[totalStatus] }}
-        />
-      </div>
-
-      {/* Kategorie-Liste */}
-      <div className="hb-budget-list">
-        {pagedItems.map((item) => {
-          const { pct, status, remaining } = item;
-          const isOver   = status === "over";
-          const pctText  = formatPercent(Math.round(pct * 100), { digits: 0, sign: false });
-
-          // Gleiche Sprache wie die Karten im Budget-View: Status als Wort in
-          // der Pille, Ton nur im Balken, Beträge in Textfarbe.
-          return (
-            <div key={item.id} className="hb-budget-row">
-              <div className="hb-budget-row-head">
-                <span className="hb-dot" style={{ background: item.color || "var(--muted)" }} />
-                <span className="hb-budget-row-name">{item.name}</span>
-                <span className="hb-budget-row-amounts">
-                  {fmt(item.spent, 0)}
-                  <span className="hb-budget-row-target"> / {fmt(item.budget, 0)}</span>
-                </span>
-                <span className={`hb-budget-status-pill hb-budget-status-pill--${status}`}>
-                  {BUDGET_STATUS_LABEL[status]}
-                </span>
-              </div>
-
-              <div className="hb-meter">
-                <div
-                  className="hb-meter-fill hb-budget-bar-fill"
-                  style={{ "--w": `${Math.min(pct * 100, 100)}%`, "--meter-tone": STATUS_COLOR[status] }}
-                />
-              </div>
-
-              <div className="hb-budget-row-meta">
-                {pctText}
-                {" · "}
-                {isOver ? (
-                  <span className="hb-pot-foot-out">
-                    +{fmt(Math.abs(remaining), 0)} über Budget
-                  </span>
-                ) : (
-                  `${fmt(remaining, 0)} verbleibend`
-                )}
-              </div>
+      <div className="hb-budget-gauge-foot">
+        {overItems.length > 0 &&
+          (onNavigateToBudget ? (
+            <button
+              type="button"
+              className="hb-infobar hb-infobar--dialog hb-budget-alert"
+              onClick={onNavigateToBudget}
+              aria-label={`${alertTitle}: ${alertMessage}. Zum Budget-View`}
+            >
+              {alertBody}
+              <span className="hb-budget-alert-chevron" aria-hidden="true"><IconChevronRight /></span>
+            </button>
+          ) : (
+            <div className="hb-infobar hb-infobar--dialog hb-budget-alert" role="status">
+              {alertBody}
             </div>
-          );
-        })}
-        {Array.from({ length: PAGE_SIZE - pagedItems.length }).map((_, i) => (
-          <div key={`ph-${i}`} className="hb-budget-row hb-budget-row--placeholder" aria-hidden="true">
-            <div className="hb-budget-row-head">
-              <span className="hb-dot" />
-              <span className="hb-budget-row-name">&nbsp;</span>
-              <span className="hb-budget-row-amounts">&nbsp;</span>
-              <span className="hb-budget-status-pill">&nbsp;</span>
-            </div>
-            <div className="hb-meter" />
-            <div className="hb-budget-row-meta">&nbsp;</div>
-          </div>
-        ))}
+          ))}
+        {goToBudget}
       </div>
-
-      {pagination}
     </div>
   );
 });

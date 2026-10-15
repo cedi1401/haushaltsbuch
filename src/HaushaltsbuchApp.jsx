@@ -408,6 +408,7 @@ export default function HaushaltsbuchApp() {
                 patchActiveBook={patchActiveBook}
                 indicateTransferCategories={indicateTransferCategories}
                 onOpenCategoryManager={() => setCategoryManagerOpen(true)}
+                onNavigateToBudget={() => setView("budget")}
               />
             )}
           </ErrorBoundary>

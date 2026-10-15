@@ -44,6 +44,7 @@ export default function DashboardView({
   patchActiveBook,
   indicateTransferCategories,
   onOpenCategoryManager,
+  onNavigateToBudget,
 }) {
   const fmt = useFmt();
   const themeColors = useThemeColors();
@@ -399,6 +400,7 @@ export default function DashboardView({
           expenseCategories={expenseCategories}
           savingsPots={savingsPots}
           onSweepSurplus={handleSweepSurplus}
+          onNavigateToBudget={onNavigateToBudget}
         />
       </div>
 

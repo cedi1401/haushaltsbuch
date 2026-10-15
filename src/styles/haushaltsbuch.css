@@ -5945,107 +5945,192 @@ select.hb-input option {
    BUDGET-CARD (Insights-Tab)
    ===================================================== */
 
-.hb-budget-summary {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 8px;
-  margin-bottom: 6px;
-  flex-wrap: wrap;
-}
-
-.hb-budget-total-inline {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.hb-budget-total-sub {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-  color: var(--muted);
-  line-height: 1.2;
-}
-
-.hb-budget-total-bar {
-  margin-bottom: 18px;
-  flex-shrink: 0;
-}
-
-/* Trennlinie zwischen Gesamt-Bereich und Kategorie-Liste */
-.hb-budget-list {
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid var(--border-light);
-  padding-top: 12px;
-}
-
-.hb-budget-bar-fill {
-  width: var(--w, 0%);
-  transition: width 0.4s ease;
-}
-
-
-.hb-budget-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 4px;
-  border-bottom: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  transition: background var(--transition-fast);
-}
-
-.hb-budget-row:last-child {
-  border-bottom: none;
-}
-
-.hb-budget-row--placeholder {
-  visibility: hidden;
-  pointer-events: none;
-  border-bottom: none;
-}
-
-.hb-budget-row:hover {
-  background: var(--hover-bg);
-}
-
-.hb-budget-row-head {
+/* Kopf: Zeitraum links, Gesamtstatus rechts. */
+.hb-budget-gauge-head {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 13px;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.hb-budget-row-name {
+/* Die Card richtet ihr Layout nach der Breite des Panels, nicht des Fensters:
+   das Insights-Panel ist je nach Dashboard-Raster unterschiedlich breit. */
+.hb-budget-insight {
+  container-type: inline-size;
+}
+
+/* Zwei Spalten: links der Bogen, rechts Summen und Zähler. Im schmalen Panel
+   untereinander (siehe @container unten). */
+.hb-budget-insight-main {
   flex: 1;
-  min-width: 0;
-  font-weight: 500;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px 32px;
+  padding: 12px 0 4px;
+}
+
+@container (max-width: 540px) {
+  .hb-budget-insight-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Halbkreis-Meter; die Mitte liegt unten im Bogen, deshalb absolut an der
+   Unterkante statt mittig wie .hb-pie-center-overlay. Breite gedeckelt,
+   damit der Bogen in einem sehr breiten Panel nicht ausufert. */
+.hb-budget-gauge {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  justify-self: center;
+}
+
+.hb-budget-gauge-center {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.hb-budget-gauge-value {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
   color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.hb-budget-row-amounts {
+.hb-budget-gauge-sub {
+  margin-top: 2px;
   font-size: 13px;
-  font-weight: 600;
-  flex-shrink: 0;
+  color: var(--muted);
   white-space: nowrap;
 }
 
-.hb-budget-row-target {
-  font-weight: 400;
-  color: var(--muted);
+/* Rechte Spalte: drei Summen als Label-Wert-Zeilen, darunter die Zähler. */
+.hb-budget-insight-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
 }
 
-.hb-budget-row-meta {
-  font-size: 11px;
-  color: var(--muted);
-  padding-left: 19px;
-  line-height: 1.4;
+.hb-budget-insight-kpis {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hb-budget-insight-kpi {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.hb-budget-insight-kpi:last-child {
+  border-bottom: none;
+}
+
+.hb-budget-insight-kpi dt {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.hb-budget-insight-kpi dd {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Zähler je Status: dieselben Pillen wie im Budget-View. */
+.hb-budget-gauge-counts {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Warnung und Link an der Unterkante, über die volle Breite. */
+.hb-budget-gauge-foot {
+  margin-top: auto;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.hb-budget-gauge-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hb-budget-gauge-link svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Warnung bei überschrittenen Budgets: InfoBar-Muster in Rot, als Button
+   — ein Klick springt in den Budget-View. Chevron, Cursor und Hover machen
+   das Drücken erkennbar. */
+.hb-budget-alert {
+  width: 100%;
+  align-items: center;
+  font: inherit;
+  text-align: left;
+  background: var(--red-soft);
+  border-color: var(--red-border);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+button.hb-budget-alert {
+  cursor: pointer;
+}
+
+button.hb-budget-alert:hover {
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+}
+
+button.hb-budget-alert:active {
+  background: color-mix(in srgb, var(--red) 18%, transparent);
+}
+
+.hb-budget-alert .hb-infobar-icon {
+  color: var(--red);
+}
+
+.hb-budget-alert-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform var(--transition-fast);
+}
+
+.hb-budget-alert-chevron svg {
+  width: 16px;
+  height: 16px;
+}
+
+button.hb-budget-alert:hover .hb-budget-alert-chevron {
+  transform: translateX(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-budget-alert-chevron { transition: none; }
 }
 
 /* Status-Pill */
@@ -6290,44 +6375,6 @@ select.hb-input option {
   margin-top: var(--card-gap);
 }
 
-/* Pagination */
-.hb-budget-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding-top: 6px;
-  padding-bottom: 2px;
-  flex-shrink: 0;
-}
-
-.hb-budget-pag-btn {
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 8px;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
-.hb-budget-pag-btn:hover:not(:disabled) {
-  background: var(--hover-bg);
-}
-
-.hb-budget-pag-btn:disabled {
-  opacity: var(--disabled-opacity);
-  cursor: default;
-}
-
-.hb-budget-pag-info {
-  font-size: 12px;
-  color: var(--muted);
-  min-width: 40px;
-  text-align: center;
-}
 
 /* =====================================================
    Kostenrechner (Kostengruppen)
@@ -7558,7 +7605,6 @@ select.hb-input option {
 .hb-cg-group-trigger:active,
 .hb-nav-item:active,
 .hb-segmented__item:not(.hb-segmented__item--active):active,
-.hb-budget-pag-btn:active:not(:disabled),
 .hb-datepicker-nav:active,
 .hb-month-filter-clear:active,
 .hb-hcat-expand-btn:active:not(:disabled) {

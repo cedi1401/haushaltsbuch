@@ -19,6 +19,7 @@ export default function InsightsPanel({
   totalSavingsTransfers,
   totalReserveTransfers,
   expenseCategories,
+  onNavigateToBudget,
 }) {
   const [activeCard, setActiveCard] = useState("overview");
   const analytics = useFinanceAnalytics({
@@ -50,8 +51,8 @@ export default function InsightsPanel({
             <BudgetCard
               budgetItems={budget.budgeted}
               totals={budget.totals}
-              monthInfo={budget.monthInfo}
               isFallbackMonth={!monthFilter}
+              onNavigateToBudget={onNavigateToBudget}
             />
           )}
           {activeCard === "behavior" && (
