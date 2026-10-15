@@ -70,6 +70,8 @@ export default function AllocationCard({ byClass, unpricedCount, fmt }) {
                   strokeLinejoin="round"
                   startAngle={90}
                   endAngle={-270}
+                  animationBegin={0}
+                  animationDuration={1350}
                 >
                   {chartRows.map((r) => (
                     <Cell key={r.key} fill={r.color} />

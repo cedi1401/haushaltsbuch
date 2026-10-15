@@ -137,6 +137,8 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, totals, isFallbackMon
                 strokeLinejoin="round"
                 startAngle={180}
                 endAngle={0}
+                animationBegin={0}
+                animationDuration={1350}
               >
                 {gaugeData.map((d) => (
                   <Cell key={d.key} fill={d.fill} />

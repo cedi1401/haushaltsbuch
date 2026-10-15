@@ -194,6 +194,8 @@ export default function Charts({
                       strokeLinejoin="round"
                       startAngle={90}
                       endAngle={-270}
+                      animationBegin={0}
+                      animationDuration={1350}
                     >
                       {allocationData.items.map((d, i) => (
                         <Cell key={d.name + i} fill={d.color} />
@@ -327,6 +329,8 @@ export default function Charts({
                     strokeLinejoin="round"
                     startAngle={90}
                     endAngle={-270}
+                    animationBegin={0}
+                    animationDuration={1350}
                   >
                     {pieData.map((d, i) => (
                       <Cell key={(d.id || d.name) + i} fill={d.color} />
