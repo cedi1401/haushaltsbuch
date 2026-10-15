@@ -6,6 +6,7 @@ import {
   normalizeEntry,
   normalizeBook,
   normalizeBooks,
+  normalizeCategoryBudgets,
   makeDefaultBook,
   fixedCostKind,
   migrateFixedCostKinds,
@@ -736,5 +737,54 @@ describe('shortMonthTick', () => {
   it('shortens the year of a month label and leaves other labels alone', () => {
     expect(shortMonthTick('Jan 2026')).toBe('Jan 26');
     expect(shortMonthTick('Mär')).toBe('Mär');
+  });
+});
+
+// ─── normalizeCategoryBudgets ──────────────────────────────────────────────
+
+describe('normalizeCategoryBudgets', () => {
+  const subs = (...budgets) => budgets.map((budget, i) => ({ id: `sub-${i}`, name: `Sub ${i}`, budget }));
+
+  it('aus reinen Unterkategorie-Budgets wird deren Summe als Budget der Oberkategorie', () => {
+    const [cat] = normalizeCategoryBudgets([{ id: 'c', name: 'C', budget: null, subcategories: subs(50, 80.5, null) }]);
+    expect(cat.budget).toBe(130.5);
+    expect(cat.subcategories.map((s) => s.budget)).toEqual([50, 80.5, null]);
+  });
+
+  it('hebt ein zu kleines Budget der Oberkategorie auf die Summe an', () => {
+    const [cat] = normalizeCategoryBudgets([{ id: 'c', name: 'C', budget: 100, subcategories: subs(80, 70) }]);
+    expect(cat.budget).toBe(150);
+  });
+
+  it('lässt gültige Kategorien unangetastet und gibt dann dieselbe Liste zurück', () => {
+    const list = [
+      { id: 'a', name: 'A', budget: 200, subcategories: subs(80, 70) },
+      { id: 'b', name: 'B', budget: 150, subcategories: subs(80, 70) },
+      { id: 'c', name: 'C', budget: 300, subcategories: [] },
+      { id: 'd', name: 'D', budget: null, subcategories: subs(null, 0) },
+      { id: 'e', name: 'E' },
+    ];
+    expect(normalizeCategoryBudgets(list)).toBe(list);
+  });
+
+  it('rundet die Summe auf zwei Stellen', () => {
+    const [cat] = normalizeCategoryBudgets([{ id: 'c', name: 'C', subcategories: subs(0.1, 0.2) }]);
+    expect(cat.budget).toBe(0.3);
+  });
+
+  it('ohne Liste: Eingabe unverändert', () => {
+    expect(normalizeCategoryBudgets(undefined)).toBeUndefined();
+    expect(normalizeCategoryBudgets(null)).toBeNull();
+  });
+
+  it('normalizeBook wendet die Regel auf bestehende Bücher an', () => {
+    const book = makeDefaultBook('Test');
+    const target = book.expenseCategories.find((c) => (c.subcategories || []).length >= 2);
+    target.budget = null;
+    target.subcategories[0].budget = 120;
+    target.subcategories[1].budget = 30;
+    const result = normalizeBook(book).expenseCategories.find((c) => c.id === target.id);
+    expect(result.budget).toBe(150);
+    expect(result.subcategories.slice(0, 2).map((s) => s.budget)).toEqual([120, 30]);
   });
 });

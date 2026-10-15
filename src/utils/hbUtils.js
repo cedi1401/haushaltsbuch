@@ -1013,6 +1013,11 @@ export function normalizeBook(book) {
     }
   }
 
+  // Budget-Regel: Die Summe der Unterkategorie-Budgets übersteigt das Budget
+  // der Oberkategorie nie. Bewusst ohne Versions-Gate — das ist eine
+  // Invariante, keine einmalige Migration (greift auch bei alten Backups).
+  normalized.expenseCategories = normalizeCategoryBudgets(normalized.expenseCategories);
+
   // categoryId + subcategoryId zu Einträgen hinzufügen (falls noch nicht vorhanden)
   // + gelöschte/umbenannte Unterkategorie-IDs migrieren
   if (Array.isArray(normalized.entries)) {
@@ -1163,23 +1168,36 @@ export function normalizeBooks(books) {
 }
 
 // ============================================
-// Budget-Validierung
+// Budget-Regel
 // ============================================
 
-/**
- * Darf die Oberkategorie ein Budget bekommen?
- * Nein, wenn mindestens eine Unterkategorie bereits ein Budget hat.
- */
-export function canSetParentBudget(category) {
-  return !(category.subcategories || []).some(
-    (sub) => sub.budget != null && sub.budget > 0
-  );
-}
+const positiveBudget = (value) => (typeof value === "number" && value > 0 ? value : null);
 
 /**
- * Darf die Unterkategorie ein Budget bekommen?
- * Nein, wenn die Oberkategorie bereits ein Budget hat.
+ * Hält die Budget-Regel der Ausgaben-Kategorien ein: Die Oberkategorie trägt
+ * das Budget, ihre Unterkategorien teilen es optional auf — die Summe der
+ * Unterkategorie-Budgets übersteigt das Budget der Oberkategorie nie.
+ *
+ * Verletzt eine Kategorie die Regel, wird ihr Budget auf die Summe der
+ * Unterkategorien angehoben. Das deckt auch Bücher aus der Zeit ab, in der ein
+ * Budget entweder auf der Oberkategorie oder auf den Unterkategorien lag: Aus
+ * reinen Unterkategorie-Budgets wird deren Summe als Budget der Oberkategorie.
+ *
+ * Läuft bei jedem Laden (normalizeBook) und ist für gültige Daten ein No-op.
+ *
+ * @param {Array} expenseCategories
+ * @returns {Array} dieselbe Liste, wenn nichts zu korrigieren war
  */
-export function canSetSubBudget(parentCategory) {
-  return !(parentCategory.budget != null && parentCategory.budget > 0);
+export function normalizeCategoryBudgets(expenseCategories) {
+  if (!Array.isArray(expenseCategories)) return expenseCategories;
+  let changed = false;
+  const result = expenseCategories.map((cat) => {
+    const allocated = (cat.subcategories || []).reduce((sum, sub) => sum + (positiveBudget(sub.budget) || 0), 0);
+    if (allocated <= 0) return cat;
+    const total = Math.round(allocated * 100) / 100;
+    if ((positiveBudget(cat.budget) || 0) >= total) return cat;
+    changed = true;
+    return { ...cat, budget: total };
+  });
+  return changed ? result : expenseCategories;
 }
