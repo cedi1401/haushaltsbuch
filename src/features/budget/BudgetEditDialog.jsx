@@ -3,7 +3,7 @@ import EditDialog from "../../components/EditDialog.jsx";
 import { Button } from "../../components/ui.jsx";
 import { parseAmount } from "../../utils/hbUtils.js";
 import { useBaseCurrency, useFmt } from "../../contexts/CurrencyContext.jsx";
-import { budgetMoney } from "./budgetColumns.jsx";
+import { budgetMoney } from "./budgetFormat.js";
 
 // Beträge sind auf Rappen/Cent genau — alles darunter ist Rechenrauschen.
 const EPS = 0.005;

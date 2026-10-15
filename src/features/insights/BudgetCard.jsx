@@ -110,38 +110,37 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, totals, monthInfo, is
       <div className="hb-budget-list">
         {pagedItems.map((item) => {
           const { pct, status, remaining } = item;
-          const color    = STATUS_COLOR[status];
           const isOver   = status === "over";
+          const pctText  = formatPercent(Math.round(pct * 100), { digits: 0, sign: false });
 
-          const pctDisplay = Math.round(pct * 100);
-          const pillText   = pctDisplay > 150 || status === "full"
-            ? BUDGET_STATUS_LABEL[status]
-            : formatPercent(pctDisplay, { digits: 0, sign: false });
-
+          // Gleiche Sprache wie die Karten im Budget-View: Status als Wort in
+          // der Pille, Ton nur im Balken, Beträge in Textfarbe.
           return (
             <div key={item.id} className="hb-budget-row">
               <div className="hb-budget-row-head">
                 <span className="hb-dot" style={{ background: item.color || "var(--muted)" }} />
                 <span className="hb-budget-row-name">{item.name}</span>
-                <span className="hb-budget-row-amounts" style={{ color }}>
+                <span className="hb-budget-row-amounts">
                   {fmt(item.spent, 0)}
                   <span className="hb-budget-row-target"> / {fmt(item.budget, 0)}</span>
                 </span>
                 <span className={`hb-budget-status-pill hb-budget-status-pill--${status}`}>
-                  {pillText}
+                  {BUDGET_STATUS_LABEL[status]}
                 </span>
               </div>
 
-              <div className="hb-meter hb-meter--lg">
+              <div className="hb-meter">
                 <div
                   className="hb-meter-fill hb-budget-bar-fill"
-                  style={{ "--w": `${Math.min(pct * 100, 100)}%`, "--meter-tone": color }}
+                  style={{ "--w": `${Math.min(pct * 100, 100)}%`, "--meter-tone": STATUS_COLOR[status] }}
                 />
               </div>
 
               <div className="hb-budget-row-meta">
+                {pctText}
+                {" · "}
                 {isOver ? (
-                  <span style={{ color: "var(--red)" }}>
+                  <span className="hb-pot-foot-out">
                     +{fmt(Math.abs(remaining), 0)} über Budget
                   </span>
                 ) : (
@@ -159,7 +158,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, totals, monthInfo, is
               <span className="hb-budget-row-amounts">&nbsp;</span>
               <span className="hb-budget-status-pill">&nbsp;</span>
             </div>
-            <div className="hb-meter hb-meter--lg" />
+            <div className="hb-meter" />
             <div className="hb-budget-row-meta">&nbsp;</div>
           </div>
         ))}

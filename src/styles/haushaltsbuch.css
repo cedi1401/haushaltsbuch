@@ -6063,40 +6063,178 @@ select.hb-input option {
 .hb-budget-status-pill--full { color: var(--muted);  background: var(--bg-subtle);  }
 .hb-budget-status-pill--over { color: var(--red);    background: var(--red-soft);    }
 
-/* Namenszelle der Budget-Tabelle: Kategoriepunkt, Name und — bei einer
-   Unterkategorie — der Elternname darunter. Die Zelle ist gedeckelt
-   (.hb-dt-clamp); gekürzt wird je Textzeile, deshalb min-width: 0. */
-.hb-budget-cell-name {
+/* =====================================================
+   BUDGET-VIEW — Karten je Oberkategorie und Liste „Ohne Budget"
+   ===================================================== */
+/* Raster der Budget-Karten: Variante von .hb-pot-grid mit flexibler
+   Spaltenzahl, weil die Karten mit Unterkategorien mehr Breite brauchen. */
+.hb-budget-grid {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  margin-bottom: var(--card-gap);
+}
+
+/* Wie .hb-cg-card: die Karten liegen direkt auf der Seite und brauchen
+   deshalb Kartenfläche und Elevation statt --bg-subtle. Nicht klickbar —
+   bearbeitet wird über den Stift, darum kein Reveal-Hover. */
+.hb-budget-card {
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  gap: 12px;
+  padding: 18px;
+}
+
+.hb-budget-card .hb-pot-card-name {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
+  gap: 7px;
+  margin-bottom: 8px;
 }
 
-.hb-budget-cell-names {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  /* Zwei Textzeilen (18 + 14 px) in der 44-px-Zeile: ohne den negativen
-     Rand würde eine Zeile mit Unterkategorie höher als ihre Nachbarn. */
-  margin-block: -2px;
-}
-
-.hb-budget-cell-label {
-  line-height: 18px;
-}
-
-.hb-budget-cell-label,
-.hb-budget-cell-parent {
+.hb-budget-card-name-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.hb-budget-cell-parent {
-  font-size: 12px;
-  line-height: 14px;
+.hb-budget-card-amounts {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hb-budget-card-of {
+  font-size: 14px;
   color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Status-Pille und Stift rechts oben; der Stift sitzt optisch an der
+   Kartenkante, ohne die Zeile höher zu machen. */
+.hb-budget-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin: -6px -8px 0 0;
+}
+
+/* Fuß an der Unterkante: Karten einer Zeile sind gleich hoch, auch wenn nur
+   eine davon Unterkategorien hat. */
+.hb-budget-card .hb-pot-card-foot {
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.hb-budget-subs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hb-budget-subs-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.hb-budget-subs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hb-budget-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hb-budget-sub-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.hb-budget-sub-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-budget-sub-amount {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.hb-budget-sub-of {
+  color: var(--muted);
+}
+
+/* „Ohne Budget": bewusst unauffällig — Punkt, Name, Ist und Plus, in so
+   vielen Spalten, wie die Breite hergibt. */
+.hb-budget-free-sum {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.hb-budget-free-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2px 24px;
+}
+
+.hb-budget-free-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 4px 0 8px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.hb-budget-free-row:hover {
+  background: var(--hover-bg);
+}
+
+.hb-budget-free-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-budget-free-amount {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Platzhalter in Breite des Plus-Buttons (.hb-icon-btn--sm). */
+.hb-budget-free-spacer {
+  width: 30px;
+  flex-shrink: 0;
 }
 
 /* Bearbeiten-Dialog des Budget-Views: Umschalter und Beträge. */

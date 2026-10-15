@@ -1,12 +1,11 @@
 import React, { useMemo, useState } from "react";
 import { Button, Card, CardContent } from "../components/ui.jsx";
-import DataTable from "../components/DataTable.jsx";
 import { IconBudget, IconEdit, IconInfo, IconPlus } from "../components/icons.jsx";
 import { useToast } from "../components/toastContext.js";
 import { formatPercent } from "../utils/hbUtils.js";
-import { buildBudgetRows, setCategoryBudgets } from "../utils/budgetUtils.js";
+import { BUDGET_STATUS_COLOR, BUDGET_STATUS_LABEL, buildBudgetRows, setCategoryBudgets } from "../utils/budgetUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
-import { buildBudgetColumns, budgetMoney } from "./budget/budgetColumns.jsx";
+import { budgetMoney } from "./budget/budgetFormat.js";
 import BudgetEditDialog from "./budget/BudgetEditDialog.jsx";
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -20,7 +19,11 @@ const percent = (ratio) => formatPercent(ratio * 100, { digits: 0, sign: false }
  * Prognose. Er zeigt immer den laufenden Finanzmonat, unabhängig vom
  * Monatsfilter der Toolbar.
  *
- * Budgets werden nur hier gepflegt: über die Zeilenaktionen und den
+ * Layout: eine Karte je budgetierter Oberkategorie (Muster der Topf-Karten),
+ * ihre Unterkategorien stehen in der Karte. Darunter die Kategorien ohne
+ * Budget als schlichte Liste mit Plus.
+ *
+ * Budgets werden nur hier gepflegt: über die Karten, die Liste und den
  * Bearbeiten-Dialog. Der Kategorien-Dialog zeigt sie bloß an.
  */
 export default function BudgetView({
@@ -59,58 +62,6 @@ export default function BudgetView({
     toast.success(`Budget für „${editCategory.name}“ entfernt.`);
     setEditCategoryId(null);
   }
-
-  // Aktionen am Zeilenende — DataTable blendet sie beim Überfahren ein.
-  // Unkategorisierte Ausgaben haben keine Kategorie, an der ein Budget hängen könnte.
-  function renderRowActions(row) {
-    if (!row.categoryId) return null;
-    const isNew = row.isParent && row.budget == null;
-    const title = isNew ? "Budget festlegen" : "Budget bearbeiten";
-    const target = row.parentName || row.name;
-    return (
-      <button
-        type="button"
-        className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
-        onClick={() => setEditCategoryId(row.categoryId)}
-        title={title}
-        aria-label={`${title}: „${target}“`}
-      >
-        {isNew ? <IconPlus /> : <IconEdit />}
-      </button>
-    );
-  }
-
-  const columns = useMemo(() => buildBudgetColumns({ fmt }), [fmt]);
-
-  const sections = useMemo(() => {
-    const result = [];
-    if (budgeted.length > 0) {
-      // Übergang bis zum Karten-Layout: Unterkategorien mit eigenem Budget
-      // stehen als Zeilen direkt unter ihrer Oberkategorie.
-      const rows = budgeted.flatMap((row) => [row, ...row.subs.filter((sub) => sub.budget != null)]);
-      result.push({
-        key: "budgeted",
-        label: "Mit Budget",
-        // Ohne Farbe: die Kante hieße hier nichts, und der Punkt im Band läse
-        // sich über der Spalte der Kategoriepunkte wie eine blaue Kategorie.
-        accent: null,
-        rows,
-        countLabel: () => plural(budgeted.length, "Budget", "Budgets"),
-        total: `${money(totals.spent)} von ${money(totals.budget)}`,
-      });
-    }
-    if (unbudgeted.length > 0) {
-      result.push({
-        key: "unbudgeted",
-        label: "Ohne Budget",
-        accent: null,
-        rows: unbudgeted,
-        countLabel: (n) => plural(n, "Kategorie", "Kategorien"),
-        total: money(unbudgetedSpent),
-      });
-    }
-    return result;
-  }, [budgeted, unbudgeted, totals, unbudgetedSpent, money]);
 
   if (budgeted.length === 0 && unbudgeted.length === 0) {
     return (
@@ -187,25 +138,62 @@ export default function BudgetView({
           <div className="hb-infobar-content">
             <div className="hb-infobar-title">Noch kein Budget festgelegt</div>
             <div className="hb-infobar-message">
-              In der Tabelle stehen alle Ausgaben-Kategorien. Fahre über eine Zeile und lege
-              mit dem Plus ein Budget fest.
+              Unter „Ohne Budget“ stehen alle Ausgaben-Kategorien. Lege mit dem Plus neben
+              einer Kategorie ihr Budget fest.
             </div>
           </div>
         </div>
       )}
 
-      <Card>
-        <CardContent>
-          <DataTable
-            columns={columns}
-            sections={sections}
-            storageKey="hb.budget.table"
-            label="Budgets"
-            toolbar={<h3 className="hb-card-title">Kategorien</h3>}
-            renderRowActions={renderRowActions}
-          />
-        </CardContent>
-      </Card>
+      {hasBudgets && (
+        <div className="hb-pot-grid hb-budget-grid">
+          {budgeted.map((row) => (
+            <BudgetCategoryCard
+              key={row.id}
+              row={row}
+              money={money}
+              onEdit={() => setEditCategoryId(row.categoryId)}
+            />
+          ))}
+        </div>
+      )}
+
+      {unbudgeted.length > 0 && (
+        <Card>
+          <CardContent>
+            <div className="hb-card-head">
+              <h3 className="hb-card-title">Ohne Budget</h3>
+              <span className="hb-budget-free-sum">
+                {plural(unbudgeted.length, "Kategorie", "Kategorien")} · {money(unbudgetedSpent)} ausgegeben
+              </span>
+            </div>
+            <ul className="hb-budget-free-list">
+              {unbudgeted.map((row) => (
+                <li key={row.id} className="hb-budget-free-row">
+                  <span className="hb-cat-dot" style={{ background: row.color || "var(--muted)" }} />
+                  <span className="hb-budget-free-name" title={row.name}>{row.name}</span>
+                  <span className="hb-budget-free-amount">{money(row.spent)}</span>
+                  {/* Unkategorisierte Ausgaben haben keine Kategorie, an der ein
+                      Budget hängen könnte — der Platzhalter hält die Beträge bündig. */}
+                  {row.categoryId ? (
+                    <button
+                      type="button"
+                      className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+                      onClick={() => setEditCategoryId(row.categoryId)}
+                      title="Budget festlegen"
+                      aria-label={`Budget festlegen: „${row.name}“`}
+                    >
+                      <IconPlus />
+                    </button>
+                  ) : (
+                    <span className="hb-budget-free-spacer" aria-hidden="true" />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {editCategory && (
         <BudgetEditDialog
@@ -217,6 +205,114 @@ export default function BudgetView({
         />
       )}
     </>
+  );
+}
+
+/**
+ * Karte einer budgetierten Oberkategorie: Ist von Budget, Auslastung, Status
+ * und — falls vorhanden — die Aufteilung: Unterkategorien mit eigenem Budget,
+ * je mit eigenem Balken.
+ */
+function BudgetCategoryCard({ row, money, onEdit }) {
+  const isOver = row.status === "over";
+  // Nur die Aufteilung zählt: Unterkategorien ohne eigenes Budget stehen
+  // nicht in der Karte, ihr Ist steckt bereits in der Summe oben.
+  const subs = row.subs.filter((sub) => sub.budget != null);
+
+  return (
+    <article className="hb-pot-card hb-budget-card" aria-label={row.name}>
+      <div className="hb-pot-card-top">
+        <div className="hb-pot-card-head">
+          <div className="hb-pot-card-name">
+            <span className="hb-cat-dot" style={{ background: row.color || "var(--muted)" }} />
+            <span className="hb-budget-card-name-text" title={row.name}>{row.name}</span>
+          </div>
+          <div className="hb-budget-card-amounts">
+            <span className="hb-pot-card-amount">{money(row.spent)}</span>
+            <span className="hb-budget-card-of">von {money(row.budget)}</span>
+          </div>
+        </div>
+        <div className="hb-budget-card-actions">
+          <StatusPill status={row.status} />
+          <button
+            type="button"
+            className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+            onClick={onEdit}
+            title="Budget bearbeiten"
+            aria-label={`Budget bearbeiten: „${row.name}“`}
+          >
+            <IconEdit />
+          </button>
+        </div>
+      </div>
+
+      <UsageMeter pct={row.pct} status={row.status} />
+
+      {subs.length > 0 && (
+        <div className="hb-budget-subs">
+          <div className="hb-budget-subs-head">
+            <span>Unterkategorien</span>
+            <span>{money(row.allocated)} von {money(row.budget)} aufgeteilt</span>
+          </div>
+          <ul className="hb-budget-subs-list">
+            {subs.map((sub) => (
+              <li key={sub.id} className="hb-budget-sub">
+                <div className="hb-budget-sub-line">
+                  <span className="hb-budget-sub-name" title={sub.name}>{sub.name}</span>
+                  {sub.status !== "ok" && <StatusPill status={sub.status} />}
+                  <span className="hb-budget-sub-amount">
+                    {money(sub.spent)}
+                    <span className="hb-budget-sub-of"> / {money(sub.budget)}</span>
+                  </span>
+                </div>
+                <span
+                  className="hb-meter hb-meter--sm"
+                  style={{ "--meter-tone": BUDGET_STATUS_COLOR[sub.status] }}
+                  aria-hidden="true"
+                >
+                  <span className="hb-meter-fill" style={{ width: `${Math.min(sub.pct, 1) * 100}%` }} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="hb-pot-card-foot">
+        <span className="hb-pot-card-foot-label">{isOver ? "Über Budget" : "Verbleibend"}</span>
+        <span className="hb-pot-card-foot-value">
+          {isOver ? (
+            <span className="hb-pot-foot-out">+{money(-row.remaining)}</span>
+          ) : (
+            money(row.remaining)
+          )}
+        </span>
+      </div>
+    </article>
+  );
+}
+
+/** Auslastungsbalken im Statuston, daneben der Prozentwert. */
+function UsageMeter({ pct, status }) {
+  return (
+    <div className="hb-dt-progress">
+      <span
+        className="hb-meter hb-dt-progress-track"
+        style={{ "--meter-tone": BUDGET_STATUS_COLOR[status] }}
+        aria-hidden="true"
+      >
+        <span className="hb-meter-fill" style={{ width: `${Math.min(pct, 1) * 100}%` }} />
+      </span>
+      <span className="hb-dt-progress-value">{percent(pct)}</span>
+    </div>
+  );
+}
+
+function StatusPill({ status }) {
+  return (
+    <span className={`hb-budget-status-pill hb-budget-status-pill--${status}`}>
+      {BUDGET_STATUS_LABEL[status]}
+    </span>
   );
 }
 
