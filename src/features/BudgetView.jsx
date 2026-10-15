@@ -40,7 +40,7 @@ export default function BudgetView({
   );
   const { budgeted, unbudgeted, totals, unbudgetedSpent, monthInfo } = model;
 
-  // Bearbeitet wird immer die Oberkategorie; die Ebene wählt der Dialog. Über
+  // Bearbeitet wird immer die Oberkategorie samt ihrer Aufteilung. Über
   // die ID statt das Objekt, damit eine inzwischen gelöschte Kategorie den
   // Dialog schließt statt ihn mit veralteten Daten offen zu halten.
   const [editCategoryId, setEditCategoryId] = useState(null);
@@ -64,7 +64,7 @@ export default function BudgetView({
   // Unkategorisierte Ausgaben haben keine Kategorie, an der ein Budget hängen könnte.
   function renderRowActions(row) {
     if (!row.categoryId) return null;
-    const isNew = row.budget == null && !row.isRemainder;
+    const isNew = row.isParent && row.budget == null;
     const title = isNew ? "Budget festlegen" : "Budget bearbeiten";
     const target = row.parentName || row.name;
     return (
@@ -85,14 +85,17 @@ export default function BudgetView({
   const sections = useMemo(() => {
     const result = [];
     if (budgeted.length > 0) {
+      // Übergang bis zum Karten-Layout: Unterkategorien mit eigenem Budget
+      // stehen als Zeilen direkt unter ihrer Oberkategorie.
+      const rows = budgeted.flatMap((row) => [row, ...row.subs.filter((sub) => sub.budget != null)]);
       result.push({
         key: "budgeted",
         label: "Mit Budget",
         // Ohne Farbe: die Kante hieße hier nichts, und der Punkt im Band läse
         // sich über der Spalte der Kategoriepunkte wie eine blaue Kategorie.
         accent: null,
-        rows: budgeted,
-        countLabel: (n) => plural(n, "Budget", "Budgets"),
+        rows,
+        countLabel: () => plural(budgeted.length, "Budget", "Budgets"),
         total: `${money(totals.spent)} von ${money(totals.budget)}`,
       });
     }

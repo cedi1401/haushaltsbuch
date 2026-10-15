@@ -162,36 +162,41 @@ describe('calcCategoryMonthlySpend', () => {
 
 describe('buildBudgetRows', () => {
   const categories = [
-    { id: 'cat-essen', name: 'Essen', color: '#111', budget: 600, subcategories: [{ id: 'sub-rest', name: 'Restaurant' }] },
+    {
+      id: 'cat-essen',
+      name: 'Essen',
+      color: '#111',
+      budget: 600,
+      subcategories: [
+        { id: 'sub-rest', name: 'Restaurant', budget: 200 },
+        { id: 'sub-markt', name: 'Supermarkt' },
+      ],
+    },
+    { id: 'cat-wohnen', name: 'Wohnen', color: '#333', budget: 2000, subcategories: [] },
     {
       id: 'cat-freizeit',
       name: 'Freizeit',
       color: '#222',
-      subcategories: [
-        { id: 'sub-kino', name: 'Kino', budget: 50 },
-        { id: 'sub-sport', name: 'Sport' },
-      ],
+      subcategories: [{ id: 'sub-kino', name: 'Kino' }],
     },
-    { id: 'cat-wohnen', name: 'Wohnen', color: '#333', budget: 2000, subcategories: [] },
     { id: 'cat-gesundheit', name: 'Gesundheit', color: '#444', subcategories: [] },
     { id: 'cat-leer', name: 'Abos', color: '#555', subcategories: [] },
   ];
+
   const entries = [
-    // August und September: abgeschlossene Monate
-    expense('2026-08-10', 500, 'cat-essen'),
+    // September: abgeschlossener Monat
     expense('2026-09-10', 700, 'cat-essen'),
-    expense('2026-09-12', 80, 'cat-freizeit', { subcategoryId: 'sub-kino' }),
-    expense('2026-09-13', 40, 'cat-freizeit', { subcategoryId: 'sub-sport' }),
-    expense('2026-09-14', 20, 'cat-freizeit'),
-    expense('2026-09-01', 1500, 'cat-wohnen', { recurringId: 'r-miete' }),
+    expense('2026-09-01', 1500, 'cat-wohnen'),
     expense('2026-09-20', 90, 'cat-gesundheit'),
     expense('2026-09-21', 12, 'cat-geloescht'),
     // Oktober: laufender Monat (Tag 15 von 31)
-    expense('2026-10-02', 1500, 'cat-wohnen', { recurringId: 'r-miete' }),
+    expense('2026-10-02', 1500, 'cat-wohnen'),
     expense('2026-10-05', 150, 'cat-wohnen'),
-    expense('2026-10-06', 300, 'cat-essen'),
-    expense('2026-10-07', 30, 'cat-freizeit', { subcategoryId: 'sub-sport' }),
-    expense('2026-10-08', 999, 'cat-essen', { source: 'pot', potId: 'p' }),
+    expense('2026-10-06', 100, 'cat-essen'),
+    expense('2026-10-07', 210, 'cat-essen', { subcategoryId: 'sub-rest' }),
+    expense('2026-10-08', 80, 'cat-essen', { subcategoryId: 'sub-markt' }),
+    expense('2026-10-09', 30, 'cat-freizeit', { subcategoryId: 'sub-kino' }),
+    expense('2026-10-10', 999, 'cat-essen', { source: 'pot', potId: 'p' }),
   ];
 
   const build = (monthFilter, extra = {}) =>
@@ -205,61 +210,54 @@ describe('buildBudgetRows', () => {
     });
   const byId = (rows, id) => rows.find((r) => r.id === id);
 
-  it('mit Budget: eine Zeile je budgetierter Ebene', () => {
+  it('mit Budget: eine Zeile je Oberkategorie, Ausgaben der Unterkategorien eingeschlossen', () => {
     const r = build('2026-10');
-    expect(r.budgeted.map((x) => x.id).sort()).toEqual(['cat-essen', 'cat-wohnen', 'sub-kino']);
-    expect(byId(r.budgeted, 'sub-kino')).toMatchObject({
-      level: 'subcategory',
-      categoryId: 'cat-freizeit',
-      subcategoryId: 'sub-kino',
-      parentName: 'Freizeit',
-      isParent: false,
-      budget: 50,
-      spent: 0,
+    expect(r.budgeted.map((x) => x.id).sort()).toEqual(['cat-essen', 'cat-wohnen']);
+    expect(byId(r.budgeted, 'cat-essen')).toMatchObject({
+      level: 'category',
+      isParent: true,
+      budget: 600,
+      spent: 390,
+      remaining: 210,
+      status: 'ok',
+      allocated: 200,
+      directSpent: 100,
     });
-    expect(byId(r.budgeted, 'cat-essen')).toMatchObject({ level: 'category', isParent: true, spent: 300 });
   });
 
   it('Topf-Ausgaben belasten das Budget nicht', () => {
-    expect(byId(build('2026-10').budgeted, 'cat-essen').spent).toBe(300);
+    expect(byId(build('2026-10').budgeted, 'cat-essen').spent).toBe(390);
   });
 
-  it('ohne Budget: alle Oberkategorien, auch ohne Ausgaben; Ausgaben zuerst', () => {
+  it('Unterkategorien hängen an ihrer Oberkategorie: mit Budget gemessen, ohne nur mit Ausgaben', () => {
+    const { subs } = byId(build('2026-10').budgeted, 'cat-essen');
+    expect(subs.map((x) => x.id)).toEqual(['sub-rest', 'sub-markt']);
+    expect(subs[0]).toMatchObject({
+      level: 'subcategory',
+      categoryId: 'cat-essen',
+      subcategoryId: 'sub-rest',
+      parentName: 'Essen',
+      isParent: false,
+      budget: 200,
+      spent: 210,
+      status: 'over',
+    });
+    expect(subs[0].remaining).toBeCloseTo(-10);
+    expect(subs[1]).toMatchObject({ budget: null, spent: 80, pct: null, remaining: null, status: null });
+    expect(byId(build('2026-10').budgeted, 'cat-wohnen')).toMatchObject({ subs: [], allocated: 0, directSpent: 1650 });
+  });
+
+  it('ohne Budget: alle Oberkategorien ohne Budget, auch ohne Ausgaben; Ausgaben zuerst', () => {
     const r = build('2026-10');
     // Ohne Ausgaben im Monat nach Name: „Abos“ vor „Gesundheit“
     expect(r.unbudgeted.map((x) => x.id)).toEqual(['cat-freizeit', 'cat-leer', 'cat-gesundheit']);
-    expect(byId(r.unbudgeted, 'cat-leer')).toMatchObject({ spent: 0, budget: null, isRemainder: false });
+    expect(byId(r.unbudgeted, 'cat-leer')).toMatchObject({ spent: 0, budget: null, isParent: true });
     expect(r.unbudgetedSpent).toBe(30);
-  });
-
-  it('Oberkategorie mit Unterkategorie-Budgets: der Rest steht ohne Budget', () => {
-    const rest = byId(build('2026-09').unbudgeted, 'cat-freizeit');
-    // 140 gesamt, davon 80 im budgetierten Kino
-    expect(rest).toMatchObject({ isRemainder: true, spent: 60, budget: null });
-  });
-
-  it('Rest entfällt, wenn alle Unterkategorien budgetiert sind und nichts übrig ist', () => {
-    const cats = [
-      { id: 'cat-a', name: 'A', subcategories: [{ id: 'sub-a1', name: 'A1', budget: 10 }] },
-    ];
-    const args = { expenseCategories: cats, monthFilter: '2026-10', today: TODAY };
-    const clean = buildBudgetRows({ ...args, entries: [expense('2026-10-03', 5, 'cat-a', { subcategoryId: 'sub-a1' })] });
-    expect(clean.unbudgeted).toEqual([]);
-    const direct = buildBudgetRows({ ...args, entries: [expense('2026-10-03', 5, 'cat-a')] });
-    expect(direct.unbudgeted).toHaveLength(1);
-    expect(direct.unbudgeted[0]).toMatchObject({ id: 'cat-a', isRemainder: true, spent: 5 });
   });
 
   it('Unkategorisiert erscheint nur mit Ausgaben im Monat', () => {
     const row = byId(build('2026-09').unbudgeted, UNCATEGORIZED_ID);
     expect(row).toMatchObject({ level: 'uncategorized', spent: 12, categoryId: null });
-    const none = buildBudgetRows({
-      entries: [expense('2026-10-03', 5, 'cat-leer')],
-      expenseCategories: categories,
-      monthFilter: '2026-10',
-      today: TODAY,
-    });
-    expect(byId(none.unbudgeted, UNCATEGORIZED_ID)).toBeUndefined();
     expect(byId(build('2026-10').unbudgeted, UNCATEGORIZED_ID)).toBeUndefined();
   });
 
@@ -274,18 +272,18 @@ describe('buildBudgetRows', () => {
     const r = build('');
     expect(r.month).toBe('2026-10');
     expect(r.monthInfo).toMatchObject({ isCurrentMonth: true, daysRemaining: 16 });
-    expect(byId(r.budgeted, 'cat-essen').spent).toBe(300);
+    expect(byId(r.budgeted, 'cat-essen').spent).toBe(390);
     expect(build('2026-09').month).toBe('2026-09');
     // Monatsbeginn am 24.: der 15. Oktober gehört noch zum Finanzmonat Oktober
     expect(build('', { monthStartDay: 24 }).month).toBe('2026-10');
     expect(build('', { monthStartDay: 10 }).month).toBe('2026-11');
   });
 
-  it('Summen und Sortierung nach Auslastung', () => {
+  it('Summen nur über Oberkategorien, Sortierung nach Auslastung', () => {
     const r = build('2026-09');
-    expect(r.budgeted.map((x) => x.id)).toEqual(['sub-kino', 'cat-essen', 'cat-wohnen']);
-    expect(r.totals).toMatchObject({ budget: 2650, spent: 2280, overCount: 2, status: 'ok' });
-    expect(r.totals.pct).toBeCloseTo(2280 / 2650);
+    expect(r.budgeted.map((x) => x.id)).toEqual(['cat-essen', 'cat-wohnen']);
+    expect(r.totals).toMatchObject({ budget: 2600, spent: 2200, overCount: 1, status: 'ok' });
+    expect(r.totals.pct).toBeCloseTo(2200 / 2600);
   });
 
   it('ohne Budgets und ohne Daten: leere Sektion, Summen bei 0', () => {
@@ -294,7 +292,6 @@ describe('buildBudgetRows', () => {
     expect(r.unbudgeted).toEqual([]);
     expect(r.totals).toMatchObject({ budget: 0, spent: 0, overCount: 0 });
   });
-
 });
 
 describe('setCategoryBudgets', () => {
@@ -302,7 +299,7 @@ describe('setCategoryBudgets', () => {
     {
       id: 'cat-freizeit',
       name: 'Freizeit',
-      budget: null,
+      budget: 200,
       subcategories: [
         { id: 'sub-kino', name: 'Kino', budget: 50 },
         { id: 'sub-sport', name: 'Sport' },
@@ -312,35 +309,47 @@ describe('setCategoryBudgets', () => {
   ];
   const freizeit = (list) => list.find((c) => c.id === 'cat-freizeit');
 
-  it('Budget für die ganze Kategorie leert die Unterkategorien', () => {
-    const next = setCategoryBudgets(categories, 'cat-freizeit', { budget: 200 });
-    expect(freizeit(next).budget).toBe(200);
-    expect(freizeit(next).subcategories.map((s) => s.budget)).toEqual([null, null]);
+  it('setzt das Budget der Kategorie und die Aufteilung auf ihre Unterkategorien', () => {
+    const next = setCategoryBudgets(categories, 'cat-freizeit', {
+      budget: 300,
+      subBudgets: { 'sub-kino': 120, 'sub-sport': 80.456 },
+    });
+    expect(freizeit(next).budget).toBe(300);
+    expect(freizeit(next).subcategories.map((s) => s.budget)).toEqual([120, 80.46]);
   });
 
-  it('Budgets je Unterkategorie leeren die Oberkategorie', () => {
-    const start = setCategoryBudgets(categories, 'cat-freizeit', { budget: 200 });
-    const next = setCategoryBudgets(start, 'cat-freizeit', { subBudgets: { 'sub-sport': 80.456 } });
-    expect(freizeit(next).budget).toBeNull();
-    expect(freizeit(next).subcategories.map((s) => s.budget)).toEqual([null, 80.46]);
+  it('die Aufteilung wird vollständig ersetzt: ohne Angabe bleibt keine Unterkategorie budgetiert', () => {
+    const next = setCategoryBudgets(categories, 'cat-freizeit', { budget: 300 });
+    expect(freizeit(next).budget).toBe(300);
+    expect(freizeit(next).subcategories.map((s) => s.budget)).toEqual([null, null]);
   });
 
   it('leere, ungültige und nicht positive Beträge heißen „kein Budget“', () => {
     const next = setCategoryBudgets(categories, 'cat-freizeit', {
+      budget: 300,
       subBudgets: { 'sub-kino': 0, 'sub-sport': 'abc' },
     });
     expect(freizeit(next).subcategories.map((s) => s.budget)).toEqual([null, null]);
-    expect(freizeit(setCategoryBudgets(categories, 'cat-freizeit', { budget: -5 })).budget).toBeNull();
   });
 
-  it('ohne Angabe wird das Budget auf beiden Ebenen entfernt', () => {
-    const next = setCategoryBudgets(categories, 'cat-freizeit');
-    expect(freizeit(next).budget).toBeNull();
-    expect(freizeit(next).subcategories.map((s) => s.budget)).toEqual([null, null]);
+  it('ohne Budget der Kategorie entfällt auch die Aufteilung', () => {
+    for (const change of [undefined, { budget: -5, subBudgets: { 'sub-kino': 40 } }, { subBudgets: { 'sub-kino': 40 } }]) {
+      const next = setCategoryBudgets(categories, 'cat-freizeit', change);
+      expect(freizeit(next).budget).toBeNull();
+      expect(freizeit(next).subcategories.map((s) => s.budget)).toEqual([null, null]);
+    }
+  });
+
+  it('übersteigt die Aufteilung das Budget, wird es auf die Summe angehoben', () => {
+    const next = setCategoryBudgets(categories, 'cat-freizeit', {
+      budget: 100,
+      subBudgets: { 'sub-kino': 80, 'sub-sport': 70 },
+    });
+    expect(freizeit(next).budget).toBe(150);
   });
 
   it('lässt andere Kategorien und die Eingabe unangetastet', () => {
-    const next = setCategoryBudgets(categories, 'cat-freizeit', { budget: 200 });
+    const next = setCategoryBudgets(categories, 'cat-freizeit', { budget: 300 });
     expect(next[1]).toBe(categories[1]);
     expect(categories[0].subcategories[0].budget).toBe(50);
     expect(setCategoryBudgets(null, 'x', { budget: 1 })).toEqual([]);

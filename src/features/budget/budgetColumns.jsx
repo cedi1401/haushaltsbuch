@@ -7,8 +7,9 @@ import { BUDGET_STATUS_COLOR, BUDGET_STATUS_LABEL } from "../../utils/budgetUtil
  * eine Fabrik, weil Beträge ausnahmslos über `fmt` laufen.
  *
  * Zeilen sind die Objekte aus `buildBudgetRows()` — budgetierte und nicht
- * budgetierte in einer Tabelle. Alles, was ein Budget voraussetzt (Auslastung,
- * Rest, Status), bleibt in den Zeilen ohne Budget leer.
+ * budgetierte in einer Tabelle; Unterkategorien stehen als eigene Zeilen unter
+ * ihrer Oberkategorie. Alles, was ein Budget voraussetzt (Auslastung, Rest,
+ * Status), bleibt in den Zeilen ohne Budget leer.
  */
 
 // Sortierrang nach Handlungsbedarf, nicht alphabetisch — aufsteigend steht
@@ -32,14 +33,10 @@ function sumOrNull(rows, pick) {
   return rows.some((r) => pick(r) != null) ? sumBy(rows, pick) : null;
 }
 
-// Die Summenzeile rechnet nur über budgetierte Zeilen: Budget, Ist und Rest
-// müssen nebeneinander aufgehen. Was ohne Budget ausgegeben wurde, steht im
-// Band der Sektion und in der Pill.
-const budgetedOnly = (rows) => rows.filter(hasBudget);
-
-function rowLabel(row) {
-  return row.isRemainder ? `${row.name} · Übriges` : row.name;
-}
+// Die Summenzeile rechnet nur über budgetierte Oberkategorien: Budget, Ist und
+// Rest müssen nebeneinander aufgehen, und die Unterkategorien sind in ihrer
+// Oberkategorie schon enthalten.
+const budgetedParents = (rows) => rows.filter((row) => hasBudget(row) && row.isParent);
 
 // Beträge ohne Nachkommastellen. Vorher runden: sonst wird aus einer
 // Überschreitung um ein paar Rappen eine „−0".
@@ -73,12 +70,12 @@ export function buildBudgetColumns({ fmt }) {
       label: "Kategorie",
       alwaysVisible: true,
       maxWidth: 320,
-      sortValue: (row) => rowLabel(row).toLowerCase(),
+      sortValue: (row) => row.name.toLowerCase(),
       render: (row) => (
         <span className="hb-budget-cell-name">
           <span className="hb-cat-dot" style={{ background: row.color || "var(--muted)" }} />
           <span className="hb-budget-cell-names">
-            <span className="hb-budget-cell-label" onMouseEnter={clampTitle}>{rowLabel(row)}</span>
+            <span className="hb-budget-cell-label" onMouseEnter={clampTitle}>{row.name}</span>
             {row.parentName && (
               <span className="hb-budget-cell-parent" onMouseEnter={clampTitle}>{row.parentName}</span>
             )}
@@ -93,7 +90,7 @@ export function buildBudgetColumns({ fmt }) {
       align: "right",
       sortValue: (row) => row.budget,
       render: (row) => money(row.budget),
-      summarize: (rows) => money(sumOrNull(rows, (r) => r.budget)),
+      summarize: (rows) => money(sumOrNull(budgetedParents(rows), (r) => r.budget)),
     },
     {
       id: "spent",
@@ -101,7 +98,7 @@ export function buildBudgetColumns({ fmt }) {
       align: "right",
       sortValue: spent,
       render: (row) => money(spent(row)),
-      summarize: (rows) => money(sumOrNull(budgetedOnly(rows), spent)),
+      summarize: (rows) => money(sumOrNull(budgetedParents(rows), spent)),
     },
     {
       id: "usage",
@@ -135,7 +132,7 @@ export function buildBudgetColumns({ fmt }) {
       align: "right",
       sortValue: remaining,
       render: (row) => money(remaining(row)),
-      summarize: (rows) => money(sumOrNull(rows, remaining)),
+      summarize: (rows) => money(sumOrNull(budgetedParents(rows), remaining)),
     },
     {
       id: "status",

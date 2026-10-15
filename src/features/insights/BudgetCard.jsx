@@ -122,9 +122,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, totals, monthInfo, is
             <div key={item.id} className="hb-budget-row">
               <div className="hb-budget-row-head">
                 <span className="hb-dot" style={{ background: item.color || "var(--muted)" }} />
-                <span className="hb-budget-row-name">
-                  {item.isParent ? item.name : `${item.parentName} › ${item.name}`}
-                </span>
+                <span className="hb-budget-row-name">{item.name}</span>
                 <span className="hb-budget-row-amounts" style={{ color }}>
                   {fmt(item.spent, 0)}
                   <span className="hb-budget-row-target"> / {fmt(item.budget, 0)}</span>

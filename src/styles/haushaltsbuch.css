@@ -6113,8 +6113,8 @@ select.hb-input option {
   color: var(--muted);
 }
 
-.hb-budget-edit-hint strong {
-  color: var(--text);
+.hb-budget-edit-hint--error {
+  color: var(--red);
 }
 
 /* Je Unterkategorie eine Zeile: Name und Betragsfeld. */

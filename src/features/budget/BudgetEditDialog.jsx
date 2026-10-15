@@ -1,15 +1,12 @@
 import React, { useState } from "react";
 import EditDialog from "../../components/EditDialog.jsx";
-import { Button, RangeTabs } from "../../components/ui.jsx";
-import { IconWarning } from "../../components/icons.jsx";
+import { Button } from "../../components/ui.jsx";
 import { parseAmount } from "../../utils/hbUtils.js";
 import { useBaseCurrency, useFmt } from "../../contexts/CurrencyContext.jsx";
 import { budgetMoney } from "./budgetColumns.jsx";
 
-const MODE_OPTIONS = [
-  { value: "category", label: "Ganze Kategorie" },
-  { value: "subcategories", label: "Je Unterkategorie" },
-];
+// Beträge sind auf Rappen/Cent genau — alles darunter ist Rechenrauschen.
+const EPS = 0.005;
 
 const hasBudget = (node) => node?.budget != null && node.budget > 0;
 const toDraft = (node) => (hasBudget(node) ? String(node.budget) : "");
@@ -17,17 +14,16 @@ const toDraft = (node) => (hasBudget(node) ? String(node.budget) : "");
 /**
  * Budget einer Ausgaben-Kategorie festlegen, ändern oder entfernen.
  *
- * Ein Budget liegt entweder auf der Oberkategorie oder auf ihren
- * Unterkategorien, nie auf beiden. Der Umschalter macht diese Regel zur Wahl:
- * gespeichert wird immer nur die gewählte Ebene, die andere wird geleert
- * (`setCategoryBudgets`).
+ * Die Oberkategorie trägt das Budget; ihre Unterkategorien teilen es optional
+ * auf. Die Summe der Unterkategorien darf das Budget nie übersteigen — der
+ * Dialog rechnet mit und sperrt das Speichern, solange sie es tut.
  *
  * Der Dialog initialisiert seinen Entwurf beim Mounten — der View rendert ihn
  * nur, solange er offen ist, und gibt ihm die Kategorie als `key`.
  *
  * @param {object} props
  * @param {object} props.category - Oberkategorie mit `subcategories`
- * @param {(change: { budget?: number, subBudgets?: object }) => void} props.onSave
+ * @param {(change: { budget: number, subBudgets: object }) => void} props.onSave
  * @param {() => void} props.onRemove
  * @param {() => void} props.onClose
  */
@@ -37,11 +33,8 @@ export default function BudgetEditDialog({ category, onSave, onRemove, onClose }
   const money = (value) => budgetMoney(fmt, value);
 
   const subs = category.subcategories || [];
-  const hadSubBudgets = subs.some(hasBudget);
-  const hadCategoryBudget = !hadSubBudgets && hasBudget(category);
 
-  const [mode, setMode] = useState(hadSubBudgets ? "subcategories" : "category");
-  const [amount, setAmount] = useState(hadSubBudgets ? "" : toDraft(category));
+  const [amount, setAmount] = useState(toDraft(category));
   const [subAmounts, setSubAmounts] = useState(() =>
     Object.fromEntries(subs.map((sub) => [sub.id, toDraft(sub)]))
   );
@@ -49,37 +42,41 @@ export default function BudgetEditDialog({ category, onSave, onRemove, onClose }
   const setSubAmount = (id, value) => setSubAmounts((prev) => ({ ...prev, [id]: value }));
 
   const parsedAmount = parseAmount(amount);
+  const amountValid = Number.isFinite(parsedAmount) && parsedAmount > 0;
+  const amountInvalid = amount.trim() !== "" && !amountValid;
+
   const parsedSubs = subs.map((sub) => {
     const raw = (subAmounts[sub.id] || "").trim();
     return { id: sub.id, empty: raw === "", value: parseAmount(raw) };
   });
-  const subsValid = parsedSubs.every((s) => s.empty || (Number.isFinite(s.value) && s.value >= 0));
+  const subInvalid = (s) => !s.empty && !(Number.isFinite(s.value) && s.value >= 0);
+  const subsValid = !parsedSubs.some(subInvalid);
   const subTotal = parsedSubs.reduce(
     (sum, s) => sum + (!s.empty && Number.isFinite(s.value) && s.value > 0 ? s.value : 0),
     0
   );
+  const free = amountValid ? parsedAmount - subTotal : null;
+  const exceeded = free != null && free < -EPS;
 
-  const amountInvalid = amount.trim() !== "" && !(parsedAmount > 0);
-  const subInvalid = (s) => !s.empty && !(Number.isFinite(s.value) && s.value >= 0);
-
-  const canSave =
-    mode === "category"
-      ? Number.isFinite(parsedAmount) && parsedAmount > 0
-      : subsValid && subTotal > 0;
+  const canSave = amountValid && subsValid && !exceeded;
 
   function save() {
     if (!canSave) return;
-    if (mode === "category") onSave({ budget: parsedAmount });
-    else onSave({ subBudgets: Object.fromEntries(parsedSubs.map((s) => [s.id, s.empty ? null : s.value])) });
+    onSave({
+      budget: parsedAmount,
+      subBudgets: Object.fromEntries(parsedSubs.map((s) => [s.id, s.empty ? null : s.value])),
+    });
   }
 
-  // Was beim Speichern auf der anderen Ebene verloren geht, steht da, bevor es
-  // passiert.
-  let switchHint = null;
-  if (mode === "category" && hadSubBudgets) {
-    switchHint = "Beim Speichern entfallen die Budgets der Unterkategorien.";
-  } else if (mode === "subcategories" && hadCategoryBudget) {
-    switchHint = `Beim Speichern entfällt das Budget der ganzen Kategorie (${money(category.budget)}).`;
+  let distribution = null;
+  if (subs.length > 0 && subTotal > 0) {
+    if (!amountValid) {
+      distribution = "Lege zuerst das Budget der Kategorie fest — die Unterkategorien teilen es auf.";
+    } else if (exceeded) {
+      distribution = `Die Unterkategorien übersteigen das Budget um ${money(-free)}.`;
+    } else {
+      distribution = `${money(subTotal)} von ${money(parsedAmount)} verteilt · ${money(free)} frei`;
+    }
   }
 
   return (
@@ -92,62 +89,39 @@ export default function BudgetEditDialog({ category, onSave, onRemove, onClose }
       saveLabel="Speichern"
       size="medium"
       footerStart={
-        (hadSubBudgets || hadCategoryBudget) && (
+        hasBudget(category) && (
           <Button variant="outline" className="hb-btn-outline--danger" onClick={onRemove}>
-            {hadSubBudgets ? "Budgets entfernen" : "Budget entfernen"}
+            Budget entfernen
           </Button>
         )
       }
     >
       <div className="hb-budget-edit">
+        <div className="hb-field">
+          <label className="hb-label" htmlFor="hb-budget-edit-amount">
+            Budget pro Monat ({baseCurrency})
+          </label>
+          <input
+            id="hb-budget-edit-amount"
+            className="hb-input hb-full"
+            style={{ minWidth: 0 }}
+            type="text"
+            inputMode="decimal"
+            placeholder="z.B. 400"
+            value={amount}
+            aria-invalid={amountInvalid || undefined}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+          {amountInvalid && (
+            <div className="hb-budget-edit-hint">Bitte einen Betrag über 0 eingeben.</div>
+          )}
+        </div>
+
         {subs.length > 0 && (
-          <div className="hb-field">
-            <div className="hb-label">Budget gilt für</div>
-            <RangeTabs
-              options={MODE_OPTIONS}
-              value={mode}
-              onChange={setMode}
-              ariaLabel="Budget gilt für"
-              size="md"
-              full
-            />
-          </div>
-        )}
-
-        {switchHint && (
-          <div className="hb-infobar hb-infobar--dialog hb-infobar--warning" role="status">
-            <div className="hb-infobar-icon"><IconWarning /></div>
-            <div className="hb-infobar-content">
-              <div className="hb-infobar-message">{switchHint}</div>
-            </div>
-          </div>
-        )}
-
-        {mode === "category" ? (
-          <div className="hb-field">
-            <label className="hb-label" htmlFor="hb-budget-edit-amount">
-              Budget pro Monat ({baseCurrency})
-            </label>
-            <input
-              id="hb-budget-edit-amount"
-              className="hb-input hb-full"
-              style={{ minWidth: 0 }}
-              type="text"
-              inputMode="decimal"
-              placeholder="z.B. 400"
-              value={amount}
-              aria-invalid={amountInvalid || undefined}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-            {amountInvalid && (
-              <div className="hb-budget-edit-hint">Bitte einen Betrag über 0 eingeben.</div>
-            )}
-          </div>
-        ) : (
           <>
             <div className="hb-budget-edit-subs">
               <div className="hb-budget-edit-subs-head">
-                <span className="hb-label">Unterkategorie</span>
+                <span className="hb-label">Davon für Unterkategorien (optional)</span>
                 <span className="hb-label" id="hb-budget-edit-col-amount">Pro Monat ({baseCurrency})</span>
               </div>
               {subs.map((sub, index) => (
@@ -174,9 +148,12 @@ export default function BudgetEditDialog({ category, onSave, onRemove, onClose }
               ))}
             </div>
 
-            <div className="hb-budget-edit-hint" aria-live="polite">
-              Summe: <strong>{money(subTotal)}</strong> pro Monat. Leere Felder bleiben ohne
-              Budget; was dort ausgegeben wird, steht in der Tabelle unter „Ohne Budget“.
+            <div
+              className={"hb-budget-edit-hint" + (exceeded ? " hb-budget-edit-hint--error" : "")}
+              aria-live="polite"
+            >
+              {distribution ||
+                "Leere Felder bleiben ohne eigenes Budget; ihre Ausgaben zählen nur zum Budget der Kategorie."}
             </div>
           </>
         )}

@@ -1,6 +1,6 @@
 // src/utils/budgetUtils.js
 import { getEntryFinancialMonth, getFinancialMonth, getFinancialMonthInfo } from "./financialMonthUtils.js";
-import { toLocalISO } from "./hbUtils.js";
+import { normalizeCategoryBudgets, toLocalISO } from "./hbUtils.js";
 
 // ============================================
 // Budget: Status
@@ -105,14 +105,17 @@ export function calcCategoryMonthlySpend(entries, expenseCategories, monthStartD
 // ============================================
 
 /**
- * Baut die Zeilen des Budget-Views: eine Sektion mit, eine ohne Budget.
+ * Baut das Modell des Budget-Views: Kategorien mit und ohne Budget.
  *
- * Mit Budget: eine Zeile je budgetierter Ebene — die Oberkategorie oder ihre
- * einzelnen Unterkategorien.
+ * Mit Budget: eine Zeile je Oberkategorie mit Budget. Ihr `spent` enthält alle
+ * Ausgaben der Kategorie, auch die ihrer Unterkategorien. Unter `subs` hängen
+ * alle Unterkategorien mit ihren eigenen Ausgaben; hat eine davon ein Budget,
+ * trägt sie dieselben Kennzahlen wie die Oberkategorie, sonst bleiben sie
+ * null. `allocated` ist die Summe der Unterkategorie-Budgets (nie mehr als das
+ * Budget, siehe normalizeCategoryBudgets), `directSpent` das, was ohne
+ * Unterkategorie direkt auf die Oberkategorie gebucht wurde.
  *
- * Ohne Budget: eine Zeile je Oberkategorie, auch ohne Ausgaben. Liegen Budgets
- * auf einzelnen Unterkategorien, zeigt die Zeile den Rest der Oberkategorie
- * (`isRemainder`) und entfällt, sobald nichts mehr unbudgetiert ist.
+ * Ohne Budget: eine Zeile je Oberkategorie ohne Budget, auch ohne Ausgaben.
  * Unkategorisierte Ausgaben bekommen eine eigene Zeile (`level:
  * "uncategorized"`), damit die Summe der Sektion zu den Ausgaben passt.
  *
@@ -145,59 +148,9 @@ export function buildBudgetRows({
   const budgeted = [];
   const unbudgeted = [];
 
-  const pushBudgeted = (base, spent) => {
-    budgeted.push({ ...base, spent, ...calcBudgetMetrics({ budget: base.budget, spent }) });
-  };
-
   for (const cat of categories) {
-    const subs = cat.subcategories || [];
-    const budgetedSubs = subs.filter(hasBudget);
-    const catSpent = spentOf(spend.byCategory.get(cat.id));
-
-    if (budgetedSubs.length === 0 && hasBudget(cat)) {
-      pushBudgeted(
-        {
-          id: cat.id,
-          level: "category",
-          categoryId: cat.id,
-          subcategoryId: null,
-          name: cat.name,
-          parentName: null,
-          color: cat.color,
-          isParent: true,
-          budget: cat.budget,
-        },
-        catSpent
-      );
-      continue;
-    }
-
-    let subSpent = 0;
-    for (const sub of budgetedSubs) {
-      const spent = spentOf(spend.bySubcategory.get(sub.id));
-      subSpent += spent;
-      pushBudgeted(
-        {
-          id: sub.id,
-          level: "subcategory",
-          categoryId: cat.id,
-          subcategoryId: sub.id,
-          name: sub.name,
-          parentName: cat.name,
-          color: cat.color,
-          isParent: false,
-          budget: sub.budget,
-        },
-        spent
-      );
-    }
-
-    const isRemainder = budgetedSubs.length > 0;
-    const spent = round2(catSpent - subSpent);
-    // Sind alle Unterkategorien budgetiert und nichts läuft direkt auf die
-    // Oberkategorie, gibt es keinen Rest zu zeigen.
-    if (isRemainder && budgetedSubs.length === subs.length && spent <= EPS) continue;
-    unbudgeted.push({
+    const spent = spentOf(spend.byCategory.get(cat.id));
+    const base = {
       id: cat.id,
       level: "category",
       categoryId: cat.id,
@@ -206,9 +159,45 @@ export function buildBudgetRows({
       parentName: null,
       color: cat.color,
       isParent: true,
-      isRemainder,
-      budget: null,
+    };
+
+    if (!hasBudget(cat)) {
+      unbudgeted.push({ ...base, budget: null, spent });
+      continue;
+    }
+
+    let subSpent = 0;
+    let allocated = 0;
+    const subs = (cat.subcategories || []).map((sub) => {
+      const subBudget = hasBudget(sub) ? sub.budget : null;
+      const own = spentOf(spend.bySubcategory.get(sub.id));
+      subSpent += own;
+      allocated += subBudget || 0;
+      return {
+        id: sub.id,
+        level: "subcategory",
+        categoryId: cat.id,
+        subcategoryId: sub.id,
+        name: sub.name,
+        parentName: cat.name,
+        color: cat.color,
+        isParent: false,
+        budget: subBudget,
+        spent: own,
+        ...(subBudget != null
+          ? calcBudgetMetrics({ budget: subBudget, spent: own })
+          : { pct: null, remaining: null, status: null }),
+      };
+    });
+
+    budgeted.push({
+      ...base,
+      budget: cat.budget,
       spent,
+      ...calcBudgetMetrics({ budget: cat.budget, spent }),
+      allocated: round2(allocated),
+      directSpent: round2(spent - subSpent),
+      subs,
     });
   }
 
@@ -226,7 +215,6 @@ export function buildBudgetRows({
         parentName: null,
         color: "#6b6b6b",
         isParent: true,
-        isRemainder: false,
         budget: null,
         spent,
       });
@@ -263,15 +251,17 @@ const toBudget = (value) => {
 };
 
 /**
- * Setzt das Budget einer Ausgaben-Kategorie und hält dabei die Regel
- * „Oberkategorie oder Unterkategorien, nie beides" ein: Die jeweils andere
- * Ebene wird geleert.
+ * Setzt das Budget einer Ausgaben-Kategorie und, optional, die Aufteilung auf
+ * ihre Unterkategorien.
  *
- * - `subBudgets` gesetzt: Budgets je Unterkategorie (`{ [subId]: Betrag }`),
- *   das Budget der Oberkategorie entfällt. Fehlende, leere oder nicht positive
- *   Beträge heißen „kein Budget".
- * - sonst: `budget` gilt für die ganze Kategorie, alle Unterkategorie-Budgets
- *   entfallen. `budget` leer oder 0 entfernt das Budget ganz.
+ * - `budget` leer oder 0 entfernt das Budget ganz, samt aller
+ *   Unterkategorie-Budgets: ohne Rahmen gibt es nichts aufzuteilen.
+ * - `subBudgets` (`{ [subId]: Betrag }`) ersetzt die Aufteilung vollständig.
+ *   Fehlende, leere oder nicht positive Beträge heißen „kein Budget".
+ *
+ * Die Summe der Unterkategorien darf das Budget nicht übersteigen. Das prüft
+ * der Dialog vor dem Speichern; käme es trotzdem dazu, hebt
+ * `normalizeCategoryBudgets` das Budget auf die Summe an.
  *
  * @param {Array} expenseCategories
  * @param {string} categoryId - ID der Oberkategorie
@@ -279,17 +269,19 @@ const toBudget = (value) => {
  * @returns {Array} neue Liste; andere Kategorien bleiben dieselben Objekte
  */
 export function setCategoryBudgets(expenseCategories, categoryId, { budget = null, subBudgets = null } = {}) {
-  return (expenseCategories || []).map((cat) => {
+  const parentBudget = toBudget(budget);
+  const next = (expenseCategories || []).map((cat) => {
     if (cat.id !== categoryId) return cat;
     return {
       ...cat,
-      budget: subBudgets ? null : toBudget(budget),
+      budget: parentBudget,
       subcategories: (cat.subcategories || []).map((sub) => ({
         ...sub,
-        budget: subBudgets ? toBudget(subBudgets[sub.id]) : null,
+        budget: parentBudget != null ? toBudget(subBudgets?.[sub.id]) : null,
       })),
     };
   });
+  return normalizeCategoryBudgets(next);
 }
 
 /**
