@@ -5960,9 +5960,27 @@ select.hb-input option {
 }
 
 /* Zwei Spalten: links der Bogen, rechts Summen und Zähler. Im schmalen Panel
-   untereinander (siehe @container unten). */
-.hb-budget-insight-main {
+   untereinander (siehe @container unten). Der Wrapper verteilt den
+   Restplatz 1 : 3 über und unter den Block — leicht über der Mitte. Der Fuß
+   reserviert dafür immer die Höhe der Warnung, sonst springt der Block je
+   nachdem, ob unten die Warnung oder nur der Button steht. */
+.hb-budget-insight-body {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.hb-budget-insight-body::before,
+.hb-budget-insight-body::after {
+  content: "";
+  flex: 1 1 0;
+}
+
+.hb-budget-insight-body::after {
+  flex-grow: 2;
+}
+
+.hb-budget-insight-main {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   align-items: center;
@@ -6062,25 +6080,43 @@ select.hb-input option {
   gap: 6px;
 }
 
-/* Warnung und Link an der Unterkante, über die volle Breite. */
+/* Warnung oder Button an der Unterkante, über die volle Breite. Die
+   Mindesthöhe entspricht der zweizeiligen Warnung (inkl. Padding), damit
+   der Mittelteil mit und ohne Warnung an derselben Stelle steht. Das
+   padding-bottom hebt Warnung und Button etwas von der Kartenkante ab. */
 .hb-budget-gauge-foot {
+  box-sizing: border-box;
+  min-height: 94px;
   margin-top: auto;
   padding-top: 12px;
+  padding-bottom: 10px;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   align-items: flex-end;
   gap: 8px;
 }
 
 .hb-budget-gauge-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  gap: 8px;
+  padding: 10px 22px;
+  font-size: 15px;
 }
 
 .hb-budget-gauge-link svg {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
+}
+
+/* Kopf- und Zähler-Label sowie die Pillen sind in dieser Card größer als
+   im Budget-View, der dieselben Klassen nutzt. */
+.hb-budget-insight .hb-insight-label {
+  font-size: 14px;
+}
+
+.hb-budget-insight .hb-budget-status-pill {
+  font-size: 13px;
+  padding: 3px 10px;
 }
 
 /* Warnung bei überschrittenen Budgets: InfoBar-Muster in Rot, als Button
@@ -6089,6 +6125,7 @@ select.hb-input option {
 .hb-budget-alert {
   width: 100%;
   align-items: center;
+  gap: 16px;
   font: inherit;
   text-align: left;
   background: var(--red-soft);
@@ -6111,6 +6148,12 @@ button.hb-budget-alert:active {
 
 .hb-budget-alert .hb-infobar-icon {
   color: var(--red);
+  margin-top: 0;
+}
+
+.hb-budget-alert .hb-infobar-icon svg {
+  width: 24px;
+  height: 24px;
 }
 
 .hb-budget-alert-chevron {

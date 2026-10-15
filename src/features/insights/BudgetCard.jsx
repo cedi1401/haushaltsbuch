@@ -2,7 +2,7 @@ import React, { memo, useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { useThemeColors } from "../../hooks/themeColors.js";
-import { IconChevronRight, IconInbox, IconWarning } from "../../components/icons.jsx";
+import { IconChevronRight, IconInbox, IconWarningRounded } from "../../components/icons.jsx";
 import { formatPercent } from "../../utils/hbUtils.js";
 import { BUDGET_STATUS_LABEL } from "../../utils/budgetUtils.js";
 import { budgetMoney } from "../budget/budgetFormat.js";
@@ -20,8 +20,8 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
  *
  * Bewusst keine Kategorienliste: die steht im Budget-View. Die Card zeigt
  * links einen Halbkreis-Meter über alle Budgets, rechts die Summen und die
- * Budgets je Status, darunter eine Warnung bei Überschreitungen und immer
- * den Sprung in den Budget-View. Der Status hängt allein am Verbrauch, ohne
+ * Budgets je Status, darunter eine Warnung bei Überschreitungen oder sonst
+ * einen Button in den Budget-View. Der Status hängt allein am Verbrauch, ohne
  * Zeitvergleich. In einem schmalen Panel stehen die Spalten untereinander.
  */
 const BudgetCard = memo(function BudgetCard({ budgetItems, totals, isFallbackMonth, onNavigateToBudget }) {
@@ -44,7 +44,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, totals, isFallbackMon
   );
 
   const goToBudget = onNavigateToBudget ? (
-    <button type="button" className="hb-link-btn hb-budget-gauge-link" onClick={onNavigateToBudget}>
+    <button type="button" className="hb-btn hb-btn-outline hb-budget-gauge-link" onClick={onNavigateToBudget}>
       Zum Budget-View <IconChevronRight />
     </button>
   ) : null;
@@ -97,7 +97,7 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, totals, isFallbackMon
 
   const alertBody = (
     <>
-      <span className="hb-infobar-icon"><IconWarning /></span>
+      <span className="hb-infobar-icon"><IconWarningRounded /></span>
       <span className="hb-infobar-content">
         <span className="hb-infobar-title">{alertTitle}</span>
         <span className="hb-infobar-message">{alertMessage}</span>
@@ -114,82 +114,85 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, totals, isFallbackMon
         </span>
       </div>
 
-      <div className="hb-budget-insight-main">
-        <div className="hb-budget-gauge">
-          {/* Seitenverhältnis statt fester Höhe: der Bogen wächst mit der
-              Spalte. Die Radien sind Prozent des halben Containers (Höhe),
-              der Mittelpunkt sitzt knapp über der Unterkante, damit die
-              abgerundeten Enden nicht angeschnitten werden. */}
-          <ResponsiveContainer width="100%" aspect={1.9}>
-            <PieChart>
-              <Pie
-                data={gaugeData}
-                dataKey="value"
-                nameKey="key"
-                cx="50%"
-                cy="97%"
-                innerRadius="150%"
-                outerRadius="182%"
-                paddingAngle={0}
-                cornerRadius={4}
-                stroke={themeColors.card}
-                strokeWidth={3}
-                strokeLinejoin="round"
-                startAngle={180}
-                endAngle={0}
-                animationBegin={0}
-                animationDuration={1350}
-              >
-                {gaugeData.map((d) => (
-                  <Cell key={d.key} fill={d.fill} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="hb-budget-gauge-center">
-            <div className="hb-budget-gauge-value">{pctText}</div>
-            <div className="hb-budget-gauge-sub">verbraucht</div>
+      <div className="hb-budget-insight-body">
+        <div className="hb-budget-insight-main">
+          <div className="hb-budget-gauge">
+            {/* Seitenverhältnis statt fester Höhe: der Bogen wächst mit der
+                Spalte. Die Radien sind Prozent des halben Containers (Höhe),
+                der Mittelpunkt sitzt knapp über der Unterkante, damit die
+                abgerundeten Enden nicht angeschnitten werden. */}
+            <ResponsiveContainer width="100%" aspect={1.9}>
+              <PieChart>
+                <Pie
+                  data={gaugeData}
+                  dataKey="value"
+                  nameKey="key"
+                  cx="50%"
+                  cy="97%"
+                  innerRadius="144%"
+                  outerRadius="182%"
+                  paddingAngle={0}
+                  cornerRadius={4}
+                  stroke={themeColors.card}
+                  strokeWidth={3}
+                  strokeLinejoin="round"
+                  startAngle={180}
+                  endAngle={0}
+                  animationBegin={0}
+                  animationDuration={1350}
+                >
+                  {gaugeData.map((d) => (
+                    <Cell key={d.key} fill={d.fill} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="hb-budget-gauge-center">
+              <div className="hb-budget-gauge-value">{pctText}</div>
+              <div className="hb-budget-gauge-sub">verbraucht</div>
+            </div>
           </div>
-        </div>
 
-        <div className="hb-budget-insight-facts">
-          <dl className="hb-budget-insight-kpis">
-            <div className="hb-budget-insight-kpi">
-              <dt>Budgetiert</dt>
-              <dd>{money(budget)}</dd>
-            </div>
-            <div className="hb-budget-insight-kpi">
-              <dt>Verbraucht</dt>
-              <dd>{money(spent)}</dd>
-            </div>
-            <div className="hb-budget-insight-kpi">
-              <dt>{isOver ? "Über Budget" : "Verbleibend"}</dt>
-              <dd className={isOver ? "hb-pot-foot-out" : undefined}>
-                {isOver ? `+${money(-remaining)}` : money(remaining)}
-              </dd>
-            </div>
-          </dl>
+          <div className="hb-budget-insight-facts">
+            <dl className="hb-budget-insight-kpis">
+              <div className="hb-budget-insight-kpi">
+                <dt>Budgetiert</dt>
+                <dd>{money(budget)}</dd>
+              </div>
+              <div className="hb-budget-insight-kpi">
+                <dt>Verbraucht</dt>
+                <dd>{money(spent)}</dd>
+              </div>
+              <div className="hb-budget-insight-kpi">
+                <dt>{isOver ? "Über Budget" : "Verbleibend"}</dt>
+                <dd className={isOver ? "hb-pot-foot-out" : undefined}>
+                  {isOver ? `+${money(-remaining)}` : money(remaining)}
+                </dd>
+              </div>
+            </dl>
 
-          {/* Zähler je Status: Budgets über dem Limit fallen auf, auch wenn
-              die Summe noch im Rahmen ist. Status ohne Budget entfallen. */}
-          <div>
-            <div className="hb-insight-label">
-              {plural(budgetItems.length, "Budget", "Budgets")} nach Status
+            {/* Zähler je Status: Budgets über dem Limit fallen auf, auch wenn
+                die Summe noch im Rahmen ist. Status ohne Budget entfallen. */}
+            <div>
+              <div className="hb-insight-label">
+                {plural(budgetItems.length, "Budget", "Budgets")} nach Status
+              </div>
+              <ul className="hb-budget-gauge-counts">
+                {STATUS_ORDER.filter((s) => counts[s] > 0).map((s) => (
+                  <li key={s} className={`hb-budget-status-pill hb-budget-status-pill--${s}`}>
+                    {counts[s]} {BUDGET_STATUS_LABEL[s]}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <ul className="hb-budget-gauge-counts">
-              {STATUS_ORDER.filter((s) => counts[s] > 0).map((s) => (
-                <li key={s} className={`hb-budget-status-pill hb-budget-status-pill--${s}`}>
-                  {counts[s]} {BUDGET_STATUS_LABEL[s]}
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
       </div>
 
+      {/* Die Warnung führt selbst in den Budget-View, dann entfällt der Button. */}
       <div className="hb-budget-gauge-foot">
-        {overItems.length > 0 &&
-          (onNavigateToBudget ? (
+        {overItems.length > 0 ? (
+          onNavigateToBudget ? (
             <button
               type="button"
               className="hb-infobar hb-infobar--dialog hb-budget-alert"
@@ -203,8 +206,10 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, totals, isFallbackMon
             <div className="hb-infobar hb-infobar--dialog hb-budget-alert" role="status">
               {alertBody}
             </div>
-          ))}
-        {goToBudget}
+          )
+        ) : (
+          goToBudget
+        )}
       </div>
     </div>
   );

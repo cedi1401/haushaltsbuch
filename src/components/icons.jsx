@@ -226,6 +226,17 @@ export function IconWarning(props) {
   );
 }
 
+/** Warndreieck mit abgerundeten Ecken, für größere Darstellung. */
+export function IconWarningRounded(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path d="M11.03 4.75Q12 3 12.97 4.75L21.03 19.25Q22 21 20 21H4Q2 21 2.97 19.25Z" />
+      <line x1="12" y1="10" x2="12" y2="14" />
+      <line x1="12" y1="17" x2="12" y2="17.5" />
+    </svg>
+  );
+}
+
 export function IconSuccess(props) {
   return (
     <svg {...baseProps} {...props}>
