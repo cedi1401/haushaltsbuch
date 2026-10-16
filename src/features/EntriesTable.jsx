@@ -105,8 +105,13 @@ export default function EntriesTable({
                   const isTransfer = e.kind === "transfer";
                   const isWithdrawal = e.kind === "withdrawal";
 
+                  // Einnahme/Ausgabe: Vorzeichen direkt am Betrag („−CHF 200.00“),
+                  // wie es formatCurrency für negative Werte schreibt.
+                  // Transfer/Entnahme: Richtungspfeil mit schmalem geschütztem
+                  // Leerzeichen (U+202F), wie in den Investment-Transaktionen.
                   let typeLabel = "Ausgabe";
                   let sign = "−";
+                  let arrow = null;
                   let colorClass = "hb-bad";
 
                   if (isIncome) {
@@ -115,23 +120,33 @@ export default function EntriesTable({
                     colorClass = "hb-ok";
                   } else if (isTransfer) {
                     typeLabel = "Transfer";
-                    sign = "↓";
+                    arrow = "→";
                     colorClass = "hb-transfer";
                   } else if (isWithdrawal) {
                     typeLabel = "Entnahme";
-                    sign = "↓";
+                    arrow = "↓";
                     colorClass = "hb-withdrawal";
                   }
+
+                  const amountText = fmt(Number(e.amount || 0));
 
                   return (
                     <tr key={e.id}>
                       <td className="hb-col-date">{formatDateDE(e.date)}</td>
                       <td className="hb-col-type">{typeLabel}</td>
-                      <td className="hb-col-category">{getEntryCategoryName(e, expenseCategories, incomeCategories) || "—"}</td>
+                      <td className="hb-col-category">
+                        {getEntryCategoryName(e, expenseCategories, incomeCategories) || "—"}
+                      </td>
                       <td className="hb-col-note">{e.note || "—"}</td>
                       <td className={`hb-col-amount hb-right ${colorClass}`}>
-                        <span className={`hb-sign${isTransfer ? " hb-sign-right" : ""}`}>{sign}</span>
-                        <span>{fmt(Number(e.amount || 0))}</span>
+                        {arrow ? (
+                          <>
+                            <span aria-hidden="true">{arrow}</span>
+                            {" "}{amountText}
+                          </>
+                        ) : (
+                          `${sign}${amountText}`
+                        )}
                       </td>
                       <td className="hb-col-actions">
                         <div className="hb-actions hb-actions-hover">

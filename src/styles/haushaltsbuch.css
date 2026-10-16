@@ -1783,12 +1783,6 @@ select.hb-input option {
   overflow: hidden;
 }
 
-.hb-sign {
-  display: inline-block;
-  width: 16px;
-  text-align: center;
-}
-
 .hb-entries-table .hb-col-actions {
   width: 88px;
   white-space: nowrap;
@@ -3222,10 +3216,6 @@ select.hb-input option {
 .hb-withdrawal {
   color: var(--red);
   font-weight: 700;
-}
-
-.hb-sign-right {
-  transform: rotate(-90deg);
 }
 
 .hb-full {
