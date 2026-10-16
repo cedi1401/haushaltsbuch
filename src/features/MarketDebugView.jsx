@@ -3,7 +3,7 @@ import { fetchQuote, fetchQuotes, fetchHistory, searchSymbols, marketDataAvailab
 
 // Debug-Oberfläche zum Prüfen der Marktdaten-Abrufe. Bewusst roh gehalten:
 // Dieser View dient dem Nachweis, dass das Backend trägt — nicht der Gestaltung.
-// Er ist nur im Dev-Modus erreichbar (siehe NavDrawer.jsx).
+// Er ist nur im Dev-Modus erreichbar (siehe viewRegistry.js).
 
 // Live verifizierte Symbole: decken Handelswährung = Zielwährung, Fremdwährung,
 // Edelmetall, FX und den Fehlerfall ab.

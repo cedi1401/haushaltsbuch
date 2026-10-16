@@ -185,7 +185,7 @@ export function IconChevron({ width = 16, height = 16, ...props }) {
 
 // Spaltenauswahl — Tabellenrahmen mit zwei senkrechten Trennern. Anders als
 // IconFixed und IconCostGroups liegen die Linien hier vertikal; das Icon sitzt
-// ohnehin auf einem beschrifteten Button und nicht im NavDrawer.
+// ohnehin auf einem beschrifteten Button und nicht in der Navigationsleiste.
 export function IconColumns(props) {
   return (
     <svg {...baseProps} {...props}>

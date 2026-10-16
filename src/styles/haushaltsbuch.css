@@ -141,9 +141,11 @@
   /* Ebenen. Menüs liegen über dem Modal, weil sie auch darin aufgehen;
      Popover und Tooltips werden an den body gehängt und liegen über allem. */
   --z-sticky: 2;
+  /* Navigationsleiste: über dem Inhalt (auch beim horizontalen Scrollen),
+     aber unter Dialogen. */
+  --z-nav: 40;
   --z-modal: 50;
   --z-menu: 80;
-  --z-nav: 200;
   --z-toast: 200;
   --z-popover: 1100;
   --z-tooltip: 9999;
@@ -281,6 +283,14 @@ button, input, select, textarea {
   width: fit-content;
   min-width: 100%;
   box-sizing: border-box;
+  /* Platz für die fixierte Navigationsleiste, immer nur eingeklappt (48 px):
+     Ausgeklappt liegt sie im freien Rand neben dem Inhalt oder darüber
+     (siehe WIDE_QUERY in NavPane.jsx), der Inhalt bleibt stehen. */
+  padding-left: calc(24px + var(--hb-nav-w-collapsed));
+}
+
+.hb-view-loading {
+  padding: 16px;
 }
 
 /* Desktop-App: Content-Breite ist auf die nutzbare Breite eines 16" MacBook Pro
@@ -394,12 +404,6 @@ button, input, select, textarea {
 /* Flex column utility — replaces style={{ display:"flex", flexDirection:"column", gap:X }} */
 .hb-stack { display: flex; flex-direction: column; gap: 12px; }
 .hb-stack--lg { gap: var(--card-gap); }
-
-.hb-title-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
 
 .hb-title {
   font-size: 28px;
@@ -1080,8 +1084,7 @@ select.hb-input option {
   border-color: transparent;
 }
 
-.hb-hamburger-btn,
-.hb-gear-btn {
+.hb-nav-toggle {
   width: 40px;
   height: 40px;
   font-size: 18px;
@@ -1186,6 +1189,78 @@ select.hb-input option {
 .hb-overflow-item:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
 .hb-overflow-item.hb-overflow-danger { color: var(--red); }
 .hb-overflow-item.hb-overflow-danger:hover { background: var(--red-soft); }
+
+/* Trennlinie im Menü; -6px gleicht das Padding von .hb-overflow-menu aus. */
+.hb-overflow-sep {
+  height: 1px;
+  background: var(--border-light);
+  margin: 4px -6px;
+}
+
+/* =====================================================
+   BUCH-AUSWAHL (Toolbar) — Flyout mit Büchern und Buchaktionen
+   ===================================================== */
+.hb-book-picker-trigger {
+  min-width: 200px;
+  max-width: 320px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.hb-book-picker-trigger svg {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform var(--transition-fast);
+}
+
+.hb-book-picker-trigger[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.hb-book-picker-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-book-picker-menu {
+  left: 0;
+  right: auto;
+  min-width: 100%;
+  max-width: 360px;
+  box-sizing: border-box;
+}
+
+.hb-book-picker-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+/* Feste 16-px-Spalte für Häkchen bzw. Aktions-Icon, damit alle Namen
+   bündig stehen. */
+.hb-book-picker-check {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: inline-flex;
+  color: var(--accent);
+}
+
+.hb-book-picker-check svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Aktionen unter der Trennlinie: Icon neutral */
+.hb-overflow-sep ~ .hb-overflow-item .hb-book-picker-check {
+  color: var(--muted);
+}
 
 /* =====================================================
    GRID LAYOUTS
@@ -3055,46 +3130,99 @@ select.hb-input option {
 }
 
 /* =====================================================
-   NAVIGATION POPUP - DROPDOWN POPOVER
+   NAVIGATIONSLEISTE (WinUI NavigationView)
+   Fixiert am linken Rand. Eingeklappt 48 px (nur Icons, Tooltips),
+   ausgeklappt 240 px mit Gruppenüberschriften. Unter 2240 px Fensterbreite
+   überlagert die ausgeklappte Leiste den Inhalt (--overlay, Light-Dismiss).
    ===================================================== */
-.hb-nav-popup-backdrop {
+:root {
+  --hb-nav-w-collapsed: 48px;
+  --hb-nav-w-expanded: 240px;
+}
+
+.hb-nav-pane {
+  position: fixed;
+  inset: 0 auto 0 0;
+  height: 100vh;
+  z-index: var(--z-nav);
+  box-sizing: border-box;
+  width: var(--hb-nav-w-expanded);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-subtle);
+  border-right: 1px solid var(--border);
+  transition: width var(--transition-normal);
+  overflow: hidden;
+}
+
+.hb-nav-pane--collapsed {
+  width: var(--hb-nav-w-collapsed);
+}
+
+.hb-nav-pane--overlay {
+  background: var(--card);
+  box-shadow: var(--shadow-dialog);
+}
+
+.hb-nav-pane-backdrop {
   position: fixed;
   inset: 0;
   z-index: calc(var(--z-nav) - 1);
 }
 
-.hb-nav-popup {
-  position: fixed;
-  z-index: var(--z-nav);
-  min-width: 200px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  padding: 6px;
+.hb-nav-pane-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-top: 4px;
+}
+
+.hb-nav-pane-foot {
+  border-top: 1px solid var(--border-light);
+  padding-top: 4px;
+}
+
+.hb-nav-group-title {
+  margin: 0;
+  padding: 16px 12px 6px 15px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.hb-nav-group:first-child .hb-nav-group-title {
+  padding-top: 8px;
+}
+
+.hb-nav-group-sep {
+  height: 1px;
+  background: var(--border-light);
+  margin: 8px;
+}
+
+.hb-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  animation: navPopupIn 0.15s ease-out;
-}
-
-@keyframes navPopupIn {
-  from {
-    opacity: 0;
-    transform: translateY(-6px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 /* Navigation Items - Fluent style */
 .hb-nav-item {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
   border: none;
   background: transparent;
   border-radius: var(--radius-sm);
-  padding: 10px 12px;
+  padding: 0 12px 0 15px;
   cursor: pointer;
   text-align: left;
   color: var(--text);
@@ -3107,7 +3235,35 @@ select.hb-input option {
   gap: 12px;
   transition: background var(--transition-fast);
   position: relative;
-  padding-left: 16px;
+}
+
+.hb-nav-item-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Eingeklappt: nur das Icon, mittig in 40 px. Das Label bleibt für
+   Screenreader im DOM. */
+.hb-nav-pane--collapsed .hb-nav-item {
+  width: 40px;
+  padding: 0;
+  justify-content: center;
+}
+
+.hb-nav-pane--collapsed .hb-nav-item-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Der Tooltip-Wrapper soll die Zeile nicht verändern. */
+.hb-nav-tooltip,
+.hb-nav-tooltip > .hb-tooltip-target {
+  display: flex;
 }
 
 .hb-nav-item-icon {
@@ -3118,6 +3274,11 @@ select.hb-input option {
   height: 18px;
   color: var(--muted);
   flex-shrink: 0;
+}
+
+.hb-nav-item-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .hb-nav-item-active .hb-nav-item-icon { color: var(--accent); }
@@ -3142,6 +3303,10 @@ select.hb-input option {
   height: 16px;
   border-radius: var(--radius-xs);
   background: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-nav-pane { transition: none; }
 }
 
 /* =====================================================
@@ -3648,6 +3813,11 @@ select.hb-input option {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* Hinweis unter einem Dialog-Feld (allgemein) */
+.hb-field-hint {
+  margin-top: 8px;
 }
 
 /* Hinweiszeile unter einem Dialog-Feld (Spalten-/Gruppen-Bindung) */
@@ -4191,6 +4361,11 @@ select.hb-input option {
     padding: 0;
   }
 
+  .hb-nav-pane,
+  .hb-nav-pane-backdrop {
+    display: none !important;
+  }
+
   .hb-card {
     box-shadow: none;
     border: 1px solid #ddd;
@@ -4199,7 +4374,6 @@ select.hb-input option {
 
   .hb-btn,
   .hb-icon-btn,
-  .hb-hamburger-btn,
   .hb-nav-item {
     display: none !important;
   }

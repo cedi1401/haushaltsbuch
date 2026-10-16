@@ -1,4 +1,4 @@
-import React, { useState, useMemo, lazy, Suspense } from "react";
+import React, { useState, useMemo, Suspense } from "react";
 
 import "./styles/haushaltsbuch.css";
 
@@ -8,17 +8,10 @@ import { useConfirm } from "./components/ConfirmDialog.jsx";
 import { IconInfo, IconClose } from "./components/icons.jsx";
 
 import SettingsDialog from "./features/SettingsDialog.jsx";
-import BudgetView from "./features/BudgetView.jsx";
-import TrendView from "./features/TrendView.jsx";
-import PotsView from "./features/PotsView.jsx";
-import GoalsView from "./features/GoalsView.jsx";
-import FixedCostsView from "./features/FixedCostsView.jsx";
-import ReservesView from "./features/ReservesView.jsx";
-import CostGroupsView from "./features/CostGroupsView.jsx";
-import NavDrawer from "./features/NavDrawer.jsx";
+import NavPane from "./features/NavPane.jsx";
 import EditEntryDialog from "./features/EditEntryDialog.jsx";
 import AppToolbar from "./features/AppToolbar.jsx";
-import DashboardView from "./features/DashboardView.jsx";
+import { DEFAULT_VIEW_ID, getView } from "./features/viewRegistry.js";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import CategoryManagerDialog from "./components/CategoryManagerDialog.jsx";
 
@@ -36,27 +29,11 @@ import { useAppSettings } from "./hooks/useAppSettings.js";
 import { useUpdateManager } from "./hooks/useUpdateManager.js";
 import { useEntryActions } from "./hooks/useEntryActions.js";
 
-// Ansichten ohne Monatsbezug — dort ist der Monatsfilter in der Toolbar deaktiviert.
-// "pots" fehlt bewusst: Die Buchungsliste im Töpfe-View filtert nach Monat.
-// Marktdaten-Testbench: nur im Dev-Modus geladen. Der dynamische Import steht in einem
-// Zweig, den der Production-Build als toten Code entfernt — so bleibt sie aus dem Release.
-const MarketDebugView = import.meta.env.DEV
-  ? lazy(() => import("./features/MarketDebugView.jsx"))
-  : null;
-// Investment-View: noch in Arbeit und deshalb ebenfalls nur im Dev-Modus geladen.
-const InvestmentsView = import.meta.env.DEV
-  ? lazy(() => import("./features/InvestmentsView.jsx"))
-  : null;
-
-const VIEW_LABELS = { budget: "Budgets", trend: "Trend", goals: "Sparziele", fixed: "Fixkosten", reserves: "Rückstellungen", costgroups: "Kostenrechner", investments: "Investments", marketdebug: "Marktdaten (Debug)" };
-
 export default function HaushaltsbuchApp() {
   const toast = useToast();
   const { confirm } = useConfirm();
 
-  const [view, setView] = useState("book");
-  const [navOpen, setNavOpen] = useState(false);
-  const [navAnchor, setNavAnchor] = useState(null);
+  const [view, setView] = useState(DEFAULT_VIEW_ID);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // Der Kategorien-Dialog wird vom Dashboard und vom Budget-View aus geöffnet.
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
@@ -81,7 +58,7 @@ export default function HaushaltsbuchApp() {
   } = bookManager;
 
   const appSettings = useAppSettings();
-  const { darkMode, setDarkMode, monthFilter, setMonthFilter } = appSettings;
+  const { darkMode, setDarkMode, monthFilter, setMonthFilter, navExpanded, setNavExpanded } = appSettings;
   const update = useUpdateManager();
 
   const entries = activeBook?.entries || EMPTY_ARRAY;
@@ -101,16 +78,10 @@ export default function HaushaltsbuchApp() {
     indicateTransferCategories,
   });
 
-  function openNav(e) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setNavAnchor({ top: rect.bottom + 6, left: rect.left });
-    setNavOpen(true);
-  }
-
   function handleCreateBook(name) {
     createBook(name);
     entryActions.setAddField("category", "Allgemein");
-    setView("book");
+    setView(DEFAULT_VIEW_ID);
   }
 
   // Derived data
@@ -194,12 +165,36 @@ export default function HaushaltsbuchApp() {
     return `${monthName} ${yyyy} · ${fmtDate(range.startDate)} – ${fmtDate(range.endDate)}`;
   }, [monthFilter, monthStartDay]);
 
-  const isViewWithoutMonth = view in VIEW_LABELS;
+  const currentView = getView(view);
+  const CurrentViewComponent = currentView.Component;
+
+  // Alles, woraus die Registry die Props der Views baut (siehe viewRegistry.js).
+  const viewContext = {
+    activeBook, entries, filteredEntries, entriesSorted,
+    totalIncome, totalExpense, totalTransfers,
+    totalSavingsTransfers, totalReserveTransfers, balance,
+    potBalances, expenseByHierarchy, incomeByHierarchy,
+    expenseCategories, allTransferCategories, indicateTransferCategories,
+    monthFilter, monthLabel, monthStartDay, baseCurrency,
+    entryActions, updateBook, patchActiveBook,
+    selectedPotId, setSelectedPotId,
+    costGroupRange, setCostGroupRange,
+    navigate: setView,
+    openCategoryManager: () => setCategoryManagerOpen(true),
+  };
 
   const currencyContextValue = useMemo(() => ({ fmt, baseCurrency }), [fmt, baseCurrency]);
 
   return (
     <CurrencyContext.Provider value={currencyContextValue}>
+      <NavPane
+        view={currentView.id}
+        onChangeView={setView}
+        expanded={navExpanded}
+        onExpandedChange={setNavExpanded}
+        settingsOpen={settingsOpen}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
       <div className="hb-page">
         <div className="hb-page-container">
           {update.available && !update.ready && (
@@ -255,20 +250,11 @@ export default function HaushaltsbuchApp() {
             </div>
           )}
 
-          <NavDrawer
-            open={navOpen}
-            onClose={() => setNavOpen(false)}
-            view={view}
-            onChangeView={setView}
-            anchor={navAnchor}
-          />
-
           <AppToolbar
             books={books}
             activeBookId={activeBook?.id || ""}
             onBookChange={setActiveBookId}
-            view={view}
-            onOpenNav={openNav}
+            title={currentView.label}
             onCreateBook={handleCreateBook}
             onDeleteBook={deleteActiveBook}
             canDeleteBook={books.length > 1}
@@ -278,111 +264,13 @@ export default function HaushaltsbuchApp() {
             onMonthFilterChange={setMonthFilter}
             darkMode={darkMode}
             onDarkModeToggle={() => setDarkMode(!darkMode)}
-            onOpenSettings={() => setSettingsOpen(true)}
-            isViewWithoutMonth={isViewWithoutMonth}
+            showMonthFilter={currentView.usesMonth}
           />
 
-          <ErrorBoundary context={view === "marketdebug" ? "Marktdaten (Debug)" : view === "book" ? "Dashboard" : view === "budget" ? "Budgets" : view === "trend" ? "Trend" : view === "pots" ? "Töpfe" : view === "goals" ? "Sparziele" : view === "costgroups" ? "Kostenrechner" : view === "investments" ? "Investments" : view === "reserves" ? "Rückstellungen" : "Fixkosten"}>
-            {view === "marketdebug" && MarketDebugView ? (
-              <Suspense fallback={<div style={{ padding: 16 }}>Lädt…</div>}>
-                <MarketDebugView baseCurrency={baseCurrency} />
-              </Suspense>
-            ) : view === "budget" ? (
-              <BudgetView
-                entries={entries}
-                expenseCategories={expenseCategories}
-                monthStartDay={monthStartDay}
-                onUpdateExpenseCategories={(newCats) =>
-                  patchActiveBook((b) => ({ ...b, expenseCategories: newCats }))
-                }
-                onOpenCategoryManager={() => setCategoryManagerOpen(true)}
-              />
-            ) : view === "trend" ? (
-              <TrendView
-                entries={entries}
-                recurringExpenses={activeBook?.recurringExpenses || []}
-                expenseCategories={activeBook?.expenseCategories || []}
-                monthStartDay={monthStartDay}
-                pots={activeBook?.pots || []}
-                transferCategories={allTransferCategories}
-              />
-            ) : view === "pots" ? (
-              <PotsView
-                activeBook={activeBook}
-                selectedPotId={selectedPotId}
-                onSelectPot={setSelectedPotId}
-                entries={entries}
-                onAddTransferEntry={entryActions.addTransferEntry}
-                onUpdateBook={updateBook}
-                transferCategories={indicateTransferCategories}
-                onEditEntry={entryActions.startEdit}
-                onRemoveEntry={entryActions.removeEntry}
-                monthStartDay={monthStartDay}
-                monthFilter={monthFilter}
-                monthLabel={monthLabel}
-              />
-            ) : view === "goals" ? (
-              <GoalsView
-                activeBook={activeBook}
-                entries={entries}
-                onUpdateBook={updateBook}
-                monthStartDay={monthStartDay}
-              />
-            ) : view === "fixed" ? (
-              <FixedCostsView
-                activeBook={activeBook}
-                entries={entries}
-                monthStartDay={monthStartDay}
-                onUpdateBook={updateBook}
-                onAddEntry={entryActions.addTransferEntry}
-                onAddEntries={entryActions.addEntries}
-              />
-            ) : view === "reserves" ? (
-              <ReservesView
-                activeBook={activeBook}
-                entries={entries}
-                monthStartDay={monthStartDay}
-                onAddEntry={entryActions.addTransferEntry}
-                onAddEntries={entryActions.addEntries}
-                onNavigateToFixed={() => setView("fixed")}
-              />
-            ) : view === "investments" && InvestmentsView ? (
-              <Suspense fallback={<div style={{ padding: 16 }}>Lädt…</div>}>
-                <InvestmentsView activeBook={activeBook} onUpdateBook={updateBook} />
-              </Suspense>
-            ) : view === "costgroups" ? (
-              <CostGroupsView
-                activeBook={activeBook}
-                onUpdateBook={updateBook}
-                monthStartDay={monthStartDay}
-                customRange={costGroupRange}
-                onCustomRangeChange={setCostGroupRange}
-              />
-            ) : (
-              <DashboardView
-                activeBook={activeBook}
-                filteredEntries={filteredEntries}
-                totalIncome={totalIncome}
-                totalExpense={totalExpense}
-                totalTransfers={totalTransfers}
-                totalSavingsTransfers={totalSavingsTransfers}
-                totalReserveTransfers={totalReserveTransfers}
-                balance={balance}
-                potBalances={potBalances}
-                expenseByHierarchy={expenseByHierarchy}
-                incomeByHierarchy={incomeByHierarchy}
-                monthFilter={monthFilter}
-                monthLabel={monthLabel}
-                monthStartDay={monthStartDay}
-                entriesSorted={entriesSorted}
-                entryActions={entryActions}
-                onUpdateBook={updateBook}
-                patchActiveBook={patchActiveBook}
-                indicateTransferCategories={indicateTransferCategories}
-                onOpenCategoryManager={() => setCategoryManagerOpen(true)}
-                onNavigateToBudget={() => setView("budget")}
-              />
-            )}
+          <ErrorBoundary key={currentView.id} context={currentView.label}>
+            <Suspense fallback={<div className="hb-view-loading">Lädt…</div>}>
+              <CurrentViewComponent {...currentView.getProps(viewContext)} />
+            </Suspense>
           </ErrorBoundary>
 
           {/* EditEntryDialog global — wird auch aus PotsView heraus geöffnet */}

@@ -133,19 +133,21 @@ export function useBookManager({ toast, confirm }) {
     toast.success(`Buch in „${trimmed}" umbenannt.`);
   }
 
+  // Liefert true, wenn das Buch gelöscht wurde (false bei Abbruch).
   async function deleteActiveBook() {
-    if (!activeBook || books.length <= 1) return;
+    if (!activeBook || books.length <= 1) return false;
     const ok = await confirm({
       title: "Buch löschen",
       message: `Haushaltsbuch „${activeBook.name}" wirklich löschen?\n\nAlle darin enthaltenen Einträge gehen verloren.`,
       confirmLabel: "Löschen",
       danger: true,
     });
-    if (!ok) return;
+    if (!ok) return false;
     const remaining = books.filter((b) => b.id !== activeBook.id);
     setBooks(remaining);
     setActiveBookId(remaining[0]?.id || null);
     toast.success("Buch gelöscht.");
+    return true;
   }
 
   function importBook(bookToImport) {
