@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import { IconEdit, IconDelete, IconInbox, IconPlus } from "../components/icons.jsx";
-import { formatDateDE } from "../utils/hbUtils.js";
+import { formatDateDE, getEntryCategoryName } from "../utils/hbUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
 
@@ -10,6 +10,8 @@ const CHUNK_SIZE = 100;
 export default function EntriesTable({
   entriesSorted,
   monthLabel,
+  expenseCategories,
+  incomeCategories,
   startEdit,
   removeEntry,
   onAddEntry,
@@ -125,7 +127,7 @@ export default function EntriesTable({
                     <tr key={e.id}>
                       <td className="hb-col-date">{formatDateDE(e.date)}</td>
                       <td className="hb-col-type">{typeLabel}</td>
-                      <td className="hb-col-category">{e.category}</td>
+                      <td className="hb-col-category">{getEntryCategoryName(e, expenseCategories, incomeCategories) || "—"}</td>
                       <td className="hb-col-note">{e.note || "—"}</td>
                       <td className={`hb-col-amount hb-right ${colorClass}`}>
                         <span className={`hb-sign${isTransfer ? " hb-sign-right" : ""}`}>{sign}</span>

@@ -502,6 +502,20 @@ export function getCategoryLabel(expenseCategories, incomeCategories, categoryId
   return parent.name;
 }
 
+/**
+ * Kategorie-Anzeige einer Buchung: bei Einnahmen/Ausgaben der Name der
+ * Oberkategorie aus `categoryId`, bei Transfers/Entnahmen der Zweck.
+ * Das Legacy-Feld `category` ist bei Ausgaben nicht verlässlich — Fixkosten-
+ * Buchungen setzen es gar nicht, und nach einem Umbenennen ist es veraltet.
+ */
+export function getEntryCategoryName(entry, expenseCategories, incomeCategories) {
+  if (entry?.kind === "expense" || entry?.kind === "income") {
+    const parent = findCategoryById(expenseCategories, incomeCategories, entry.categoryId);
+    if (parent) return parent.name;
+  }
+  return entry?.category || "";
+}
+
 // ============================================
 // Migration: Legacy-Kategorienamen → neue IDs
 // ============================================

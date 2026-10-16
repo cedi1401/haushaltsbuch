@@ -408,6 +408,8 @@ export default function DashboardView({
         entriesSorted={entriesSorted}
         monthLabel={monthLabel}
         monthFilter={monthFilter}
+        expenseCategories={expenseCategories}
+        incomeCategories={incomeCategories}
         startEdit={entryActions.startEdit}
         removeEntry={entryActions.removeEntry}
         onAddEntry={() => entryActions.setAddEntryOpen(true)}

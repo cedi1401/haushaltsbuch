@@ -3,6 +3,7 @@ import {
   parseAmount,
   todayISO,
   formatDateDE,
+  getEntryCategoryName,
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
 } from "../utils/hbUtils.js";
@@ -277,8 +278,15 @@ export function useEntryActions({
     else if (target?.kind === "withdrawal") prettyType = "Entnahme";
 
     const prettyAmount = target ? fmt(Number(target.amount || 0)) : "";
+    const prettyCategory = target
+      ? getEntryCategoryName(
+          target,
+          activeBook.expenseCategories || DEFAULT_EXPENSE_CATEGORIES,
+          activeBook.incomeCategories || DEFAULT_INCOME_CATEGORIES
+        )
+      : "";
     const message = target
-      ? `Eintrag wirklich löschen?\n\n${formatDateDE(target.date)} · ${prettyType} · ${target.category || ""}\nBetrag: ${prettyAmount}${target.note ? `\nNotiz: ${target.note}` : ""}`
+      ? `Eintrag wirklich löschen?\n\n${formatDateDE(target.date)} · ${prettyType} · ${prettyCategory}\nBetrag: ${prettyAmount}${target.note ? `\nNotiz: ${target.note}` : ""}`
       : "Eintrag wirklich löschen?";
 
     const ok = await confirm({
