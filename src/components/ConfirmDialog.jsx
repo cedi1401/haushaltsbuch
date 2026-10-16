@@ -73,8 +73,13 @@ function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, onCon
   }, []);
 
   useEffect(() => {
+    // Capture-Phase auf document: Die Rückfrage liegt immer zuoberst. So
+    // schließt Escape nur sie und nicht auch einen EditDialog darunter
+    // (z.B. „Buch verwalten …“ → „Buch löschen“).
     const onKey = (e) => {
       if (e.key === "Escape") {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         onCancel();
         return;
       }
@@ -90,8 +95,8 @@ function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, onCon
         }
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
   }, [onCancel]);
 
   return (
