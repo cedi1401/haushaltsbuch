@@ -2,7 +2,7 @@ import React from "react";
 import EditDialog from "../../components/EditDialog.jsx";
 import { HbDatePicker } from "../../components/HbDatePicker.jsx";
 import { IconWarning } from "../../components/icons.jsx";
-import { parseAmount } from "../../utils/hbUtils.js";
+import { parseAmount } from "../../utils/formatUtils.js";
 import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
 
 /**

@@ -1,7 +1,7 @@
 import React from "react";
 import HbTooltip from "../../components/HbTooltip.jsx";
 import { Button } from "../../components/ui.jsx";
-import { formatDateDE } from "../../utils/hbUtils.js";
+import { formatDateDE } from "../../utils/formatUtils.js";
 import { formatRateCount } from "./reserveFormat.js";
 
 /**

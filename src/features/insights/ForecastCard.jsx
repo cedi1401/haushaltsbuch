@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { useThemeColors } from "../../hooks/themeColors.js";
 import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
-import { formatCurrencyCompact, formatPercent, formatSigned } from "../../utils/hbUtils.js";
+import { formatCurrencyCompact, formatPercent, formatSigned } from "../../utils/formatUtils.js";
 import { CHART_STROKE, CHART_DASH, AXIS_FONT_SIZE, axisProps, zeroLineProps, lineCursorProps } from "../../utils/chartStyle.js";
 import { IconInbox } from "../../components/icons.jsx";
 

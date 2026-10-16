@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Button, Card, CardContent } from "../components/ui.jsx";
 import { IconBudget, IconEdit, IconInfo, IconPlus } from "../components/icons.jsx";
 import { useToast } from "../components/toastContext.js";
-import { formatPercent } from "../utils/hbUtils.js";
+import { formatPercent } from "../utils/formatUtils.js";
 import { BUDGET_STATUS_COLOR, BUDGET_STATUS_LABEL, buildBudgetRows, setCategoryBudgets } from "../utils/budgetUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { budgetMoney } from "./budget/budgetFormat.js";

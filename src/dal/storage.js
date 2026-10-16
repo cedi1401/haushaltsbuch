@@ -1,7 +1,7 @@
 // Data Access Layer — abstracts storage between Electron (SQLite) and Browser (localStorage).
 // The React app calls these functions; they route to the right backend automatically.
 
-import { formatFileStamp } from "../utils/hbUtils.js";
+import { formatFileStamp } from "../utils/formatUtils.js";
 import { BACKUP_FORMAT, BACKUP_VERSION } from "../backup.js";
 import makeLogger from "../utils/logger.js";
 

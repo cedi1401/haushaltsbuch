@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Card, CardContent, Button } from "../../components/ui.jsx";
 import { IconWallet } from "../../components/icons.jsx";
-import { formatPercent } from "../../utils/hbUtils.js";
+import { formatPercent } from "../../utils/formatUtils.js";
 import { gainClass } from "../../utils/investmentFormat.js";
 
 /**

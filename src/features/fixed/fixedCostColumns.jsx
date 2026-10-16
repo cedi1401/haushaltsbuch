@@ -1,7 +1,7 @@
 import React from "react";
 import HbTooltip from "../../components/HbTooltip.jsx";
 import { IconTag } from "../../components/icons.jsx";
-import { formatDateDE } from "../../utils/hbUtils.js";
+import { formatDateDE } from "../../utils/formatUtils.js";
 import { annualAmount, isSinkingFund, monthlyRate, turnusMonths } from "../../utils/fixedCostUtils.js";
 import { TURNUS_LABEL } from "../reserves/reserveColumns.jsx";
 

@@ -4,7 +4,7 @@
 // Benzin, Versicherung, Steuer, Reparatur) und berechnet die geglätteten
 // Monatskosten: Gesamtausgaben ÷ Anzahl Kalendermonate im Zeitraum.
 import { getEntryFinancialMonth, getFinancialMonthRange, formatYearMonth, addMonthsISO } from "./financialMonthUtils.js";
-import { todayISO } from "./hbUtils.js";
+import { todayISO } from "./formatUtils.js";
 
 /**
  * Verschiebt einen YYYY-MM-String um delta Monate.

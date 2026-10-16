@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { getEntryFinancialMonth, getFinancialMonthInfo } from "../utils/financialMonthUtils.js";
-import { formatPercent, toLocalISO } from "../utils/hbUtils.js";
+import { formatPercent, toLocalISO } from "../utils/formatUtils.js";
 import { BURNRATE_DELTA_THRESHOLD_PCT } from "../utils/constants.js";
 
 const DAY_NAMES_MON_FIRST = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];

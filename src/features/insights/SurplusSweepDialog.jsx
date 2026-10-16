@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import EditDialog from "../../components/EditDialog.jsx";
 import HbTooltip from "../../components/HbTooltip.jsx";
 import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
-import { parseAmount } from "../../utils/hbUtils.js";
+import { parseAmount } from "../../utils/formatUtils.js";
 
 // Sentinel: kein eigener Spar-Topf vorhanden → Fallback-„Überschuss"-Topf
 // wird beim Buchen angelegt.

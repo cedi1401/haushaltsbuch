@@ -3,10 +3,9 @@ import {
   parseAmount,
   todayISO,
   formatDateDE,
-  getEntryCategoryName,
-  DEFAULT_EXPENSE_CATEGORIES,
-  DEFAULT_INCOME_CATEGORIES,
-} from "../utils/hbUtils.js";
+} from "../utils/formatUtils.js";
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../utils/bookDefaults.js";
+import { getEntryCategoryName } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { getWithdrawalCategoriesForPot } from "../utils/potUtils.js";
 import { templateToDraftPatch } from "../utils/entryTemplateUtils.js";

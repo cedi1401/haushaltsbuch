@@ -2,7 +2,7 @@ import React from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent } from "../../components/ui.jsx";
 import { useThemeColors } from "../../hooks/themeColors.js";
-import { formatPercent } from "../../utils/hbUtils.js";
+import { formatPercent } from "../../utils/formatUtils.js";
 import { pieCenterFontSize } from "../../utils/chartStyle.js";
 import { gainClass } from "../../utils/investmentFormat.js";
 

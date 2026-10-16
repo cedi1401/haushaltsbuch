@@ -22,7 +22,7 @@ import { calcPotSeries, potPurposeBalances } from "../utils/potUtils.js";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import { CHART_STROKE, CHART_HEIGHT, BAR_MAX_SIZE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, zeroLineProps, lineCursorProps } from "../utils/chartStyle.js";
-import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact, formatSigned } from "../utils/hbUtils.js";
+import { formatDateDE, parseAmount, todayISO, formatCurrencyCompact, formatSigned } from "../utils/formatUtils.js";
 import { formatYearMonth, getEntryFinancialMonth } from "../utils/financialMonthUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useThemeColors } from "../hooks/themeColors.js";

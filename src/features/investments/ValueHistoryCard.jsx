@@ -13,7 +13,7 @@ import HbTooltip from "../../components/HbTooltip.jsx";
 import { ChartTooltip, ChartTooltipRow, ChartTooltipDivider } from "../../components/ChartTooltip.jsx";
 import { IconTrend } from "../../components/icons.jsx";
 import { useThemeColors } from "../../hooks/themeColors.js";
-import { formatCurrencyCompact, formatDateDE, formatPercent, formatSigned } from "../../utils/hbUtils.js";
+import { formatCurrencyCompact, formatDateDE, formatPercent, formatSigned } from "../../utils/formatUtils.js";
 import { CHART_STROKE, AMOUNT_AXIS_WIDTH, axisProps, xAxisProps, lineCursorProps } from "../../utils/chartStyle.js";
 import { formatFetchedAt, gainClass } from "../../utils/investmentFormat.js";
 import { windowSnapshots } from "../../utils/investmentUtils.js";

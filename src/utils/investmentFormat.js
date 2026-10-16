@@ -3,7 +3,7 @@
 //
 // Beträge laufen weiterhin über `fmt` aus dem CurrencyContext — hier stehen nur
 // die Formate, die es dort nicht gibt (Stückzahlen, Kurse, Zeitstempel).
-// Prozentwerte laufen über `formatPercent` aus hbUtils.js.
+// Prozentwerte laufen über `formatPercent` aus formatUtils.js.
 
 import { QUANTITY_UNIT_LABELS } from "./investmentModel.js";
 

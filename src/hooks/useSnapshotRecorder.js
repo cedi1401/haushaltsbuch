@@ -14,7 +14,7 @@
 //      schriebe — eine Endlosschleife über den Buch-Speicher.
 
 import { useEffect } from "react";
-import { todayISO } from "../utils/hbUtils.js";
+import { todayISO } from "../utils/formatUtils.js";
 import { buildSnapshot, sameSnapshot, upsertSnapshot } from "../utils/investmentUtils.js";
 
 /**

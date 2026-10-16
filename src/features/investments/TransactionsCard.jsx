@@ -3,7 +3,7 @@ import { Card, CardContent, Button, RangeTabs } from "../../components/ui.jsx";
 import DataTable from "../../components/DataTable.jsx";
 import HbTooltip from "../../components/HbTooltip.jsx";
 import { IconDelete, IconEdit, IconPlus } from "../../components/icons.jsx";
-import { formatCurrency, formatDateDE, formatSigned } from "../../utils/hbUtils.js";
+import { formatCurrency, formatDateDE, formatSigned } from "../../utils/formatUtils.js";
 import { TRANSACTION_TYPE_LABELS } from "../../utils/investmentModel.js";
 import { formatQuantity, formatQuotePrice } from "../../utils/investmentFormat.js";
 

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { EMPTY_ARRAY } from "../utils/constants.js";
-import { formatPercent } from "../utils/hbUtils.js";
+import { formatPercent } from "../utils/formatUtils.js";
 import { Card, CardContent, Button, RangeTabs } from "../components/ui.jsx";
 import { IconChevronRight, IconInbox } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";

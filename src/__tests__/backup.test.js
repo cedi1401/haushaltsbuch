@@ -5,7 +5,7 @@ import {
   SUPPORTED_BACKUP_VERSIONS,
   validateBackupObject,
 } from '../backup.js';
-import { normalizeBook } from '../utils/hbUtils.js';
+import { normalizeBook } from '../utils/bookMigration.js';
 
 function backupOf(overrides = {}) {
   return {

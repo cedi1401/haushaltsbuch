@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import EditDialog from "./EditDialog.jsx";
 import { HierarchicalCategoryPicker } from "./HierarchicalCategoryPicker.jsx";
 import { useBaseCurrency } from "../contexts/CurrencyContext.jsx";
-import { parseAmount } from "../utils/hbUtils.js";
+import { parseAmount } from "../utils/formatUtils.js";
 import { TEMPLATE_NAME_MAX } from "../utils/entryTemplateUtils.js";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 

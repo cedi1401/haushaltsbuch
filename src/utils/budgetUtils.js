@@ -1,6 +1,7 @@
 // src/utils/budgetUtils.js
 import { getEntryFinancialMonth, getFinancialMonth, getFinancialMonthInfo } from "./financialMonthUtils.js";
-import { normalizeCategoryBudgets, toLocalISO } from "./hbUtils.js";
+import { toLocalISO } from "./formatUtils.js";
+import { normalizeCategoryBudgets } from "./bookMigration.js";
 
 // ============================================
 // Budget: Status

@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { useThemeColors } from "../../hooks/themeColors.js";
 import { CHART_STROKE, BAR_TOP_RADIUS, axisProps, averageLineProps, lineCursorProps } from "../../utils/chartStyle.js";
-import { formatDateDELong, formatPercent } from "../../utils/hbUtils.js";
+import { formatDateDELong, formatPercent } from "../../utils/formatUtils.js";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { IconInbox } from "../../components/icons.jsx";
 import HbTooltip from "../../components/HbTooltip.jsx";

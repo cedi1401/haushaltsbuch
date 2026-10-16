@@ -1,9 +1,9 @@
 // src/utils/investmentModel.js
 //
 // Datenmodell des Investment-Views: Shape, Konstanten und Normalisierung.
-// Bewusst eine eigene Datei statt hbUtils.js — analog zu entryTemplateUtils.js.
+// Bewusst eine eigene Datei statt bookMigration.js — analog zu entryTemplateUtils.js.
 //
-// Importiert absichtlich NICHT aus hbUtils.js (dort läge sonst ein Zyklus,
+// Importiert absichtlich NICHT aus bookMigration.js (dort läge sonst ein Zyklus,
 // weil normalizeBook von hier importiert).
 //
 // Aufbau (siehe docs/investment-view-plan.md, Abschnitt 7):

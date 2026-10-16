@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import EditDialog from "../../components/EditDialog.jsx";
 import { Button } from "../../components/ui.jsx";
-import { parseAmount } from "../../utils/hbUtils.js";
+import { parseAmount } from "../../utils/formatUtils.js";
 import { useBaseCurrency, useFmt } from "../../contexts/CurrencyContext.jsx";
 import { budgetMoney } from "./budgetFormat.js";
 

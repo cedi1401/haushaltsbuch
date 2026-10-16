@@ -1,7 +1,8 @@
 // src/utils/financialMonthUtils.js
 // Berechnet den "finanziellen Monat" basierend auf einem konfigurierbaren Monatsbeginn-Tag.
 // Beispiel: monthStartDay=24 → Einträge ab dem 24. Mai zählen zum finanziellen Juni (24. Mai – 23. Jun = "Juni").
-import { validateMonthStartDay, toLocalISO } from "./hbUtils.js";
+import { toLocalISO } from "./formatUtils.js";
+import { validateMonthStartDay } from "./hbUtils.js";
 import { MONTHS_SHORT } from "./constants.js";
 
 /**

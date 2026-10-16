@@ -8,12 +8,12 @@ import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPi
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import { generateId } from "../utils/idUtils.js";
 import {
-  DEFAULT_EXPENSE_CATEGORIES,
-  fixedCostKind,
   formatDateDE,
   parseAmount,
   todayISO,
-} from "../utils/hbUtils.js";
+} from "../utils/formatUtils.js";
+import { DEFAULT_EXPENSE_CATEGORIES } from "../utils/bookDefaults.js";
+import { fixedCostKind } from "../utils/hbUtils.js";
 import { isSinkingFund, monthlyRate } from "../utils/fixedCostUtils.js";
 import { getFinancialMonth } from "../utils/financialMonthUtils.js";
 import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";

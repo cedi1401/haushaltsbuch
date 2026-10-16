@@ -9,7 +9,7 @@ import {
   calcGoalPrognosis,
   calcGoalArchiveStats,
 } from "../utils/goalUtils.js";
-import { formatPercent, parseAmount, todayISO } from "../utils/hbUtils.js";
+import { formatPercent, parseAmount, todayISO } from "../utils/formatUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";

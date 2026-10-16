@@ -22,11 +22,8 @@ import DashboardView from "./features/DashboardView.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import CategoryManagerDialog from "./components/CategoryManagerDialog.jsx";
 
-import {
-  DEFAULT_EXPENSE_CATEGORIES,
-  DEFAULT_INCOME_CATEGORIES,
-  sumAmounts,
-} from "./utils/hbUtils.js";
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./utils/bookDefaults.js";
+import { sumAmounts } from "./utils/hbUtils.js";
 import { calcExpenseByHierarchy, calcIncomeByHierarchy } from "./utils/budgetUtils.js";
 import { EMPTY_ARRAY, MONTHS_LONG, MONTHS_SHORT } from "./utils/constants.js";
 import { CurrencyContext } from "./contexts/CurrencyContext.jsx";

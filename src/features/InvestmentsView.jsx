@@ -15,7 +15,7 @@ import {
 } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
-import { formatDateDE, formatPercent, formatSigned } from "../utils/hbUtils.js";
+import { formatDateDE, formatPercent, formatSigned } from "../utils/formatUtils.js";
 import {
   emptyInvestments,
   GRAMS_PER_TROY_OUNCE,

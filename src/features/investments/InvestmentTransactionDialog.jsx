@@ -5,7 +5,7 @@ import { HbDatePicker } from "../../components/HbDatePicker.jsx";
 import { IconSearch, IconClose, IconCheck } from "../../components/icons.jsx";
 import { useClickOutside } from "../../hooks/useClickOutside.js";
 import { fetchQuote, marketDataAvailable, searchSymbols } from "../../dal/marketdata.js";
-import { formatCurrency, formatDateDE, parseAmount, todayISO } from "../../utils/hbUtils.js";
+import { formatCurrency, formatDateDE, parseAmount, todayISO } from "../../utils/formatUtils.js";
 import {
   ASSET_CLASSES,
   ASSET_CLASS_LABELS,

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import { IconEdit, IconDelete, IconInbox, IconPlus } from "../components/icons.jsx";
-import { formatDateDE, getEntryCategoryName } from "../utils/hbUtils.js";
+import { formatDateDE } from "../utils/formatUtils.js";
+import { getEntryCategoryName } from "../utils/hbUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
 

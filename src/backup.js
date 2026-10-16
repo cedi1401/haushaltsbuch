@@ -2,7 +2,7 @@
 // Simple JSON backup/restore for the Haushaltsbuch app.
 // Import behavior is designed for FULL RESTORE (overwrite), no merging.
 
-import { formatFileStamp } from "./utils/hbUtils.js";
+import { formatFileStamp } from "./utils/formatUtils.js";
 
 function downloadJson(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });

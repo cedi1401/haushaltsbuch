@@ -9,7 +9,7 @@
 
 import { addMonthsISO, getFinancialMonth, getFinancialMonthRange } from "./financialMonthUtils.js";
 import { potPurposeBalance } from "./potUtils.js";
-import { todayISO } from "./hbUtils.js";
+import { todayISO } from "./formatUtils.js";
 
 /**
  * Zykluslänge in Monaten. 1, wenn kein Turnus gesetzt ist — dadurch sind
@@ -166,7 +166,7 @@ export function cycleAnchor(item, entries) {
   const months = turnusMonths(item);
   const faelligkeit = item?.faelligkeit || null;
 
-  // Ohne Fälligkeit gibt es kein Raster. Die Normalisierung in hbUtils schließt
+  // Ohne Fälligkeit gibt es kein Raster. Die Normalisierung in bookMigration schließt
   // diesen Halbzustand aus; der Zweig steht hier nur, damit ein manipuliertes
   // Backup keine NaN-Daten erzeugt — dann trägt ersatzweise die Zahlung selbst.
   if (!faelligkeit) {

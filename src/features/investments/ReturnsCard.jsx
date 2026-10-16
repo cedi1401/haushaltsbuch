@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardContent } from "../../components/ui.jsx";
 import { IconTrend } from "../../components/icons.jsx";
-import { formatPercent, formatSigned } from "../../utils/hbUtils.js";
+import { formatPercent, formatSigned } from "../../utils/formatUtils.js";
 import { gainClass } from "../../utils/investmentFormat.js";
 
 /**

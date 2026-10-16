@@ -1,11 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import {
-  makeDefaultBook,
-  normalizeBooks,
-  bookNeedsMigration,
-  formatCurrency,
-  todayISO,
-} from "../utils/hbUtils.js";
+import { formatCurrency, todayISO } from "../utils/formatUtils.js";
+import { makeDefaultBook } from "../utils/bookDefaults.js";
+import { normalizeBooks, bookNeedsMigration } from "../utils/bookMigration.js";
 import { generateId } from "../utils/idUtils.js";
 import { getFinancialMonth } from "../utils/financialMonthUtils.js";
 import { loadBooks, saveBooks, getSetting, setSetting, createAutoBackup } from "../dal/storage.js";

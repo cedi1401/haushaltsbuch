@@ -1,7 +1,7 @@
 import React from "react";
 import EditDialog from "../../components/EditDialog.jsx";
 import { IconInfo } from "../../components/icons.jsx";
-import { formatDateDE } from "../../utils/hbUtils.js";
+import { formatDateDE } from "../../utils/formatUtils.js";
 import { formatYearMonth } from "../../utils/financialMonthUtils.js";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 

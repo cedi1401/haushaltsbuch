@@ -3,7 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { useThemeColors } from "../../hooks/themeColors.js";
 import { IconChevronRight, IconInbox, IconWarningRounded } from "../../components/icons.jsx";
-import { formatPercent } from "../../utils/hbUtils.js";
+import { formatPercent } from "../../utils/formatUtils.js";
 import { BUDGET_STATUS_LABEL } from "../../utils/budgetUtils.js";
 import { budgetMoney } from "../budget/budgetFormat.js";
 

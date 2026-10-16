@@ -1,6 +1,6 @@
 import React from "react";
 import HbTooltip from "../../components/HbTooltip.jsx";
-import { formatDateDE, formatPercent, formatSigned } from "../../utils/hbUtils.js";
+import { formatDateDE, formatPercent, formatSigned } from "../../utils/formatUtils.js";
 import { ASSET_CLASS_LABELS } from "../../utils/investmentModel.js";
 import {
   formatFetchedAt,

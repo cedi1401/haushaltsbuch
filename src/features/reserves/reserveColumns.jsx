@@ -1,6 +1,6 @@
 import React from "react";
 import HbTooltip from "../../components/HbTooltip.jsx";
-import { formatDateDE, formatPercent } from "../../utils/hbUtils.js";
+import { formatDateDE, formatPercent } from "../../utils/formatUtils.js";
 import { IconTag } from "../../components/icons.jsx";
 import { formatRateCount } from "./reserveFormat.js";
 

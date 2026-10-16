@@ -3,7 +3,7 @@ import { Button, Card, CardContent } from "../components/ui.jsx";
 import EntryTemplateManagerDialog from "../components/EntryTemplateManagerDialog.jsx";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
-import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../utils/hbUtils.js";
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../utils/bookDefaults.js";
 import { IconPots } from "../components/icons.jsx";
 import HbSparklineHover from "../components/HbSparklineHover.jsx";
 import { generateId } from "../utils/idUtils.js";

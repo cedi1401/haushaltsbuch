@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { IconInbox } from "../../components/icons.jsx";
-import { formatPercent } from "../../utils/hbUtils.js";
+import { formatPercent } from "../../utils/formatUtils.js";
 
 function MomDelta({ momDelta, fontSize }) {
   const style = fontSize ? { fontSize } : undefined;
