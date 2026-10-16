@@ -17,6 +17,7 @@ import { IconTag, IconInfo, IconInbox } from "../components/icons.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { formatCurrencyCompact, formatPercent } from "../utils/formatUtils.js";
 import { getCategoryLabel, fixedCostKind } from "../utils/hbUtils.js";
+import { getTransferCategoryName } from "../utils/transferCategoryUtils.js";
 import { CHART_STROKE, CHART_HEIGHT, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, lineCursorProps } from "../utils/chartStyle.js";
 import { FALLBACK_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { monthlyRate, annualAmount, isSinkingFund } from "../utils/fixedCostUtils.js";
@@ -107,6 +108,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
   recurringExpenses,
   expenseCategories,
   pots = [],
+  transferCategories = [],
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
@@ -186,7 +188,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
           // Karte (D6). Die Pille ist der sichtbare Träger der Kostenregel.
           isFreeSaving: isTransfer && !isSinkingFund(r),
           categoryLabel: isTransfer
-            ? `${r.transferCategory || "Transfer"} → ${potName}`
+            ? `${getTransferCategoryName(transferCategories, r.transferCategoryId) || "Transfer"} → ${potName}`
             : getCategoryLabel(expenseCategories || [], [], r.categoryId, null),
           color: isTransfer ? themeColors.teal : (cat?.color || FALLBACK_CATEGORY_COLOR),
         };
@@ -216,7 +218,7 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
     // nicht mehr aufgehen lässt. Dass es in keine Kennzahl eingeht, sagt die Pille.
     const base = items.reduce((s, r) => s + r.amount, 0) || 1;
     return items.map((r) => ({ ...r, group: groupOf(r), pct: (r.amount / base) * 100 }));
-  }, [recurringExpenses, expenseCategories, pots, themeColors, selectedTags]);
+  }, [recurringExpenses, expenseCategories, pots, transferCategories, themeColors, selectedTags]);
 
   // Beide Summen beziehen sich auf dieselbe Menge — die sichtbaren Zeilen der
   // Liste (showInOverview plus Tag-Filter). `annualTotal` ist per Konstruktion

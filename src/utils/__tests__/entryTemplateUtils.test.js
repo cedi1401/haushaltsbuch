@@ -16,7 +16,16 @@ const CTX = {
     },
   ],
   incomeCategories: [{ id: 'cat_einnahmen', name: 'Einnahmen', subcategories: [] }],
-  transferCategories: ['Steuern', 'Ferien'],
+  // Nur die aktiven Zwecke; allTransferCategories enthält zusätzlich gelöschte.
+  transferCategories: [
+    { id: 'tcat_steuern', name: 'Steuern' },
+    { id: 'tcat_ferien', name: 'Ferien' },
+  ],
+  allTransferCategories: [
+    { id: 'tcat_steuern', name: 'Steuern' },
+    { id: 'tcat_ferien', name: 'Ferien' },
+    { id: 'tcat_alt', name: 'Auto', deleted: true },
+  ],
   pots: [{ id: 'pot_a', name: 'Rücklagen' }, { id: 'pot_b', name: 'Urlaub' }],
 };
 
@@ -49,17 +58,18 @@ describe('normalizeEntryTemplate', () => {
 
   it('drops category fields that do not belong to the kind', () => {
     const transfer = normalizeEntryTemplate({
-      name: 'A', kind: 'transfer', categoryId: 'cat_wohnen', category: 'Steuern', potId: 'pot_a',
+      name: 'A', kind: 'transfer', categoryId: 'cat_wohnen', transferCategoryId: 'tcat_steuern', potId: 'pot_a',
     });
     expect(transfer.categoryId).toBe(null);
-    expect(transfer.category).toBe('Steuern');
+    expect(transfer.transferCategoryId).toBe('tcat_steuern');
     expect(transfer.potId).toBe('pot_a');
 
     const expense = normalizeEntryTemplate({
-      name: 'A', kind: 'expense', categoryId: 'cat_wohnen', category: 'Steuern', potId: 'pot_a',
+      name: 'A', kind: 'expense', categoryId: 'cat_wohnen', transferCategoryId: 'tcat_steuern', potId: 'pot_a',
     });
     expect(expense.categoryId).toBe('cat_wohnen');
-    expect(expense.category).toBe('');
+    expect(expense.transferCategoryId).toBe(null);
+    expect(expense).not.toHaveProperty('category');
     expect(expense.potId).toBe('');
   });
 
@@ -114,18 +124,25 @@ describe('templateToDraftPatch', () => {
     expect(patch.subcategoryId).toBe(null);
   });
 
-  it('falls back to the first transfer category for an unknown purpose', () => {
+  it('keeps a valid transfer purpose', () => {
     const patch = templateToDraftPatch(
-      { kind: 'transfer', category: 'Gelöscht', potId: 'pot_b' },
+      { kind: 'transfer', transferCategoryId: 'tcat_ferien', potId: 'pot_b' },
       CTX
     );
-    expect(patch.category).toBe('Steuern');
-    expect(patch.potId).toBe('pot_b');
+    expect(patch.transferCategoryId).toBe('tcat_ferien');
+  });
+
+  it('falls back to the first transfer category for an unknown or deleted purpose', () => {
+    for (const transferCategoryId of ['tcat_weg', 'tcat_alt']) {
+      const patch = templateToDraftPatch({ kind: 'transfer', transferCategoryId, potId: 'pot_b' }, CTX);
+      expect(patch.transferCategoryId).toBe('tcat_steuern');
+      expect(patch.potId).toBe('pot_b');
+    }
   });
 
   it('falls back to the first pot when the pot was deleted', () => {
     const patch = templateToDraftPatch(
-      { kind: 'transfer', category: 'Ferien', potId: 'pot_weg' },
+      { kind: 'transfer', transferCategoryId: 'tcat_ferien', potId: 'pot_weg' },
       CTX
     );
     expect(patch.potId).toBe('pot_a');
@@ -133,7 +150,7 @@ describe('templateToDraftPatch', () => {
 
   it('prefers the current draft pot over the first pot as fallback', () => {
     const patch = templateToDraftPatch(
-      { kind: 'transfer', category: 'Ferien', potId: 'pot_weg' },
+      { kind: 'transfer', transferCategoryId: 'tcat_ferien', potId: 'pot_weg' },
       { ...CTX, fallbackPotId: 'pot_b' }
     );
     expect(patch.potId).toBe('pot_b');
@@ -160,7 +177,7 @@ describe('getTemplateIssues', () => {
   it('reports nothing for an intact template', () => {
     expect(getTemplateIssues({ kind: 'expense', categoryId: 'cat_wohnen', subcategoryId: 'sub_miete' }, CTX))
       .toEqual([]);
-    expect(getTemplateIssues({ kind: 'transfer', category: 'Steuern', potId: 'pot_a' }, CTX))
+    expect(getTemplateIssues({ kind: 'transfer', transferCategoryId: 'tcat_steuern', potId: 'pot_a' }, CTX))
       .toEqual([]);
   });
 
@@ -177,12 +194,17 @@ describe('getTemplateIssues', () => {
   });
 
   it('reports a deleted transfer purpose and a deleted pot', () => {
-    const issues = getTemplateIssues({ kind: 'transfer', category: 'Weg', potId: 'pot_weg' }, CTX);
+    const issues = getTemplateIssues({ kind: 'transfer', transferCategoryId: 'tcat_weg', potId: 'pot_weg' }, CTX);
     expect(issues).toHaveLength(2);
   });
 
+  it('names a soft-deleted transfer purpose in the warning', () => {
+    const issues = getTemplateIssues({ kind: 'transfer', transferCategoryId: 'tcat_alt', potId: 'pot_a' }, CTX);
+    expect(issues).toEqual(['Der Transfer-Zweck „Auto“ existiert nicht mehr.']);
+  });
+
   it('reports missing pots', () => {
-    const issues = getTemplateIssues({ kind: 'transfer', category: 'Steuern', potId: 'pot_a' }, { ...CTX, pots: [] });
+    const issues = getTemplateIssues({ kind: 'transfer', transferCategoryId: 'tcat_steuern', potId: 'pot_a' }, { ...CTX, pots: [] });
     expect(issues).toHaveLength(1);
     expect(issues[0]).toContain('Töpfe');
   });

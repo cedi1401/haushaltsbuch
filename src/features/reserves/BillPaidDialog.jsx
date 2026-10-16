@@ -26,6 +26,7 @@ export default function BillPaidDialog({
   open,
   item,
   potName,
+  purposeName,
   actual,
   draft,
   onDraftChange,
@@ -61,7 +62,7 @@ export default function BillPaidDialog({
         onConfirm({
           date: draft.date,
           amount,
-          category: item.transferCategory,
+          transferCategoryId: item.transferCategoryId || null,
           categoryId: null,
           subcategoryId: null,
           kind: "withdrawal",
@@ -80,7 +81,7 @@ export default function BillPaidDialog({
         {/* Topf und Zweck stehen fest — als Textzeile, nicht als gesperrtes
             Eingabefeld: es gibt nichts zu ändern, also auch nichts zu bedienen. */}
         <div className="hb-muted hb-muted--sm" style={{ marginBottom: 4 }}>
-          {item.name} · Topf: {potName || "—"} · Zweck: {item.transferCategory || "—"}
+          {item.name} · Topf: {potName || "—"} · Zweck: {purposeName || "—"}
         </div>
 
         <div className="hb-two hb-two--dialog">

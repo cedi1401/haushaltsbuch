@@ -23,6 +23,7 @@ export default function BacklogCatchUpDialog({
   open,
   item,
   potName,
+  purposeName,
   cycleStart,
   rates,
   actual,
@@ -54,7 +55,7 @@ export default function BacklogCatchUpDialog({
     >
       <div style={{ display: "grid", gap: 16 }}>
         <div className="hb-muted hb-muted--sm">
-          {item.name} · Topf: {potName || "—"} · Zweck: {item.transferCategory || "—"}
+          {item.name} · Topf: {potName || "—"} · Zweck: {purposeName || "—"}
         </div>
 
         <div>

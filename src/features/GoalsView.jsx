@@ -11,6 +11,7 @@ import {
 } from "../utils/goalUtils.js";
 import { formatPercent, parseAmount, todayISO } from "../utils/formatUtils.js";
 import { generateId } from "../utils/idUtils.js";
+import { getTransferCategoryName, getTransferCategoryOptions } from "../utils/transferCategoryUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
 import { IconGoals, IconPlus, IconCheck } from "../components/icons.jsx";
@@ -38,7 +39,7 @@ export default function GoalsView({
     targetAmount: "",
     deadline: "",
     potId: pots[0]?.id || "",
-    transferCategory: "",       // "" = Topf-Gesamtstand
+    transferCategoryId: "",     // "" = Topf-Gesamtstand
     startMode: "zero",          // "zero" | "date" | "custom"
     startDate: "",
     startAmount: "",
@@ -121,7 +122,7 @@ export default function GoalsView({
       targetAmount: "",
       deadline: "",
       potId: pots[0]?.id || "",
-      transferCategory: "",
+      transferCategoryId: "",
       startMode: "zero",
       startDate: "",
       startAmount: "",
@@ -136,7 +137,7 @@ export default function GoalsView({
       targetAmount: String(goal.targetAmount || ""),
       deadline: goal.deadline || "",
       potId: goal.potId || pots[0]?.id || "",
-      transferCategory: goal.transferCategory || "",
+      transferCategoryId: goal.transferCategoryId || "",
       startMode: goal.startMode || "zero",
       startDate: goal.startDate || "",
       startAmount: String(goal.startAmount || ""),
@@ -162,7 +163,7 @@ export default function GoalsView({
       targetAmount: numericAmount,
       deadline: draft.deadline || null,
       potId: draft.potId,
-      transferCategory: draft.transferCategory || null,
+      transferCategoryId: draft.transferCategoryId || null,
       startMode: draft.startMode,
       startDate: draft.startMode === "date" ? (draft.startDate || null) : null,
       startAmount: draft.startMode === "custom"
@@ -410,9 +411,9 @@ export default function GoalsView({
                     <h3 className="hb-goal-title">{goal.name}</h3>
                     <div className="hb-goal-badges">
                       <span className="hb-goal-badge">Topf: {getPotName(goal)}</span>
-                      {goal.transferCategory && (
+                      {goal.transferCategoryId && (
                         <span className="hb-goal-badge hb-goal-badge--accent">
-                          Zweck: {goal.transferCategory}
+                          Zweck: {getTransferCategoryName(transferCategories, goal.transferCategoryId) || "—"}
                         </span>
                       )}
                       {goal.deadline && (
@@ -554,9 +555,9 @@ export default function GoalsView({
                                 Erreicht am {formatDate(goal.completedAt)}
                               </span>
                               <span className="hb-goal-badge">Topf: {getPotName(goal)}</span>
-                              {goal.transferCategory && (
+                              {goal.transferCategoryId && (
                                 <span className="hb-goal-badge hb-goal-badge--accent">
-                                  Zweck: {goal.transferCategory}
+                                  Zweck: {getTransferCategoryName(transferCategories, goal.transferCategoryId) || "—"}
                                 </span>
                               )}
                             </div>
@@ -694,15 +695,15 @@ export default function GoalsView({
               <div className="hb-label">Transfer-Zweck (optional)</div>
               <select
                 className="hb-input"
-                value={draft.transferCategory}
-                onChange={(e) => setDraft((d) => ({ ...d, transferCategory: e.target.value }))}
+                value={draft.transferCategoryId}
+                onChange={(e) => setDraft((d) => ({ ...d, transferCategoryId: e.target.value }))}
               >
                 <option value="">Alle (Topf-Gesamtstand)</option>
-                {transferCategories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
+                {getTransferCategoryOptions(transferCategories, draft.transferCategoryId).map((opt) => (
+                  <option key={opt.id} value={opt.id}>{opt.label}</option>
                 ))}
               </select>
-              {draft.transferCategory && (
+              {draft.transferCategoryId && (
                 <div className="hb-muted" style={{ marginTop: 4 }}>
                   Nur Transfers mit diesem Zweck werden gezählt
                 </div>

@@ -153,12 +153,12 @@ function nearestGridIndex(faelligkeit, months, payment) {
 export function cycleAnchor(item, entries) {
   if (!isSinkingFund(item)) return null;
 
-  const purpose = String(item?.transferCategory ?? "").trim();
+  const purposeId = item?.transferCategoryId || null;
   let lastPayment = null;
   for (const e of entries || []) {
     if (e.kind !== "withdrawal") continue;
     if (e.potId !== item.potId) continue;
-    if (String(e.category ?? "").trim() !== purpose) continue;
+    if ((e.transferCategoryId || null) !== purposeId) continue;
     if (!e.date) continue;
     if (lastPayment === null || e.date > lastPayment) lastPayment = e.date;
   }
@@ -239,7 +239,7 @@ export function sinkingFundStatus(item, entries, opts = {}) {
   const months = turnusMonths(item);
   const rate = monthlyRate(item);
   const cycleAmount = Number(item?.amount || 0) || 0;
-  const actual = potPurposeBalance(entries, item?.potId, item?.transferCategory);
+  const actual = potPurposeBalance(entries, item?.potId, item?.transferCategoryId);
   const anchor = cycleAnchor(item, entries);
 
   // Rücklage: kein Turnus, keine Rechnung, keine Bewertung. Der Ist-Stand
@@ -317,7 +317,7 @@ export function sinkingFundStatus(item, entries, opts = {}) {
  * Ist-Stand genau dann, wenn beide übereinstimmen.
  */
 function purposeKey(item) {
-  return `${item?.potId ?? ""}\u0000${String(item?.transferCategory ?? "").trim()}`;
+  return `${item?.potId ?? ""}\u0000${item?.transferCategoryId || ""}`;
 }
 
 /**

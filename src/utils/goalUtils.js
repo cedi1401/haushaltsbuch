@@ -32,7 +32,7 @@ function resolveStartDate(goal) {
 
 /**
  * Berechnet den Fortschritt eines Sparziels
- * @param {Object} goal - Das Sparziel (potId, transferCategory, startMode, startDate, startAmount)
+ * @param {Object} goal - Das Sparziel (potId, transferCategoryId, startMode, startDate, startAmount)
  * @param {Array} entries - Alle Einträge
  * @param {Array} pots - Alle Töpfe
  * @returns {{ current: number, target: number, percent: number, remaining: number }}
@@ -54,11 +54,11 @@ export function calcGoalProgress(goal, entries, _pots) {
 
   let current = 0;
 
-  if (goal.transferCategory) {
-    // Nur Transfers mit passendem potId + category zählen
+  if (goal.transferCategoryId) {
+    // Nur Transfers mit passendem potId + Zweck zählen
     // Entnahmen werden NICHT abgezogen (sie haben keinen Zweck)
     current = sumAmounts(relevant, (e) =>
-      e.kind === "transfer" && e.potId === potId && e.category === goal.transferCategory
+      e.kind === "transfer" && e.potId === potId && e.transferCategoryId === goal.transferCategoryId
     );
   } else {
     // Topf-Gesamtstand: alle transfers rein - alle withdrawals raus
@@ -151,12 +151,12 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
   const startDate = resolveStartDate(goal);
   let relevantEntries = [];
 
-  if (goal.transferCategory) {
+  if (goal.transferCategoryId) {
     relevantEntries = (entries || []).filter(
       (e) =>
         e.kind === "transfer" &&
         e.potId === goal.potId &&
-        e.category === goal.transferCategory
+        e.transferCategoryId === goal.transferCategoryId
     );
   } else {
     relevantEntries = (entries || []).filter(
@@ -263,7 +263,7 @@ export function calcGoalArchiveStats(goal, entries) {
     (e) =>
       e.kind === "transfer" &&
       e.potId === goal.potId &&
-      (!goal.transferCategory || e.category === goal.transferCategory)
+      (!goal.transferCategoryId || e.transferCategoryId === goal.transferCategoryId)
   );
   // Nur Buchungen bis zum Abschluss berücksichtigen
   const relevant = completedAt

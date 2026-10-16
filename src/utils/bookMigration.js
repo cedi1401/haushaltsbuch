@@ -8,13 +8,16 @@ import { normalizeEntryTemplate } from "./entryTemplateUtils.js";
 import { normalizeInvestments } from "./investmentModel.js";
 import { DEFAULT_POTS, DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./bookDefaults.js";
 import { fixedCostKind, validateMonthStartDay } from "./hbUtils.js";
+import { migrateTransferCategoryIds } from "./transferCategoryMigration.js";
 
 // 3 = Fixkosten-Gruppen haben ein festes `kind` ("expense" | "transfer") und
 //     damit eine feste Spalte im Fixkosten-View (siehe migrateFixedCostKinds).
 // 4 = Einträge tragen `recurringId` — die Herkunftskennung ihrer Fixkosten-
 //     Position (siehe stampRecurringIds).
 // 5 = Bücher tragen `investments` (Depots, Assets, Transaktionen, Snapshots).
-export const CURRENT_SCHEMA_VERSION = 5;
+// 6 = Transfer-Zwecke sind Objekte mit ID, Referenzen laufen über
+//     `transferCategoryId` (siehe transferCategoryMigration.js).
+export const CURRENT_SCHEMA_VERSION = 6;
 
 /** Returns true if the book has not yet been migrated to the current schema. */
 export function bookNeedsMigration(book) {
@@ -431,20 +434,16 @@ export function normalizeBook(book) {
     });
   }
 
-  // Transfer-Kategorien hinzufügen, falls nicht vorhanden
-  if (!Array.isArray(normalized.transferCategories)) {
-    normalized.transferCategories = [];
-  } else {
-    // Bereinigung: "Allgemein" sollte NICHT in transferCategories sein
-    normalized.transferCategories = normalized.transferCategories.filter(
-      (cat) => cat !== "Allgemein"
-    );
-  }
-
   // Alle Einträge mit kind/source migrieren
   if (Array.isArray(normalized.entries)) {
     normalized.entries = normalized.entries.map(normalizeEntry);
   }
+
+  // Transfer-Zwecke: Liste als Objekte, Referenzen per ID. Braucht die
+  // normalisierten Eintrags-kinds von oben und muss vor normalizeEntryTemplate
+  // laufen, das nur noch `transferCategoryId` kennt. Idempotent, daher ohne
+  // Versions-Gate.
+  Object.assign(normalized, migrateTransferCategoryIds(normalized));
 
   // === Hierarchische Kategorie-Migration ===
   const needsCategoryMigration = !Array.isArray(normalized.expenseCategories);

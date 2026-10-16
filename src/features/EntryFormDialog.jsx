@@ -35,7 +35,7 @@ export default function EntryFormDialog({
   appliedTemplateId = null,
   onApplyTemplate,
 }) {
-  const { kind, date, amount, potId, category, note, categoryId, subcategoryId } = draft;
+  const { kind, date, amount, potId, transferCategoryId, note, categoryId, subcategoryId } = draft;
   const fmt = useFmt();
   const amountInputRef = useRef(null);
 
@@ -233,9 +233,9 @@ export default function EntryFormDialog({
               </div>
               <div className="hb-field">
                 <div className="hb-label">Transfer-Zweck</div>
-                <select className="hb-input" value={category} onChange={(e) => setField("category", e.target.value)}>
+                <select className="hb-input" value={transferCategoryId} onChange={(e) => setField("transferCategoryId", e.target.value)}>
                   {availableWithdrawalCategories.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>
               </div>
@@ -252,9 +252,9 @@ export default function EntryFormDialog({
               </div>
               <div className="hb-field">
                 <div className="hb-label">Transfer-Zweck</div>
-                <select className="hb-input" value={category} onChange={(e) => setField("category", e.target.value)}>
+                <select className="hb-input" value={transferCategoryId} onChange={(e) => setField("transferCategoryId", e.target.value)}>
                   {transferCategories.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>
                 {onOpenCategoryManager && (

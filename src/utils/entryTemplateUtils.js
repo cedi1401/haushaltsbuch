@@ -10,6 +10,7 @@
 
 import { generateId } from "./idUtils.js";
 import { FALLBACK_CATEGORY_COLOR } from "./hbPalette.js";
+import { getTransferCategoryName, validTransferCategoryId } from "./transferCategoryUtils.js";
 
 export const TEMPLATE_KINDS = ["expense", "income", "withdrawal", "transfer"];
 export const TEMPLATE_NAME_MAX = 50;
@@ -49,7 +50,10 @@ export function normalizeEntryTemplate(t) {
     categoryId: catKind && typeof t.categoryId === "string" && t.categoryId ? t.categoryId : null,
     subcategoryId:
       catKind && typeof t.subcategoryId === "string" && t.subcategoryId ? t.subcategoryId : null,
-    category: !catKind && typeof t.category === "string" ? t.category : "",
+    transferCategoryId:
+      !catKind && typeof t.transferCategoryId === "string" && t.transferCategoryId
+        ? t.transferCategoryId
+        : null,
     potId: !catKind && typeof t.potId === "string" ? t.potId : "",
     note: typeof t.note === "string" ? t.note : "",
     amount,
@@ -78,6 +82,7 @@ export function makeEntryTemplate(fields = {}) {
  * @param {object} template
  * @param {{ expenseCategories?: array, incomeCategories?: array,
  *           transferCategories?: array, pots?: array, fallbackPotId?: string }} ctx
+ *        transferCategories: nur die aktiven Zwecke (Objekte mit id)
  * @returns {object} Draft-Patch (nur gesetzte Felder)
  */
 export function templateToDraftPatch(template, ctx = {}) {
@@ -112,10 +117,9 @@ export function templateToDraftPatch(template, ctx = {}) {
         : null;
     patch.subcategoryId = sub ? sub.id : null;
   } else {
-    // Transfer-Zweck: unbekannt → erster verfügbarer (wie applyKindToDraft)
-    patch.category = transferCategories.includes(template.category)
-      ? template.category
-      : transferCategories[0] || "";
+    // Transfer-Zweck: unbekannt oder gelöscht → erster verfügbarer (wie
+    // applyKindToDraft). transferCategories enthält nur die aktiven Zwecke.
+    patch.transferCategoryId = validTransferCategoryId(transferCategories, template.transferCategoryId);
     // Topf: unbekannt → aktueller Draft-Topf, sonst erster Topf
     const fallback = pots.some((p) => p.id === fallbackPotId)
       ? fallbackPotId
@@ -129,7 +133,8 @@ export function templateToDraftPatch(template, ctx = {}) {
 /**
  * Deutsche Warntexte zu verwaisten Referenzen — für den Vorlagen-Manager.
  * @param {object} template
- * @param {object} ctx wie bei templateToDraftPatch
+ * @param {object} ctx wie bei templateToDraftPatch, optional zusätzlich
+ *        `allTransferCategories` (inkl. gelöschter) für den Namen im Warntext
  * @returns {string[]}
  */
 export function getTemplateIssues(template, ctx = {}) {
@@ -138,6 +143,7 @@ export function getTemplateIssues(template, ctx = {}) {
     expenseCategories = [],
     incomeCategories = [],
     transferCategories = [],
+    allTransferCategories = transferCategories,
     pots = [],
   } = ctx;
 
@@ -157,8 +163,14 @@ export function getTemplateIssues(template, ctx = {}) {
       issues.push("Die hinterlegte Unterkategorie existiert nicht mehr.");
     }
   } else {
-    if (template.category && !transferCategories.includes(template.category)) {
-      issues.push(`Der Transfer-Zweck „${template.category}“ existiert nicht mehr.`);
+    const tcId = template.transferCategoryId;
+    if (tcId && !transferCategories.some((c) => c.id === tcId)) {
+      const name = getTransferCategoryName(allTransferCategories, tcId);
+      issues.push(
+        name
+          ? `Der Transfer-Zweck „${name}“ existiert nicht mehr.`
+          : "Der hinterlegte Transfer-Zweck existiert nicht mehr."
+      );
     }
     if (pots.length === 0) {
       issues.push("Es gibt noch keine Töpfe — die Vorlage lässt sich nicht buchen.");

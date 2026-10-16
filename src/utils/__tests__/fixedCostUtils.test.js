@@ -101,15 +101,15 @@ const STEUERN = {
   turnus: 12,
   faelligkeit: '2027-03-15',
   potId: 'reserve',
-  transferCategory: 'Steuern',
+  transferCategoryId: 'Steuern',
 };
 
 function withdrawal(date, amount, over = {}) {
-  return { kind: 'withdrawal', date, amount, potId: 'reserve', category: 'Steuern', ...over };
+  return { kind: 'withdrawal', date, amount, potId: 'reserve', transferCategoryId: 'Steuern', ...over };
 }
 
 function transfer(date, amount, over = {}) {
-  return { kind: 'transfer', date, amount, potId: 'reserve', category: 'Steuern', ...over };
+  return { kind: 'transfer', date, amount, potId: 'reserve', transferCategoryId: 'Steuern', ...over };
 }
 
 describe('cycleAnchor', () => {
@@ -172,7 +172,7 @@ describe('cycleAnchor', () => {
   });
 
   it('ignoriert einen anderen Zweck im selben Topf', () => {
-    const anchor = cycleAnchor(STEUERN, [withdrawal('2026-05-10', 600, { category: 'Versicherung' })]);
+    const anchor = cycleAnchor(STEUERN, [withdrawal('2026-05-10', 600, { transferCategoryId: 'Versicherung' })]);
     expect(anchor.anchorSource).toBe('faelligkeit');
     expect(anchor.lastPayment).toBeNull();
   });
@@ -287,7 +287,7 @@ describe('sinkingFundStatus', () => {
     const s = sinkingFundStatus(STEUERN, [
       transfer('2026-04-01', 50),
       transfer('2026-05-01', 50),
-      transfer('2026-05-01', 999, { category: 'Versicherung' }), // anderer Zweck
+      transfer('2026-05-01', 999, { transferCategoryId: 'Versicherung' }), // anderer Zweck
       transfer('2026-05-01', 999, { potId: 'surplus' }), // anderer Topf
       withdrawal('2026-05-02', 20),
     ], opts());
@@ -367,7 +367,7 @@ describe('buildSinkingFundRows', () => {
   });
 
   it('lässt eine Einzelposition unmarkiert', () => {
-    const allein = { ...STEUERN, transferCategory: 'Versicherung' };
+    const allein = { ...STEUERN, transferCategoryId: 'Versicherung' };
     const rows = buildSinkingFundRows([klein, allein], gemeinsam, opts);
     expect(rows[1].sharedPurpose).toBe(false);
     expect(rows[1].sharedWith).toBe(0);

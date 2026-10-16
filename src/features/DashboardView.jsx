@@ -410,6 +410,7 @@ export default function DashboardView({
         monthFilter={monthFilter}
         expenseCategories={expenseCategories}
         incomeCategories={incomeCategories}
+        transferCategories={activeBook?.transferCategories || EMPTY_ARRAY}
         startEdit={entryActions.startEdit}
         removeEntry={entryActions.removeEntry}
         onAddEntry={() => entryActions.setAddEntryOpen(true)}
@@ -422,6 +423,7 @@ export default function DashboardView({
         expenseCategories={expenseCategories}
         incomeCategories={incomeCategories}
         transferCategories={indicateTransferCategories}
+        allTransferCategories={activeBook?.transferCategories || EMPTY_ARRAY}
         pots={activeBook?.pots || EMPTY_ARRAY}
         onUpdateTemplates={(next) =>
           patchActiveBook((b) => ({ ...b, entryTemplates: next }))

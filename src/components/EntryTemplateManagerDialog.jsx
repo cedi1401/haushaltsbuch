@@ -23,6 +23,7 @@ export default function EntryTemplateManagerDialog({
   expenseCategories = EMPTY_ARRAY,
   incomeCategories = EMPTY_ARRAY,
   transferCategories = EMPTY_ARRAY,
+  allTransferCategories = transferCategories,
   pots = EMPTY_ARRAY,
   onUpdateTemplates,
 }) {
@@ -51,8 +52,8 @@ export default function EntryTemplateManagerDialog({
   }
 
   const ctx = useMemo(
-    () => ({ expenseCategories, incomeCategories, transferCategories, pots }),
-    [expenseCategories, incomeCategories, transferCategories, pots]
+    () => ({ expenseCategories, incomeCategories, transferCategories, allTransferCategories, pots }),
+    [expenseCategories, incomeCategories, transferCategories, allTransferCategories, pots]
   );
 
   const trimmedSearch = search.trim();
@@ -293,6 +294,7 @@ export default function EntryTemplateManagerDialog({
         expenseCategories={expenseCategories}
         incomeCategories={incomeCategories}
         transferCategories={transferCategories}
+        allTransferCategories={allTransferCategories}
         pots={pots}
         onClose={closeForm}
         onSave={handleSaveTemplate}

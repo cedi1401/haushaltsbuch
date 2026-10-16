@@ -138,7 +138,7 @@ function categoryLabel(item, categoryById) {
   return { cat, text: sub ? `${cat.name} › ${sub.name}` : cat.name };
 }
 
-function catalog(kind, { fmt, categoryById, potNameById, groupNameById }) {
+function catalog(kind, { fmt, categoryById, potNameById, purposeNameById, groupNameById }) {
   const name = {
     id: "name",
     label: "Bezeichnung",
@@ -255,8 +255,8 @@ function catalog(kind, { fmt, categoryById, potNameById, groupNameById }) {
       id: "purpose",
       label: "Zweck",
       shrink: true,
-      sortValue: (row) => String(row.item?.transferCategory ?? "").toLowerCase(),
-      render: (row) => row.item?.transferCategory,
+      sortValue: (row) => String(purposeNameById.get(row.item?.transferCategoryId) ?? "").toLowerCase(),
+      render: (row) => purposeNameById.get(row.item?.transferCategoryId),
     },
     {
       id: "pot",
@@ -312,7 +312,7 @@ function catalog(kind, { fmt, categoryById, potNameById, groupNameById }) {
  * Spaltenkatalog einer der beiden Fixkosten-Tabellen.
  *
  * @param {"expense"|"transfer"} kind
- * @param {{ fmt: Function, categoryById: Map, potNameById: Map, groupNameById: Map }} ctx
+ * @param {{ fmt: Function, categoryById: Map, potNameById: Map, purposeNameById: Map, groupNameById: Map }} ctx
  */
 export function buildFixedCostColumns(kind, ctx) {
   const defaults = new Set(DEFAULT_COLUMNS[kind]);

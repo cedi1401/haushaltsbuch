@@ -6,8 +6,8 @@ import { buildFixedCostMonthlyData } from '../fixedCostTrendUtils.js';
 // - Rücklage (Transfer mit Turnus) → zählt, Zyklusbetrag 1200 bei turnus 12
 // - freies Sparen (ohne Turnus)    → zählt nicht
 const miete = { id: 'r-miete', name: 'Miete', kind: 'expense', amount: 1500, categoryId: 'cat-wohnen' };
-const steuern = { id: 'r-steuern', name: 'Steuern', kind: 'transfer', amount: 1200, turnus: 12, potId: 'pot-steuern', transferCategory: 'Steuern' };
-const ferien = { id: 'r-ferien', name: 'Ferien', kind: 'transfer', amount: 200, potId: 'pot-ferien', transferCategory: 'Ferien' };
+const steuern = { id: 'r-steuern', name: 'Steuern', kind: 'transfer', amount: 1200, turnus: 12, potId: 'pot-steuern', transferCategoryId: 'tcat-steuern' };
+const ferien = { id: 'r-ferien', name: 'Ferien', kind: 'transfer', amount: 200, potId: 'pot-ferien', transferCategoryId: 'tcat-ferien' };
 
 const items = [miete, steuern, ferien];
 

@@ -53,9 +53,9 @@ export function getWithdrawalCategoriesForPot(entries, potId, allCategories) {
   if (!potId || !allCategories.length) return allCategories;
   const used = new Set();
   for (const e of entries) {
-    if (e.kind === "withdrawal" && e.potId === potId && e.category) used.add(e.category);
+    if (e.kind === "withdrawal" && e.potId === potId && e.transferCategoryId) used.add(e.transferCategoryId);
   }
-  const filtered = allCategories.filter((cat) => used.has(cat));
+  const filtered = allCategories.filter((cat) => used.has(cat.id));
   return filtered.length > 0 ? filtered : allCategories;
 }
 
@@ -66,15 +66,15 @@ export function getWithdrawalCategoriesForPot(entries, potId, allCategories) {
  * Herkunft der Buchung.
  * @param {Array} entries - alle Einträge
  * @param {string} potId
- * @param {string} purpose - Zweck (entry.category)
+ * @param {string|null} purposeId - Zweck (entry.transferCategoryId); leer = ohne Zweck
  * @returns {number}
  */
-export function potPurposeBalance(entries, potId, purpose) {
-  const key = String(purpose ?? "").trim();
+export function potPurposeBalance(entries, potId, purposeId) {
+  const key = purposeId || null;
   let sum = 0;
   for (const e of entries || []) {
     if (e.potId !== potId) continue;
-    if (String(e.category ?? "").trim() !== key) continue;
+    if ((e.transferCategoryId || null) !== key) continue;
     if (e.kind === "transfer") sum += Number(e.amount || 0);
     else if (e.kind === "withdrawal") sum -= Number(e.amount || 0);
   }
@@ -83,8 +83,9 @@ export function potPurposeBalance(entries, potId, purpose) {
 
 /**
  * Alle Zweck-Netto-Stände eines Topfes in einem Durchlauf.
- * Ein Eintrag ohne category landet unter dem leeren Schlüssel "" — die
- * Anzeige-Beschriftung (z.B. „Sonstiges") ist Sache der View.
+ * Schlüssel ist die transferCategoryId. Ein Eintrag ohne Zweck landet unter dem
+ * leeren Schlüssel "" — Name und Beschriftung (z.B. „Sonstiges") sind Sache
+ * der View.
  * @param {Array} entries
  * @param {string} potId
  * @returns {Map<string, number>}
@@ -94,7 +95,7 @@ export function potPurposeBalances(entries, potId) {
   for (const e of entries || []) {
     if (e.potId !== potId) continue;
     if (e.kind !== "transfer" && e.kind !== "withdrawal") continue;
-    const key = String(e.category ?? "").trim();
+    const key = e.transferCategoryId || "";
     const prev = map.get(key) || 0;
     const amount = Number(e.amount || 0);
     map.set(key, e.kind === "transfer" ? prev + amount : prev - amount);

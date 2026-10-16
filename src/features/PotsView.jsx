@@ -19,6 +19,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { calcPotSeries, potPurposeBalances } from "../utils/potUtils.js";
+import { getTransferCategoryName } from "../utils/transferCategoryUtils.js";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import { CHART_STROKE, CHART_HEIGHT, BAR_MAX_SIZE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, zeroLineProps, lineCursorProps } from "../utils/chartStyle.js";
@@ -83,6 +84,9 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const pots = useMemo(() => activeBook?.pots || [], [activeBook?.pots]);
+  // `transferCategories` (Prop) sind nur die aktiven Zwecke für die Auswahl;
+  // Namen bestehender Buchungen kommen aus der vollen Liste inkl. gelöschter.
+  const allTransferCategories = activeBook?.transferCategories;
   const themeColors = useThemeColors();
   const [addEntryOpen, setAddEntryOpen] = useState(false);
   const [managePotsOpen, setManagePotsOpen] = useState(false);
@@ -98,7 +102,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
   const [newEntryDraft, setNewEntryDraft] = useState({
     date: "",
     amount: "",
-    category: "",
+    transferCategoryId: "",
     note: "",
   });
 
@@ -234,9 +238,11 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
   const transfersByCategory = useMemo(() => {
     if (!selectedPot) return [];
 
+    // Nach Namen zusammenfassen: ein gelöschter und ein neuer Zweck können
+    // gleich heißen und sollen im Donut ein Segment bleiben.
     const display = new Map();
-    for (const [purpose, value] of potPurposeBalances(entries, selectedPot.id)) {
-      const name = purpose || "Sonstiges";
+    for (const [purposeId, value] of potPurposeBalances(entries, selectedPot.id)) {
+      const name = getTransferCategoryName(allTransferCategories, purposeId) || "Sonstiges";
       display.set(name, (display.get(name) || 0) + value);
     }
 
@@ -245,7 +251,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
       if (value > 0) result.push({ name, value });
     }
     return result.toSorted((a, b) => b.value - a.value);
-  }, [entries, selectedPot]);
+  }, [entries, selectedPot, allTransferCategories]);
 
   // Zusammensetzung des Topfs: 100-%-Stapelbalken + Rangliste.
   //
@@ -410,7 +416,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
               setNewEntryDraft({
                 date: todayISO(),
                 amount: "",
-                category: transferCategories[0] || "",
+                transferCategoryId: transferCategories[0]?.id || "",
                 note: "",
               });
               setAddEntryOpen(true);
@@ -487,7 +493,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
                   setNewEntryDraft({
                     date: todayISO(),
                     amount: "",
-                    category: transferCategories[0] || "",
+                    transferCategoryId: transferCategories[0]?.id || "",
                     note: "",
                   });
                   setAddEntryOpen(true);
@@ -809,7 +815,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
                         <tr key={e.id}>
                           <td className="hb-col-date">{formatDateDE(e.date)}</td>
                           <td className="hb-col-type">{isTransfer ? "Einzahlung" : "Entnahme"}</td>
-                          <td className="hb-col-category">{e.category || "—"}</td>
+                          <td className="hb-col-category">{getTransferCategoryName(allTransferCategories, e.transferCategoryId) || "—"}</td>
                           <td className="hb-col-note">{e.note || "—"}</td>
                           <td className={`hb-col-amount hb-right ${isTransfer ? "hb-ok" : "hb-bad"}`}>
                             {isTransfer ? "+" : "−"}{fmt(Number(e.amount || 0))}
@@ -883,7 +889,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
             id: generateId("entry"),
             date: newEntryDraft.date,
             amount: numericAmount,
-            category: newEntryDraft.category,
+            transferCategoryId: newEntryDraft.transferCategoryId,
             kind: "transfer",
             potId: selectedPot.id,
             note: newEntryDraft.note.trim(),
@@ -896,7 +902,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
           newEntryDraft.date &&
           newEntryDraft.amount &&
           parseAmount(newEntryDraft.amount) > 0 &&
-          Boolean(newEntryDraft.category)
+          Boolean(newEntryDraft.transferCategoryId)
         }
         saveLabel="Hinzufügen"
         size="medium"
@@ -933,12 +939,12 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
             <div className="hb-label">Transfer-Zweck</div>
             <select
               className="hb-input"
-              value={newEntryDraft.category}
-              onChange={(e) => setNewEntryDraft((d) => ({ ...d, category: e.target.value }))}
+              value={newEntryDraft.transferCategoryId}
+              onChange={(e) => setNewEntryDraft((d) => ({ ...d, transferCategoryId: e.target.value }))}
             >
               {transferCategories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
                 </option>
               ))}
             </select>

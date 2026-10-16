@@ -3,6 +3,7 @@ import EditDialog from "../components/EditDialog.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import { EntryKindSelector } from "../components/EntryKindSelector.jsx";
+import { getTransferCategoryOptions } from "../utils/transferCategoryUtils.js";
 
 export default function EditEntryDialog({
   open,
@@ -15,8 +16,10 @@ export default function EditEntryDialog({
   expenseCategories,
   incomeCategories,
   transferCategories,
+  allTransferCategories,
   withdrawalCategories,
 }) {
+  const selectedPurposeId = editDraft.transferCategoryId || "";
   return (
     <EditDialog
       open={open}
@@ -126,11 +129,11 @@ export default function EditEntryDialog({
                   <div className="hb-label">Transfer-Zweck</div>
                   <select
                     className="hb-input"
-                    value={editDraft.category || ""}
-                    onChange={(e) => setEditDraft((d) => ({ ...d, category: e.target.value }))}
+                    value={selectedPurposeId}
+                    onChange={(e) => setEditDraft((d) => ({ ...d, transferCategoryId: e.target.value }))}
                   >
-                    {withdrawalCategories.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
+                    {getTransferCategoryOptions(allTransferCategories, selectedPurposeId, withdrawalCategories).map((opt) => (
+                      <option key={opt.id} value={opt.id}>{opt.label}</option>
                     ))}
                   </select>
                 </div>
@@ -153,11 +156,11 @@ export default function EditEntryDialog({
                   <div className="hb-label">Transfer-Zweck</div>
                   <select
                     className="hb-input"
-                    value={editDraft.category || ""}
-                    onChange={(e) => setEditDraft((d) => ({ ...d, category: e.target.value }))}
+                    value={selectedPurposeId}
+                    onChange={(e) => setEditDraft((d) => ({ ...d, transferCategoryId: e.target.value }))}
                   >
-                    {transferCategories.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
+                    {getTransferCategoryOptions(allTransferCategories, selectedPurposeId, transferCategories).map((opt) => (
+                      <option key={opt.id} value={opt.id}>{opt.label}</option>
                     ))}
                   </select>
                 </div>

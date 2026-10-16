@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { potPurposeBalance, potPurposeBalances } from '../potUtils.js';
+// Zweck-IDs sind hier der Lesbarkeit halber sprechend ('Versicherung' statt tcat_…).
 
-const transfer = (potId, category, amount, extra = {}) => ({
-  kind: 'transfer', date: '2026-01-15', potId, category, amount, ...extra,
+const transfer = (potId, transferCategoryId, amount, extra = {}) => ({
+  kind: 'transfer', date: '2026-01-15', potId, transferCategoryId, amount, ...extra,
 });
-const withdrawal = (potId, category, amount) => ({
-  kind: 'withdrawal', date: '2026-02-15', potId, category, amount,
+const withdrawal = (potId, transferCategoryId, amount) => ({
+  kind: 'withdrawal', date: '2026-02-15', potId, transferCategoryId, amount,
 });
 
 describe('potPurposeBalance', () => {
@@ -54,7 +55,7 @@ describe('potPurposeBalance', () => {
 
   it('ignoriert Einträge, die weder Transfer noch Entnahme sind', () => {
     const entries = [
-      { kind: 'expense', date: '2026-01-10', potId: 'pot-a', category: 'Versicherung', amount: 500 },
+      { kind: 'expense', date: '2026-01-10', potId: 'pot-a', transferCategoryId: 'Versicherung', amount: 500 },
       transfer('pot-a', 'Versicherung', 100),
     ];
     expect(potPurposeBalance(entries, 'pot-a', 'Versicherung')).toBe(100);

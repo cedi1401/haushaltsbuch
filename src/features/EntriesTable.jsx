@@ -13,6 +13,7 @@ export default function EntriesTable({
   monthLabel,
   expenseCategories,
   incomeCategories,
+  transferCategories,
   startEdit,
   removeEntry,
   onAddEntry,
@@ -136,7 +137,7 @@ export default function EntriesTable({
                       <td className="hb-col-date">{formatDateDE(e.date)}</td>
                       <td className="hb-col-type">{typeLabel}</td>
                       <td className="hb-col-category">
-                        {getEntryCategoryName(e, expenseCategories, incomeCategories) || "—"}
+                        {getEntryCategoryName(e, expenseCategories, incomeCategories, transferCategories) || "—"}
                       </td>
                       <td className="hb-col-note">{e.note || "—"}</td>
                       <td className={`hb-col-amount hb-right ${colorClass}`}>

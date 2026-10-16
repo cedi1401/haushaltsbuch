@@ -24,6 +24,7 @@ import CategoryManagerDialog from "./components/CategoryManagerDialog.jsx";
 
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./utils/bookDefaults.js";
 import { sumAmounts } from "./utils/hbUtils.js";
+import { getActiveTransferCategories } from "./utils/transferCategoryUtils.js";
 import { calcExpenseByHierarchy, calcIncomeByHierarchy } from "./utils/budgetUtils.js";
 import { EMPTY_ARRAY, MONTHS_LONG, MONTHS_SHORT } from "./utils/constants.js";
 import { CurrencyContext } from "./contexts/CurrencyContext.jsx";
@@ -84,7 +85,13 @@ export default function HaushaltsbuchApp() {
   const update = useUpdateManager();
 
   const entries = activeBook?.entries || EMPTY_ARRAY;
-  const indicateTransferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
+  // Volle Liste inkl. gelöschter Zwecke (für Namen bestehender Buchungen) und
+  // die aktiven Zwecke (für Auswahllisten und Standardwerte).
+  const allTransferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
+  const indicateTransferCategories = useMemo(
+    () => getActiveTransferCategories(allTransferCategories),
+    [allTransferCategories]
+  );
 
   const entryActions = useEntryActions({
     activeBook,
@@ -98,39 +105,6 @@ export default function HaushaltsbuchApp() {
     const rect = e.currentTarget.getBoundingClientRect();
     setNavAnchor({ top: rect.bottom + 6, left: rect.left });
     setNavOpen(true);
-  }
-
-  // Transfer-Zwecke werden überall als Klartext referenziert (Buchungen, Fixkosten,
-  // Sparziele). Ein Umbenennen muss diese Referenzen im selben Patch mitziehen,
-  // sonst zeigen bestehende Daten auf einen Zweck, den es nicht mehr gibt.
-  function renameTransferCategory(oldName, newName) {
-    if (!oldName || !newName || oldName === newName) return;
-    patchActiveBook((b) => ({
-      ...b,
-      transferCategories: (b.transferCategories || []).map((c) =>
-        c === oldName ? newName : c
-      ),
-      entries: (b.entries || []).map((e) =>
-        (e.kind === "transfer" || e.kind === "withdrawal") && e.category === oldName
-          ? { ...e, category: newName }
-          : e
-      ),
-      recurringExpenses: (b.recurringExpenses || []).map((r) =>
-        r.kind === "transfer" && r.transferCategory === oldName
-          ? { ...r, transferCategory: newName }
-          : r
-      ),
-      goals: (b.goals || []).map((g) =>
-        g.transferCategory === oldName ? { ...g, transferCategory: newName } : g
-      ),
-      // Ohne das biegt der Fallback in templateToDraftPatch still auf einen
-      // falschen Zweck um — schlimmer als ein sichtbarer Fehler.
-      entryTemplates: (b.entryTemplates || []).map((t) =>
-        (t.kind === "transfer" || t.kind === "withdrawal") && t.category === oldName
-          ? { ...t, category: newName }
-          : t
-      ),
-    }));
   }
 
   function handleCreateBook(name) {
@@ -330,6 +304,7 @@ export default function HaushaltsbuchApp() {
                 expenseCategories={activeBook?.expenseCategories || []}
                 monthStartDay={monthStartDay}
                 pots={activeBook?.pots || []}
+                transferCategories={allTransferCategories}
               />
             ) : view === "pots" ? (
               <PotsView
@@ -422,6 +397,7 @@ export default function HaushaltsbuchApp() {
             expenseCategories={activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES}
             incomeCategories={activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES}
             transferCategories={indicateTransferCategories}
+            allTransferCategories={allTransferCategories}
             withdrawalCategories={entryActions.editWithdrawalCategories}
           />
 
@@ -430,7 +406,7 @@ export default function HaushaltsbuchApp() {
             onClose={() => setCategoryManagerOpen(false)}
             expenseCategories={expenseCategories}
             incomeCategories={incomeCategories}
-            transferCategories={indicateTransferCategories}
+            transferCategories={allTransferCategories}
             onUpdateExpenseCategories={(newCats) =>
               patchActiveBook((b) => ({ ...b, expenseCategories: newCats }))
             }
@@ -440,7 +416,6 @@ export default function HaushaltsbuchApp() {
             onUpdateTransferCategories={(newCats) =>
               patchActiveBook((b) => ({ ...b, transferCategories: newCats }))
             }
-            onRenameTransferCategory={renameTransferCategory}
           />
 
           <SettingsDialog

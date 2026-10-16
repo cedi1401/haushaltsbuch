@@ -88,7 +88,7 @@ function YoYTooltip({ active, payload, label, fmt, avgColor }) {
   );
 }
 
-export default function TrendView({ entries = [], recurringExpenses = [], expenseCategories = [], monthStartDay = 1, pots = [] }) {
+export default function TrendView({ entries = [], recurringExpenses = [], expenseCategories = [], monthStartDay = 1, pots = [], transferCategories = [] }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const fmtTick = (v) => formatCurrencyCompact(v, baseCurrency);
@@ -573,6 +573,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
             recurringExpenses={recurringExpenses}
             expenseCategories={expenseCategories}
             pots={pots}
+            transferCategories={transferCategories}
           />
         </>
       )}

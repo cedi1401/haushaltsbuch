@@ -9,6 +9,7 @@ import { getEntryCategoryName } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { getWithdrawalCategoriesForPot } from "../utils/potUtils.js";
 import { templateToDraftPatch } from "../utils/entryTemplateUtils.js";
+import { validTransferCategoryId } from "../utils/transferCategoryUtils.js";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 
 const INITIAL_ADD_DRAFT = {
@@ -21,6 +22,7 @@ const INITIAL_ADD_DRAFT = {
   date: "",
   categoryId: null,
   subcategoryId: null,
+  transferCategoryId: "",
 };
 
 const INITIAL_EDIT_DRAFT = {
@@ -31,6 +33,7 @@ const INITIAL_EDIT_DRAFT = {
   category: "Allgemein",
   categoryId: null,
   subcategoryId: null,
+  transferCategoryId: "",
   note: "",
   amount: "",
 };
@@ -47,13 +50,14 @@ const TEMPLATE_INVALIDATING_FIELDS = new Set([
   "categoryId",
   "subcategoryId",
   "potId",
-  "category",
+  "transferCategoryId",
 ]);
 
 // Computes all draft fields that depend on the entry `kind`. Done in the event
 // path (see setAddField) rather than via cascading effects, so switching kind
-// updates categoryId, subcategoryId and the legacy `category` string in a single
-// state update — no Effect → setState → Effect chain.
+// updates categoryId, subcategoryId, transferCategoryId and the legacy
+// `category` string in a single state update — no Effect → setState → Effect chain.
+// `transferCategories` sind nur die aktiven Zwecke (Objekte mit id).
 function applyKindToDraft(draft, kind, transferCategories) {
   const next = { ...draft, kind };
   if (kind === "expense") {
@@ -65,12 +69,10 @@ function applyKindToDraft(draft, kind, transferCategories) {
     next.subcategoryId = null;
     if (next.category !== "Allgemein") next.category = "Allgemein";
   } else {
-    // transfer | withdrawal — legacy `category` must be a valid transfer category
+    // transfer | withdrawal — transferCategoryId must be a valid transfer category
     next.categoryId = null;
     next.subcategoryId = null;
-    if (!transferCategories.includes(next.category)) {
-      next.category = transferCategories[0] || "";
-    }
+    next.transferCategoryId = validTransferCategoryId(transferCategories, next.transferCategoryId);
   }
   return next;
 }
@@ -137,9 +139,7 @@ export function useEntryActions({
       // frisch rechnen, sonst steht im <select> ein Wert ohne passende Option.
       if (patch.kind === "withdrawal") {
         const allowed = getWithdrawalCategoriesForPot(entries, patch.potId, indicateTransferCategories);
-        if (!allowed.includes(patch.category)) {
-          patch.category = allowed[0] || "";
-        }
+        patch.transferCategoryId = validTransferCategoryId(allowed, patch.transferCategoryId);
       }
 
       return { ...base, ...patch };
@@ -160,7 +160,7 @@ export function useEntryActions({
     });
   }
 
-  // Re-validate the legacy `category` when the active book or its transfer
+  // Re-validate transferCategoryId / legacy `category` when the active book or its transfer
   // categories change. The kind-change path is handled synchronously in
   // setAddField (applyKindToDraft) — this only reacts to external data. Derived
   // from the prop transition rather than via an Effect (avoids set-state-in-effect).
@@ -174,11 +174,10 @@ export function useEntryActions({
     setPrevBookId(bookId);
     setPrevTransferCats(indicateTransferCategories);
     setAddDraft((d) => {
-      const { kind, category } = d;
+      const { kind, category, transferCategoryId } = d;
       if (kind === "transfer" || kind === "withdrawal") {
-        if (!indicateTransferCategories.includes(category)) {
-          return { ...d, category: indicateTransferCategories[0] || "" };
-        }
+        const valid = validTransferCategoryId(indicateTransferCategories, transferCategoryId);
+        if (valid !== transferCategoryId) return { ...d, transferCategoryId: valid };
       } else if (kind === "income") {
         if (category !== "Allgemein") return { ...d, category: "Allgemein" };
       }
@@ -205,7 +204,7 @@ export function useEntryActions({
   }
 
   function buildEntry(draft, book) {
-    const { kind, categoryId, subcategoryId, category, amount, note, date, potId } = draft;
+    const { kind, categoryId, subcategoryId, category, transferCategoryId, amount, note, date, potId } = draft;
     let legacyCategory = category;
     if (kind === "expense") {
       legacyCategory =
@@ -215,19 +214,25 @@ export function useEntryActions({
         (book.incomeCategories || DEFAULT_INCOME_CATEGORIES).find((c) => c.id === categoryId)?.name || "";
     }
 
+    const isTransferKind = kind === "transfer" || kind === "withdrawal";
     const entry = {
       id: generateId("entry"),
       amount: parseAmount(amount),
-      category: legacyCategory,
       kind,
       note: String(note || "").trim(),
       date,
       categoryId: kind === "expense" || kind === "income" ? categoryId : null,
       subcategoryId: kind === "expense" || kind === "income" ? subcategoryId : null,
     };
+    // Legacy-Textfeld nur bei Einnahmen/Ausgaben; Transfers referenzieren ihren
+    // Zweck ausschließlich über die ID.
+    if (!isTransferKind) entry.category = legacyCategory;
 
     if (kind === "expense") entry.source = "month";
-    if (kind === "transfer" || kind === "withdrawal") entry.potId = potId;
+    if (isTransferKind) {
+      entry.potId = potId;
+      entry.transferCategoryId = transferCategoryId || null;
+    }
 
     return entry;
   }
@@ -281,7 +286,8 @@ export function useEntryActions({
       ? getEntryCategoryName(
           target,
           activeBook.expenseCategories || DEFAULT_EXPENSE_CATEGORIES,
-          activeBook.incomeCategories || DEFAULT_INCOME_CATEGORIES
+          activeBook.incomeCategories || DEFAULT_INCOME_CATEGORIES,
+          activeBook.transferCategories
         )
       : "";
     const message = target
@@ -308,18 +314,19 @@ export function useEntryActions({
 
   function startEdit(entry) {
     setEditingId(entry.id);
-    const fallbackCategory =
-      entry.kind === "withdrawal"
-        ? entry.category || indicateTransferCategories[0] || ""
-        : entry.category || "Allgemein";
+    const isTransferKind = entry.kind === "transfer" || entry.kind === "withdrawal";
     setEditDraft({
       date: entry.date || todayISO(),
       kind: entry.kind || "expense",
       source: entry.source || "month",
       potId: entry.potId || "reserve",
-      category: fallbackCategory,
+      category: isTransferKind ? "Allgemein" : entry.category || "Allgemein",
       categoryId: entry.categoryId ?? null,
       subcategoryId: entry.subcategoryId ?? null,
+      // Auch ein gelöschter Zweck bleibt erhalten — der Dialog zeigt ihn als
+      // eigene Option. Ohne Zweck (z.B. Monatsüberschuss) oder beim späteren
+      // Wechsel auf Transfer: erster aktiver.
+      transferCategoryId: entry.transferCategoryId || indicateTransferCategories[0]?.id || "",
       note: entry.note || "",
       amount: String(entry.amount ?? ""),
     });
@@ -354,6 +361,7 @@ export function useEntryActions({
             )?.name || editDraft.category;
         }
 
+        const isTransferKind = editDraft.kind === "transfer" || editDraft.kind === "withdrawal";
         const updated = {
           ...e,
           date: editDraft.date,
@@ -377,10 +385,13 @@ export function useEntryActions({
           delete updated.source;
         }
 
-        if (editDraft.kind === "transfer" || editDraft.kind === "withdrawal") {
+        if (isTransferKind) {
           updated.potId = editDraft.potId;
+          updated.transferCategoryId = editDraft.transferCategoryId || null;
+          delete updated.category;
         } else {
           delete updated.potId;
+          delete updated.transferCategoryId;
         }
 
         return updated;
@@ -392,12 +403,12 @@ export function useEntryActions({
   }
 
   const canAddEntry = useMemo(() => {
-    const { date, amount, kind, category, potId } = addDraft;
+    const { date, amount, kind, transferCategoryId, potId } = addDraft;
     if (!date) return false;
     const n = parseAmount(amount);
     if (!Number.isFinite(n) || n <= 0) return false;
-    if (kind === "transfer" && (!potId || !category)) return false;
-    if (kind === "withdrawal" && (!potId || !category)) return false;
+    if (kind === "transfer" && (!potId || !transferCategoryId)) return false;
+    if (kind === "withdrawal" && (!potId || !transferCategoryId)) return false;
     return true;
   }, [addDraft]);
 
@@ -408,7 +419,7 @@ export function useEntryActions({
     if (!editDraft.kind) return false;
     if (
       (editDraft.kind === "transfer" || editDraft.kind === "withdrawal") &&
-      !editDraft.category
+      !editDraft.transferCategoryId
     )
       return false;
     return true;

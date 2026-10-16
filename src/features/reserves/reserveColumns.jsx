@@ -102,7 +102,7 @@ function statusTooltip(row, fmt) {
  *
  * Privat: Nach außen gehen die beiden fertig zugeschnittenen Sätze unten.
  */
-function reserveColumnCatalog({ fmt, potNameById, groupNameById }) {
+function reserveColumnCatalog({ fmt, potNameById, purposeNameById, groupNameById }) {
   return [
     {
       id: "name",
@@ -122,8 +122,8 @@ function reserveColumnCatalog({ fmt, potNameById, groupNameById }) {
     {
       id: "purpose",
       label: "Zweck",
-      sortValue: (row) => String(row.item?.transferCategory ?? "").toLowerCase(),
-      render: (row) => row.item?.transferCategory,
+      sortValue: (row) => String(purposeNameById.get(row.item?.transferCategoryId) ?? "").toLowerCase(),
+      render: (row) => purposeNameById.get(row.item?.transferCategoryId),
     },
     {
       id: "pot",
@@ -294,7 +294,7 @@ function reserveColumnCatalog({ fmt, potNameById, groupNameById }) {
 /**
  * Der Spaltenkatalog der Rückstellungs-Tabelle — der volle Satz.
  *
- * @param {{ fmt: Function, potNameById: Map, groupNameById: Map }} ctx
+ * @param {{ fmt: Function, potNameById: Map, purposeNameById: Map, groupNameById: Map }} ctx
  */
 export function buildReserveColumns(ctx) {
   const defaults = new Set(DEFAULT_RESERVE_COLUMNS);

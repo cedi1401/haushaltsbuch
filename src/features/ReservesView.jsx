@@ -46,6 +46,7 @@ export default function ReservesView({
   const recurringExpenses = activeBook?.recurringExpenses || EMPTY_ARRAY;
   const pots = activeBook?.pots || EMPTY_ARRAY;
   const fixedCostGroups = activeBook?.fixedCostGroups || EMPTY_ARRAY;
+  const transferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
 
   const items = useMemo(
     () => recurringExpenses.filter((r) => fixedCostKind(r) === "transfer"),
@@ -83,14 +84,20 @@ export default function ReservesView({
   const provisionRows = useMemo(() => rows.filter((r) => r.isSinkingFund), [rows]);
 
   const potById = useMemo(() => new Map(pots.map((p) => [p.id, p])), [pots]);
+  // Inklusive gelöschter Zwecke: eine Position darf noch auf einen zeigen.
+  const purposeNameById = useMemo(
+    () => new Map(transferCategories.map((c) => [c.id, c.name])),
+    [transferCategories]
+  );
 
   const columnCtx = useMemo(
     () => ({
       fmt,
       potNameById: new Map(pots.map((p) => [p.id, p.name])),
+      purposeNameById,
       groupNameById: new Map(fixedCostGroups.map((g) => [g.id, g.name])),
     }),
-    [fmt, pots, fixedCostGroups]
+    [fmt, pots, purposeNameById, fixedCostGroups]
   );
 
   const columns = useMemo(() => buildReserveColumns(columnCtx), [columnCtx]);
@@ -145,13 +152,14 @@ export default function ReservesView({
         hiddenColumns={hiddenColumns}
         fmt={fmt}
         pot={potById.get(row.item?.potId)}
+        purposeName={purposeNameById.get(row.item?.transferCategoryId) ?? ""}
         canCatchUp={row.elapsed > 0 && !bookedRecurringIds.has(row.item?.id)}
         onBillPaid={openBillPaid}
         onCatchUp={openCatchUp}
         onEdit={onNavigateToFixed}
       />
     ),
-    [fmt, potById, bookedRecurringIds, openBillPaid, openCatchUp, onNavigateToFixed]
+    [fmt, potById, purposeNameById, bookedRecurringIds, openBillPaid, openCatchUp, onNavigateToFixed]
   );
 
   // Die Raten werden hier berechnet und dem Dialog fertig gereicht: dieselbe
@@ -188,7 +196,7 @@ export default function ReservesView({
       id: generateId("entry"),
       date: r.date,
       amount: r.amount,
-      category: item.transferCategory,
+      transferCategoryId: item.transferCategoryId || null,
       categoryId: null,
       subcategoryId: null,
       kind: "transfer",
@@ -285,6 +293,7 @@ export default function ReservesView({
         open={Boolean(billTarget)}
         item={billTarget?.item}
         potName={potById.get(billTarget?.item?.potId)?.name}
+        purposeName={purposeNameById.get(billTarget?.item?.transferCategoryId)}
         actual={billTarget?.actual ?? 0}
         draft={billDraft}
         onDraftChange={setBillDraft}
@@ -296,6 +305,7 @@ export default function ReservesView({
         open={Boolean(catchUpTarget)}
         item={catchUpTarget?.item}
         potName={potById.get(catchUpTarget?.item?.potId)?.name}
+        purposeName={purposeNameById.get(catchUpTarget?.item?.transferCategoryId)}
         cycleStart={catchUpTarget?.cycleStart}
         rates={catchUpRates}
         actual={catchUpTarget?.actual ?? 0}

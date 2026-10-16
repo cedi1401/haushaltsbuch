@@ -5,6 +5,7 @@ import { useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { parseAmount } from "../utils/formatUtils.js";
 import { TEMPLATE_NAME_MAX } from "../utils/entryTemplateUtils.js";
 import { EMPTY_ARRAY } from "../utils/constants.js";
+import { getTransferCategoryOptions } from "../utils/transferCategoryUtils.js";
 
 const EMPTY_DRAFT = {
   name: "",
@@ -13,7 +14,7 @@ const EMPTY_DRAFT = {
   note: "",
   categoryId: null,
   subcategoryId: null,
-  category: "",
+  transferCategoryId: "",
   potId: "",
 };
 
@@ -21,7 +22,7 @@ function draftFromTemplate(template, { transferCategories, pots }) {
   if (!template) {
     return {
       ...EMPTY_DRAFT,
-      category: transferCategories[0] || "",
+      transferCategoryId: transferCategories[0]?.id || "",
       potId: pots[0]?.id || "",
     };
   }
@@ -32,7 +33,7 @@ function draftFromTemplate(template, { transferCategories, pots }) {
     note: template.note || "",
     categoryId: template.categoryId || null,
     subcategoryId: template.subcategoryId || null,
-    category: template.category || transferCategories[0] || "",
+    transferCategoryId: template.transferCategoryId || transferCategories[0]?.id || "",
     potId: template.potId || pots[0]?.id || "",
   };
 }
@@ -50,6 +51,7 @@ export default function EntryTemplateFormDialog({
   expenseCategories = EMPTY_ARRAY,
   incomeCategories = EMPTY_ARRAY,
   transferCategories = EMPTY_ARRAY,
+  allTransferCategories = transferCategories,
   pots = EMPTY_ARRAY,
   onClose,
   onSave,
@@ -91,7 +93,7 @@ export default function EntryTemplateFormDialog({
       if (!Number.isFinite(n) || n <= 0) return false;
     }
     // Eine Transfer-Vorlage ohne Topf oder Zweck wäre wertlos
-    if (isTransferKind && (!draft.potId || !draft.category)) return false;
+    if (isTransferKind && (!draft.potId || !draft.transferCategoryId)) return false;
     return true;
   }, [draft, nameError, isTransferKind]);
 
@@ -107,7 +109,7 @@ export default function EntryTemplateFormDialog({
       note: draft.note.trim(),
       categoryId: draft.categoryId,
       subcategoryId: draft.subcategoryId,
-      category: draft.category,
+      transferCategoryId: draft.transferCategoryId,
       potId: draft.potId,
     });
   }
@@ -119,7 +121,10 @@ export default function EntryTemplateFormDialog({
       // Kategoriefelder und Transferfelder schließen sich aus
       categoryId: kind === "income" ? "cat_einnahmen" : null,
       subcategoryId: null,
-      category: kind === "transfer" || kind === "withdrawal" ? d.category || transferCategories[0] || "" : "",
+      transferCategoryId:
+        kind === "transfer" || kind === "withdrawal"
+          ? d.transferCategoryId || transferCategories[0]?.id || ""
+          : "",
       potId: kind === "transfer" || kind === "withdrawal" ? d.potId || pots[0]?.id || "" : "",
     }));
   }
@@ -209,12 +214,12 @@ export default function EntryTemplateFormDialog({
               <div className="hb-label">Transfer-Zweck</div>
               <select
                 className="hb-input"
-                value={draft.category}
-                onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}
+                value={draft.transferCategoryId}
+                onChange={(e) => setDraft((d) => ({ ...d, transferCategoryId: e.target.value }))}
               >
                 {transferCategories.length === 0 && <option value="">Kein Zweck vorhanden</option>}
-                {transferCategories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
+                {getTransferCategoryOptions(allTransferCategories, draft.transferCategoryId, transferCategories).map((opt) => (
+                  <option key={opt.id} value={opt.id}>{opt.label}</option>
                 ))}
               </select>
             </div>

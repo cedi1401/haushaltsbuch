@@ -181,8 +181,20 @@ describe('normalizeBook', () => {
 
   it('removes "Allgemein" from transferCategories', () => {
     const result = normalizeBook({ id: 'b1', transferCategories: ['Allgemein', 'Steuern'] });
-    expect(result.transferCategories).not.toContain('Allgemein');
-    expect(result.transferCategories).toContain('Steuern');
+    expect(result.transferCategories.map((c) => c.name)).toEqual(['Steuern']);
+  });
+
+  it('migrates transfer purposes to ids', () => {
+    const result = normalizeBook({
+      id: 'b1',
+      schemaVersion: 5,
+      transferCategories: ['Steuern'],
+      entries: [{ id: 'e1', kind: 'transfer', potId: 'p1', category: 'Steuern', amount: 10, categoryId: null }],
+    });
+    const [steuern] = result.transferCategories;
+    expect(steuern).toEqual({ id: expect.stringMatching(/^tcat_/), name: 'Steuern' });
+    expect(result.entries[0].transferCategoryId).toBe(steuern.id);
+    expect(result.entries[0]).not.toHaveProperty('category');
   });
 
   it('leaves transferCategories empty when filtering removes all entries', () => {

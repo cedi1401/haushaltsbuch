@@ -35,8 +35,14 @@ describe('getEntryCategoryName', () => {
     expect(getEntryCategoryName(entry, expense, income)).toBe('Lebensmittel');
   });
 
-  it('zeigt bei Transfers und Entnahmen den Zweck', () => {
-    expect(getEntryCategoryName({ kind: 'transfer', category: 'Steuern' }, expense, income)).toBe('Steuern');
-    expect(getEntryCategoryName({ kind: 'withdrawal', category: '' }, expense, income)).toBe('');
+  it('zeigt bei Transfers und Entnahmen den Zweck aus der ID, auch einen gelöschten', () => {
+    const purposes = [
+      { id: 'tcat_steuern', name: 'Steuern' },
+      { id: 'tcat_alt', name: 'Ferien', deleted: true },
+    ];
+    expect(getEntryCategoryName({ kind: 'transfer', transferCategoryId: 'tcat_steuern' }, expense, income, purposes)).toBe('Steuern');
+    expect(getEntryCategoryName({ kind: 'withdrawal', transferCategoryId: 'tcat_alt' }, expense, income, purposes)).toBe('Ferien');
+    expect(getEntryCategoryName({ kind: 'transfer', transferCategoryId: null }, expense, income, purposes)).toBe('');
+    expect(getEntryCategoryName({ kind: 'transfer', transferCategoryId: 'tcat_weg' }, expense, income, purposes)).toBe('');
   });
 });

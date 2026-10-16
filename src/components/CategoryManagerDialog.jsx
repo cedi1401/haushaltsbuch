@@ -10,8 +10,14 @@ import { useToast } from "./toastContext.js";
 import { useConfirm } from "./ConfirmDialog.jsx";
 import { generateId } from "../utils/idUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
-
-const MAX_TRANSFER_NAME_LENGTH = 50;
+import {
+  MAX_TRANSFER_NAME_LENGTH,
+  getActiveTransferCategories,
+  findTransferCategoryByName,
+  addTransferCategory as addTransferCategoryToList,
+  renameTransferCategory,
+  deleteTransferCategory as deleteTransferCategoryFromList,
+} from "../utils/transferCategoryUtils.js";
 
 // Sieb auf Item-Ebene: erst entscheiden, welche Unterkategorien sichtbar sind,
 // dann daraus ableiten, ob die Oberkategorie überhaupt gezeigt wird. Dadurch
@@ -52,14 +58,18 @@ export default function CategoryManagerDialog({
   onUpdateExpenseCategories,
   onUpdateIncomeCategories,
   onUpdateTransferCategories,
-  onRenameTransferCategory,
 }) {
   const fmt = useFmt();
   const toast = useToast();
   const { confirm } = useConfirm();
   const [newTransferName, setNewTransferName] = useState("");
-  // Inline-Umbenennung: der ursprüngliche Name identifiziert die Zeile,
-  // weil Transfer-Zwecke reine Strings ohne id sind.
+  // `transferCategories` ist die volle Liste inkl. gelöschter Zwecke (die
+  // bleiben für bestehende Buchungen erhalten); angezeigt werden nur die aktiven.
+  const activeTransfers = useMemo(
+    () => getActiveTransferCategories(transferCategories),
+    [transferCategories]
+  );
+  // Inline-Umbenennung: id des Zwecks in Bearbeitung
   const [editingTransfer, setEditingTransfer] = useState(null);
   const [transferDraft, setTransferDraft] = useState("");
   const transferInputRef = useRef(null);
@@ -110,18 +120,15 @@ export default function CategoryManagerDialog({
   // -------------------------------------------------------
   // Transfer-Zwecke CRUD
   // -------------------------------------------------------
-  // excludeName: der eigene Name beim Umbenennen, damit die Zeile nicht mit
-  // sich selbst kollidiert.
-  function validateTransferName(name, excludeName) {
+  // excludeId: der eigene Zweck beim Umbenennen, damit die Zeile nicht mit
+  // sich selbst kollidiert. Gelöschte Zwecke zählen nicht als Duplikat.
+  function validateTransferName(name, excludeId) {
     const trimmed = name.trim();
     if (!trimmed) return "Name darf nicht leer sein.";
     if (trimmed.length > MAX_TRANSFER_NAME_LENGTH)
       return `Name ist zu lang (max. ${MAX_TRANSFER_NAME_LENGTH} Zeichen).`;
-    const normalized = trimmed.toLocaleLowerCase("de");
-    const isDuplicate = transferCategories.some(
-      (c) => c !== excludeName && c.trim().toLocaleLowerCase("de") === normalized
-    );
-    if (isDuplicate) return "Dieser Transfer-Zweck existiert bereits.";
+    if (findTransferCategoryByName(transferCategories, trimmed, { excludeId }))
+      return "Dieser Transfer-Zweck existiert bereits.";
     return null;
   }
 
@@ -132,40 +139,41 @@ export default function CategoryManagerDialog({
       return;
     }
     const trimmed = newTransferName.trim();
-    onUpdateTransferCategories?.([...transferCategories, trimmed]);
+    // Ein gleichnamiger gelöschter Zweck wird reaktiviert, samt seiner Buchungen.
+    onUpdateTransferCategories?.(addTransferCategoryToList(transferCategories, trimmed).list);
     setNewTransferName("");
     toast.success(`Transfer-Zweck „${trimmed}“ erstellt.`);
   }
 
-  function startTransferEdit(name) {
-    setEditingTransfer(name);
-    setTransferDraft(name);
+  function startTransferEdit(cat) {
+    setEditingTransfer(cat.id);
+    setTransferDraft(cat.name);
   }
 
   function cancelTransferEdit() {
-    const name = editingTransfer;
+    const id = editingTransfer;
     setEditingTransfer(null);
     setTransferDraft("");
     // Erst nach dem Re-Render existiert der Stift-Button wieder.
-    if (name) requestAnimationFrame(() => transferEditBtnRefs.current[name]?.focus());
+    if (id) requestAnimationFrame(() => transferEditBtnRefs.current[id]?.focus());
   }
 
   function commitTransferEdit() {
-    const oldName = editingTransfer;
-    if (!oldName) return;
+    const id = editingTransfer;
+    const oldName = transferCategories.find((c) => c.id === id)?.name;
+    if (!id || oldName === undefined) return;
     const trimmed = transferDraft.trim();
     if (trimmed === oldName) {
       cancelTransferEdit();
       return;
     }
-    if (validateTransferName(transferDraft, oldName)) return;
+    if (validateTransferName(transferDraft, id)) return;
 
-    // Umbenennen muss auch die Buchungen, Fixkosten und Sparziele mitziehen,
-    // die den Zweck als Klartext referenzieren — das erledigt der Parent.
-    onRenameTransferCategory?.(oldName, trimmed);
+    // Referenzen laufen über die ID — es reicht, den Namen in der Liste zu ändern.
+    onUpdateTransferCategories?.(renameTransferCategory(transferCategories, id, trimmed));
     setEditingTransfer(null);
     setTransferDraft("");
-    requestAnimationFrame(() => transferEditBtnRefs.current[trimmed]?.focus());
+    requestAnimationFrame(() => transferEditBtnRefs.current[id]?.focus());
     toast.success(`Transfer-Zweck „${oldName}“ in „${trimmed}“ umbenannt.`);
   }
 
@@ -193,23 +201,23 @@ export default function CategoryManagerDialog({
     }
   }
 
-  async function deleteTransferCategory(name) {
-    if (transferCategories.length <= 1) {
+  async function deleteTransferCategory(cat) {
+    if (activeTransfers.length <= 1) {
       toast.warning("Du brauchst mindestens einen Transfer-Zweck.");
       return;
     }
     const ok = await confirm({
       title: "Transfer-Zweck löschen",
-      message: `Transfer-Zweck „${name}“ wirklich löschen?`,
+      message: `Transfer-Zweck „${cat.name}“ wirklich löschen?\n\nBestehende Buchungen behalten den Zweck, er steht aber nicht mehr zur Auswahl.`,
       confirmLabel: "Löschen",
       danger: true,
     });
     if (!ok) return;
-    if (editingTransfer === name) {
+    if (editingTransfer === cat.id) {
       setEditingTransfer(null);
       setTransferDraft("");
     }
-    onUpdateTransferCategories?.(transferCategories.filter((c) => c !== name));
+    onUpdateTransferCategories?.(deleteTransferCategoryFromList(transferCategories, cat.id));
     toast.success("Transfer-Zweck gelöscht.");
   }
 
@@ -693,7 +701,7 @@ export default function CategoryManagerDialog({
 
               {/* Liste der Transfer-Zwecke */}
               <div className="hb-cat-list">
-                {transferCategories.length === 0 ? (
+                {activeTransfers.length === 0 ? (
                   <div className="hb-empty hb-empty--sm">
                     <div className="hb-empty-icon"><IconTransfer /></div>
                     <div className="hb-empty-title">Noch keine Transfer-Zwecke</div>
@@ -702,15 +710,15 @@ export default function CategoryManagerDialog({
                     </div>
                   </div>
                 ) : (
-                  transferCategories.map((cat) => {
-                    const isEditing = editingTransfer === cat;
+                  activeTransfers.map((cat) => {
+                    const isEditing = editingTransfer === cat.id;
                     const error = isEditing
-                      ? validateTransferName(transferDraft, cat)
+                      ? validateTransferName(transferDraft, cat.id)
                       : null;
 
                     return (
                       <div
-                        key={cat}
+                        key={cat.id}
                         className={`hb-cat-transfer-item${isEditing ? " hb-cat-transfer-item--editing" : ""}`}
                       >
                         {isEditing ? (
@@ -721,15 +729,15 @@ export default function CategoryManagerDialog({
                               type="text"
                               value={transferDraft}
                               maxLength={MAX_TRANSFER_NAME_LENGTH}
-                              aria-label={`Name von „${cat}“`}
+                              aria-label={`Name von „${cat.name}“`}
                               aria-invalid={error ? "true" : undefined}
-                              aria-describedby={error ? `transfer-error-${cat}` : undefined}
+                              aria-describedby={error ? `transfer-error-${cat.id}` : undefined}
                               onChange={(e) => setTransferDraft(e.target.value)}
                               onKeyDown={handleTransferEditKeyDown}
                               onBlur={handleTransferEditBlur}
                             />
                             {error && (
-                              <span id={`transfer-error-${cat}`} className="hb-cat-transfer-error">
+                              <span id={`transfer-error-${cat.id}`} className="hb-cat-transfer-error">
                                 {error}
                               </span>
                             )}
@@ -738,9 +746,9 @@ export default function CategoryManagerDialog({
                           <span
                             className="hb-cat-name"
                             onDoubleClick={() => startTransferEdit(cat)}
-                            title={cat}
+                            title={cat.name}
                           >
-                            {cat}
+                            {cat.name}
                           </span>
                         )}
 
@@ -773,11 +781,11 @@ export default function CategoryManagerDialog({
                             <button
                               type="button"
                               ref={(el) => {
-                                transferEditBtnRefs.current[cat] = el;
+                                transferEditBtnRefs.current[cat.id] = el;
                               }}
                               className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
                               onClick={() => startTransferEdit(cat)}
-                              aria-label={`„${cat}“ umbenennen`}
+                              aria-label={`„${cat.name}“ umbenennen`}
                               title="Umbenennen"
                             >
                               <IconEdit />
@@ -786,9 +794,9 @@ export default function CategoryManagerDialog({
                               type="button"
                               className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
                               onClick={() => deleteTransferCategory(cat)}
-                              aria-label={`„${cat}“ löschen`}
+                              aria-label={`„${cat.name}“ löschen`}
                               title="Löschen"
-                              disabled={transferCategories.length <= 1}
+                              disabled={activeTransfers.length <= 1}
                             >
                               <IconDelete />
                             </button>

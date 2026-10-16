@@ -6,6 +6,8 @@
 // Importiert absichtlich nichts aus bookMigration.js — die Migration nutzt
 // fixedCostKind und validateMonthStartDay von hier.
 
+import { getTransferCategoryName } from "./transferCategoryUtils.js";
+
 export function validateMonthStartDay(day) {
   return Math.max(1, Math.min(28, Number(day) || 1));
 }
@@ -45,14 +47,17 @@ export function getCategoryLabel(expenseCategories, incomeCategories, categoryId
 
 /**
  * Kategorie-Anzeige einer Buchung: bei Einnahmen/Ausgaben der Name der
- * Oberkategorie aus `categoryId`, bei Transfers/Entnahmen der Zweck.
- * Das Legacy-Feld `category` ist bei Ausgaben nicht verlässlich — Fixkosten-
- * Buchungen setzen es gar nicht, und nach einem Umbenennen ist es veraltet.
+ * Oberkategorie aus `categoryId`, bei Transfers/Entnahmen der Zweck aus
+ * `transferCategoryId` (auch ein gelöschter). Das Legacy-Feld `category` ist
+ * bei Ausgaben nicht verlässlich — Fixkosten-Buchungen setzen es gar nicht,
+ * und nach einem Umbenennen ist es veraltet.
  */
-export function getEntryCategoryName(entry, expenseCategories, incomeCategories) {
+export function getEntryCategoryName(entry, expenseCategories, incomeCategories, transferCategories) {
   if (entry?.kind === "expense" || entry?.kind === "income") {
     const parent = findCategoryById(expenseCategories, incomeCategories, entry.categoryId);
     if (parent) return parent.name;
+  } else if (entry?.kind === "transfer" || entry?.kind === "withdrawal") {
+    return getTransferCategoryName(transferCategories, entry.transferCategoryId);
   }
   return entry?.category || "";
 }

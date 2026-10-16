@@ -26,12 +26,13 @@ export default function ReserveDetail({
   hiddenColumns,
   fmt,
   pot,
+  purposeName,
   canCatchUp,
   onBillPaid,
   onCatchUp,
   onEdit,
 }) {
-  const purpose = String(row.item?.transferCategory ?? "").trim();
+  const purpose = purposeName || "—";
   const potName = pot?.name ?? "—";
   const canPay = row.status === "due" || row.status === "overdue";
   const assessment = buildAssessment(row, fmt);

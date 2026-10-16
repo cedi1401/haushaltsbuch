@@ -14,6 +14,7 @@ import {
 } from "../utils/formatUtils.js";
 import { DEFAULT_EXPENSE_CATEGORIES } from "../utils/bookDefaults.js";
 import { fixedCostKind } from "../utils/hbUtils.js";
+import { getActiveTransferCategories, getTransferCategoryOptions } from "../utils/transferCategoryUtils.js";
 import { isSinkingFund, monthlyRate } from "../utils/fixedCostUtils.js";
 import { getFinancialMonth } from "../utils/financialMonthUtils.js";
 import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
@@ -107,7 +108,11 @@ export default function FixedCostsView({
   const fixedCostGroups = activeBook?.fixedCostGroups || EMPTY_ARRAY;
   const pots = activeBook?.pots || EMPTY_ARRAY;
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
-  const transferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
+  const allTransferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
+  const transferCategories = useMemo(
+    () => getActiveTransferCategories(allTransferCategories),
+    [allTransferCategories]
+  );
   const { confirm } = useConfirm();
   const toast = useToast();
 
@@ -126,7 +131,7 @@ export default function FixedCostsView({
     kind: "expense",
     categoryId: null,
     subcategoryId: null,
-    transferCategory: transferCategories[0] || "Steuern",
+    transferCategoryId: transferCategories[0]?.id || "",
     potId: pots[0]?.id || "",
     // Nur für Transfers: Turnus als Zahl (null | 1 | 3 | 6 | 12), Fälligkeit als
     // ISO-String. `""` ist bei HbDatePicker die Darstellung für „kein Datum".
@@ -205,9 +210,11 @@ export default function FixedCostsView({
       fmt,
       categoryById: new Map(expenseCategories.map((c) => [c.id, c])),
       potNameById: new Map(pots.map((p) => [p.id, p.name])),
+      // Inklusive gelöschter Zwecke: eine Position darf noch auf einen zeigen.
+      purposeNameById: new Map(allTransferCategories.map((c) => [c.id, c.name])),
       groupNameById: new Map(fixedCostGroups.map((g) => [g.id, g.name])),
     }),
-    [fmt, expenseCategories, pots, fixedCostGroups]
+    [fmt, expenseCategories, pots, allTransferCategories, fixedCostGroups]
   );
 
   const columnsByKind = useMemo(
@@ -299,7 +306,7 @@ export default function FixedCostsView({
       kind,
       categoryId: null,
       subcategoryId: null,
-      transferCategory: transferCategories[0] || "Steuern",
+      transferCategoryId: transferCategories[0]?.id || "",
       potId: pots[0]?.id || "",
       turnus: null,
       faelligkeit: "",
@@ -338,7 +345,7 @@ export default function FixedCostsView({
       kind: fixedCostKind(item),
       categoryId: item.categoryId || null,
       subcategoryId: item.subcategoryId || null,
-      transferCategory: item.transferCategory || transferCategories[0] || "Steuern",
+      transferCategoryId: item.transferCategoryId || transferCategories[0]?.id || "",
       potId: item.potId || pots[0]?.id || "",
       turnus: item.turnus ?? null,
       faelligkeit: item.faelligkeit || "",
@@ -431,7 +438,7 @@ export default function FixedCostsView({
               kind: draft.kind,
               categoryId: draft.kind === "expense" ? draft.categoryId : undefined,
               subcategoryId: draft.kind === "expense" ? (draft.subcategoryId || null) : undefined,
-              transferCategory: draft.kind === "transfer" ? draft.transferCategory : undefined,
+              transferCategoryId: draft.kind === "transfer" ? (draft.transferCategoryId || null) : undefined,
               potId: draft.kind === "transfer" ? draft.potId : undefined,
               turnus: isTransfer ? nextTurnus : undefined,
               faelligkeit: isTransfer ? nextFaelligkeit : undefined,
@@ -456,7 +463,7 @@ export default function FixedCostsView({
         newItem.categoryId = draft.categoryId;
         newItem.subcategoryId = draft.subcategoryId || null;
       } else if (draft.kind === "transfer") {
-        newItem.transferCategory = draft.transferCategory;
+        newItem.transferCategoryId = draft.transferCategoryId || null;
         newItem.potId = draft.potId;
         newItem.turnus = nextTurnus;
         newItem.faelligkeit = nextFaelligkeit;
@@ -495,7 +502,7 @@ export default function FixedCostsView({
       // Gebucht wird die Monatsrate — bei einer Rückstellung also der anteilige
       // Betrag, nicht der Zyklusbetrag aus `item.amount`.
       amount: monthlyRate(item),
-      category: kind === "transfer" ? item.transferCategory : undefined,
+      transferCategoryId: kind === "transfer" ? (item.transferCategoryId || null) : undefined,
       categoryId: kind === "expense" ? (item.categoryId || null) : null,
       subcategoryId: kind === "expense" ? (item.subcategoryId || null) : null,
       kind,
@@ -1041,11 +1048,12 @@ export default function FixedCostsView({
                 <div className="hb-label">Transfer-Zweck</div>
                 <select
                   className="hb-input"
-                  value={draft.transferCategory}
-                  onChange={(e) => setDraft((d) => ({ ...d, transferCategory: e.target.value }))}
+                  value={draft.transferCategoryId}
+                  onChange={(e) => setDraft((d) => ({ ...d, transferCategoryId: e.target.value }))}
                 >
-                  {transferCategories.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
+                  {transferCategories.length === 0 && <option value="">Kein Zweck vorhanden</option>}
+                  {getTransferCategoryOptions(allTransferCategories, draft.transferCategoryId).map((opt) => (
+                    <option key={opt.id} value={opt.id}>{opt.label}</option>
                   ))}
                 </select>
               </div>
