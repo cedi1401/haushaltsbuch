@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   validateBook,
+  validateBookSync,
   SETTING_SCHEMA,
   isValidSetting,
   isValidSymbol,
@@ -205,5 +206,44 @@ describe('isValidHistoryOptions', () => {
 
   it('rejects non-object', () => {
     expect(isValidHistoryOptions('1mo')).toBe(false);
+  });
+});
+
+describe('validateBookSync', () => {
+  const book = (id) => ({ id, name: 'Buch ' + id });
+
+  it('accepts upserts that are all listed in order', () => {
+    expect(validateBookSync({ upserts: [book('b1')], order: ['b1', 'b2'] })).toBe(true);
+  });
+
+  it('accepts an order-only sync without upserts', () => {
+    expect(validateBookSync({ upserts: [], order: ['b1'] })).toBe(true);
+  });
+
+  it('rejects an empty order (would delete every book)', () => {
+    expect(validateBookSync({ upserts: [], order: [] })).toBe(false);
+  });
+
+  it('rejects duplicate ids in order', () => {
+    expect(validateBookSync({ upserts: [], order: ['b1', 'b1'] })).toBe(false);
+  });
+
+  it('rejects non-string or empty ids in order', () => {
+    expect(validateBookSync({ upserts: [], order: ['b1', 42] })).toBe(false);
+    expect(validateBookSync({ upserts: [], order: [''] })).toBe(false);
+  });
+
+  it('rejects an upsert missing from order', () => {
+    expect(validateBookSync({ upserts: [book('b3')], order: ['b1'] })).toBe(false);
+  });
+
+  it('rejects an invalid book in upserts', () => {
+    expect(validateBookSync({ upserts: [{ id: 'b1', name: '' }], order: ['b1'] })).toBe(false);
+  });
+
+  it('rejects malformed payloads', () => {
+    expect(validateBookSync(null)).toBe(false);
+    expect(validateBookSync([book('b1')])).toBe(false);
+    expect(validateBookSync({ order: ['b1'] })).toBe(false);
   });
 });

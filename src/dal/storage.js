@@ -4,6 +4,7 @@
 import { formatFileStamp } from "../utils/formatUtils.js";
 import { BACKUP_FORMAT, BACKUP_VERSION } from "../backup.js";
 import makeLogger from "../utils/logger.js";
+import { diffBooks, isEmptyDiff } from "./bookSync.js";
 
 const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
 const log = makeLogger('dal/storage');
@@ -24,10 +25,31 @@ export async function loadBooks() {
   }
 }
 
+// Stand des letzten Speicherns (Electron). `null` heißt unbekannt: Dann wird
+// alles geschrieben — so beim ersten Speichern nach dem Start, damit migrierte
+// Bücher auch ohne eigene Änderung in die Datenbank kommen, und nach einem
+// Fehler, damit nichts verloren geht.
+let lastSyncedBooks = null;
+
 export async function saveBooks(books) {
   if (isElectron) {
-    return window.electronAPI.saveBooks(books);
+    const base = lastSyncedBooks;
+    const diff = diffBooks(base, books);
+    if (isEmptyDiff(base, diff)) return true;
+    // Sofort übernehmen, nicht erst nach Erfolg: Ein zweiter Aufruf, solange
+    // dieser noch läuft, soll nur die eigenen Änderungen schicken. Die IPC-
+    // Aufrufe laufen im Main-Prozess der Reihe nach ab.
+    lastSyncedBooks = books;
+    try {
+      const ok = await window.electronAPI.syncBooks(diff);
+      if (ok === false) lastSyncedBooks = null;
+      return ok;
+    } catch (err) {
+      lastSyncedBooks = null;
+      throw err;
+    }
   }
+  // Browser-Fallback (nur Entwicklung): weiterhin ein Blob.
   localStorage.setItem('hb_books', JSON.stringify(books));
   return true;
 }

@@ -3,7 +3,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('electronAPI', {
   // Books (full JSON, same structure as localStorage)
   getBooks: () => ipcRenderer.invoke('db:getBooks'),
-  saveBooks: (books) => ipcRenderer.invoke('db:saveBooks', books),
+  // Nur geänderte Bücher plus Reihenfolge, siehe src/dal/bookSync.js
+  syncBooks: (payload) => ipcRenderer.invoke('db:syncBooks', payload),
 
   // Settings
   getSetting: (key) => ipcRenderer.invoke('db:getSetting', key),

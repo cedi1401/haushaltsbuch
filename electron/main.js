@@ -3,7 +3,7 @@ import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDatabase, getDb, closeDatabase } from './database/db.js';
-import { validateBook, isValidSetting, isValidSymbol, isValidSymbolList, isValidSearchQuery, isValidHistoryOptions, MAX_SYMBOL_BATCH } from './ipcValidation.js';
+import { validateBookSync, isValidSetting, isValidSymbol, isValidSymbolList, isValidSearchQuery, isValidHistoryOptions, MAX_SYMBOL_BATCH } from './ipcValidation.js';
 import { getQuote, getQuotes, getHistory, search as searchSymbols } from './services/marketdata/index.js';
 
 process.on('uncaughtException', (err) => {
@@ -115,13 +115,13 @@ function registerIpcHandlers() {
     }
   });
 
-  ipcMain.handle('db:saveBooks', (_event, books) => {
-    if (!Array.isArray(books) || !books.every(validateBook)) return false;
+  ipcMain.handle('db:syncBooks', (_event, payload) => {
+    if (!validateBookSync(payload)) return false;
     try {
-      db.saveBooks(books);
+      db.syncBooks(payload);
       return true;
     } catch (err) {
-      console.error('[ipc] db:saveBooks failed:', err);
+      console.error('[ipc] db:syncBooks failed:', err);
       return false;
     }
   });

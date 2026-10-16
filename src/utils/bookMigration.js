@@ -419,7 +419,7 @@ export function normalizeBook(book) {
   const priorVersion = typeof book.schemaVersion === "number" ? book.schemaVersion : 0;
 
   // Nicht-leeren Namen erzwingen. Sonst lehnt die Electron-IPC-Validierung
-  // (validateBook: name.length > 0) das GESAMTE Buch-Array ab → db:saveBooks
+  // (validateBook: name.length > 0) die GESAMTE Speicherung ab → db:syncBooks
   // liefert false → unter Electron wird nichts persistiert (Datenverlust).
   normalized.name = String(book.name || "").trim() || "Unbenanntes Buch";
 
