@@ -155,7 +155,7 @@ export function getTransferCategoryOptions(list, selectedId, choices = getActive
 /**
  * Hat der Zweck eine monatliche Rate? Rückstellungen immer, Rücklagen und
  * Sparziele nur mit gesetzter `monthlyRate`. Genau diese Zwecke stehen in der
- * Fixkosten-Tabelle „Rücklagen & Rückstellungen".
+ * Fixkosten-Tabelle „Sparraten".
  */
 export function hasPurposeRate(purpose) {
   if (!purpose) return false;
@@ -224,46 +224,9 @@ export function purposeToGoal(purpose) {
 }
 
 /**
- * Schreibt die Felder aus dem Fixkosten-Dialog in einen Zweck. Mit Turnus wird
- * er zur Rückstellung, ohne zur Rücklage — ein Sparziel bleibt Sparziel und
- * bekommt nur seine Rate (den Turnus bietet der Dialog dort nicht an).
- * @param {object} purpose
- * @param {{ name: string, amount: number, potId: string, turnus: number|null,
- *           faelligkeit: string|null, groupId: string|null, tags: string[],
- *           showInOverview: boolean }} fields
- */
-export function applyFixedFieldsToPurpose(purpose, fields) {
-  const {
-    amount: _amount, turnus: _turnus, faelligkeit: _faelligkeit, monthlyRate: _rate, ...rest
-  } = purpose;
-  const common = {
-    ...rest,
-    name: fields.name,
-    potId: fields.potId,
-    groupId: fields.groupId ?? null,
-    tags: fields.tags || [],
-    showInOverview: fields.showInOverview === true,
-  };
-  if (purpose.rule !== "goal" && fields.turnus) {
-    return {
-      ...common,
-      rule: "reserve",
-      amount: fields.amount,
-      turnus: fields.turnus,
-      faelligkeit: fields.faelligkeit,
-    };
-  }
-  return {
-    ...common,
-    rule: purpose.rule === "goal" ? "goal" : "free",
-    monthlyRate: fields.amount,
-  };
-}
-
-/**
- * Nimmt einem Zweck die Rate — „Löschen" in der Fixkosten-Tabelle. Der Zweck
+ * Nimmt einem Zweck die Rate — „Sparrate entfernen" in den Fixkosten. Der Zweck
  * selbst bleibt mit seinen Buchungen bestehen: das Geld liegt weiter im Topf.
- * Eine Rückstellung wird dabei zur Rücklage.
+ * Eine Rückstellung wird dabei zur freien Rücklage.
  */
 export function clearPurposeRate(purpose) {
   const { amount: _amount, turnus: _turnus, faelligkeit: _faelligkeit, ...rest } = purpose;

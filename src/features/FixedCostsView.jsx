@@ -5,7 +5,8 @@ import EditDialog from "../components/EditDialog.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
 import DataTable from "../components/DataTable.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
-import { HbDatePicker } from "../components/HbDatePicker.jsx";
+import TagInputField from "../components/TagInputField.jsx";
+import TrendToggle from "../components/TrendToggle.jsx";
 import { generateId } from "../utils/idUtils.js";
 import {
   formatDateDE,
@@ -14,23 +15,13 @@ import {
 } from "../utils/formatUtils.js";
 import { DEFAULT_EXPENSE_CATEGORIES } from "../utils/bookDefaults.js";
 import { fixedCostKind } from "../utils/hbUtils.js";
-import {
-  applyFixedFieldsToPurpose,
-  clearPurposeRate,
-  findTransferCategoryByName,
-  getRatedPurposes,
-  hasPurposeRate,
-  makeTransferCategory,
-  MAX_TRANSFER_NAME_LENGTH,
-  purposeHasEntries,
-  purposeToFixedItem,
-} from "../utils/transferCategoryUtils.js";
+import { clearPurposeRate, getRatedPurposes, purposeToFixedItem } from "../utils/transferCategoryUtils.js";
 import { isSinkingFund, monthlyRate } from "../utils/fixedCostUtils.js";
 import { getFinancialMonth } from "../utils/financialMonthUtils.js";
 import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
-import { IconClose, IconEdit, IconFixed, IconPlus, IconTag, IconWarning } from "../components/icons.jsx";
+import { IconEdit, IconFixed, IconPlus } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 import { buildFixedCostColumns, renderBookedStatus } from "./fixed/fixedCostColumns.jsx";
@@ -47,47 +38,17 @@ const TABLES = [
   },
   {
     kind: "transfer",
-    title: "Rücklagen & Rückstellungen",
-    addLabel: "Transfer",
+    title: "Sparraten",
+    addLabel: "Sparposition",
     emptyText:
-      "Noch keine wiederkehrenden Transfers — z.B. eine Rückstellung für die Jahresrechnung "
-      + "oder eine monatliche Rücklage in einen Topf.",
+      "Noch keine Sparraten — z.B. eine Rückstellung für die Jahresrechnung oder eine "
+      + "monatliche Rate für eine freie Rücklage. Sparpositionen mit Rate erscheinen hier.",
   },
 ];
 
 // Sektions-Schlüssel für Positionen ohne (gültige) Gruppe. Jede Tabelle hat
 // ihre eigenen Sektionen, ein gemeinsamer Schlüssel ist daher eindeutig.
 const UNGROUPED_KEY = "ungrouped";
-
-// Turnus-Auswahl im Dialog. Der Wert ist bewusst ein String — das <select>
-// liefert immer Strings, die Umwandlung nach `number|null` passiert im Handler.
-//
-// „Monatlich" fehlt bewusst: Bei Turnus 1 ist die Monatsrate der volle
-// Rechnungsbetrag, angespart wird also nie. Was monatlich in einen Topf geht,
-// ist eine Rücklage ohne Turnus — keine Rückstellung für einen Termin.
-const TURNUS_OPTIONS = [
-  { value: "", label: "Kein Turnus (freie Rücklage)" },
-  { value: "3", label: "Quartalsweise" },
-  { value: "6", label: "Halbjährlich" },
-  { value: "12", label: "Jährlich" },
-  { value: "24", label: "Alle 2 Jahre" },
-  { value: "36", label: "Alle 3 Jahre" },
-];
-
-/**
- * Der Katalog, ergänzt um einen Bestandswert, den er nicht (mehr) führt.
- *
- * Ohne die Ergänzung fällt das <select> stumm auf seinen ersten Eintrag zurück:
- * Die Position zeigte „Kein Turnus" und daneben ein aktives Fälligkeitsfeld mit
- * Datum — ein sichtbarer Widerspruch, der beim nächsten Speichern zur stillen
- * Änderung würde. Die Normalisierung lässt jeden Turnus > 0 durch, der Katalog
- * kann also nie alle vorkommenden Werte kennen.
- */
-function turnusOptionsFor(turnus) {
-  if (!turnus || TURNUS_OPTIONS.some((o) => o.value === String(turnus))) return TURNUS_OPTIONS;
-  const label = turnus === 1 ? "Monatlich" : `Alle ${turnus} Monate`;
-  return [...TURNUS_OPTIONS, { value: String(turnus), label: `${label} (Bestandswert)` }];
-}
 
 /**
  * Kostenregel: Als Fixkosten zählen Ausgaben und Rückstellungen mit
@@ -119,6 +80,7 @@ export default function FixedCostsView({
   onUpdateBook,
   onAddEntry,
   onAddEntries,
+  onOpenSavingsPosition,
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
@@ -136,26 +98,17 @@ export default function FixedCostsView({
   const { confirm } = useConfirm();
   const toast = useToast();
 
-  // Dialog-State
+  // Dialog-State — nur für Ausgaben. Sparraten werden in den Rücklagen
+  // angelegt und bearbeitet (onOpenSavingsPosition).
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   // Beim Duplizieren: id des Originals, damit die Kopie direkt dahinter landet
   const [duplicateSourceId, setDuplicateSourceId] = useState(null);
-  // Aus einer Tabelle/Gruppe heraus angelegte Positionen erben deren Art —
-  // sie ist dann im Dialog fest vorgegeben.
-  const [kindLocked, setKindLocked] = useState(false);
-  const [tagInput, setTagInput] = useState("");
   const [draft, setDraft] = useState({
     name: "",
     amount: "",
-    kind: "expense",
     categoryId: null,
     subcategoryId: null,
-    potId: pots[0]?.id || "",
-    // Nur für Transfers: Turnus als Zahl (null | 1 | 3 | 6 | 12), Fälligkeit als
-    // ISO-String. `""` ist bei HbDatePicker die Darstellung für „kein Datum".
-    turnus: null,
-    faelligkeit: "",
     groupId: null,
     // false wie in openCreateDialog() — neue Positionen erscheinen erst nach
     // bewusster Wahl in der Trend-Übersicht. Der Wert hier wird nie gerendert
@@ -230,10 +183,9 @@ export default function FixedCostsView({
       fmt,
       categoryById: new Map(expenseCategories.map((c) => [c.id, c])),
       potNameById: new Map(pots.map((p) => [p.id, p.name])),
-      purposeNameById: new Map(allTransferCategories.map((c) => [c.id, c.name])),
       groupNameById: new Map(fixedCostGroups.map((g) => [g.id, g.name])),
     }),
-    [fmt, expenseCategories, pots, allTransferCategories, fixedCostGroups]
+    [fmt, expenseCategories, pots, fixedCostGroups]
   );
 
   const columnsByKind = useMemo(
@@ -249,14 +201,6 @@ export default function FixedCostsView({
     allItems.forEach((r) => (r.tags || []).forEach((t) => set.add(t)));
     return [...set].sort();
   }, [allItems]);
-
-  const availableTagSuggestions = useMemo(() => {
-    const existing = new Set(draft.tags);
-    const base = tagInput.trim()
-      ? allBookTags.filter((t) => t.toLowerCase().includes(tagInput.toLowerCase()) && !existing.has(t))
-      : allBookTags.filter((t) => !existing.has(t));
-    return base.slice(0, 8);
-  }, [allBookTags, draft.tags, tagInput]);
 
   // Sektions-Schlüssel einer Position: nur eine existierende Gruppe derselben
   // Art zählt — sonst „Sonstige".
@@ -322,37 +266,32 @@ export default function FixedCostsView({
     toast.success("Gruppe gelöscht.");
   }
 
-  // Dialog
-  function openCreateDialog({ groupId = null, kind = "expense", lockKind = false } = {}) {
+  // Dialog (nur Ausgaben)
+  function openCreateDialog({ groupId = null } = {}) {
     setEditingItem(null);
     setDuplicateSourceId(null);
-    setKindLocked(lockKind);
     setDraft({
       name: "",
       amount: "",
-      kind,
       categoryId: null,
       subcategoryId: null,
-      potId: pots[0]?.id || "",
-      turnus: null,
-      faelligkeit: "",
       groupId,
       showInOverview: false,
       tags: [],
     });
-    setTagInput("");
     setDialogOpen(true);
   }
 
-  // Beim Bearbeiten steht die Art fest: Ausgaben und Transfer-Positionen leben
-  // seit Schema 7 in verschiedenen Listen (Fixkosten bzw. Zwecke). Wer die Art
-  // wechseln will, dupliziert.
+  // Eine Sparrate ist eine Sparposition: Bearbeitet wird sie in den Rücklagen,
+  // im selben Dialog wie dort. Nach dem Schließen geht es zurück hierher.
   function openEditDialog(item) {
+    if (fixedCostKind(item) === "transfer") {
+      onOpenSavingsPosition?.({ purposeId: item.id, returnTo: "fixed" });
+      return;
+    }
     setEditingItem(item);
     setDuplicateSourceId(null);
-    setKindLocked(true);
     setDraft(draftFromItem(item));
-    setTagInput("");
     setDialogOpen(true);
   }
 
@@ -361,9 +300,7 @@ export default function FixedCostsView({
   function openDuplicateDialog(item) {
     setEditingItem(null);
     setDuplicateSourceId(item.id);
-    setKindLocked(false);
     setDraft({ ...draftFromItem(item), name: makeCopyName(item.name || "") });
-    setTagInput("");
     setDialogOpen(true);
   }
 
@@ -371,26 +308,16 @@ export default function FixedCostsView({
     return {
       name: item.name || "",
       amount: String(item.amount || ""),
-      kind: fixedCostKind(item),
       categoryId: item.categoryId || null,
       subcategoryId: item.subcategoryId || null,
-      potId: item.potId || pots[0]?.id || "",
-      turnus: item.turnus ?? null,
-      faelligkeit: item.faelligkeit || "",
       groupId: item.groupId || null,
       showInOverview: item.showInOverview !== false,
       tags: item.tags || [],
     };
   }
 
-  // Auch die Namen aller Zwecke sind belegt: eine kopierte Transfer-Position
-  // wird ein neuer Zweck, und Zweck-Namen sind eindeutig.
   function makeCopyName(baseName) {
-    const taken = new Set(
-      [...recurringExpenses, ...allTransferCategories.filter((c) => !c.deleted)].map((r) =>
-        (r.name || "").trim()
-      )
-    );
+    const taken = new Set(recurringExpenses.map((r) => (r.name || "").trim()));
     const first = `${baseName} (Kopie)`;
     if (!taken.has(first)) return first;
     let n = 2;
@@ -402,129 +329,38 @@ export default function FixedCostsView({
     setDialogOpen(false);
     setEditingItem(null);
     setDuplicateSourceId(null);
-    setKindLocked(false);
-  }
-
-  // Art wechseln: die Gruppe gehört fest zu einer Tabelle, die Position wandert
-  // also nach „Sonstige" der anderen Tabelle. Turnus und Fälligkeit sind
-  // Transfer-Felder und werden beim Wechsel auf „Ausgabe" zurückgesetzt — sonst
-  // bliebe ein unsichtbarer Wert stehen, der die Speichern-Sperre auslöst.
-  function handleKindChange(kind) {
-    setDraft((d) => ({
-      ...d,
-      kind,
-      groupId: null,
-      turnus: kind === "transfer" ? d.turnus : null,
-      faelligkeit: kind === "transfer" ? d.faelligkeit : "",
-    }));
-  }
-
-  // Turnus wechseln. Fällt der Turnus weg, fällt auch die Fälligkeit weg —
-  // sonst bliebe ein Datum am Draft stehen, das nichts mehr bedeutet und beim
-  // nächsten Setzen eines Turnus als vermeintlich geprüfter Wert wieder auftaucht.
-  function handleTurnusChange(value) {
-    const turnus = Number(value) || null;
-    setDraft((d) => ({ ...d, turnus, faelligkeit: turnus ? d.faelligkeit : "" }));
-  }
-
-  function handleTagAdd(tagText) {
-    const tag = tagText.trim().slice(0, 30);
-    if (!tag || draft.tags.includes(tag)) return;
-    setDraft((d) => ({ ...d, tags: [...d.tags, tag] }));
-    setTagInput("");
-  }
-
-  function handleTagRemove(tag) {
-    setDraft((d) => ({ ...d, tags: d.tags.filter((t) => t !== tag) }));
   }
 
   function saveItem() {
     if (!activeBook) return;
+    // Dieselben Regeln wie in `canSave` — die Doppelung ist nicht redundant:
+    // EditDialog löst `onSave` auch per Strg+Enter aus, am Button-Zustand vorbei.
     const numericAmount = parseAmount(draft.amount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
     if (!draft.name.trim()) return;
-    // Dieselben Regeln wie in `canSave` — die Doppelung ist nicht redundant:
-    // EditDialog löst `onSave` auch per Strg+Enter aus, am Button-Zustand vorbei.
-    if (draft.kind === "transfer" && draft.turnus) {
-      if (!draft.faelligkeit) return;
-      if (monthlyRate({ kind: "transfer", amount: numericAmount, turnus: draft.turnus }) < 0.01) return;
-    }
-    if (transferNameError) return;
 
-    // Absicherung gegen inkonsistente Zustände: eine Gruppe der anderen Tabelle
-    // wird nie übernommen.
+    // Absicherung gegen inkonsistente Zustände: eine Gruppe der Sparraten wird
+    // nie übernommen.
     const targetGroupId =
-      draft.groupId && groupKindById.get(draft.groupId) === draft.kind ? draft.groupId : null;
-
-    // Turnus und Fälligkeit gehören zusammen: ohne Turnus wird die Fälligkeit
-    // nicht mitgeschrieben, damit die Zyklusrechnung nie auf ein verwaistes
-    // Datum trifft. `normalizeBook()` erzwingt dieselbe Kopplung beim Laden.
-    const isTransfer = draft.kind === "transfer";
-    const nextTurnus = isTransfer ? (draft.turnus || null) : null;
-    const nextFaelligkeit = nextTurnus ? (draft.faelligkeit || null) : null;
-
-    // Transfer-Positionen sind Zwecke (Schema 7): Anlegen legt einen Zweck im
-    // Topf an, Bearbeiten schreibt in ihn.
-    if (isTransfer) {
-      const fields = {
-        name: draft.name.trim(),
-        amount: numericAmount,
-        potId: draft.potId,
-        turnus: nextTurnus,
-        faelligkeit: nextFaelligkeit,
-        groupId: targetGroupId,
-        tags: draft.tags || [],
-        showInOverview: draft.showInOverview === true,
-      };
-      const targetId = editingItem?.id ?? adoptPurpose?.id ?? null;
-      if (targetId) {
-        const updated = allTransferCategories.map((c) =>
-          c.id === targetId ? applyFixedFieldsToPurpose(c, fields) : c
-        );
-        onUpdateBook({ ...activeBook, transferCategories: updated });
-      } else {
-        const created = applyFixedFieldsToPurpose(makeTransferCategory(fields.name, fields.potId), fields);
-        const idx = duplicateSourceId
-          ? allTransferCategories.findIndex((c) => c.id === duplicateSourceId)
-          : -1;
-        const next = idx === -1
-          ? [...allTransferCategories, created]
-          : [...allTransferCategories.slice(0, idx + 1), created, ...allTransferCategories.slice(idx + 1)];
-        onUpdateBook({ ...activeBook, transferCategories: next });
-      }
-      closeDialog();
-      return;
-    }
+      draft.groupId && groupKindById.get(draft.groupId) === "expense" ? draft.groupId : null;
+    const fields = {
+      name: draft.name.trim(),
+      amount: numericAmount,
+      kind: "expense",
+      categoryId: draft.categoryId,
+      subcategoryId: draft.subcategoryId || null,
+      groupId: targetGroupId,
+      showInOverview: draft.showInOverview === true,
+      tags: draft.tags || [],
+    };
 
     if (editingItem) {
       const updatedItems = recurringExpenses.map((item) =>
-        item.id === editingItem.id
-          ? {
-              ...item,
-              name: draft.name.trim(),
-              amount: numericAmount,
-              kind: "expense",
-              categoryId: draft.categoryId,
-              subcategoryId: draft.subcategoryId || null,
-              groupId: targetGroupId,
-              showInOverview: draft.showInOverview === true,
-              tags: draft.tags || [],
-            }
-          : item
+        item.id === editingItem.id ? { ...item, ...fields } : item
       );
       onUpdateBook({ ...activeBook, recurringExpenses: updatedItems });
     } else {
-      const newItem = {
-        id: generateId("rec"),
-        name: draft.name.trim(),
-        amount: numericAmount,
-        kind: "expense",
-        categoryId: draft.categoryId,
-        subcategoryId: draft.subcategoryId || null,
-        groupId: targetGroupId,
-        showInOverview: draft.showInOverview === true,
-        tags: draft.tags || [],
-      };
+      const newItem = { id: generateId("rec"), ...fields };
       // Kopien direkt hinter dem Original einfügen, sonst ans Ende anhängen
       const idx = duplicateSourceId
         ? recurringExpenses.findIndex((r) => r.id === duplicateSourceId)
@@ -537,29 +373,38 @@ export default function FixedCostsView({
     closeDialog();
   }
 
-  // Eine Transfer-Position verliert beim Löschen nur ihre Rate: Der Zweck
-  // bleibt mit seinen Buchungen im Topf (clearPurposeRate).
-  async function deleteItem(item) {
+  async function deleteExpense(item) {
     if (!activeBook) return;
-    const isTransfer = fixedCostKind(item) === "transfer";
     const ok = await confirm({
       title: "Fixkosten löschen",
-      message: isTransfer
-        ? `Fixkosten „${item.name}“ wirklich löschen?\n\nDer Zweck bleibt mit seinen Buchungen im Topf, nur die monatliche Rate entfällt.`
-        : `Fixkosten „${item.name}“ wirklich löschen?`,
+      message: `Fixkosten „${item.name}“ wirklich löschen?`,
       confirmLabel: "Löschen",
       danger: true,
     });
     if (!ok) return;
-    if (isTransfer) {
-      onUpdateBook({
-        ...activeBook,
-        transferCategories: allTransferCategories.map((c) => (c.id === item.id ? clearPurposeRate(c) : c)),
-      });
-    } else {
-      onUpdateBook({ ...activeBook, recurringExpenses: recurringExpenses.filter((i) => i.id !== item.id) });
-    }
+    onUpdateBook({ ...activeBook, recurringExpenses: recurringExpenses.filter((i) => i.id !== item.id) });
     toast.success("Fixkosten gelöscht.");
+  }
+
+  // Eine Sparrate verliert beim Entfernen nur ihre Rate: Die Sparposition
+  // bleibt mit ihren Buchungen in den Rücklagen (clearPurposeRate).
+  async function removeSavingsRate(item) {
+    if (!activeBook) return;
+    const ok = await confirm({
+      title: "Sparrate entfernen",
+      message:
+        `Sparrate „${item.name}“ wirklich entfernen?\n\n` +
+        "Die Sparposition bleibt mit ihren Buchungen in den Rücklagen, nur die monatliche Rate entfällt." +
+        (isSinkingFund(item) ? " Die Rückstellung wird dabei zur freien Rücklage." : ""),
+      confirmLabel: "Entfernen",
+      danger: true,
+    });
+    if (!ok) return;
+    onUpdateBook({
+      ...activeBook,
+      transferCategories: allTransferCategories.map((c) => (c.id === item.id ? clearPurposeRate(c) : c)),
+    });
+    toast.success("Sparrate entfernt.");
   }
 
   // Einzige Quelle für die Entry-Erzeugung — Einzel- und Sammelbuchung teilen sie.
@@ -656,74 +501,21 @@ export default function FixedCostsView({
     );
   }
 
-  // Bedeutungswechsel von `amount`: mit Turnus ist der Wert der Zyklusbetrag,
-  // gebucht wird die daraus abgeleitete Monatsrate.
   const draftAmount = parseAmount(draft.amount);
-  const draftAmountValid = Number.isFinite(draftAmount) && draftAmount > 0;
-  const hasTurnus = draft.kind === "transfer" && !!draft.turnus;
-  const draftMonthlyRate =
-    hasTurnus && draftAmountValid
-      ? monthlyRate({ kind: "transfer", amount: draftAmount, turnus: draft.turnus })
-      : null;
-  // Ein für sich gültiger Zyklusbetrag kann auf eine Rate von 0.00 herunterrunden
-  // (0.05 auf zwölf Monate). „Buchen" erzeugte dann Einträge über 0.00.
-  const rateTooSmall = draftMonthlyRate !== null && draftMonthlyRate < 0.01;
-  // Ein Turnus ohne Fälligkeit ist ein Halbzustand — ohne Startanker lässt sich
-  // kein Zyklus berechnen. Das `kind`-Gate steckt in `hasTurnus` und ist zwingend:
-  // ohne es würde ein nach dem Artwechsel stehengebliebener Turnus das Speichern
-  // einer Ausgabe blockieren, während die Turnus-Felder gar nicht sichtbar sind.
-  const missingDueDate = hasTurnus && !draft.faelligkeit;
+  const canSave = !!draft.name.trim() && Number.isFinite(draftAmount) && draftAmount > 0;
 
-  // `editingItem` ist ein stabiler Vorher-Snapshot: gesetzt in `openEditDialog()`,
-  // bis `closeDialog()` unverändert — kein zusätzlicher State nötig. Beim Anlegen
-  // und Duplizieren ist er `null`, die Warnung erscheint dort korrekt nicht.
-  const showTurnusSwitchWarning =
-    !!editingItem && draft.kind === "transfer" && !editingItem.turnus && !!draft.turnus;
-
-  // Eine Transfer-Position ist ein Zweck, und Zweck-Namen sind eindeutig.
-  const editingPurpose =
-    editingItem && draft.kind === "transfer"
-      ? allTransferCategories.find((c) => c.id === editingItem.id) || null
-      : null;
-  const sameNamePurpose =
-    draft.kind === "transfer" && draft.name.trim()
-      ? findTransferCategoryByName(allTransferCategories, draft.name, { excludeId: editingPurpose?.id })
-      : null;
-  // Beim Anlegen darf der Name einen bestehenden Zweck ohne Rate im selben Topf
-  // treffen: Der bekommt dann die Rate, samt seiner bisherigen Buchungen.
-  const adoptPurpose =
-    !editingItem && sameNamePurpose && !hasPurposeRate(sameNamePurpose) && sameNamePurpose.potId === draft.potId
-      ? sameNamePurpose
-      : null;
-  const transferNameError = (() => {
-    if (draft.kind !== "transfer") return null;
-    if (draft.name.trim().length > MAX_TRANSFER_NAME_LENGTH) {
-      return `Der Name ist zu lang (max. ${MAX_TRANSFER_NAME_LENGTH} Zeichen).`;
-    }
-    if (sameNamePurpose && !adoptPurpose) {
-      return sameNamePurpose.potId !== draft.potId && !hasPurposeRate(sameNamePurpose)
-        ? "Es gibt bereits einen Transfer-Zweck mit diesem Namen, aber in einem anderen Topf."
-        : "Es gibt bereits einen Transfer-Zweck mit diesem Namen.";
-    }
-    return null;
-  })();
-  // Der Topf eines Zwecks mit Buchungen steht fest — ein Wechsel ließe die
-  // bisherigen Buchungen im alten Topf zurück.
-  const potLocked = !!editingPurpose && purposeHasEntries(entries, editingPurpose.id);
-  // Ein Sparziel bleibt Sparziel; hier wird nur seine Rate gepflegt.
-  const isGoalPurpose = editingPurpose?.rule === "goal";
-
-  const canSave =
-    !!draft.name.trim() && draftAmountValid && !missingDueDate && !rateTooSmall && !transferNameError;
-
-  const dialogGroupOptions = useMemo(
-    () => fixedCostGroups.filter((g) => fixedCostKind(g) === draft.kind),
-    [fixedCostGroups, draft.kind]
-  );
+  const dialogGroupOptions = groupsByKind.expense;
 
   // Aktionen am Zeilenende — DataTable blendet sie beim Überfahren ein.
   function renderRowActions(row) {
     const item = row.item;
+    const isTransfer = fixedCostKind(item) === "transfer";
+    const menuItems = isTransfer
+      ? [{ label: "Sparrate entfernen", danger: true, onClick: () => removeSavingsRate(item) }]
+      : [
+          { label: "Duplizieren", onClick: () => openDuplicateDialog(item) },
+          { label: "Löschen", danger: true, onClick: () => deleteExpense(item) },
+        ];
     return (
       <>
         <Button size="sm" variant="outline" onClick={() => bookNow(item)}>Buchen</Button>
@@ -731,18 +523,17 @@ export default function FixedCostsView({
           type="button"
           className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
           onClick={() => openEditDialog(item)}
-          title="Bearbeiten"
-          aria-label={`„${item.name}“ bearbeiten`}
+          title={isTransfer ? "In den Rücklagen bearbeiten" : "Bearbeiten"}
+          aria-label={
+            isTransfer ? `„${item.name}“ in den Rücklagen bearbeiten` : `„${item.name}“ bearbeiten`
+          }
         >
           <IconEdit />
         </button>
         <OverflowMenu
           label={`Weitere Aktionen für „${item.name}“`}
           buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
-          items={[
-            { label: "Duplizieren", onClick: () => openDuplicateDialog(item) },
-            { label: "Löschen", danger: true, onClick: () => deleteItem(item) },
-          ]}
+          items={menuItems}
         />
       </>
     );
@@ -756,10 +547,15 @@ export default function FixedCostsView({
     const items = rows.map((r) => r.item);
     const total = items.reduce((sum, item) => sum + monthlyRate(item), 0);
     const menuItems = [
-      {
-        label: "Position hinzufügen",
-        onClick: () => openCreateDialog({ groupId: group?.id ?? null, kind, lockKind: true }),
-      },
+      kind === "transfer"
+        ? {
+            label: "Sparposition hinzufügen",
+            onClick: () => onOpenSavingsPosition?.({ groupId: group?.id ?? null, returnTo: "fixed" }),
+          }
+        : {
+            label: "Position hinzufügen",
+            onClick: () => openCreateDialog({ groupId: group?.id ?? null }),
+          },
     ];
     if (group) {
       menuItems.push(
@@ -844,7 +640,9 @@ export default function FixedCostsView({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => openCreateDialog({ kind: table.kind, lockKind: true })}
+            onClick={() =>
+              table.kind === "transfer" ? onOpenSavingsPosition?.({ returnTo: "fixed" }) : openCreateDialog()
+            }
           >
             <IconPlus /> {table.addLabel}
           </Button>
@@ -915,7 +713,9 @@ export default function FixedCostsView({
                     <DataTable
                       columns={columnsByKind[table.kind]}
                       sections={buildSections(table.kind)}
-                      storageKey={`fixed-${table.kind}`}
+                      // Sparraten mit neuem Schlüssel: der Katalog hat seit 7c3 die
+                      // Spalte Art statt Zweck.
+                      storageKey={table.kind === "transfer" ? "fixed-savings" : "fixed-expense"}
                       label={table.title}
                       toolbar={renderTableToolbar(table)}
                       renderRowActions={renderRowActions}
@@ -952,12 +752,11 @@ export default function FixedCostsView({
                 <div className="hb-fixed-total-meta">
                   <HbTooltip
                     inline
-                    text="Ausgaben und Rückstellungen mit Turnus, umgerechnet auf den Monat. Freie Rücklagen (ohne Turnus) zählen nicht zu den Fixkosten."
+                    text="Ausgaben und Rückstellungen, umgerechnet auf den Monat. Die Raten für freie Rücklagen und Sparziele zählen nicht zu den Fixkosten."
                   >
                     {freeMonthly > 0 && (
                       <>
-                        Ohne {fmt(freeMonthly)} freie Rücklagen aus der Tabelle „Rücklagen &amp;
-                        Rückstellungen“
+                        Ohne {fmt(freeMonthly)} Sparraten für freie Rücklagen und Sparziele
                         <span aria-hidden="true"> · </span>
                       </>
                     )}
@@ -970,7 +769,7 @@ export default function FixedCostsView({
         </div>
       )}
 
-      {/* Dialog: Fixkosten erstellen/bearbeiten */}
+      {/* Dialog: Fixkosten (Ausgaben) erstellen/bearbeiten */}
       <EditDialog
         open={dialogOpen}
         title={editingItem ? "Fixkosten bearbeiten" : duplicateSourceId ? "Fixkosten duplizieren" : "Neue Fixkosten"}
@@ -979,269 +778,69 @@ export default function FixedCostsView({
         canSave={canSave}
         saveLabel={editingItem ? "Speichern" : duplicateSourceId ? "Duplizieren" : "Erstellen"}
         size="medium"
-        // Ohne das klemmt `.hb-modal-body` das Kalender-Popover des
-        // HbDatePickers ab und zeigt stattdessen eine Scrollbar.
-        bodyScroll={false}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
-          {/* Betragszeile, Warnung und Ratenhinweis lesen als eine Gruppe — der
-              engere Abstand hält sie vom 14er-Raster der übrigen Abschnitte ab. */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, width: "100%" }}>
-              <div className="hb-field">
-                <div className="hb-label">Name</div>
-                <input
-                  className="hb-input"
-                  style={{ width: "100%", minWidth: 0 }}
-                  type="text"
-                  placeholder="z.B. Spotify, Miete, Versicherung"
-                  value={draft.name}
-                  onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-                  aria-invalid={transferNameError ? "true" : undefined}
-                  autoFocus
-                />
-                {transferNameError && (
-                  <div className="hb-fixed-field-error">{transferNameError}</div>
-                )}
-                {adoptPurpose && (
-                  <div className="hb-fixed-field-hint">
-                    Der bestehende Zweck „{adoptPurpose.name}“ bekommt diese Rate, seine
-                    Buchungen zählen mit.
-                  </div>
-                )}
-              </div>
-              <div className="hb-field">
-                {/* Kurz genug, dass das Label einzeilig bleibt — ein Umbruch würde
-                    das Feld aus der Flucht mit dem Namensfeld schieben. */}
-                <div className="hb-label">
-                  {hasTurnus ? `Betrag pro Zyklus (${baseCurrency})` : `Betrag (${baseCurrency})`}
-                </div>
-                <input
-                  className="hb-input"
-                  style={{ width: "100%", minWidth: 0 }}
-                  type="text"
-                  inputMode="decimal"
-                  placeholder={hasTurnus ? "z.B. 1200.00" : "z.B. 12.90"}
-                  value={draft.amount}
-                  onChange={(e) => setDraft((d) => ({ ...d, amount: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            {showTurnusSwitchWarning && (
-              <div className="hb-infobar hb-infobar--dialog hb-infobar--warning" role="status">
-                <div className="hb-infobar-icon"><IconWarning /></div>
-                <div className="hb-infobar-content">
-                  <div className="hb-infobar-message">
-                    Bisher war <strong>{fmt(editingItem.amount)}</strong> der Betrag pro
-                    Buchung. Mit dem Turnus wird daraus der Betrag für den ganzen Zyklus —
-                    prüf den Wert, er wird nicht automatisch umgerechnet.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {rateTooSmall ? (
-              <div className="hb-fixed-field-error">
-                Der Betrag ergibt weniger als {fmt(0.01)} pro Monat — bei diesem Turnus
-                gäbe es nichts zu buchen. Erhöhe den Zyklusbetrag oder verkürze den Turnus.
-              </div>
-            ) : draftMonthlyRate !== null ? (
-              <div className="hb-fixed-field-hint">
-                Ergibt <strong>{fmt(draftMonthlyRate)}</strong> pro Monat — genau dieser
-                Betrag wird beim monatlichen Buchen in den Topf gelegt.
-              </div>
-            ) : null}
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, width: "100%" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, width: "100%" }}>
             <div className="hb-field">
-              <div className="hb-label">Art</div>
-              <select
-                className="hb-input"
-                value={draft.kind}
-                disabled={kindLocked}
-                onChange={(e) => handleKindChange(e.target.value)}
-              >
-                <option value="expense">Ausgabe</option>
-                <option value="transfer">Transfer</option>
-              </select>
-              {kindLocked && (
-                <div className="hb-fixed-field-hint">
-                  {editingItem
-                    ? "Steht beim Bearbeiten fest. Zum Wechseln die Position duplizieren."
-                    : `Durch die Tabelle „${tableLabel(draft.kind)}“ vorgegeben.`}
-                </div>
-              )}
-            </div>
-            <div className="hb-field">
-              <div className="hb-label">Gruppe</div>
-              <select
-                className="hb-input"
-                value={draft.groupId || ""}
-                onChange={(e) => setDraft((d) => ({ ...d, groupId: e.target.value || null }))}
-              >
-                <option value="">Sonstige</option>
-                {dialogGroupOptions.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
-              {editingItem && !kindLocked && (
-                <div className="hb-fixed-field-hint">
-                  Beim Wechsel der Art verliert die Position ihre Gruppe.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div className="hb-field" style={{ width: "100%" }}>
-            <div className="hb-label">Tags</div>
-            <div className="hb-tag-input-field">
-              {draft.tags.map((tag) => (
-                <span key={tag} className="hb-tag-chip">
-                  <IconTag width={13} height={13} />
-                  {tag}
-                  <button
-                    type="button"
-                    className="hb-tag-chip-remove"
-                    onClick={() => handleTagRemove(tag)}
-                    aria-label={`Tag ${tag} entfernen`}
-                  >
-                    <IconClose width={12} height={12} strokeWidth={2.2} />
-                  </button>
-                </span>
-              ))}
+              <div className="hb-label">Name</div>
               <input
+                className="hb-input"
+                style={{ width: "100%", minWidth: 0 }}
                 type="text"
-                placeholder={draft.tags.length === 0 ? "Tag eingeben und Enter drücken…" : ""}
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleTagAdd(tagInput);
-                  } else if (e.key === "Backspace" && !tagInput && draft.tags.length > 0) {
-                    handleTagRemove(draft.tags[draft.tags.length - 1]);
-                  } else if (e.key === ",") {
-                    e.preventDefault();
-                    handleTagAdd(tagInput);
-                  }
-                }}
+                placeholder="z.B. Spotify, Miete, Versicherung"
+                value={draft.name}
+                onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                autoFocus
               />
             </div>
-            {availableTagSuggestions.length > 0 && (
-              <div className="hb-tag-suggestions">
-                {availableTagSuggestions.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    className="hb-tag-suggestion-pill"
-                    onClick={() => handleTagAdd(tag)}
-                  >
-                    <IconPlus width={12} height={12} />
-                    <IconTag width={13} height={13} />
-                    {tag}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="hb-field">
+              <div className="hb-label">Betrag ({baseCurrency})</div>
+              <input
+                className="hb-input"
+                style={{ width: "100%", minWidth: 0 }}
+                type="text"
+                inputMode="decimal"
+                placeholder="z.B. 12.90"
+                value={draft.amount}
+                onChange={(e) => setDraft((d) => ({ ...d, amount: e.target.value }))}
+              />
+            </div>
           </div>
 
-          {draft.kind === "expense" && (
-            <HierarchicalCategoryPicker
-              label="Kategorie"
-              value={{ categoryId: draft.categoryId, subcategoryId: draft.subcategoryId }}
-              categories={expenseCategories}
-              onChange={({ categoryId, subcategoryId }) =>
-                setDraft((d) => ({ ...d, categoryId, subcategoryId }))
-              }
-            />
-          )}
+          <HierarchicalCategoryPicker
+            label="Kategorie"
+            value={{ categoryId: draft.categoryId, subcategoryId: draft.subcategoryId }}
+            categories={expenseCategories}
+            onChange={({ categoryId, subcategoryId }) =>
+              setDraft((d) => ({ ...d, categoryId, subcategoryId }))
+            }
+          />
 
-          {draft.kind === "transfer" && (
-            <>
-              {/* Seit Schema 7 ist die Position selbst der Transfer-Zweck — ihr
-                  Name ist der Zweck, eine eigene Zweck-Auswahl entfällt. */}
-              <div className="hb-field">
-                <div className="hb-label">In Topf</div>
-                <select
-                  className="hb-input"
-                  value={draft.potId}
-                  disabled={potLocked}
-                  onChange={(e) => setDraft((d) => ({ ...d, potId: e.target.value }))}
-                >
-                  {pots.map((pot) => (
-                    <option key={pot.id} value={pot.id}>{pot.name}</option>
-                  ))}
-                </select>
-                {potLocked && (
-                  <div className="hb-fixed-field-hint">
-                    Die Position hat schon Buchungen in diesem Topf, der Topf steht deshalb fest.
-                  </div>
-                )}
-              </div>
-              {/* Topf sagt wohin, Turnus und Fälligkeit wann und wie oft. */}
-              <div className="hb-two hb-two--dialog" style={{ width: "100%" }}>
-                <div className="hb-field">
-                  <div className="hb-label">Turnus</div>
-                  <select
-                    className="hb-input"
-                    value={draft.turnus ?? ""}
-                    disabled={isGoalPurpose}
-                    onChange={(e) => handleTurnusChange(e.target.value)}
-                  >
-                    {turnusOptionsFor(draft.turnus).map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                  <div className="hb-fixed-field-hint">
-                    {isGoalPurpose
-                      ? "Die Position ist ein Sparziel: Hier wird nur die monatliche Rate gepflegt, Zielbetrag und Deadline stehen unter „Rücklagen“."
-                      : "Mit einem Turnus wird die Position als Rückstellung geführt: Der Betrag gilt für den ganzen Zyklus, gebucht wird monatlich der anteilige Betrag. Ohne Turnus ist es eine freie Rücklage ohne festen Termin."}
-                  </div>
-                </div>
-                <div className="hb-field">
-                  <div className="hb-label">Nächste Fälligkeit</div>
-                  {/* Ohne Turnus hat das Datum keine Funktion — deaktiviert statt
-                      stumm ignoriert. Der erklärende Text steht im Hint, nicht im
-                      Platzhalter: der wird bei `disabled` zu blass zum Lesen. */}
-                  <HbDatePicker
-                    clearable
-                    disabled={!draft.turnus}
-                    value={draft.faelligkeit}
-                    onChange={(v) => setDraft((d) => ({ ...d, faelligkeit: v }))}
-                  />
-                  <div className="hb-fixed-field-hint">
-                    {draft.turnus
-                      ? "Wann die Rechnung das nächste Mal fällig wird — nicht die letzte Zahlung. Das Datum gibt den dauerhaften Rhythmus vor: Der Termin wiederholt sich im Turnus, auch wenn eine Rechnung einmal verspätet kommt."
-                      : "Wird erst mit einem Turnus benötigt."}
-                  </div>
-                  {!!draft.turnus && !draft.faelligkeit && (
-                    <div className="hb-fixed-field-error">
-                      Zu einem Turnus gehört eine nächste Fälligkeit — daraus ergibt sich
-                      der Rhythmus der Zyklen.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
+          <div className="hb-field">
+            <div className="hb-label">Gruppe</div>
+            <select
+              className="hb-input"
+              value={draft.groupId || ""}
+              onChange={(e) => setDraft((d) => ({ ...d, groupId: e.target.value || null }))}
+            >
+              <option value="">Sonstige</option>
+              {dialogGroupOptions.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </div>
 
-          <label className="hb-fct-annual-toggle">
-            <input
-              type="checkbox"
-              checked={draft.showInOverview}
-              onChange={(e) => setDraft((d) => ({ ...d, showInOverview: e.target.checked }))}
-              style={{ accentColor: "var(--accent)" }}
-            />
-            <div>
-              <div style={{ fontWeight: 600, fontSize: 13 }}>Im Trend auflisten</div>
-              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
-                Die Position erscheint in der Liste unter „Fixkosten-Entwicklung“. Auf die Kennzahlen hat das keinen Einfluss.
-              </div>
-            </div>
-          </label>
+          <TagInputField
+            tags={draft.tags}
+            onChange={(tags) => setDraft((d) => ({ ...d, tags }))}
+            knownTags={allBookTags}
+          />
+
+          <TrendToggle
+            checked={draft.showInOverview}
+            onChange={(showInOverview) => setDraft((d) => ({ ...d, showInOverview }))}
+            subject="Die Position"
+          />
         </div>
       </EditDialog>
     </div>

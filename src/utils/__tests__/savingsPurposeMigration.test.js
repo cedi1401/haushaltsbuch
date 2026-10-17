@@ -3,7 +3,6 @@ import { migrateSavingsPurposes, normalizeSavingsPurposes } from '../savingsPurp
 import { normalizeBook } from '../bookMigration.js';
 import {
   addTransferCategory,
-  applyFixedFieldsToPurpose,
   clearPurposeRate,
   getFixedCostItems,
   getPurposesForPot,
@@ -336,19 +335,6 @@ describe('Sparpositionen — Adapter', () => {
 
   it('bildet einen Ziel-Zweck als Sparziel ab', () => {
     expect(purposeToGoal(goalP)).toMatchObject({ id: 'tc_g', potId: 'p_ferien', transferCategoryId: 'tc_g', targetAmount: 2000 });
-  });
-
-  it('schreibt Felder aus dem Fixkosten-Dialog in den Zweck', () => {
-    const fields = { name: 'Steuern', amount: 100, potId: 'p_res', turnus: null, faelligkeit: null, groupId: null, tags: [], showInOverview: false };
-    expect(applyFixedFieldsToPurpose(reserve, fields)).toMatchObject({ rule: 'free', monthlyRate: 100 });
-    expect(applyFixedFieldsToPurpose(reserve, fields)).not.toHaveProperty('turnus');
-    const toReserve = applyFixedFieldsToPurpose(free, { ...fields, amount: 600, turnus: 6, faelligkeit: '2027-01-01' });
-    expect(toReserve).toMatchObject({ rule: 'reserve', amount: 600, turnus: 6 });
-    expect(toReserve).not.toHaveProperty('monthlyRate');
-    // Ein Ziel bleibt Ziel, auch wenn ein Turnus mitkäme
-    expect(applyFixedFieldsToPurpose(goalP, { ...fields, turnus: 12, faelligkeit: '2027-01-01' })).toMatchObject({
-      rule: 'goal', monthlyRate: 100, targetAmount: 2000,
-    });
   });
 
   it('nimmt beim Löschen nur die Rate weg', () => {

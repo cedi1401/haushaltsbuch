@@ -33,8 +33,8 @@ const HELP_FCT =
   'nicht mit.';
 
 const HELP_OVERVIEW =
-  'Welche Positionen hier stehen, legst du in den Fixkosten beim Bearbeiten der Position fest ' +
-  '(„Im Trend auflisten“). Auf die Kennzahlen hat das keinen Einfluss.';
+  'Welche Positionen hier stehen, legst du beim Bearbeiten fest („Im Trend auflisten“): ' +
+  'Ausgaben in den Fixkosten, Sparraten in den Rücklagen. Auf die Kennzahlen hat das keinen Einfluss.';
 
 // Die drei Arten von Fixkosten, in der Reihenfolge, in der sie in der Übersicht
 // als Blöcke untereinander stehen: erst die echten Ausgaben, dann die
@@ -256,13 +256,13 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
         <div className="hb-infobar" role="status">
           <div className="hb-infobar-icon"><IconInfo /></div>
           <div className="hb-infobar-content">
-            <div className="hb-infobar-title">Noch keine Position mit Turnus</div>
+            <div className="hb-infobar-title">Noch keine Rückstellung</div>
             <div className="hb-infobar-message">
-              Transfer-Fixkosten zählen nur dann als Belastung, wenn ein Turnus hinterlegt ist —
+              Sparraten zählen nur dann als Belastung, wenn sie zu einer Rückstellung gehören —
               die Gebucht-Linie und der Anteil an der Gesamtbelastung fallen deshalb niedriger aus
-              als bisher. Trag in der Fixkosten-Ansicht bei einer Transfer-Position Turnus und
-              nächste Fälligkeit nach, dann fließt ihre Monatsrate wieder in Kurve und Kennzahlen
-              ein. Ohne Turnus gilt eine Position als freies Sparen.
+              als bisher. Mach in den Rücklagen aus der Sparposition eine Rückstellung mit Turnus
+              und nächster Fälligkeit, dann fließt ihre Monatsrate wieder in Kurve und Kennzahlen
+              ein. Freie Rücklagen und Sparziele zählen nicht als Belastung.
             </div>
           </div>
         </div>
@@ -406,7 +406,8 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
                 <div className="hb-empty-icon"><IconInbox /></div>
                 <div className="hb-empty-title">Keine Positionen eingeblendet</div>
                 <div className="hb-empty-text">
-                  Setze in den Fixkosten beim Bearbeiten einer Position den Haken „Im Trend auflisten“.
+                  Setze beim Bearbeiten einer Position den Haken „Im Trend auflisten“ — bei Ausgaben in
+                  den Fixkosten, bei Sparraten in den Rücklagen.
                 </div>
               </div>
             ) : (

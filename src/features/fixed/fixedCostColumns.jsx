@@ -3,21 +3,22 @@ import HbTooltip from "../../components/HbTooltip.jsx";
 import { IconTag } from "../../components/icons.jsx";
 import { formatDateDE } from "../../utils/formatUtils.js";
 import { annualAmount, isSinkingFund, monthlyRate, turnusMonths } from "../../utils/fixedCostUtils.js";
-import { TURNUS_LABEL } from "../savings/savingsColumns.jsx";
+import { RULE_LABEL, TURNUS_LABEL } from "../savings/savingsColumns.jsx";
 
 /**
- * Spaltenkataloge der beiden Fixkosten-Tabellen („Ausgaben" und „Rücklagen &
- * Rückstellungen"). Gleiche Mechanik wie `savingsColumns.jsx`: eine Fabrik,
- * weil Beträge ausnahmslos über `fmt` laufen.
+ * Spaltenkataloge der beiden Fixkosten-Tabellen („Ausgaben" und „Sparraten").
+ * Gleiche Mechanik wie `savingsColumns.jsx`: eine Fabrik, weil Beträge
+ * ausnahmslos über `fmt` laufen.
  *
  * Zeilen haben die Form `{ id, item, booked }` — `item` ist die Position aus
- * `recurringExpenses`, `booked` die Buchungen dieses Finanzmonats
+ * `recurringExpenses` bzw. eine Sparposition mit Rate (`purposeToFixedItem`),
+ * `booked` die Buchungen dieses Finanzmonats
  * (`{ count, amount, lastDate }`) oder `null`. Beides setzt der View.
  */
 
 const DEFAULT_COLUMNS = {
   expense: ["name", "category", "monthlyRate", "status"],
-  transfer: ["name", "purpose", "pot", "turnus", "cycleAmount", "monthlyRate", "status"],
+  transfer: ["name", "rule", "pot", "turnus", "cycleAmount", "monthlyRate", "status"],
 };
 
 /** Summe eines Feldes über alle Zeilen; null-Werte zählen nicht mit. */
@@ -138,7 +139,7 @@ function categoryLabel(item, categoryById) {
   return { cat, text: sub ? `${cat.name} › ${sub.name}` : cat.name };
 }
 
-function catalog(kind, { fmt, categoryById, potNameById, purposeNameById, groupNameById }) {
+function catalog(kind, { fmt, categoryById, potNameById, groupNameById }) {
   const name = {
     id: "name",
     label: "Bezeichnung",
@@ -252,11 +253,21 @@ function catalog(kind, { fmt, categoryById, potNameById, purposeNameById, groupN
   return [
     name,
     {
-      id: "purpose",
-      label: "Zweck",
+      // Die Art der Sparposition (Freie Rücklage, Rückstellung, Sparziel).
+      // Freie Rücklagen und Sparziele zählen nicht zu den Fixkosten pro Monat.
+      id: "rule",
+      label: "Art",
       shrink: true,
-      sortValue: (row) => String(purposeNameById.get(row.item?.transferCategoryId) ?? "").toLowerCase(),
-      render: (row) => purposeNameById.get(row.item?.transferCategoryId),
+      sortValue: (row) => RULE_LABEL[row.item?.rule] ?? null,
+      render: (row) => {
+        const label = RULE_LABEL[row.item?.rule];
+        if (isSinkingFund(row.item)) return label;
+        return (
+          <HbTooltip text="Zählt nicht zu den Fixkosten pro Monat" focusable={false} underline>
+            <span className="hb-fixed-free">{label}</span>
+          </HbTooltip>
+        );
+      },
     },
     {
       id: "pot",
@@ -272,21 +283,9 @@ function catalog(kind, { fmt, categoryById, potNameById, purposeNameById, groupN
       label: "Turnus",
       shrink: true,
       sortValue: (row) => (isSinkingFund(row.item) ? turnusMonths(row.item) : null),
-      // Ohne Turnus ist die Position eine Rücklage (freies Sparen) — das steht
-      // hier statt eines „—", weil genau das die Position von einer
-      // Rückstellung unterscheidet. Dasselbe Merkmal trägt die Trend-Übersicht.
+      // Einen Turnus haben nur Rückstellungen; die Art steht in der Spalte „Art".
       render: (row) => {
-        if (!isSinkingFund(row.item)) {
-          return (
-            <HbTooltip
-              text="Freie Rücklage ohne Turnus — zählt nicht zu den Fixkosten pro Monat"
-              focusable={false}
-              underline
-            >
-              <span className="hb-fixed-free">Freie Rücklage</span>
-            </HbTooltip>
-          );
-        }
+        if (!isSinkingFund(row.item)) return null;
         const months = turnusMonths(row.item);
         return TURNUS_LABEL[months] || `Alle ${months} Monate`;
       },
@@ -312,7 +311,7 @@ function catalog(kind, { fmt, categoryById, potNameById, purposeNameById, groupN
  * Spaltenkatalog einer der beiden Fixkosten-Tabellen.
  *
  * @param {"expense"|"transfer"} kind
- * @param {{ fmt: Function, categoryById: Map, potNameById: Map, purposeNameById: Map, groupNameById: Map }} ctx
+ * @param {{ fmt: Function, categoryById: Map, potNameById: Map, groupNameById: Map }} ctx
  */
 export function buildFixedCostColumns(kind, ctx) {
   const defaults = new Set(DEFAULT_COLUMNS[kind]);
