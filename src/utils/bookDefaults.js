@@ -263,7 +263,6 @@ export function makeDefaultBook(name = "Mein Haushaltsbuch") {
     transferCategories: [],
     entries: [],
     pots: [],
-    goals: [],
     recurringExpenses: [],
     fixedCostGroups: [],
     costGroups: [],

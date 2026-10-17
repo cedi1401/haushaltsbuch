@@ -1,10 +1,20 @@
 import { getEntryFinancialMonth } from "./financialMonthUtils.js";
 import { isSinkingFund } from "./fixedCostUtils.js";
 
-// Matching-Strategie: entry.recurringId === recurringExpense.id — die
-// Herkunftskennung, die "Jetzt buchen" setzt (buildEntryFromItem). Bewusst OHNE
-// Fallback auf den Notiztext: eine umbenannte Position behält so ihre Historie,
-// und ein manuell erfasster Eintrag mit passendem Namen zählt nicht mit.
+// Matching-Strategie: Ausgaben über entry.recurringId === recurringExpense.id —
+// die Herkunftskennung, die "Jetzt buchen" setzt (buildEntryFromItem). Bewusst
+// OHNE Fallback auf den Notiztext: eine umbenannte Position behält so ihre
+// Historie, und ein manuell erfasster Eintrag mit passendem Namen zählt nicht mit.
+//
+// Transfers über entry.transferCategoryId: Seit Schema 7 ist der Zweck selbst
+// die Position (transferCategoryUtils.purposeToFixedItem, id = Zweck-ID). Jede
+// Einzahlung auf den Zweck zählt — auch eine Sondereinzahlung, sie gehört
+// bewusst zur Position.
+
+function matchId(e) {
+  if (e.kind === "transfer") return e.transferCategoryId || null;
+  return e.recurringId || null;
+}
 
 // Index über die Positionen: die Kostenregel braucht nicht nur die ID, sondern
 // das Item selbst (Turnus).
@@ -13,11 +23,12 @@ function buildItemById(recurringExpenses) {
 }
 
 function buildMonthItemMap(entries, itemById, monthStartDay) {
-  const map = new Map(); // ym → Map<recurringId, amount>
+  const map = new Map(); // ym → Map<Positions-ID, amount>
 
   for (const e of entries || []) {
-    if (!e.recurringId) continue;
-    const item = itemById.get(e.recurringId);
+    const id = matchId(e);
+    if (!id) continue;
+    const item = itemById.get(id);
     if (!item) continue;
     // Ausgaben nur aus dem Monatsbudget: eine aus einem Topf bezahlte Ausgabe
     // steckt nicht im Ausgaben-Nenner (m.expense) und würde den Anteilswert
@@ -36,7 +47,7 @@ function buildMonthItemMap(entries, itemById, monthStartDay) {
     if (!ym) continue;
     if (!map.has(ym)) map.set(ym, new Map());
     const inner = map.get(ym);
-    inner.set(e.recurringId, (inner.get(e.recurringId) || 0) + Number(e.amount || 0));
+    inner.set(id, (inner.get(id) || 0) + Number(e.amount || 0));
   }
 
   return map;

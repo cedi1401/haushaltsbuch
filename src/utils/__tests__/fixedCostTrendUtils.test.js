@@ -5,9 +5,11 @@ import { buildFixedCostMonthlyData } from '../fixedCostTrendUtils.js';
 // - Ausgaben-Fixkosten            → zählt
 // - Rücklage (Transfer mit Turnus) → zählt, Zyklusbetrag 1200 bei turnus 12
 // - freies Sparen (ohne Turnus)    → zählt nicht
+// Transfer-Positionen sind seit Schema 7 Zwecke (purposeToFixedItem): ihre
+// id ist die Zweck-ID, Buchungen ordnen sich über transferCategoryId zu.
 const miete = { id: 'r-miete', name: 'Miete', kind: 'expense', amount: 1500, categoryId: 'cat-wohnen' };
-const steuern = { id: 'r-steuern', name: 'Steuern', kind: 'transfer', amount: 1200, turnus: 12, potId: 'pot-steuern', transferCategoryId: 'tcat-steuern' };
-const ferien = { id: 'r-ferien', name: 'Ferien', kind: 'transfer', amount: 200, potId: 'pot-ferien', transferCategoryId: 'tcat-ferien' };
+const steuern = { id: 'tcat-steuern', name: 'Steuern', kind: 'transfer', amount: 1200, turnus: 12, potId: 'pot-steuern', transferCategoryId: 'tcat-steuern' };
+const ferien = { id: 'tcat-ferien', name: 'Ferien', kind: 'transfer', amount: 200, potId: 'pot-ferien', transferCategoryId: 'tcat-ferien' };
 
 const items = [miete, steuern, ferien];
 
@@ -22,6 +24,15 @@ const booked = (recurringId, amount, extra = {}) => ({
   ...extra,
 });
 
+const paid = (purposeId, amount, potId) => ({
+  id: `e-${purposeId}`,
+  date: '2026-08-10',
+  amount,
+  kind: 'transfer',
+  potId,
+  transferCategoryId: purposeId,
+});
+
 const data = (entries) => buildFixedCostMonthlyData(entries, items, monthly, 1)[0];
 
 describe('buildFixedCostMonthlyData — Kostenregel im Zähler', () => {
@@ -33,14 +44,14 @@ describe('buildFixedCostMonthlyData — Kostenregel im Zähler', () => {
   });
 
   it('zählt eine Rücklage (Transfer mit Turnus) als Belastung', () => {
-    const r = data([booked('r-steuern', 100, { kind: 'transfer', potId: 'pot-steuern' })]);
+    const r = data([paid('tcat-steuern', 100, 'pot-steuern')]);
     expect(r.sinkingTotal).toBe(100);
     expect(r.expenseFixedTotal).toBe(0);
     expect(r.fixedTotal).toBe(100);
   });
 
   it('lässt freies Sparen (Transfer ohne Turnus) vollständig außen vor', () => {
-    const r = data([booked('r-ferien', 200, { kind: 'transfer', potId: 'pot-ferien' })]);
+    const r = data([paid('tcat-ferien', 200, 'pot-ferien')]);
     expect(r.fixedTotal).toBe(0);
     expect(r.sinkingTotal).toBe(0);
     expect(r.basis).toBe(2000);
@@ -60,6 +71,14 @@ describe('buildFixedCostMonthlyData — Kostenregel im Zähler', () => {
     expect(r.fixedTotal).toBe(0);
   });
 
+  it('ordnet Transfers über den Zweck zu, nicht über eine alte recurringId', () => {
+    const r = data([
+      booked('tcat-steuern', 100, { kind: 'transfer', potId: 'pot-steuern' }),
+      paid('tcat-unbekannt', 100, 'pot-steuern'),
+    ]);
+    expect(r.fixedTotal).toBe(0);
+  });
+
   it('ignoriert Einkommen, auch mit passender recurringId', () => {
     const r = data([booked('r-miete', 500, { kind: 'income' })]);
     expect(r.fixedTotal).toBe(0);
@@ -70,7 +89,7 @@ describe('buildFixedCostMonthlyData — Anteil an der Gesamtbelastung', () => {
   it('nimmt die gebuchte Rücklage in den Nenner auf', () => {
     const r = data([
       booked('r-miete', 1500, { kind: 'expense', source: 'month' }),
-      booked('r-steuern', 100, { kind: 'transfer', potId: 'pot-steuern' }),
+      paid('tcat-steuern', 100, 'pot-steuern'),
     ]);
     // basis = 2000 Ausgaben + 100 Rücklage; Zähler = 1500 + 100
     expect(r.basis).toBe(2100);
@@ -80,7 +99,7 @@ describe('buildFixedCostMonthlyData — Anteil an der Gesamtbelastung', () => {
   it('überschreitet 100 % nicht mehr, wenn nur Rücklagen gebucht sind', () => {
     // Der alte Fehler: Zähler enthielt den Transfer, Nenner (m.expense) nicht.
     const r = buildFixedCostMonthlyData(
-      [booked('r-steuern', 100, { kind: 'transfer', potId: 'pot-steuern' })],
+      [paid('tcat-steuern', 100, 'pot-steuern')],
       items,
       [{ month: '2026-08', label: 'Aug 26', expense: 0 }],
       1

@@ -1,8 +1,20 @@
 // src/utils/transferCategoryUtils.js
 //
-// Transfer-Zwecke: { id, name, deleted? }. Buchungen, Fixkosten, Sparziele und
-// Vorlagen referenzieren einen Zweck über `transferCategoryId`, nie über den
-// Namen — ein Umbenennen ändert damit nur den Eintrag in der Liste.
+// Transfer-Zwecke sind seit Schema 7 die Sparpositionen des Buchs (F2, Konzept
+// C): Ein Zweck gehört genau einem Topf und trägt eine Regel.
+//
+//   { id, name, potId, rule, deleted?, groupId, tags, showInOverview, ...Regelfelder }
+//
+//   rule "free"    — Rücklage: optionale `monthlyRate`
+//   rule "reserve" — Rückstellung: `amount` (Rechnung je Zyklus), `turnus`,
+//                    `faelligkeit`; die Monatsrate wird abgeleitet
+//   rule "goal"    — Sparziel: `targetAmount`, `deadline`, optionale
+//                    `monthlyRate`, `createdAt`, `completedAt`, `completedAmount`
+//
+// Buchungen und Vorlagen referenzieren einen Zweck über `transferCategoryId`,
+// nie über den Namen — ein Umbenennen ändert damit nur den Eintrag in der Liste.
+// Weil der Zweck exklusiv ist, ist sein Netto im Topf zugleich der Ist-Stand
+// der Position; es gibt keine geteilten Zwecke mehr.
 //
 // Gelöschte Zwecke bleiben mit `deleted: true` in der Liste: bestehende
 // Buchungen behalten so ihren Namen und ihren Ist-Stand im Topf. Auswahllisten
@@ -14,13 +26,33 @@ import { generateId } from "./idUtils.js";
 
 export const MAX_TRANSFER_NAME_LENGTH = 50;
 
-export function makeTransferCategory(name) {
-  return { id: generateId("tcat"), name: String(name ?? "").trim() };
+export const PURPOSE_RULES = ["free", "reserve", "goal"];
+
+export function makeTransferCategory(name, potId) {
+  return {
+    id: generateId("tcat"),
+    name: String(name ?? "").trim(),
+    potId: potId || null,
+    rule: "free",
+    monthlyRate: null,
+    groupId: null,
+    tags: [],
+    showInOverview: false,
+  };
 }
 
 /** Nur die nicht gelöschten Zwecke — für Auswahllisten und Standardwerte. */
 export function getActiveTransferCategories(list) {
   return (list || []).filter((c) => c && !c.deleted);
+}
+
+/**
+ * Die aktiven Zwecke eines Topfs — die Auswahl beim Buchen. Ein Zweck gehört
+ * genau einem Topf; ein Zweck aus einem anderen Topf würde dessen Ist-Stand in
+ * zwei Töpfe aufspalten.
+ */
+export function getPurposesForPot(list, potId) {
+  return getActiveTransferCategories(list).filter((c) => c.potId === potId);
 }
 
 export function findTransferCategory(list, id) {
@@ -59,19 +91,24 @@ export function findTransferCategoryByName(list, name, opts = {}) {
 }
 
 /**
- * Legt einen Zweck an. Gibt es einen gelöschten mit demselben Namen, wird
- * dieser reaktiviert (gleiche ID), sonst ein neuer angehängt.
+ * Legt einen Zweck im Topf an. Gibt es einen gelöschten mit demselben Namen im
+ * selben Topf, wird dieser reaktiviert (gleiche ID, samt Regel und Buchungen),
+ * sonst ein neuer angehängt. Ein gelöschter Zweck aus einem anderen Topf lebt
+ * bewusst nicht auf: seine Buchungen liegen dort.
  * @returns {{ list: Array, category: object }}
  */
-export function addTransferCategory(list, name) {
+export function addTransferCategory(list, name, potId) {
   const trimmed = String(name ?? "").trim();
   const current = list || [];
-  const revived = findTransferCategoryByName(current, trimmed, { includeDeleted: true });
-  if (revived && revived.deleted) {
-    const category = { id: revived.id, name: trimmed };
+  const revived = current.find(
+    (c) => c?.deleted && c.potId === potId && nameKey(c.name) === nameKey(trimmed)
+  );
+  if (revived) {
+    const { deleted: _deleted, ...rest } = revived;
+    const category = { ...rest, name: trimmed };
     return { list: current.map((c) => (c.id === revived.id ? category : c)), category };
   }
-  const category = makeTransferCategory(trimmed);
+  const category = makeTransferCategory(trimmed, potId);
   return { list: [...current, category], category };
 }
 
@@ -106,4 +143,144 @@ export function getTransferCategoryOptions(list, selectedId, choices = getActive
   const selected = findTransferCategory(list, selectedId);
   if (selected?.deleted) options.push({ id: selected.id, label: `${selected.name} (gelöscht)` });
   return options;
+}
+
+// ── Sparpositionen ────────────────────────────────────────────────────────
+// Die Views aus der Zeit vor Schema 7 (Fixkosten, Rückstellungen, Sparziele,
+// Trend) rechnen mit Fixkosten-Positionen bzw. Sparziel-Objekten. Die Adapter
+// unten bilden einen Zweck auf diese Form ab, damit die Rechenlogik
+// (Zyklus, Soll/Ist, Prognose) unverändert bleibt. Die `id` ist die des Zwecks
+// — Buchungen ordnen sich darüber per `transferCategoryId` zu.
+
+/**
+ * Hat der Zweck eine monatliche Rate? Rückstellungen immer, Rücklagen und
+ * Sparziele nur mit gesetzter `monthlyRate`. Genau diese Zwecke stehen in der
+ * Fixkosten-Tabelle „Rücklagen & Rückstellungen".
+ */
+export function hasPurposeRate(purpose) {
+  if (!purpose) return false;
+  if (purpose.rule === "reserve") return true;
+  return Number(purpose.monthlyRate) > 0;
+}
+
+/** Aktive Zwecke mit Rate, in Listenreihenfolge. */
+export function getRatedPurposes(list) {
+  return getActiveTransferCategories(list).filter(hasPurposeRate);
+}
+
+/** Aktive Zwecke mit der Regel „Sparziel". */
+export function getGoalPurposes(list) {
+  return getActiveTransferCategories(list).filter((c) => c.rule === "goal");
+}
+
+/**
+ * Ein Zweck in der Form einer Transfer-Fixkostenposition: `amount` ist bei
+ * einer Rückstellung der Zyklusbetrag, sonst die Monatsrate — dieselbe
+ * Bedeutung wie früher in `recurringExpenses`.
+ */
+export function purposeToFixedItem(purpose) {
+  const isReserve = purpose.rule === "reserve";
+  return {
+    id: purpose.id,
+    kind: "transfer",
+    rule: purpose.rule,
+    name: purpose.name,
+    amount: isReserve ? Number(purpose.amount) || 0 : Number(purpose.monthlyRate) || 0,
+    potId: purpose.potId,
+    transferCategoryId: purpose.id,
+    turnus: isReserve ? purpose.turnus ?? null : null,
+    faelligkeit: isReserve ? purpose.faelligkeit ?? null : null,
+    groupId: purpose.groupId ?? null,
+    tags: purpose.tags || [],
+    showInOverview: purpose.showInOverview === true,
+  };
+}
+
+/**
+ * Alle Fixkosten-Positionen des Buchs: die Ausgaben aus `recurringExpenses`
+ * und die Zwecke mit Rate als Transfer-Positionen.
+ */
+export function getFixedCostItems(book) {
+  return [
+    ...(book?.recurringExpenses || []),
+    ...getRatedPurposes(book?.transferCategories).map(purposeToFixedItem),
+  ];
+}
+
+/** Ein Sparziel-Zweck in der Form, die goalUtils erwartet. */
+export function purposeToGoal(purpose) {
+  return {
+    id: purpose.id,
+    name: purpose.name,
+    potId: purpose.potId,
+    transferCategoryId: purpose.id,
+    targetAmount: Number(purpose.targetAmount) || 0,
+    deadline: purpose.deadline || null,
+    monthlyRate: purpose.monthlyRate ?? null,
+    createdAt: purpose.createdAt || null,
+    completedAt: purpose.completedAt || null,
+    completedAmount: purpose.completedAmount ?? null,
+  };
+}
+
+/**
+ * Schreibt die Felder aus dem Fixkosten-Dialog in einen Zweck. Mit Turnus wird
+ * er zur Rückstellung, ohne zur Rücklage — ein Sparziel bleibt Sparziel und
+ * bekommt nur seine Rate (den Turnus bietet der Dialog dort nicht an).
+ * @param {object} purpose
+ * @param {{ name: string, amount: number, potId: string, turnus: number|null,
+ *           faelligkeit: string|null, groupId: string|null, tags: string[],
+ *           showInOverview: boolean }} fields
+ */
+export function applyFixedFieldsToPurpose(purpose, fields) {
+  const {
+    amount: _amount, turnus: _turnus, faelligkeit: _faelligkeit, monthlyRate: _rate, ...rest
+  } = purpose;
+  const common = {
+    ...rest,
+    name: fields.name,
+    potId: fields.potId,
+    groupId: fields.groupId ?? null,
+    tags: fields.tags || [],
+    showInOverview: fields.showInOverview === true,
+  };
+  if (purpose.rule !== "goal" && fields.turnus) {
+    return {
+      ...common,
+      rule: "reserve",
+      amount: fields.amount,
+      turnus: fields.turnus,
+      faelligkeit: fields.faelligkeit,
+    };
+  }
+  return {
+    ...common,
+    rule: purpose.rule === "goal" ? "goal" : "free",
+    monthlyRate: fields.amount,
+  };
+}
+
+/**
+ * Nimmt einem Zweck die Rate — „Löschen" in der Fixkosten-Tabelle. Der Zweck
+ * selbst bleibt mit seinen Buchungen bestehen: das Geld liegt weiter im Topf.
+ * Eine Rückstellung wird dabei zur Rücklage.
+ */
+export function clearPurposeRate(purpose) {
+  const { amount: _amount, turnus: _turnus, faelligkeit: _faelligkeit, ...rest } = purpose;
+  return {
+    ...rest,
+    rule: purpose.rule === "goal" ? "goal" : "free",
+    monthlyRate: null,
+  };
+}
+
+/**
+ * Hat der Zweck Buchungen? Dann ist sein Topf festgelegt: ein Wechsel ließe
+ * die bisherigen Buchungen im alten Topf zurück und spaltete den Ist-Stand.
+ */
+export function purposeHasEntries(entries, purposeId) {
+  if (!purposeId) return false;
+  return (entries || []).some(
+    (e) => (e.kind === "transfer" || e.kind === "withdrawal") && e.transferCategoryId === purposeId
+  );
 }

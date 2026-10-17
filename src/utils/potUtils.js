@@ -49,16 +49,6 @@ export function calcPotSeries(entries, potId, monthStartDay = 1) {
   });
 }
 
-export function getWithdrawalCategoriesForPot(entries, potId, allCategories) {
-  if (!potId || !allCategories.length) return allCategories;
-  const used = new Set();
-  for (const e of entries) {
-    if (e.kind === "withdrawal" && e.potId === potId && e.transferCategoryId) used.add(e.transferCategoryId);
-  }
-  const filtered = allCategories.filter((cat) => used.has(cat.id));
-  return filtered.length > 0 ? filtered : allCategories;
-}
-
 /**
  * Netto-Stand eines einzelnen Zwecks in einem Topf: Σ Transfers − Σ Entnahmen.
  * Kann negativ sein (Überentnahme). Zählt jede Buchung mit, auch manuell

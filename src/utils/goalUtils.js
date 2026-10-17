@@ -14,64 +14,30 @@ function diffMonthsInclusive(fromYm, toYm) {
   return span < 1 ? 1 : span;
 }
 
-/**
- * Bestimmt das Startdatum basierend auf dem startMode
- */
-function resolveStartDate(goal) {
-  if (!goal) return null;
-  switch (goal.startMode) {
-    case "date":
-      return goal.startDate || goal.createdAt || null;
-    case "custom":
-      return goal.createdAt || null;
-    case "zero":
-    default:
-      return null; // kein Startdatum = alle Entries zählen
-  }
-}
+// Sparziele sind seit Schema 7 Zwecke mit der Regel „goal" (siehe
+// transferCategoryUtils.purposeToGoal). Der Zweck gehört nur diesem Ziel,
+// deshalb zählen alle seine Buchungen — ein Startpunkt ist nicht mehr nötig,
+// ein Anfangsbetrag ist eine echte Buchung.
 
 /**
  * Berechnet den Fortschritt eines Sparziels
- * @param {Object} goal - Das Sparziel (potId, transferCategoryId, startMode, startDate, startAmount)
+ * @param {Object} goal - Das Sparziel (potId, transferCategoryId, targetAmount)
  * @param {Array} entries - Alle Einträge
- * @param {Array} pots - Alle Töpfe
  * @returns {{ current: number, target: number, percent: number, remaining: number }}
  */
-export function calcGoalProgress(goal, entries, _pots) {
+export function calcGoalProgress(goal, entries) {
   if (!goal) {
     return { current: 0, target: 0, percent: 0, remaining: 0 };
   }
 
   const target = Number(goal.targetAmount) || 0;
-  const potId = goal.potId;
-  const startDate = resolveStartDate(goal);
 
-  // Entries ab Startdatum filtern
-  const relevant = (entries || []).filter((e) => {
-    if (startDate && (!e.date || e.date < startDate)) return false;
-    return true;
-  });
-
-  let current = 0;
-
-  if (goal.transferCategoryId) {
-    // Netto über Topf + Zweck, wie der Ist-Stand der Rückstellungen: Entnahmen
-    // tragen seit den Rückstellungen ebenfalls einen Zweck (F2).
-    const ofPurpose = (e) => e.potId === potId && e.transferCategoryId === goal.transferCategoryId;
-    const transfersIn = sumAmounts(relevant, (e) => e.kind === "transfer" && ofPurpose(e));
-    const withdrawalsOut = sumAmounts(relevant, (e) => e.kind === "withdrawal" && ofPurpose(e));
-    current = transfersIn - withdrawalsOut;
-  } else {
-    // Topf-Gesamtstand: alle transfers rein - alle withdrawals raus
-    const transfersIn = sumAmounts(relevant, (e) => e.kind === "transfer" && e.potId === potId);
-    const withdrawalsOut = sumAmounts(relevant, (e) => e.kind === "withdrawal" && e.potId === potId);
-    current = transfersIn - withdrawalsOut;
-  }
-
-  // Manuellen Anfangsbetrag addieren (für startMode "custom")
-  if (goal.startMode === "custom") {
-    current += Number(goal.startAmount || 0);
-  }
+  // Netto über Topf + Zweck, wie der Ist-Stand der Rückstellungen.
+  const ofPurpose = (e) =>
+    e.potId === goal.potId && e.transferCategoryId === goal.transferCategoryId;
+  const transfersIn = sumAmounts(entries, (e) => e.kind === "transfer" && ofPurpose(e));
+  const withdrawalsOut = sumAmounts(entries, (e) => e.kind === "withdrawal" && ofPurpose(e));
+  const current = transfersIn - withdrawalsOut;
 
   const percent = target > 0 ? Math.round((current / target) * 100) : 0;
   const remaining = Math.max(0, target - current);
@@ -132,7 +98,7 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
     };
   }
 
-  const progress = calcGoalProgress(goal, entries, []);
+  const progress = calcGoalProgress(goal, entries);
   const remaining = progress.remaining;
   const deadlineNeed = calcDeadlineNeed(goal, remaining, todayISO, monthStartDay);
 
@@ -147,26 +113,13 @@ export function calcGoalPrognosis(goal, entries, todayISO, monthStartDay = 1) {
     };
   }
 
-  // Berechne durchschnittlichen monatlichen Zufluss.
-  // Konsistent zu calcGoalProgress: nur Einzahlungen ab dem Zielstart zählen (F-2).
-  const startDate = resolveStartDate(goal);
-  let relevantEntries = [];
-
-  if (goal.transferCategoryId) {
-    relevantEntries = (entries || []).filter(
-      (e) =>
-        e.kind === "transfer" &&
-        e.potId === goal.potId &&
-        e.transferCategoryId === goal.transferCategoryId
-    );
-  } else {
-    relevantEntries = (entries || []).filter(
-      (e) => e.kind === "transfer" && e.potId === goal.potId
-    );
-  }
-  if (startDate) {
-    relevantEntries = relevantEntries.filter((e) => e.date && e.date >= startDate);
-  }
+  // Berechne durchschnittlichen monatlichen Zufluss (nur Einzahlungen).
+  const relevantEntries = (entries || []).filter(
+    (e) =>
+      e.kind === "transfer" &&
+      e.potId === goal.potId &&
+      e.transferCategoryId === goal.transferCategoryId
+  );
 
   if (relevantEntries.length === 0) {
     return {
@@ -259,12 +212,12 @@ export function calcGoalArchiveStats(goal, entries) {
 
   const completedAt = goal.completedAt || null;
 
-  // Relevante Einzahlungen (Transfers in den Topf, optional nach Zweck gefiltert)
+  // Relevante Einzahlungen auf den Zweck des Ziels
   const relevantAll = (entries || []).filter(
     (e) =>
       e.kind === "transfer" &&
       e.potId === goal.potId &&
-      (!goal.transferCategoryId || e.transferCategoryId === goal.transferCategoryId)
+      e.transferCategoryId === goal.transferCategoryId
   );
   // Nur Buchungen bis zum Abschluss berücksichtigen
   const relevant = completedAt
@@ -274,7 +227,7 @@ export function calcGoalArchiveStats(goal, entries) {
   const depositCount = relevant.length;
 
   const dates = relevant.map((e) => e.date).filter(Boolean).sort();
-  const start = resolveStartDate(goal) || dates[0] || goal.createdAt || null;
+  const start = dates[0] || goal.createdAt || null;
 
   let durationMonths = null;
   let durationDays = null;

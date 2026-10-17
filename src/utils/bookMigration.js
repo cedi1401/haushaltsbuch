@@ -9,6 +9,7 @@ import { normalizeInvestments } from "./investmentModel.js";
 import { DEFAULT_POTS, DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./bookDefaults.js";
 import { fixedCostKind, validateMonthStartDay } from "./hbUtils.js";
 import { migrateTransferCategoryIds } from "./transferCategoryMigration.js";
+import { migrateSavingsPurposes, normalizeSavingsPurposes } from "./savingsPurposeMigration.js";
 
 // 3 = Fixkosten-Gruppen haben ein festes `kind` ("expense" | "transfer") und
 //     damit eine feste Spalte im Fixkosten-View (siehe migrateFixedCostKinds).
@@ -17,7 +18,11 @@ import { migrateTransferCategoryIds } from "./transferCategoryMigration.js";
 // 5 = Bücher tragen `investments` (Depots, Assets, Transaktionen, Snapshots).
 // 6 = Transfer-Zwecke sind Objekte mit ID, Referenzen laufen über
 //     `transferCategoryId` (siehe transferCategoryMigration.js).
-export const CURRENT_SCHEMA_VERSION = 6;
+// 7 = Zweck = Sparposition: Zwecke tragen Topf und Regel, Transfer-Positionen
+//     und Sparziele sind in sie aufgegangen; `goals` entfällt,
+//     `recurringExpenses` führt nur noch Ausgaben (siehe
+//     savingsPurposeMigration.js).
+export const CURRENT_SCHEMA_VERSION = 7;
 
 /** Returns true if the book has not yet been migrated to the current schema. */
 export function bookNeedsMigration(book) {
@@ -405,7 +410,7 @@ function stampRecurringIds(entries, recurringExpenses) {
  * Normalisiert ein komplettes Buch:
  * - Migiert altes flaches Kategorie-System → hierarchisches System
  * - Fügt categoryId + subcategoryId zu Einträgen hinzu
- * - Fügt fehlende Felder (pots, goals, etc.) hinzu
+ * - Fügt fehlende Felder (pots, recurringExpenses, etc.) hinzu
  */
 export function normalizeBook(book) {
   if (!book) return book;
@@ -540,18 +545,6 @@ export function normalizeBook(book) {
     });
   }
 
-  // Sparziele hinzufügen, falls nicht vorhanden
-  if (!Array.isArray(normalized.goals)) {
-    normalized.goals = [];
-  } else {
-    // Archiv-Felder (Abschluss) für ältere Ziele ergänzen
-    normalized.goals = normalized.goals.map((g) => ({
-      completedAt: null,
-      completedAmount: null,
-      ...g,
-    }));
-  }
-
   // Fixkosten hinzufügen, falls nicht vorhanden
   if (!Array.isArray(normalized.recurringExpenses)) {
     normalized.recurringExpenses = [];
@@ -629,6 +622,24 @@ export function normalizeBook(book) {
       .map(normalizeEntryTemplate)
       .filter(Boolean);
   }
+
+  // Zweck = Sparposition (Schema 7). Einmalig, weil die Migration Buchungen
+  // umhängt; braucht normalisierte Fixkosten-Positionen und Vorlagen von oben.
+  // Feste 7 aus demselben Grund wie die 4 bei stampRecurringIds.
+  if (priorVersion < 7) {
+    Object.assign(normalized, migrateSavingsPurposes(normalized));
+  } else {
+    // Schema 7 kennt keine Transfer-Positionen mehr — auch nicht aus einem
+    // manipulierten Backup.
+    normalized.recurringExpenses = normalized.recurringExpenses.filter(
+      (r) => fixedCostKind(r) === "expense"
+    );
+  }
+  delete normalized.goals;
+  normalized.transferCategories = normalizeSavingsPurposes(
+    normalized.transferCategories,
+    normalized.pots
+  );
 
   // Investments (Depots, Assets, Transaktionen, Snapshots). Läuft bewusst bei
   // jedem Start und nicht nur einmalig: normalizeInvestments ist idempotent und

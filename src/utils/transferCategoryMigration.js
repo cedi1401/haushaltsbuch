@@ -45,7 +45,10 @@ function normalizeList(rawList) {
       if (!name) continue;
       const id = typeof raw.id === "string" && raw.id ? raw.id : generateId("tcat");
       if (seenIds.has(id)) continue;
-      item = raw.deleted ? { id, name, deleted: true } : { id, name };
+      // Weitere Felder (Topf, Regel, ab Schema 7) bleiben erhalten; sie
+      // normalisiert savingsPurposeMigration.
+      const { deleted, ...rest } = raw;
+      item = deleted ? { ...rest, id, name, deleted: true } : { ...rest, id, name };
     }
     if (!item) continue;
     seenIds.add(item.id);

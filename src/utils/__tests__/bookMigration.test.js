@@ -192,7 +192,7 @@ describe('normalizeBook', () => {
       entries: [{ id: 'e1', kind: 'transfer', potId: 'p1', category: 'Steuern', amount: 10, categoryId: null }],
     });
     const [steuern] = result.transferCategories;
-    expect(steuern).toEqual({ id: expect.stringMatching(/^tcat_/), name: 'Steuern' });
+    expect(steuern).toMatchObject({ id: expect.stringMatching(/^tcat_/), name: 'Steuern' });
     expect(result.entries[0].transferCategoryId).toBe(steuern.id);
     expect(result.entries[0]).not.toHaveProperty('category');
   });
@@ -202,9 +202,9 @@ describe('normalizeBook', () => {
     expect(result.transferCategories).toEqual([]);
   });
 
-  it('adds goals array when missing', () => {
-    const result = normalizeBook({ id: 'b1' });
-    expect(result.goals).toEqual([]);
+  it('drops goals (schema 7: goals are purposes)', () => {
+    expect(normalizeBook({ id: 'b1' })).not.toHaveProperty('goals');
+    expect(normalizeBook({ id: 'b1', schemaVersion: 7, goals: [] })).not.toHaveProperty('goals');
   });
 
   it('adds recurringExpenses array when missing', () => {
@@ -279,7 +279,8 @@ describe('normalizeBook', () => {
     expect(result.recurringExpenses[0].faelligkeit).toBe(null);
   });
 
-  it('preserves turnus and faelligkeit on a transfer that has both', () => {
+  // Transfer-Positionen gehen in Schema 7 in Zwecke auf (savingsPurposeMigration).
+  it('turns a transfer with turnus and faelligkeit into a reserve purpose', () => {
     const book = {
       id: 'b1',
       recurringExpenses: [
@@ -287,8 +288,10 @@ describe('normalizeBook', () => {
       ],
     };
     const result = normalizeBook(book);
-    expect(result.recurringExpenses[0].turnus).toBe(12);
-    expect(result.recurringExpenses[0].faelligkeit).toBe('2027-03-15');
+    expect(result.recurringExpenses).toEqual([]);
+    expect(result.transferCategories[0]).toMatchObject({
+      name: 'Autoversicherung', rule: 'reserve', amount: 1200, turnus: 12, faelligkeit: '2027-03-15',
+    });
   });
 
   it('does not derive a turnus for an existing transfer without one', () => {
@@ -296,9 +299,9 @@ describe('normalizeBook', () => {
       id: 'b1',
       recurringExpenses: [{ id: 'r1', kind: 'transfer', name: 'Sparen', amount: 200 }],
     };
-    const result = normalizeBook(book);
-    expect(result.recurringExpenses[0].turnus).toBe(null);
-    expect(result.recurringExpenses[0].faelligkeit).toBe(null);
+    const [purpose] = normalizeBook(book).transferCategories;
+    expect(purpose).toMatchObject({ name: 'Sparen', rule: 'free', monthlyRate: 200 });
+    expect(purpose).not.toHaveProperty('turnus');
   });
 
   it('drops a turnus without faelligkeit (no cycle anchor)', () => {
@@ -306,9 +309,9 @@ describe('normalizeBook', () => {
       id: 'b1',
       recurringExpenses: [{ id: 'r1', kind: 'transfer', name: 'Sparen', amount: 200, turnus: 6 }],
     };
-    const result = normalizeBook(book);
-    expect(result.recurringExpenses[0].turnus).toBe(null);
-    expect(result.recurringExpenses[0].faelligkeit).toBe(null);
+    const [purpose] = normalizeBook(book).transferCategories;
+    expect(purpose).toMatchObject({ rule: 'free', monthlyRate: 200 });
+    expect(purpose).not.toHaveProperty('turnus');
   });
 
   it('drops turnus and faelligkeit on an expense', () => {
@@ -342,11 +345,13 @@ describe('normalizeBook', () => {
       expect(result.entries[0].recurringId).toBe('r_miete');
     });
 
-    it('stamps transfers as well', () => {
+    it('stamps transfers as well — schema 7 then moves them to the purpose', () => {
       const result = normalizeBook(bookAt(3, [
         { id: 'e1', kind: 'transfer', date: '2026-01-05', amount: 50, note: 'Versicherung', categoryId: null },
       ]));
-      expect(result.entries[0].recurringId).toBe('r_versicherung');
+      const purpose = result.transferCategories.find((c) => c.name === 'Versicherung');
+      expect(result.entries[0].transferCategoryId).toBe(purpose.id);
+      expect(result.entries[0]).not.toHaveProperty('recurringId');
     });
 
     it('leaves an entry with a different note unstamped', () => {
