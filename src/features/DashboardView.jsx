@@ -37,6 +37,7 @@ export default function DashboardView({
   expenseByHierarchy,
   incomeByHierarchy,
   monthFilter,
+  onMonthFilterChange,
   monthLabel,
   monthStartDay,
   entriesSorted,
@@ -420,6 +421,7 @@ export default function DashboardView({
         entriesSorted={entriesSorted}
         monthLabel={monthLabel}
         monthFilter={monthFilter}
+        onMonthFilterChange={onMonthFilterChange}
         expenseCategories={expenseCategories}
         incomeCategories={incomeCategories}
         transferCategories={activeBook?.transferCategories || EMPTY_ARRAY}

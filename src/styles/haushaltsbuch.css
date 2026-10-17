@@ -4600,6 +4600,41 @@ select.hb-input option {
   width: 100%;
 }
 
+/* Löschen-Button (×) rechts im Suchfeld, nur sichtbar mit Text */
+.hb-search-field .hb-search-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+}
+
+.hb-search-field .hb-input--clearable {
+  padding-right: 32px;
+}
+
+/* type="search": das native × von Chromium weicht dem eigenen Button */
+.hb-search-field .hb-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Suche in der Kopfzeile der Buchungen, rechts neben den Pills */
+.hb-entries-search {
+  flex: 0 1 280px;
+  min-width: 200px;
+  margin-left: auto;
+}
+
+/* Treffer der Buchungssuche in Notiz und Kategorie */
+.hb-search-hit {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
 /* Kopfzeile: Tabs (Kategorien / Sparpositionen) links, Filter (Alle / Eigene) rechts */
 .hb-cat-tabbar {
   display: flex;

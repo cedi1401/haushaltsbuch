@@ -70,6 +70,7 @@ export const VIEWS = [
       expenseByHierarchy: ctx.expenseByHierarchy,
       incomeByHierarchy: ctx.incomeByHierarchy,
       monthFilter: ctx.monthFilter,
+      onMonthFilterChange: ctx.setMonthFilter,
       monthLabel: ctx.monthLabel,
       monthStartDay: ctx.monthStartDay,
       entriesSorted: ctx.entriesSorted,

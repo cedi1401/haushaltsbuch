@@ -193,7 +193,7 @@ export default function HaushaltsbuchApp() {
     totalSavingsTransfers, totalReserveTransfers, balance,
     potBalances, expenseByHierarchy, incomeByHierarchy,
     expenseCategories, allTransferCategories, indicateTransferCategories, fixedCostItems,
-    monthFilter, monthLabel, monthStartDay, baseCurrency,
+    monthFilter, setMonthFilter, monthLabel, monthStartDay, baseCurrency,
     entryActions, updateBook, patchActiveBook,
     selectedPotId, setSelectedPotId,
     costGroupRange, setCostGroupRange,
