@@ -6574,10 +6574,6 @@ button.hb-budget-alert:hover .hb-budget-alert-chevron {
   color: var(--muted);
 }
 
-.hb-budget-edit-hint--error {
-  color: var(--red);
-}
-
 /* Je Unterkategorie eine Zeile: Name und Betragsfeld. */
 .hb-budget-edit-subs {
   display: flex;

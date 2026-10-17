@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import EditDialog from "../../components/EditDialog.jsx";
 import { Button } from "../../components/ui.jsx";
+import { IconWarningRounded } from "../../components/icons.jsx";
 import { parseAmount } from "../../utils/formatUtils.js";
 import { useBaseCurrency, useFmt } from "../../contexts/CurrencyContext.jsx";
 import { budgetMoney } from "./budgetFormat.js";
@@ -72,9 +73,7 @@ export default function BudgetEditDialog({ category, onSave, onRemove, onClose }
   if (subs.length > 0 && subTotal > 0) {
     if (!amountValid) {
       distribution = "Lege zuerst das Budget der Kategorie fest — die Unterkategorien teilen es auf.";
-    } else if (exceeded) {
-      distribution = `Die Unterkategorien übersteigen das Budget um ${money(-free)}.`;
-    } else {
+    } else if (!exceeded) {
       distribution = `${money(subTotal)} von ${money(parsedAmount)} verteilt · ${money(free)} frei`;
     }
   }
@@ -148,12 +147,25 @@ export default function BudgetEditDialog({ category, onSave, onRemove, onClose }
               ))}
             </div>
 
-            <div
-              className={"hb-budget-edit-hint" + (exceeded ? " hb-budget-edit-hint--error" : "")}
-              aria-live="polite"
-            >
-              {distribution ||
-                "Leere Felder bleiben ohne eigenes Budget; ihre Ausgaben zählen nur zum Budget der Kategorie."}
+            {/* Überschreitung als rote InfoBar wie die Budget-Warnung im
+                Dashboard — sie sperrt das Speichern, ist also mehr als ein Hinweis. */}
+            <div aria-live="polite">
+              {exceeded ? (
+                <div className="hb-infobar hb-infobar--dialog hb-budget-alert">
+                  <span className="hb-infobar-icon"><IconWarningRounded /></span>
+                  <span className="hb-infobar-content">
+                    <span className="hb-infobar-title">Budget überschritten</span>
+                    <span className="hb-infobar-message">
+                      Die Unterkategorien übersteigen das Budget um {money(-free)}.
+                    </span>
+                  </span>
+                </div>
+              ) : (
+                <div className="hb-budget-edit-hint">
+                  {distribution ||
+                    "Leere Felder bleiben ohne eigenes Budget; ihre Ausgaben zählen nur zum Budget der Kategorie."}
+                </div>
+              )}
             </div>
           </>
         )}
