@@ -308,23 +308,6 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
       });
   }, [entries, selectedPot, monthFilter, monthStartDay]);
 
-  // Highlights
-  const highlights = useMemo(() => {
-    if (!potSeries.length) return null;
-
-    const topTransfer = potSeries.reduce(
-      (best, cur) => (cur.transfersIn > best.transfersIn ? cur : best),
-      potSeries[0]
-    );
-
-    const topExpense = potSeries.reduce(
-      (best, cur) => (cur.expensesOut > best.expensesOut ? cur : best),
-      potSeries[0]
-    );
-
-    return { topTransfer, topExpense };
-  }, [potSeries]);
-
 
   if (!selectedPot) {
     return (
@@ -428,53 +411,22 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
       </div>
 
       {/*
-        Kopf-Block: KPIs (5 Spalten) — 3 Kennzahlen + 2 Highlights in EINER Zeile.
-        Statt zweier getrennter Voll-Breiten-Streifen ergibt das eine ruhige,
-        zusammenhängende Übersicht. Bricht via auto-fit/minmax responsiv um.
+        Kopf-Block: drei Kennzahlen. „Aktueller Stand“ trägt das Blau der
+        Entwicklungslinie und keine Wertfarbe — der Saldo eines Topfs ist ein
+        Bestand, keine Bewertung.
       */}
-      <div className="hb-stat-pills" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+      <div className="hb-stat-pills">
         <div className="hb-stat-pill hb-stat-pill--ok">
-          <div className="hb-stat-pill-label">Summe Einzahlungen</div>
+          <div className="hb-stat-pill-label">Gesamt eingezahlt</div>
           <div className="hb-stat-pill-value hb-ok" style={{ marginTop: 14 }}>+{fmt(totals.transfersIn)}</div>
         </div>
         <div className="hb-stat-pill hb-stat-pill--bad">
-          <div className="hb-stat-pill-label">Summe Entnahmen</div>
+          <div className="hb-stat-pill-label">Gesamt entnommen</div>
           <div className="hb-stat-pill-value hb-bad" style={{ marginTop: 14 }}>−{fmt(totals.expensesOut)}</div>
         </div>
-        <div className={`hb-stat-pill ${currentBalance >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
+        <div className="hb-stat-pill hb-stat-pill--transfer">
           <div className="hb-stat-pill-label">Aktueller Stand</div>
-          <div className={`hb-stat-pill-value ${currentBalance >= 0 ? "hb-ok" : "hb-bad"}`} style={{ marginTop: 14 }}>
-            {fmt(currentBalance)}
-          </div>
-        </div>
-
-        {/*
-          Highlight-Pills immer rendern — auch bei leerem Topf, damit die KPI-Reihe
-          konsistent 5 Pills zeigt. Ohne Bewegungen fällt der Betrag auf 0 zurück und
-          das Monats-Sublabel entfällt (label-only Pills brauchen marginTop:14, siehe
-          PotsView Pill-Alignment).
-        */}
-        <div className="hb-stat-pill hb-stat-pill--ok">
-          <div className="hb-stat-pill-label">Höchste Einzahlung</div>
-          <div className="hb-stat-pill-value hb-ok" style={highlights ? undefined : { marginTop: 14 }}>
-            +{fmt(highlights ? highlights.topTransfer.transfersIn : 0)}
-          </div>
-          {highlights ? (
-            <div className="hb-muted hb-muted--sm" style={{ marginTop: 4 }}>
-              {highlights.topTransfer.label}
-            </div>
-          ) : null}
-        </div>
-        <div className="hb-stat-pill hb-stat-pill--bad">
-          <div className="hb-stat-pill-label">Höchste Entnahme</div>
-          <div className="hb-stat-pill-value hb-bad" style={highlights ? undefined : { marginTop: 14 }}>
-            −{fmt(highlights ? highlights.topExpense.expensesOut : 0)}
-          </div>
-          {highlights ? (
-            <div className="hb-muted hb-muted--sm" style={{ marginTop: 4 }}>
-              {highlights.topExpense.label}
-            </div>
-          ) : null}
+          <div className="hb-stat-pill-value" style={{ marginTop: 14 }}>{fmt(currentBalance)}</div>
         </div>
       </div>
 
