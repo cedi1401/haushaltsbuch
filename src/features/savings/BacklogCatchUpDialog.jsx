@@ -23,7 +23,6 @@ export default function BacklogCatchUpDialog({
   open,
   item,
   potName,
-  purposeName,
   cycleStart,
   rates,
   actual,
@@ -55,7 +54,7 @@ export default function BacklogCatchUpDialog({
     >
       <div style={{ display: "grid", gap: 16 }}>
         <div className="hb-muted hb-muted--sm">
-          {item.name} · Topf: {potName || "—"} · Zweck: {purposeName || "—"}
+          {item.name} · Topf: {potName || "—"}
         </div>
 
         <div>
@@ -98,7 +97,7 @@ export default function BacklogCatchUpDialog({
             <div className="hb-infobar-icon"><IconInfo /></div>
             <div className="hb-infobar-content">
               <div className="hb-infobar-message">
-                Für diesen Zweck liegen bereits <strong>{fmt(actual)}</strong> im Topf. Der
+                Für diese Sparposition liegen bereits <strong>{fmt(actual)}</strong> im Topf. Der
                 Ausgleich rechnet das nicht gegen, sondern addiert die Raten dazu — der
                 Ist-Stand kann danach über dem Soll liegen. Das ist gewollt: die Raten
                 füllen die Historie, damit in der Fixkosten-Trendlinie kein Monat leer bleibt.

@@ -4,9 +4,8 @@ import {
   IconBook,
   IconBudget,
   IconPots,
-  IconGoals,
+  IconSavings,
   IconFixed,
-  IconReserves,
   IconTrend,
   IconCostGroups,
   IconInvest,
@@ -16,8 +15,7 @@ import DashboardView from "./DashboardView.jsx";
 import BudgetView from "./BudgetView.jsx";
 import PotsView from "./PotsView.jsx";
 import FixedCostsView from "./FixedCostsView.jsx";
-import ReservesView from "./ReservesView.jsx";
-import GoalsView from "./GoalsView.jsx";
+import SavingsView from "./SavingsView.jsx";
 import TrendView from "./TrendView.jsx";
 import CostGroupsView from "./CostGroupsView.jsx";
 
@@ -138,33 +136,20 @@ export const VIEWS = [
     }),
   },
   {
-    id: "reserves",
-    label: "Rückstellungen",
-    Icon: IconReserves,
+    id: "savings",
+    label: "Sparen",
+    Icon: IconSavings,
     group: "planning",
     usesMonth: false,
-    Component: ReservesView,
+    Component: SavingsView,
     getProps: (ctx) => ({
       activeBook: ctx.activeBook,
       entries: ctx.entries,
       monthStartDay: ctx.monthStartDay,
+      onUpdateBook: ctx.updateBook,
       onAddEntry: ctx.entryActions.addTransferEntry,
       onAddEntries: ctx.entryActions.addEntries,
-      onNavigateToFixed: () => ctx.navigate("fixed"),
-    }),
-  },
-  {
-    id: "goals",
-    label: "Sparziele",
-    Icon: IconGoals,
-    group: "planning",
-    usesMonth: false,
-    Component: GoalsView,
-    getProps: (ctx) => ({
-      activeBook: ctx.activeBook,
-      entries: ctx.entries,
-      onUpdateBook: ctx.updateBook,
-      monthStartDay: ctx.monthStartDay,
+      onNavigateToPots: () => ctx.navigate("pots"),
     }),
   },
   {

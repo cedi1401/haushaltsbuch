@@ -5,8 +5,8 @@ import { formatDateDE } from "../../utils/formatUtils.js";
 import { formatRateCount } from "./reserveFormat.js";
 
 /**
- * Der aufklappbare Detailbereich einer Zeile im Rückstellungs-View — in beiden
- * Tabellen, der für Rückstellungen wie der für Rücklagen.
+ * Der aufklappbare Detailbereich einer Rückstellung oder Rücklage in der
+ * Sparen-View.
  *
  * Er löst drei Dinge auf einmal, die in einer Tabellenzelle keinen Platz haben:
  * die abgewählten Spalten, die Erklärung des Zyklus (wo der Anker herkommt) und
@@ -26,13 +26,11 @@ export default function ReserveDetail({
   hiddenColumns,
   fmt,
   pot,
-  purposeName,
   canCatchUp,
   onBillPaid,
   onCatchUp,
   onEdit,
 }) {
-  const purpose = purposeName || "—";
   const potName = pot?.name ?? "—";
   const canPay = row.status === "due" || row.status === "overdue";
   const assessment = buildAssessment(row, fmt);
@@ -80,8 +78,8 @@ export default function ReserveDetail({
                   werden soll. */}
               <p className="hb-res-note-hint">
                 {row.anchorSource === "withdrawal"
-                  ? `Die Entnahme vom ${formatDateDE(row.lastPayment)} hat den Zyklus davor abgeschlossen. Der Rhythmus bleibt an der hinterlegten Fälligkeit — verschiebt der Rechnungssteller ihn dauerhaft, passe die Fälligkeit der Position an.`
-                  : "Für diesen Zweck ist noch keine Entnahme erfasst. Der Zyklusbeginn ist aus der nächsten Fälligkeit zurückgerechnet."}
+                  ? `Die Entnahme vom ${formatDateDE(row.lastPayment)} hat den Zyklus davor abgeschlossen. Der Rhythmus bleibt an der hinterlegten Fälligkeit — verschiebt der Rechnungssteller ihn dauerhaft, passe die Fälligkeit der Sparposition an.`
+                  : "Für diese Sparposition ist noch keine Entnahme erfasst. Der Zyklusbeginn ist aus der nächsten Fälligkeit zurückgerechnet."}
               </p>
             </section>
 
@@ -100,38 +98,25 @@ export default function ReserveDetail({
               monatliche Betrag geht in den Topf und bleibt dort, bis du ihn brauchst.
             </p>
             <p className="hb-res-note-hint">
-              Steht hinter dem Geld doch eine Rechnung zu einem festen Termin, mach über
-              Turnus und Fälligkeit eine Rückstellung daraus — dann bewertet diese Ansicht
-              den Sparstand.
+              Steht hinter dem Geld doch eine Rechnung zu einem festen Termin, stell die Art
+              auf Rückstellung um — dann bewertet diese Ansicht den Sparstand.
             </p>
           </section>
         )}
 
-        {(row.sharedPurpose || pot?.isSavings) && (
+        {/* Nur bei Rückstellungen: Rücklagen zählen im Trend nicht als Fixkosten. */}
+        {pot?.isSavings && row.isSinkingFund && (
           <div className="hb-res-detail-hints">
-            {row.sharedPurpose && (
-              <HbTooltip
-                text={
-                  `Den Zweck „${purpose}" im Topf „${potName}" nutzen ${row.sharedWith + 1} Positionen. ` +
-                  "Der Ist-Stand lässt sich nicht einzeln zuordnen — die Deckung wird deshalb " +
-                  "gegen die Summe aller Soll-Stände dieses Zwecks gerechnet."
-                }
-              >
-                <span className="hb-badge hb-res-hint">Zweck geteilt</span>
-              </HbTooltip>
-            )}
-            {pot?.isSavings && (
-              <HbTooltip
-                text={
-                  `Der Topf „${potName}" ist als Spartopf markiert. Diese Position erscheint ` +
-                  `deshalb im Dashboard unter „Gespart" und gleichzeitig im Trend als ` +
-                  `Fixkostenbelastung. Beides ist gewollt: Das Dashboard zeigt, wohin das Geld ` +
-                  `fließt, der Trend, was es monatlich kostet.`
-                }
-              >
-                <span className="hb-badge hb-res-hint">Spartopf</span>
-              </HbTooltip>
-            )}
+            <HbTooltip
+              text={
+                `Der Topf „${potName}“ ist als Spartopf markiert. Diese Rückstellung erscheint ` +
+                `deshalb im Dashboard unter „Gespart“ und gleichzeitig im Trend als ` +
+                `Fixkostenbelastung. Beides ist gewollt: Das Dashboard zeigt, wohin das Geld ` +
+                `fließt, der Trend, was es monatlich kostet.`
+              }
+            >
+              <span className="hb-badge hb-res-hint">Spartopf</span>
+            </HbTooltip>
           </div>
         )}
       </div>
@@ -149,11 +134,8 @@ export default function ReserveDetail({
             Rückstand ausgleichen
           </Button>
         )}
-        {/* Bearbeitet wird die Position dort, wo sie angelegt wurde. Ein zweiter
-            Bearbeiten-Dialog neben dem der Fixkosten-View wäre eine zweite
-            Wahrheit über dieselben Felder. */}
-        <Button size="sm" variant="outline" onClick={() => onEdit?.()}>
-          In Fixkosten bearbeiten
+        <Button size="sm" variant="outline" onClick={() => onEdit?.(row)}>
+          Bearbeiten
         </Button>
       </div>
     </div>
@@ -167,7 +149,7 @@ export default function ReserveDetail({
  * verliert: bei freiem Sparen liefern bis zu sieben Spalten „—", die sonst
  * gleichberechtigt neben denen stünden, die etwas sagen.
  */
-function FactTile({ col, row }) {
+export function FactTile({ col, row }) {
   const value = col.render(row);
   const empty = value === null || value === undefined || value === "";
   return (

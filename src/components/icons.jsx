@@ -53,16 +53,6 @@ export function IconPots(props) {
   );
 }
 
-export function IconGoals(props) {
-  return (
-    <svg {...baseProps} {...props}>
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="5" />
-      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-    </svg>
-  );
-}
-
 // Tacho — Budget-View. IconWallet ist für Depots belegt.
 export function IconBudget(props) {
   return (
@@ -85,7 +75,7 @@ export function IconFixed(props) {
   );
 }
 
-// Münzstapel — Rückstellungs-View. Deckel-Ellipse, Zylinder-Silhouette, ein
+// Münzstapel — Sparen-View. Deckel-Ellipse, Zylinder-Silhouette, ein
 // Trennbogen: zwei Münzen (D10). Ein zweiter Trennbogen ließe bei 18 px und
 // 1.6 Strichstärke nur ~1.5 px Luft zwischen den Bögen — auf einem Windows-
 // Display ohne Skalierung verschmieren die drei Bögen dann zu einem Block.
@@ -95,7 +85,7 @@ export function IconFixed(props) {
 // und kleiner als IconFixed (16) und IconCostGroups (18) daneben. Der
 // Münzkörper misst 5.2 Einheiten, der Abstand zwischen Trenn- und Bodenbogen
 // bleibt bei 18 px damit ~2.7 px — deutlich getrennt.
-export function IconReserves(props) {
+export function IconSavings(props) {
   return (
     <svg {...baseProps} {...props}>
       <ellipse cx="12" cy="6.8" rx="7" ry="2.8" />

@@ -71,7 +71,7 @@ export const TRANSFER_PALETTE = [
   "#b14cc5", // Magenta     H290 L54%
 ];
 
-// Gruppenfarben der Rückstellungs-Tabellen: Gliederungsband (12-px-Punkt) und die
+// Gruppenfarben der Fixkosten-Tabellen: Gliederungsband (12-px-Punkt) und die
 // 3-px-Kante links an jeder Zeile der Gruppe. Die Farbe unterscheidet nur, sie
 // bedeutet nichts — zugewiesen wird zyklisch nach der Position der Gruppe in der
 // Liste der Transfer-Gruppen, nicht über ein Feld am Gruppen-Modell.

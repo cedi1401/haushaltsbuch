@@ -176,7 +176,7 @@ export default function FixedCostsView({
   }, [fixedCostGroups]);
 
   // Gruppen je Tabelle, nach `order` sortiert. Die Reihenfolge bestimmt auch
-  // die Bandfarbe — identisch zum Rückstellungs-View.
+  // die Bandfarbe.
   const groupsByKind = useMemo(() => {
     const result = { expense: [], transfer: [] };
     for (const group of fixedCostGroups) result[fixedCostKind(group)].push(group);
@@ -186,7 +186,7 @@ export default function FixedCostsView({
   }, [fixedCostGroups]);
 
   // Buchungen des laufenden Finanzmonats je Position — zugeordnet über
-  // entryPositionId(), wie im Rückstellungs-View.
+  // entryPositionId().
   const bookedThisMonth = useMemo(() => {
     const map = new Map();
     const currentMonth = getFinancialMonth(todayISO(), monthStartDay)?.yyyymm;
@@ -794,7 +794,7 @@ export default function FixedCostsView({
     };
   }
 
-  // Gliederung wie im Rückstellungs-View: Gruppen in ihrer `order`, „Ohne
+  // Gliederung: Gruppen in ihrer `order`, „Ohne
   // Gruppe" ans Ende und ohne Farbe. Ohne jede Gruppe gibt es kein Band.
   // Anders als dort bleiben leere Gruppen sichtbar — hier werden sie verwaltet.
   function buildSections(kind) {
@@ -1197,7 +1197,7 @@ export default function FixedCostsView({
                   </select>
                   <div className="hb-fixed-field-hint">
                     {isGoalPurpose
-                      ? "Die Position ist ein Sparziel: Hier wird nur die monatliche Rate gepflegt, Zielbetrag und Deadline stehen unter „Sparziele“."
+                      ? "Die Position ist ein Sparziel: Hier wird nur die monatliche Rate gepflegt, Zielbetrag und Deadline stehen unter „Sparen“."
                       : "Mit einem Turnus wird die Position als Rückstellung geführt: Der Betrag gilt für den ganzen Zyklus, gebucht wird monatlich der anteilige Betrag. Ohne Turnus ist es eine Rücklage — freies Sparen ohne festen Termin."}
                   </div>
                 </div>

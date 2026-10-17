@@ -10,7 +10,7 @@ import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
  * beendet damit den Zyklus.
  *
  * Warum ein eigener Dialog und nicht der globale „Buchung hinzufügen": Topf
- * und Zweck stehen hier fest und dürfen gar nicht zur Wahl stehen; vorbelegt
+ * und Sparposition stehen hier fest und dürfen gar nicht zur Wahl stehen; vorbelegt
  * ist die Rechnung, nicht die Monatsrate.
  *
  * Der Dialog rechnet nichts und schreibt nichts: `actual` kommt fertig herein,
@@ -23,7 +23,6 @@ export default function BillPaidDialog({
   open,
   item,
   potName,
-  purposeName,
   actual,
   draft,
   onDraftChange,
@@ -41,7 +40,7 @@ export default function BillPaidDialog({
 
   // Die Unterdeckung informiert nur, sie blockiert nicht: der Nutzer hat die
   // Rechnung real bezahlt, und ob das Geld vorher im Topf lag, ändert daran
-  // nichts. Der Zweck steht danach eben im Minus — das ist eine Aussage über
+  // nichts. Die Sparposition steht danach eben im Minus — das ist eine Aussage über
   // die Vergangenheit, kein Eingabefehler.
   const shortfall = amountValid && amount > actual ? amount - actual : 0;
 
@@ -75,10 +74,10 @@ export default function BillPaidDialog({
       bodyScroll={false}
     >
       <div className="hb-form hb-form-stack">
-        {/* Topf und Zweck stehen fest — als Textzeile, nicht als gesperrtes
+        {/* Topf und Sparposition stehen fest — als Textzeile, nicht als gesperrtes
             Eingabefeld: es gibt nichts zu ändern, also auch nichts zu bedienen. */}
         <div className="hb-muted hb-muted--sm" style={{ marginBottom: 4 }}>
-          {item.name} · Topf: {potName || "—"} · Zweck: {purposeName || "—"}
+          {item.name} · Topf: {potName || "—"}
         </div>
 
         <div className="hb-two hb-two--dialog">
@@ -124,8 +123,8 @@ export default function BillPaidDialog({
             <div className="hb-infobar-icon"><IconWarning /></div>
             <div className="hb-infobar-content">
               <div className="hb-infobar-message">
-                Für diesen Zweck liegen erst <strong>{fmt(actual)}</strong> im Topf. Die
-                Entnahme wird trotzdem erfasst; der Zweck steht danach mit{" "}
+                Für diese Sparposition liegen erst <strong>{fmt(actual)}</strong> im Topf. Die
+                Entnahme wird trotzdem erfasst; die Sparposition steht danach mit{" "}
                 <strong>{fmt(shortfall)}</strong> im Minus.
               </div>
             </div>

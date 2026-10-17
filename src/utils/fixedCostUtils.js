@@ -219,7 +219,7 @@ function financialMonthSpan(fromISO, toISO, monthStartDay) {
 }
 
 /**
- * Soll-Ist-Vergleich einer Rückstellung für den Rückstellungs-View.
+ * Soll-Ist-Vergleich einer Rückstellung für die Sparen-View.
  *
  * Der Soll-Stand läuft auf Monatsebene (Finanzmonate), die Fälligkeit taggenau:
  * Gebucht wird einmal pro Monat, nicht anteilig pro Tag. Der Ist-Stand ist der
@@ -228,13 +228,11 @@ function financialMonthSpan(fromISO, toISO, monthStartDay) {
  *
  * @param {object} item - Fixkosten-Position
  * @param {Array} entries - alle Einträge des Buchs
- * @param {{ monthStartDay?: number, today?: string, targetSum?: number|null }} opts
- *        targetSum: Summe der Soll-Stände aller Positionen desselben Zwecks;
- *        gesetzt von buildSinkingFundRows() bei geteilten Zwecken.
+ * @param {{ monthStartDay?: number, today?: string }} opts
  * @returns {object}
  */
 export function sinkingFundStatus(item, entries, opts = {}) {
-  const { monthStartDay = 1, today = todayISO(), targetSum = null } = opts;
+  const { monthStartDay = 1, today = todayISO() } = opts;
 
   const months = turnusMonths(item);
   const rate = monthlyRate(item);
@@ -280,10 +278,9 @@ export function sinkingFundStatus(item, entries, opts = {}) {
   // Buchungen summiert sich der Rundungsfehler auf bis zu 0.01 × turnusMonths.
   const tolerance = 0.01 * months;
 
-  // Deckungsgrad gegen die Soll-Summe des Zwecks, falls er geteilt wird — sonst
-  // läse jede Zeile den vollen Zweck-Netto als "ihren" Ist-Stand.
-  const coverageBase = targetSum === null ? target : targetSum;
-  const coverage = coverageBase > 0 ? actual / coverageBase : null;
+  // Seit Schema 7 ist der Zweck exklusiv: sein Netto ist der Ist-Stand genau
+  // dieser Position, geteilte Zwecke gibt es nicht mehr.
+  const coverage = target > 0 ? actual / target : null;
   const progress = cycleAmount > 0 ? actual / cycleAmount : null;
 
   let status;
@@ -310,98 +307,6 @@ export function sinkingFundStatus(item, entries, opts = {}) {
     tolerance,
     status,
   };
-}
-
-/**
- * Schlüssel eines Zwecks: Topf + Zweck. Zwei Positionen teilen sich einen
- * Ist-Stand genau dann, wenn beide übereinstimmen.
- */
-function purposeKey(item) {
-  return `${item?.potId ?? ""}\u0000${item?.transferCategoryId || ""}`;
-}
-
-/**
- * Die Zeilen des Rückstellungs-Views: sinkingFundStatus() je Position, plus die
- * Auflösung geteilter Zwecke.
- *
- * Zwei Positionen dürfen denselben Zweck im selben Topf bespielen — dann teilen
- * sie sich zwangsläufig einen Ist-Stand. Die Zeilen bleiben getrennt (es sind
- * zwei Verpflichtungen mit eigenen Zyklen), aber der Deckungsgrad wird gegen die
- * SUMME der Soll-Stände dieses Zwecks gerechnet. Sonst zeigte jede Zeile den
- * vollen Zweck-Netto als "ihren" Ist-Stand und damit einen irreführend hohen
- * Deckungsgrad.
- *
- * Nur Rückstellungen zählen in die Gruppierung: eine Rücklage hat keinen
- * Soll-Stand und keine Bewertung, wäre in der Summe also ein Nullsummand und
- * trüge die Markierung ohne Aussage. (Ein freier Transfer auf denselben Zweck
- * hebt den Ist-Stand der Rückstellung trotzdem — das lässt sich über
- * Soll-Summen nicht ausgleichen und bleibt eine bewusste Unschärfe.)
- *
- * @param {Array} items - Fixkosten-Positionen (bereits gefiltert, z.B. nur Transfers)
- * @param {Array} entries - alle Einträge des Buchs
- * @param {{ monthStartDay?: number, today?: string }} opts
- * @returns {Array<object>} sinkingFundStatus-Objekte, erweitert um `item`,
- *          `sharedPurpose` (teilt sich den Zweck mit mindestens einer weiteren
- *          Rückstellung) und `sharedWith` (Anzahl der ANDEREN Positionen am Zweck)
- */
-export function buildSinkingFundRows(items, entries, opts = {}) {
-  const list = Array.isArray(items) ? items : [];
-
-  // Durchgang 1: Status ohne Kenntnis der Nachbarn — coverage wird unten ersetzt.
-  const base = list.map((item) => ({ item, status: sinkingFundStatus(item, entries, opts) }));
-
-  const groups = new Map();
-  for (const { item, status } of base) {
-    if (!status.isSinkingFund) continue;
-    const key = purposeKey(item);
-    const prev = groups.get(key) || { targetSum: 0, count: 0 };
-    prev.targetSum += status.target;
-    prev.count += 1;
-    groups.set(key, prev);
-  }
-
-  // Durchgang 2: coverage gegen die Soll-Summe des Zwecks.
-  return base.map(({ item, status }) => {
-    const group = status.isSinkingFund ? groups.get(purposeKey(item)) : null;
-    const sharedWith = group ? group.count - 1 : 0;
-    const coverage = group && group.targetSum > 0 ? status.actual / group.targetSum : status.coverage;
-    return { ...status, item, coverage, sharedPurpose: sharedWith > 0, sharedWith };
-  });
-}
-
-/**
- * Summen von Ist-Stand und Differenz über Zeilen aus buildSinkingFundRows(),
- * wobei jeder Zweck (Topf + Zweck) nur EINMAL zählt.
- *
- * Teilen sich zwei Positionen einen Zweck, steht in beiden Zeilen derselbe
- * Zweck-Netto als Ist-Stand. Einfach aufsummiert läge die Summe um diesen
- * Betrag zu hoch (F2). Die Differenz eines geteilten Zwecks ist entsprechend
- * Ist − Σ Soll seiner Positionen, nicht die Summe der Zeilen-Differenzen.
- * Positionen ohne Soll-Stand (Rücklagen) gehen in den Ist-Stand ein, nicht in
- * die Differenz.
- *
- * @param {Array<object>} rows - Zeilen aus buildSinkingFundRows() (auch gefiltert)
- * @returns {{ actual: number, delta: number }}
- */
-export function sumSinkingFundRows(rows) {
-  const purposes = new Map();
-  for (const row of rows || []) {
-    const key = purposeKey(row?.item);
-    const prev = purposes.get(key) || { actual: Number(row?.actual) || 0, target: 0, hasTarget: false };
-    if (typeof row?.target === "number" && Number.isFinite(row.target)) {
-      prev.target += row.target;
-      prev.hasTarget = true;
-    }
-    purposes.set(key, prev);
-  }
-
-  let actual = 0;
-  let delta = 0;
-  for (const p of purposes.values()) {
-    actual += p.actual;
-    if (p.hasTarget) delta += p.actual - p.target;
-  }
-  return { actual, delta };
 }
 
 /**

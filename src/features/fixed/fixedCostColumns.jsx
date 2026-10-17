@@ -3,11 +3,11 @@ import HbTooltip from "../../components/HbTooltip.jsx";
 import { IconTag } from "../../components/icons.jsx";
 import { formatDateDE } from "../../utils/formatUtils.js";
 import { annualAmount, isSinkingFund, monthlyRate, turnusMonths } from "../../utils/fixedCostUtils.js";
-import { TURNUS_LABEL } from "../reserves/reserveColumns.jsx";
+import { TURNUS_LABEL } from "../savings/savingsColumns.jsx";
 
 /**
  * Spaltenkataloge der beiden Fixkosten-Tabellen („Ausgaben" und „Rücklagen &
- * Rückstellungen"). Gleiche Mechanik wie `reserveColumns.jsx`: eine Fabrik,
+ * Rückstellungen"). Gleiche Mechanik wie `savingsColumns.jsx`: eine Fabrik,
  * weil Beträge ausnahmslos über `fmt` laufen.
  *
  * Zeilen haben die Form `{ id, item, booked }` — `item` ist die Position aus
