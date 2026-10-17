@@ -1356,6 +1356,9 @@ select.hb-input option {
 .hb-stat-pill--bad      { --pill-edge: var(--red); }
 .hb-stat-pill--transfer { --pill-edge: var(--blue); }
 .hb-stat-pill--accent   { --pill-edge: var(--accent); }
+/* Gespart: Teal wie „Sparen“ im Aufteilungs-Donut, damit nicht drei KPI-Karten
+   grün sind (Review O3). Grün bleibt bei Einnahmen und Frei. */
+.hb-stat-pill--teal     { --pill-edge: var(--teal); }
 /* Plan-/Soll-Werte (Kostenrechner): Violett wie die Rücklagenlinie im Chart.
    Bewusst nicht Orange — das liegt im hellen Theme zu nah an --red und würde
    neben der Abweichungs-Pill wie ein zweiter Warnzustand wirken, obwohl der
@@ -3375,6 +3378,11 @@ select.hb-input option {
 
 .hb-transfer {
   color: var(--blue);
+  font-weight: 700;
+}
+
+.hb-teal {
+  color: var(--teal);
   font-weight: 700;
 }
 

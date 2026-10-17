@@ -98,7 +98,7 @@ export default function DashboardView({
     { key: "income", label: "Einnahmen", tone: "ok", valueClass: "hb-ok", prefix: "+", value: totalIncome, higherIsGood: true },
     { key: "expense", label: "Ausgaben", tone: "bad", valueClass: "hb-bad", prefix: "−", value: totalExpense, higherIsGood: false },
     { key: "reserve", label: "Rücklagen", tone: "transfer", valueClass: "hb-transfer", prefix: "", value: totalReserveTransfers ?? totalTransfers, higherIsGood: true },
-    { key: "savings", label: "Gespart", tone: "ok", valueClass: "hb-ok", prefix: "", value: totalSavingsTransfers ?? 0, higherIsGood: true },
+    { key: "savings", label: "Gespart", tone: "teal", valueClass: "hb-teal", prefix: "", value: totalSavingsTransfers ?? 0, higherIsGood: true },
     { key: "free", label: "Frei", tone: balance >= 0 ? "ok" : "bad", valueClass: balance >= 0 ? "hb-ok" : "hb-bad", prefix: "", value: balance, higherIsGood: true },
   ], [totalIncome, totalExpense, totalReserveTransfers, totalTransfers, totalSavingsTransfers, balance]);
 
@@ -262,6 +262,7 @@ export default function DashboardView({
           const sparkColor =
             tile.tone === "bad" ? themeColors.red
             : tile.tone === "transfer" ? themeColors.blue
+            : tile.tone === "teal" ? themeColors.teal
             : themeColors.green;
           // Sparkline zeigt die letzten 12 Monate mit Buchungen — hält die jüngsten
           // Bewegungen lesbar, statt bei langer Historie alles zu stauchen.
