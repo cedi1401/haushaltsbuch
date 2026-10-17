@@ -13,6 +13,7 @@ import {
   applySavingsFields,
   deleteTransferCategory,
   findTransferCategory,
+  NO_PURPOSE_LABEL,
 } from "../utils/transferCategoryUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { useToast } from "../components/toastContext.js";
@@ -42,24 +43,29 @@ import BacklogCatchUpDialog from "./savings/BacklogCatchUpDialog.jsx";
  */
 
 /**
- * Dialog-Zustand zum Sprung aus den Fixkosten: `{ purposeId }` bearbeitet eine
- * Sparposition, sonst wird eine neue angelegt (optional in `groupId`). Mit
- * `returnTo` geht es nach dem Schließen dorthin zurück. Ein unbekannter Zweck
+ * Dialog-Zustand zum Sprung aus den Fixkosten oder dem Buchungsdialog:
+ * `{ purposeId }` bearbeitet eine Sparposition, sonst wird eine neue angelegt
+ * (optional in `potId` und `groupId`). Mit `returnTo` geht es nach dem
+ * Schließen dorthin zurück; `onReturn` erfährt dabei die gespeicherte
+ * Sparposition (`{ id, potId }`, bei Abbrechen `null`). Ein unbekannter Zweck
  * (inzwischen gelöscht) öffnet nichts.
  */
 function dialogFromIntent(intent, transferCategories, pots) {
   if (!intent) return null;
   if (intent.purposeId) {
     const purpose = findTransferCategory(transferCategories, intent.purposeId);
-    return purpose && !purpose.deleted ? { key: 1, purpose, returnTo: intent.returnTo } : null;
+    return purpose && !purpose.deleted
+      ? { key: 1, purpose, returnTo: intent.returnTo, onReturn: intent.onReturn }
+      : null;
   }
   if (pots.length === 0) return null;
   return {
     key: 1,
     purpose: null,
-    defaultPotId: pots[0].id,
+    defaultPotId: pots.some((p) => p.id === intent.potId) ? intent.potId : pots[0].id,
     defaultGroupId: intent.groupId || null,
     returnTo: intent.returnTo,
+    onReturn: intent.onReturn,
   };
 }
 
@@ -123,11 +129,12 @@ export default function SavingsView({
     return [...set].sort();
   }, [recurringExpenses, transferCategories]);
 
-  // Schließt den Dialog; kam er per Sprung aus den Fixkosten, geht es dorthin
-  // zurück.
-  function closeDialog() {
-    const returnTo = dialog?.returnTo;
+  // Schließt den Dialog; kam er per Sprung (Fixkosten, Buchungsdialog), geht
+  // es dorthin zurück. `saved` ist die gespeicherte Sparposition, sonst null.
+  function closeDialog(saved = null) {
+    const { returnTo, onReturn } = dialog || {};
     setDialog(null);
+    onReturn?.(saved);
     if (returnTo) onNavigate?.(returnTo);
   }
 
@@ -137,6 +144,7 @@ export default function SavingsView({
 
   function savePosition(fields) {
     const target = dialog?.purpose;
+    let savedId = target?.id;
     if (target) {
       saveTransferCategories(
         transferCategories.map((c) => (c.id === target.id ? applySavingsFields(c, fields, todayISO()) : c))
@@ -146,12 +154,13 @@ export default function SavingsView({
       // Ein gelöschter Zweck gleichen Namens im selben Topf lebt dabei mit
       // seinen Buchungen wieder auf (addTransferCategory).
       const { list, category } = addTransferCategory(transferCategories, fields.name, fields.potId);
+      savedId = category.id;
       saveTransferCategories(
         list.map((c) => (c.id === category.id ? applySavingsFields(c, fields, todayISO()) : c))
       );
       toast.success(`${RULE_LABEL[fields.rule]} „${fields.name}“ angelegt.`);
     }
-    closeDialog();
+    closeDialog({ id: savedId, potId: fields.potId });
   }
 
   // „Bestehende verwenden": derselbe Dialog, jetzt als Bearbeiten der
@@ -163,6 +172,7 @@ export default function SavingsView({
       purpose,
       initialDraft: { ...draft, name: purpose.name, potId: purpose.potId, tags },
       returnTo: dialog?.returnTo,
+      onReturn: dialog?.onReturn,
     });
   }
 
@@ -171,7 +181,7 @@ export default function SavingsView({
       title: "Sparposition löschen",
       message:
         `Sparposition „${purpose.name}“ wirklich löschen?\n\n` +
-        "Das Geld bleibt im Topf und erscheint dort unter „Ohne Sparposition“. " +
+        `Das Geld bleibt im Topf und zählt hier unter „${NO_PURPOSE_LABEL}“. ` +
         "Bestehende Buchungen behalten ihren Namen.",
       confirmLabel: "Löschen",
       danger: true,
@@ -318,7 +328,7 @@ export default function SavingsView({
           tail.push({
             id: `rest:${s.pot.id}`,
             isRemainder: true,
-            label: "Ohne Sparposition",
+            label: NO_PURPOSE_LABEL,
             actual: s.unassigned,
           });
         }
@@ -497,7 +507,7 @@ export default function SavingsView({
           transferCategories={transferCategories}
           fixedCostGroups={fixedCostGroups}
           entries={entries}
-          onClose={closeDialog}
+          onClose={() => closeDialog()}
           onSave={savePosition}
           onUseExisting={adoptExisting}
         />

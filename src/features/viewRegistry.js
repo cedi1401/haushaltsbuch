@@ -78,6 +78,7 @@ export const VIEWS = [
       patchActiveBook: ctx.patchActiveBook,
       indicateTransferCategories: ctx.indicateTransferCategories,
       onOpenCategoryManager: ctx.openCategoryManager,
+      onOpenSavingsPosition: ctx.openSavingsPosition,
       onNavigateToBudget: () => ctx.navigate("budget"),
     }),
   },

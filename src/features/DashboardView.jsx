@@ -44,6 +44,7 @@ export default function DashboardView({
   patchActiveBook,
   indicateTransferCategories,
   onOpenCategoryManager,
+  onOpenSavingsPosition,
   onNavigateToBudget,
 }) {
   const fmt = useFmt();
@@ -239,10 +240,21 @@ export default function DashboardView({
         expenseCategories={expenseCategories}
         incomeCategories={incomeCategories}
         availablePurposes={entryActions.availablePurposes}
-        onOpenCategoryManager={() => {
+        onCreatePurpose={onOpenSavingsPosition && (() => {
+          // Sparpositionen entstehen in den Rücklagen; danach geht es zurück
+          // ins Dashboard und der Buchungsdialog öffnet sich mit dem
+          // bisherigen Draft wieder — nach dem Speichern mit der neuen
+          // Sparposition (und ihrem Topf) vorgewählt.
           entryActions.setAddEntryOpen(false);
-          onOpenCategoryManager();
-        }}
+          onOpenSavingsPosition({
+            potId: entryActions.addDraft.potId,
+            returnTo: "book",
+            onReturn: (saved) =>
+              entryActions.reopenAddEntry(
+                saved ? { potId: saved.potId, transferCategoryId: saved.id } : null
+              ),
+          });
+        })}
         onOpenTemplateManager={() => {
           entryActions.setAddEntryOpen(false);
           setTemplateManagerOpen(true);
