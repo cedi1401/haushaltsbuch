@@ -55,11 +55,12 @@ export function calcGoalProgress(goal, entries, _pots) {
   let current = 0;
 
   if (goal.transferCategoryId) {
-    // Nur Transfers mit passendem potId + Zweck zählen
-    // Entnahmen werden NICHT abgezogen (sie haben keinen Zweck)
-    current = sumAmounts(relevant, (e) =>
-      e.kind === "transfer" && e.potId === potId && e.transferCategoryId === goal.transferCategoryId
-    );
+    // Netto über Topf + Zweck, wie der Ist-Stand der Rückstellungen: Entnahmen
+    // tragen seit den Rückstellungen ebenfalls einen Zweck (F2).
+    const ofPurpose = (e) => e.potId === potId && e.transferCategoryId === goal.transferCategoryId;
+    const transfersIn = sumAmounts(relevant, (e) => e.kind === "transfer" && ofPurpose(e));
+    const withdrawalsOut = sumAmounts(relevant, (e) => e.kind === "withdrawal" && ofPurpose(e));
+    current = transfersIn - withdrawalsOut;
   } else {
     // Topf-Gesamtstand: alle transfers rein - alle withdrawals raus
     const transfersIn = sumAmounts(relevant, (e) => e.kind === "transfer" && e.potId === potId);
