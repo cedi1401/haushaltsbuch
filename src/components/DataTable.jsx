@@ -38,10 +38,10 @@ const ACTIONS_LINGER_MS = 300;
  *   }
  *
  * Sektion (vom View vorbereitet):
- *   { key, label, accent, rows, aside, total, totalColumnId, countLabel }  // rows brauchen je eine `id`
+ *   { key, label, accent, rows, aside, total, totalColumnId, countLabel, tail }  // rows brauchen je eine `id`
  *
  * `label === null` heißt: kein Gliederungsband. `accent` ist eine beliebige
- * CSS-Farbe (im Rückstellungs-View eine var(--group-accent-N)) und färbt Punkt und
+ * CSS-Farbe (in der Fixkosten-View eine var(--group-accent-N)) und färbt Punkt und
  * 3-px-Kante. `aside` ist optional und steht rechtsbündig im Band — dort sitzen
  * Kennzahl und Aktionen, die der ganzen Sektion gelten (z.B. „Gruppe buchen").
  * `total` ist die Bandsumme; mit `totalColumnId` endet sie an der rechten Kante
@@ -51,6 +51,11 @@ const ACTIONS_LINGER_MS = 300;
  * keine Positionen sind.
  * Eine Sektion ohne Zeilen wird trotzdem mit ihrem Band gezeigt: eine leere
  * Gruppe muss sichtbar bleiben, damit sie sich verwalten lässt.
+ * `tail` sind optionale Abschlusszeilen der Sektion (z.B. die Überleitung „Ohne
+ * Sparposition"): gedämpft, nach den sortierten Zeilen, ohne Detailbereich und
+ * ohne Zeilenaktionen. Sie zählen nicht im Band, gehen aber in die Summenzeile
+ * ein — `summarize` erkennt sie am eigenen Feld der Zeile, wenn es sie
+ * ausnehmen will.
  *
  * Optionale Erweiterungen, alle rückwärtskompatibel (ohne sie rendert die
  * Tabelle exakt wie zuvor):
@@ -203,11 +208,14 @@ export default function DataTable({
 
   // Die Summenzeile liest alle Zeilen der Tabelle, nicht die einer Sektion —
   // sie beantwortet die Frage „wie viel muss insgesamt in den Töpfen liegen".
-  const allRows = useMemo(() => sections.flatMap((s) => s.rows), [sections]);
+  const allRows = useMemo(
+    () => sections.flatMap((s) => (s.tail?.length ? [...s.rows, ...s.tail] : s.rows)),
+    [sections]
+  );
   const hasSummary = useMemo(() => columns.some((c) => c.summarize), [columns]);
   // Nur mit `emptyText`: ohne ihn bleibt eine leere Tabelle, wie sie war
   // (Kopf und Summenzeile), und der Leerzustand liegt beim View.
-  const isEmpty = Boolean(emptyText) && allRows.length === 0;
+  const isEmpty = Boolean(emptyText) && sections.every((s) => s.rows.length === 0);
 
   return (
     <div className="hb-dt">
@@ -348,6 +356,14 @@ export default function DataTable({
                   </React.Fragment>
                 );
               })}
+              {section.tail?.map((row) => (
+                <tr key={row.id} className="hb-dt-tail">
+                  {renderDetail && <td className="hb-dt-chevron-col" />}
+                  {visible.map((col) => (
+                    <Cell key={col.id} col={col} row={row} actions={null} quiet />
+                  ))}
+                </tr>
+              ))}
             </tbody>
           ))}
           {isEmpty && (
@@ -475,10 +491,12 @@ function setClampTitle(e) {
   else el.removeAttribute("title");
 }
 
-function Cell({ col, row, actions, lingering, onActionsClick }) {
+// `quiet` (Abschlusszeilen): leere Zellen bleiben leer — eine Überleitungszeile
+// voller „—" läse sich wie eine Position, der alles fehlt.
+function Cell({ col, row, actions, lingering, onActionsClick, quiet = false }) {
   const value = col.render(row);
   const empty = value === null || value === undefined || value === "";
-  const content = empty ? <span className="hb-dt-dash">—</span> : value;
+  const content = empty ? (quiet ? null : <span className="hb-dt-dash">—</span>) : value;
   // `actions` bekommt nur die letzte sichtbare Zelle (renderRowActions). Die
   // Zelle wird zum Positionsanker des Overlays.
   const cls = [

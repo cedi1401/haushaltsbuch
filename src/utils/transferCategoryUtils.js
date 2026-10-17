@@ -284,3 +284,53 @@ export function purposeHasEntries(entries, purposeId) {
     (e) => (e.kind === "transfer" || e.kind === "withdrawal") && e.transferCategoryId === purposeId
   );
 }
+
+// Felder, die nur zu einer Art gehören. Beim Wechsel der Art fallen die der
+// alten Art weg — sonst bliebe z.B. ein Turnus an einer Rücklage stehen, den
+// die Normalisierung beim nächsten Laden wieder zur Rückstellung machte.
+const RULE_FIELDS = {
+  free: ["monthlyRate"],
+  reserve: ["amount", "turnus", "faelligkeit"],
+  goal: ["targetAmount", "deadline", "monthlyRate", "createdAt", "completedAt", "completedAmount"],
+};
+const ALL_RULE_FIELDS = [...new Set(Object.values(RULE_FIELDS).flat())];
+
+/**
+ * Schreibt die Felder aus dem Dialog der Sparen-View in einen Zweck. Die Art
+ * darf wechseln: der Zweck bleibt derselbe (gleiche ID, gleiche Buchungen), nur
+ * seine Regel ändert sich.
+ * @param {object} purpose
+ * @param {{ rule: "free"|"reserve"|"goal", name: string, potId: string,
+ *           groupId?: string|null, monthlyRate?: number|null, amount?: number,
+ *           turnus?: number, faelligkeit?: string, targetAmount?: number,
+ *           deadline?: string|null }} fields
+ * @param {string} [today] - Anlagedatum eines neuen Sparziels
+ */
+export function applySavingsFields(purpose, fields, today) {
+  const rest = { ...purpose };
+  for (const key of ALL_RULE_FIELDS) delete rest[key];
+  const common = {
+    ...rest,
+    rule: fields.rule,
+    name: String(fields.name ?? "").trim(),
+    potId: fields.potId,
+    groupId: fields.groupId ?? null,
+  };
+  if (fields.rule === "reserve") {
+    return { ...common, amount: fields.amount, turnus: fields.turnus, faelligkeit: fields.faelligkeit };
+  }
+  const rate = Number(fields.monthlyRate) > 0 ? Number(fields.monthlyRate) : null;
+  if (fields.rule === "goal") {
+    const wasGoal = purpose.rule === "goal";
+    return {
+      ...common,
+      targetAmount: fields.targetAmount,
+      deadline: fields.deadline || null,
+      monthlyRate: rate,
+      createdAt: (wasGoal && purpose.createdAt) || today || null,
+      completedAt: wasGoal ? purpose.completedAt ?? null : null,
+      completedAmount: wasGoal ? purpose.completedAmount ?? null : null,
+    };
+  }
+  return { ...common, rule: "free", monthlyRate: rate };
+}

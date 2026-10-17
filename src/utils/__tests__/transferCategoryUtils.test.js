@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   addTransferCategory,
+  applySavingsFields,
   deleteTransferCategory,
   renameTransferCategory,
   findTransferCategoryByName,
@@ -65,5 +66,52 @@ describe('transferCategoryUtils', () => {
     expect(getTransferCategoryOptions(LIST, 'tcat_steuern').map((o) => o.label)).toEqual(['Steuern', 'Ferien']);
     expect(getTransferCategoryOptions(LIST, 'tcat_auto').map((o) => o.label)).toEqual(['Steuern', 'Ferien', 'Auto (gelöscht)']);
     expect(getTransferCategoryOptions(LIST, 'tcat_auto', [LIST[0]]).map((o) => o.id)).toEqual(['tcat_steuern', 'tcat_auto']);
+  });
+});
+
+describe('applySavingsFields', () => {
+  const base = { id: 'tcat_x', name: 'Alt', potId: 'pot_a', tags: ['t'], showInOverview: true };
+
+  it('macht aus einer Rücklage eine Rückstellung und lässt die Rate fallen', () => {
+    const free = { ...base, rule: 'free', monthlyRate: 50 };
+    const r = applySavingsFields(free, {
+      rule: 'reserve', name: ' Steuern ', potId: 'pot_a', amount: 1200, turnus: 12, faelligkeit: '2027-03-15',
+    });
+    expect(r).toMatchObject({ id: 'tcat_x', rule: 'reserve', name: 'Steuern', amount: 1200, turnus: 12, faelligkeit: '2027-03-15' });
+    expect(r).not.toHaveProperty('monthlyRate');
+    // Felder außerhalb des Dialogs bleiben erhalten
+    expect(r.tags).toEqual(['t']);
+    expect(r.showInOverview).toBe(true);
+  });
+
+  it('entfernt beim Wechsel zur Rücklage Turnus und Fälligkeit', () => {
+    const reserve = { ...base, rule: 'reserve', amount: 600, turnus: 6, faelligkeit: '2027-01-01' };
+    const r = applySavingsFields(reserve, { rule: 'free', name: 'Alt', potId: 'pot_a', monthlyRate: '' });
+    expect(r.rule).toBe('free');
+    expect(r.monthlyRate).toBeNull();
+    expect(r).not.toHaveProperty('turnus');
+    expect(r).not.toHaveProperty('faelligkeit');
+    expect(r).not.toHaveProperty('amount');
+  });
+
+  it('setzt das Anlagedatum eines neuen Sparziels und behält es beim Bearbeiten', () => {
+    const neu = applySavingsFields({ ...base, rule: 'free' }, {
+      rule: 'goal', name: 'Velo', potId: 'pot_a', targetAmount: 2000, deadline: '', monthlyRate: 100,
+    }, '2026-10-17');
+    expect(neu).toMatchObject({ rule: 'goal', targetAmount: 2000, deadline: null, monthlyRate: 100, createdAt: '2026-10-17', completedAt: null });
+
+    const done = { ...neu, completedAt: '2026-12-01', completedAmount: 2000 };
+    const edited = applySavingsFields(done, { rule: 'goal', name: 'Velo', potId: 'pot_a', targetAmount: 2500 }, '2027-01-01');
+    expect(edited.createdAt).toBe('2026-10-17');
+    expect(edited.completedAt).toBe('2026-12-01');
+    expect(edited.monthlyRate).toBeNull();
+  });
+
+  it('löscht die Ziel-Felder, wenn ein Sparziel zur Rücklage wird', () => {
+    const goal = { ...base, rule: 'goal', targetAmount: 1000, deadline: '2027-01-01', createdAt: '2026-01-01', completedAt: null };
+    const r = applySavingsFields(goal, { rule: 'free', name: 'Alt', potId: 'pot_b', monthlyRate: 20 });
+    expect(r).toMatchObject({ rule: 'free', potId: 'pot_b', monthlyRate: 20 });
+    expect(r).not.toHaveProperty('targetAmount');
+    expect(r).not.toHaveProperty('createdAt');
   });
 });
