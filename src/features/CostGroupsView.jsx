@@ -676,11 +676,26 @@ export default function CostGroupsView({
               Ablesen, keine Summe über den Balken. */}
           <Card style={{ marginBottom: "var(--card-gap)" }}>
             <CardContent>
-              <div className={`hb-card-head${hasChartData ? " hb-card-head--legend" : ""}`}>
-                <span className="hb-title-with-help">
-                  <h3 className="hb-card-title">Kostenverlauf</h3>
-                  <HbTooltip size={16} text={HELP_CHART} />
-                </span>
+              {/* Legende rechts neben dem Titel statt als eigene Zeile darunter —
+                  nur bei gezeichnetem Chart, im Empty-State gäbe es keine Linien,
+                  die sie erklären könnte. */}
+              <div className="hb-card-head" style={hasChartData ? { marginBottom: 16 } : undefined}>
+                <div className="hb-card-head-start">
+                  <span className="hb-title-with-help">
+                    <h3 className="hb-card-title">Kostenverlauf</h3>
+                    <HbTooltip size={16} text={HELP_CHART} />
+                  </span>
+                  {hasChartData && (
+                    <ChartLegend
+                      items={[
+                        { label: "Ø Ist", type: "line", color: avgLine.stroke, strokeWidth: avgLine.strokeWidth, dash: avgLine.strokeDasharray },
+                        ...(planned.expectedMonthly > 0
+                          ? [{ label: "Rücklagenbedarf", type: "line", color: themeColors.purple, strokeWidth: CHART_STROKE.ref }]
+                          : []),
+                      ]}
+                    />
+                  )}
+                </div>
                 {chartMaxOffset > 0 && (
                   <ChartScrollNav
                     offset={chartOffset}
@@ -690,20 +705,6 @@ export default function CostGroupsView({
                   />
                 )}
               </div>
-              {/* Legende nur bei gezeichnetem Chart — im Empty-State gäbe es
-                  keine Linien, die sie erklären könnte. */}
-              {hasChartData && (
-                <ChartLegend
-                  style={{ marginBottom: 16 }}
-                  items={[
-                    { label: "Ø Ist", type: "line", color: avgLine.stroke, strokeWidth: avgLine.strokeWidth, dash: avgLine.strokeDasharray },
-                    ...(planned.expectedMonthly > 0
-                      ? [{ label: "Rücklagenbedarf", type: "line", color: themeColors.purple, strokeWidth: CHART_STROKE.ref }]
-                      : []),
-                  ]}
-                />
-              )}
-
               {!hasChartData ? (
                 <div className="hb-empty hb-empty--sm">
                   <div className="hb-empty-icon"><IconTrend /></div>

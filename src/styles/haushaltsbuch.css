@@ -515,6 +515,15 @@ button.hb-alert:hover .hb-alert-chevron {
 
 .hb-card-head--legend { margin-bottom: 6px; }
 
+/* Linke Gruppe im Card-Kopf: Titel mit der Legende direkt rechts daneben.
+   Bricht die Legende bei wenig Platz unter den Titel um. */
+.hb-card-head-start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 20px;
+}
+
 /* Rechte Gruppe im Chart-Kopf: Blättern und Zeitraum-Auswahl */
 .hb-chart-range {
   display: flex;

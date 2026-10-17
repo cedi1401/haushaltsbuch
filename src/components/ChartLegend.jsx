@@ -1,7 +1,8 @@
 import React from "react";
 import { CHART_STROKE } from "../utils/chartStyle.js";
 
-// Legende über einem Chart, immer als eigene Zeile unter der Titelzeile.
+// Legende über einem Chart, meist als eigene Zeile unter der Titelzeile
+// (Kostenrechner-Verlauf: rechts neben dem Titel, via .hb-card-head-start).
 // items: [{ label, color, type?: "box" | "line", strokeWidth?, dash? }]
 // Linienmarken zeichnen die echte Stärke und das echte Strichmuster der Serie.
 export function ChartLegend({ items, className, style }) {
