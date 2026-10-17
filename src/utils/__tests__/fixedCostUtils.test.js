@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { turnusMonths, monthlyRate, annualAmount, isSinkingFund, cycleAnchor, sinkingFundStatus, buildSinkingFundRows, buildCatchUpRates } from '../fixedCostUtils.js';
+import { turnusMonths, monthlyRate, annualAmount, isSinkingFund, cycleAnchor, sinkingFundStatus, buildSinkingFundRows, sumSinkingFundRows, buildCatchUpRates } from '../fixedCostUtils.js';
 import { addMonthsISO } from '../financialMonthUtils.js';
 
 describe('turnusMonths', () => {
@@ -412,6 +412,43 @@ describe('buildSinkingFundRows', () => {
   it('kommt mit einer leeren oder fehlenden Liste zurecht', () => {
     expect(buildSinkingFundRows([], [], opts)).toEqual([]);
     expect(buildSinkingFundRows(undefined, [], opts)).toEqual([]);
+  });
+});
+
+describe('sumSinkingFundRows', () => {
+  const opts = { monthStartDay: 1, today: '2026-05-20' };
+  const klein = { ...STEUERN, id: 'fc-klein', amount: 600 };
+  const gross = { ...STEUERN, id: 'fc-gross', amount: 1200 };
+  const gemeinsam = [transfer('2026-04-01', 150)];
+
+  it('zählt den Ist-Stand eines geteilten Zwecks nur einmal', () => {
+    const rows = buildSinkingFundRows([klein, gross], gemeinsam, opts);
+    // Soll 100 + 200, gemeinsames Ist 150. Zeilenweise addiert ergäbe das
+    // Ist 300 und Differenz 50 + (−50) = 0.
+    expect(sumSinkingFundRows(rows)).toEqual({ actual: 150, delta: -150 });
+  });
+
+  it('addiert getrennte Zwecke und Töpfe normal', () => {
+    const versicherung = { ...STEUERN, id: 'fc-vers', transferCategoryId: 'Versicherung' };
+    const rows = buildSinkingFundRows([klein, versicherung], [
+      ...gemeinsam,
+      transfer('2026-04-01', 80, { transferCategoryId: 'Versicherung' }),
+    ], opts);
+    expect(sumSinkingFundRows(rows)).toEqual({ actual: 230, delta: 30 });
+  });
+
+  it('nimmt Rücklagen in den Ist-Stand, nicht in die Differenz', () => {
+    const frei = { ...STEUERN, id: 'fc-frei', turnus: null, faelligkeit: null, transferCategoryId: 'Frei' };
+    const rows = buildSinkingFundRows([klein, frei], [
+      ...gemeinsam,
+      transfer('2026-04-01', 40, { transferCategoryId: 'Frei' }),
+    ], opts);
+    expect(sumSinkingFundRows(rows)).toEqual({ actual: 190, delta: 50 });
+  });
+
+  it('liefert Nullen ohne Zeilen', () => {
+    expect(sumSinkingFundRows([])).toEqual({ actual: 0, delta: 0 });
+    expect(sumSinkingFundRows(undefined)).toEqual({ actual: 0, delta: 0 });
   });
 });
 

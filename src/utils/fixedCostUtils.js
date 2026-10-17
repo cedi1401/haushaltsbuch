@@ -370,6 +370,41 @@ export function buildSinkingFundRows(items, entries, opts = {}) {
 }
 
 /**
+ * Summen von Ist-Stand und Differenz über Zeilen aus buildSinkingFundRows(),
+ * wobei jeder Zweck (Topf + Zweck) nur EINMAL zählt.
+ *
+ * Teilen sich zwei Positionen einen Zweck, steht in beiden Zeilen derselbe
+ * Zweck-Netto als Ist-Stand. Einfach aufsummiert läge die Summe um diesen
+ * Betrag zu hoch (F2). Die Differenz eines geteilten Zwecks ist entsprechend
+ * Ist − Σ Soll seiner Positionen, nicht die Summe der Zeilen-Differenzen.
+ * Positionen ohne Soll-Stand (Rücklagen) gehen in den Ist-Stand ein, nicht in
+ * die Differenz.
+ *
+ * @param {Array<object>} rows - Zeilen aus buildSinkingFundRows() (auch gefiltert)
+ * @returns {{ actual: number, delta: number }}
+ */
+export function sumSinkingFundRows(rows) {
+  const purposes = new Map();
+  for (const row of rows || []) {
+    const key = purposeKey(row?.item);
+    const prev = purposes.get(key) || { actual: Number(row?.actual) || 0, target: 0, hasTarget: false };
+    if (typeof row?.target === "number" && Number.isFinite(row.target)) {
+      prev.target += row.target;
+      prev.hasTarget = true;
+    }
+    purposes.set(key, prev);
+  }
+
+  let actual = 0;
+  let delta = 0;
+  for (const p of purposes.values()) {
+    actual += p.actual;
+    if (p.hasTarget) delta += p.actual - p.target;
+  }
+  return { actual, delta };
+}
+
+/**
  * Verschiebt einen YYYY-MM-String um delta Monate.
  */
 function addYearMonth(yyyymm, delta) {

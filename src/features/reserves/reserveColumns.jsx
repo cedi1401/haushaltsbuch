@@ -3,6 +3,7 @@ import HbTooltip from "../../components/HbTooltip.jsx";
 import { formatDateDE, formatPercent } from "../../utils/formatUtils.js";
 import { IconTag } from "../../components/icons.jsx";
 import { formatRateCount } from "./reserveFormat.js";
+import { sumSinkingFundRows } from "../../utils/fixedCostUtils.js";
 
 // Turnus im Klartext. Deckt die Werte ab, die der Fixkosten-Dialog anbietet,
 // plus den Bestandswert 1; alles andere fällt auf „Alle N Monate" zurück.
@@ -211,7 +212,8 @@ function reserveColumnCatalog({ fmt, potNameById, purposeNameById, groupNameById
       align: "right",
       sortValue: (row) => row.actual,
       render: (row) => fmt(row.actual),
-      summarize: (rows) => fmt(sumBy(rows, (r) => r.actual)),
+      // Je Zweck einmal: geteilte Zwecke stehen mit demselben Ist in jeder Zeile.
+      summarize: (rows) => fmt(sumSinkingFundRows(rows).actual),
     },
     {
       id: "delta",
@@ -230,7 +232,7 @@ function reserveColumnCatalog({ fmt, potNameById, purposeNameById, groupNameById
               : undefined;
         return <span className={cls}>{fmt(row.delta)}</span>;
       },
-      summarize: (rows) => fmt(sumBy(rows, (r) => r.delta)),
+      summarize: (rows) => fmt(sumSinkingFundRows(rows).delta),
     },
     {
       id: "coverage",
