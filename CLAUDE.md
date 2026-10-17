@@ -19,3 +19,4 @@ These rules must never be broken, regardless of what seems convenient:
 - **Sprache UI**: Deutsch (korrekte deutsche Grammatik und Rechtschreibung)
 - **Währung**: Konfigurierbar pro Buch (mehrere Formate verfügbar); kein einzelnes Format annehmen
 - **Warnmeldungen (rot)**: Immer `AlertBar` aus `src/components/ui.jsx` verwenden (`title`, `message`, optional `onClick`, `compact`) — nie `hb-infobar`/Icon von Hand zusammenbauen
+- **Hinweismeldungen (gelb)**: Ebenfalls `AlertBar`, mit `tone="warning"` — für Handlungsaufforderungen, die nichts blockieren (z.B. fehlendes Pflichtdatum im Dialog); gleiches abgerundetes Icon wie die rote Variante

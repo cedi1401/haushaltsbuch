@@ -33,11 +33,14 @@ export function Button({ children, onClick, variant = "solid", size, disabled, t
 // muss — der Standard für jede neue Warnmeldung. Mit `onClick` wird sie zum
 // Button mit Chevron, `compact` stellt Titel und Text einzeilig nebeneinander.
 // `role` ist standardmäßig "status"; `null` übergeben, wenn ein umgebender
-// aria-live-Bereich die Ansage schon übernimmt.
-export function AlertBar({ title, message, onClick, ariaLabel, compact = false, role = "status", className }) {
+// aria-live-Bereich die Ansage schon übernimmt. `tone="warning"` macht sie
+// gelb: für Hinweise mit Handlungsaufforderung, die nichts blockieren oder
+// verloren gehen lassen (z.B. ein fehlendes Pflichtdatum im Dialog).
+export function AlertBar({ title, message, onClick, ariaLabel, compact = false, tone, role = "status", className }) {
   const cls = [
     "hb-infobar hb-infobar--dialog hb-alert",
     compact ? "hb-alert--compact" : null,
+    tone === "warning" ? "hb-alert--warning" : null,
     className,
   ].filter(Boolean).join(" ");
   const body = (

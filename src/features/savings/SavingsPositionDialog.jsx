@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from "react";
 import EditDialog from "../../components/EditDialog.jsx";
-import { Button, RangeTabs } from "../../components/ui.jsx";
+import { AlertBar, Button, RangeTabs } from "../../components/ui.jsx";
 import { HbDatePicker } from "../../components/HbDatePicker.jsx";
-import { IconWarning } from "../../components/icons.jsx";
+import HbTooltip from "../../components/HbTooltip.jsx";
 import TagInputField from "../../components/TagInputField.jsx";
 import TrendToggle from "../../components/TrendToggle.jsx";
 import { parseAmount } from "../../utils/formatUtils.js";
@@ -291,29 +291,6 @@ export default function SavingsPositionDialog({
                 </select>
               </div>
             </div>
-            <div className="hb-field">
-              <div className="hb-label">Nächste Fälligkeit</div>
-              <HbDatePicker
-                clearable
-                value={draft.faelligkeit}
-                onChange={(v) => set({ faelligkeit: v })}
-              />
-              <div className="hb-field-hint">
-                Wann die Rechnung das nächste Mal fällig wird — nicht die letzte Zahlung. Der
-                Termin wiederholt sich im Turnus, auch wenn eine Rechnung einmal verspätet kommt.
-              </div>
-            </div>
-            {!draft.faelligkeit && (
-              <div className="hb-infobar hb-infobar--dialog hb-infobar--warning" role="status">
-                <div className="hb-infobar-icon"><IconWarning /></div>
-                <div className="hb-infobar-content">
-                  <div className="hb-infobar-message">
-                    Trage die nächste Fälligkeit ein. Ohne diesen Termin lässt sich der Turnus
-                    nicht berechnen, und die Rückstellung kann nicht gespeichert werden.
-                  </div>
-                </div>
-              </div>
-            )}
             {reserveRate !== null && reserveRate < 0.01 ? (
               <div className="hb-field-error">
                 Der Betrag ergibt weniger als {fmt(0.01)} pro Monat — erhöhe ihn oder verkürze
@@ -372,7 +349,22 @@ export default function SavingsPositionDialog({
               </div>
             </div>
           ) : (
-            <div />
+            // Ein Datum braucht keine volle Dialogbreite: die Fälligkeit teilt
+            // sich die Zeile mit der Gruppe, die Erklärung steckt im Tooltip.
+            <div className="hb-field">
+              <div className="hb-label hb-title-with-help">
+                Nächste Fälligkeit
+                <HbTooltip
+                  size={14}
+                  text="Wann die Rechnung das nächste Mal fällig wird — nicht die letzte Zahlung. Der Termin wiederholt sich im Turnus, auch wenn eine Rechnung einmal verspätet kommt."
+                />
+              </div>
+              <HbDatePicker
+                clearable
+                value={draft.faelligkeit}
+                onChange={(v) => set({ faelligkeit: v })}
+              />
+            </div>
           )}
           <div className="hb-field">
             <div className="hb-label">Gruppe</div>
@@ -389,6 +381,13 @@ export default function SavingsPositionDialog({
             <div className="hb-field-hint">Gliedert die Sparraten in den Fixkosten.</div>
           </div>
         </div>
+
+        {draft.rule === "reserve" && !draft.faelligkeit && (
+          <AlertBar
+            tone="warning"
+            message="Trage die nächste Fälligkeit ein. Ohne diesen Termin lässt sich der Turnus nicht berechnen, und die Rückstellung kann nicht gespeichert werden."
+          />
+        )}
 
         <TagInputField
           tags={draft.tags}

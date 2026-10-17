@@ -1,7 +1,7 @@
 import React from "react";
 import EditDialog from "../../components/EditDialog.jsx";
 import { HbDatePicker } from "../../components/HbDatePicker.jsx";
-import { IconWarning } from "../../components/icons.jsx";
+import { AlertBar } from "../../components/ui.jsx";
 import { parseAmount } from "../../utils/formatUtils.js";
 import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
 
@@ -119,16 +119,16 @@ export default function BillPaidDialog({
         </div>
 
         {shortfall > 0 && (
-          <div className="hb-infobar hb-infobar--dialog hb-infobar--warning" role="status">
-            <div className="hb-infobar-icon"><IconWarning /></div>
-            <div className="hb-infobar-content">
-              <div className="hb-infobar-message">
+          <AlertBar
+            tone="warning"
+            message={
+              <>
                 Für diese Sparposition liegen erst <strong>{fmt(actual)}</strong> im Topf. Die
                 Entnahme wird trotzdem erfasst; die Sparposition steht danach mit{" "}
                 <strong>{fmt(shortfall)}</strong> im Minus.
-              </div>
-            </div>
-          </div>
+              </>
+            }
+          />
         )}
       </div>
     </EditDialog>

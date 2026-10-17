@@ -422,6 +422,26 @@ button.hb-alert:active {
   height: 24px;
 }
 
+/* Gelbe Variante (`tone="warning"`): gleiche Form, gleiches abgerundetes
+   Icon in 24 px, nur die Farben der bisherigen .hb-infobar--warning. */
+.hb-alert--warning {
+  background: var(--yellow-soft);
+  border-color: var(--yellow-border);
+}
+
+.hb-alert--warning .hb-infobar-icon {
+  color: var(--yellow);
+}
+
+button.hb-alert--warning:hover {
+  border-color: var(--yellow);
+  background: color-mix(in srgb, var(--yellow) 14%, transparent);
+}
+
+button.hb-alert--warning:active {
+  background: color-mix(in srgb, var(--yellow) 18%, transparent);
+}
+
 .hb-alert-chevron {
   display: inline-flex;
   flex-shrink: 0;
