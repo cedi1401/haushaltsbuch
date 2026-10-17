@@ -219,7 +219,7 @@ function financialMonthSpan(fromISO, toISO, monthStartDay) {
 }
 
 /**
- * Soll-Ist-Vergleich einer Rückstellung für die Sparen-View.
+ * Soll-Ist-Vergleich einer Rückstellung für die Rücklagen-View.
  *
  * Der Soll-Stand läuft auf Monatsebene (Finanzmonate), die Fälligkeit taggenau:
  * Gebucht wird einmal pro Monat, nicht anteilig pro Tag. Der Ist-Stand ist der

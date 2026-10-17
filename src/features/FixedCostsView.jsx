@@ -66,7 +66,7 @@ const UNGROUPED_KEY = "ungrouped";
 // Rechnungsbetrag, angespart wird also nie. Was monatlich in einen Topf geht,
 // ist eine Rücklage ohne Turnus — keine Rückstellung für einen Termin.
 const TURNUS_OPTIONS = [
-  { value: "", label: "Kein Turnus (Rücklage)" },
+  { value: "", label: "Kein Turnus (freie Rücklage)" },
   { value: "3", label: "Quartalsweise" },
   { value: "6", label: "Halbjährlich" },
   { value: "12", label: "Jährlich" },
@@ -952,7 +952,7 @@ export default function FixedCostsView({
                 <div className="hb-fixed-total-meta">
                   <HbTooltip
                     inline
-                    text="Ausgaben und Rückstellungen mit Turnus, umgerechnet auf den Monat. Rücklagen ohne Turnus sind freies Sparen und zählen nicht zu den Fixkosten."
+                    text="Ausgaben und Rückstellungen mit Turnus, umgerechnet auf den Monat. Freie Rücklagen (ohne Turnus) zählen nicht zu den Fixkosten."
                   >
                     {freeMonthly > 0 && (
                       <>
@@ -1197,8 +1197,8 @@ export default function FixedCostsView({
                   </select>
                   <div className="hb-fixed-field-hint">
                     {isGoalPurpose
-                      ? "Die Position ist ein Sparziel: Hier wird nur die monatliche Rate gepflegt, Zielbetrag und Deadline stehen unter „Sparen“."
-                      : "Mit einem Turnus wird die Position als Rückstellung geführt: Der Betrag gilt für den ganzen Zyklus, gebucht wird monatlich der anteilige Betrag. Ohne Turnus ist es eine Rücklage — freies Sparen ohne festen Termin."}
+                      ? "Die Position ist ein Sparziel: Hier wird nur die monatliche Rate gepflegt, Zielbetrag und Deadline stehen unter „Rücklagen“."
+                      : "Mit einem Turnus wird die Position als Rückstellung geführt: Der Betrag gilt für den ganzen Zyklus, gebucht wird monatlich der anteilige Betrag. Ohne Turnus ist es eine freie Rücklage ohne festen Termin."}
                   </div>
                 </div>
                 <div className="hb-field">

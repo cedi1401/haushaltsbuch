@@ -24,7 +24,7 @@ function deadlineLabel(delta) {
 }
 
 /**
- * Archiv der abgeschlossenen Sparziele unter der Sparen-Tabelle. Standardmäßig
+ * Archiv der abgeschlossenen Sparziele unter den Sparziel-Karten. Standardmäßig
  * zugeklappt: Es ist Rückschau, nicht Planung. Die Karten sind die der früheren
  * Sparziele-View (bis 7c).
  */

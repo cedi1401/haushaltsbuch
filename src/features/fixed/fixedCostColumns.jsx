@@ -279,11 +279,11 @@ function catalog(kind, { fmt, categoryById, potNameById, purposeNameById, groupN
         if (!isSinkingFund(row.item)) {
           return (
             <HbTooltip
-              text="Rücklage ohne Turnus — freies Sparen, zählt nicht zu den Fixkosten pro Monat"
+              text="Freie Rücklage ohne Turnus — zählt nicht zu den Fixkosten pro Monat"
               focusable={false}
               underline
             >
-              <span className="hb-fixed-free">Rücklage</span>
+              <span className="hb-fixed-free">Freie Rücklage</span>
             </HbTooltip>
           );
         }

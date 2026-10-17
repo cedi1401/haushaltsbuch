@@ -296,7 +296,7 @@ const RULE_FIELDS = {
 const ALL_RULE_FIELDS = [...new Set(Object.values(RULE_FIELDS).flat())];
 
 /**
- * Schreibt die Felder aus dem Dialog der Sparen-View in einen Zweck. Die Art
+ * Schreibt die Felder aus dem Dialog der Rücklagen-View in einen Zweck. Die Art
  * darf wechseln: der Zweck bleibt derselbe (gleiche ID, gleiche Buchungen), nur
  * seine Regel ändert sich.
  * @param {object} purpose

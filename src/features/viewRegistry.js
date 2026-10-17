@@ -137,7 +137,7 @@ export const VIEWS = [
   },
   {
     id: "savings",
-    label: "Sparen",
+    label: "Rücklagen",
     Icon: IconSavings,
     group: "planning",
     usesMonth: false,

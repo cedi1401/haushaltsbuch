@@ -18,14 +18,15 @@ export const TURNUS_LABEL = {
 
 /** Die drei Arten einer Sparposition, in der Reihenfolge des Dialogs. */
 export const RULE_LABEL = {
-  free: "Rücklage",
+  free: "Freie Rücklage",
   reserve: "Rückstellung",
   goal: "Sparziel",
 };
 
-// Statustext je Stufe. Rücklagen („free") und Sparziele ohne Deadline („open")
-// haben keinen Maßstab, an dem ein Status etwas bedeuten würde — sie bleiben leer.
-const STATUS_LABEL = {
+// Statustext je Stufe. Freie Rücklagen („free") und Sparziele ohne Deadline
+// („open") haben keinen Maßstab, an dem ein Status etwas bedeuten würde — sie
+// bleiben leer. Exportiert, weil die Sparziel-Karten dieselben Stufen zeigen.
+export const STATUS_LABEL = {
   onTrack: "Im Plan",
   behind: "Rückstand",
   due: "Fällig",
@@ -37,7 +38,7 @@ const STATUS_LABEL = {
 
 // Die Sparziel-Stufen leihen sich die Farben der Rückstellungs-Pillen: dieselbe
 // Bedeutung („gut", „aufpassen", „zu spät") soll gleich aussehen.
-const STATUS_TONE = {
+export const STATUS_TONE = {
   onTrack: "onTrack",
   behind: "behind",
   due: "due",
@@ -49,7 +50,7 @@ const STATUS_TONE = {
 
 // Sortierrang nach Handlungsbedarf, nicht alphabetisch: aufsteigend steht oben,
 // was zuerst Aufmerksamkeit braucht.
-const STATUS_ORDER = { overdue: 0, missed: 0, due: 1, behind: 2, offTrack: 2, onTrack: 3, reached: 4 };
+export const STATUS_ORDER = { overdue: 0, missed: 0, due: 1, behind: 2, offTrack: 2, onTrack: 3, reached: 4 };
 
 /**
  * Vorbelegung: die Kernaussage der View in acht Spalten. Alles Übrige ist über
@@ -74,7 +75,7 @@ function pct(value) {
   return formatPercent(value * 100, { digits: 0, sign: false });
 }
 
-// Die Überleitungszeilen („Ohne Sparposition", „Abgeschlossene Sparziele")
+// Die Überleitungszeilen („Sparziele", „Abgeschlossene Sparziele", „Ohne Sparposition")
 // zeigen nur Bezeichnung und Ist-Stand; alle anderen Spalten bleiben leer.
 const position = (fn) => (row) => (row.isRemainder ? null : fn(row));
 
@@ -86,10 +87,10 @@ function statusTooltip(row, fmt) {
   const due = row.nextDate ? formatDateDE(row.nextDate) : "—";
   switch (row.status) {
     case "onTrack":
-      return row.rule === "goal"
-        ? `Mit dem bisherigen Tempo ist das Ziel bis ${due} erreicht.`
-        : "Für diese Rückstellung liegt im Topf mindestens so viel, wie zum jetzigen " +
-            "Zeitpunkt im Zyklus zurückgelegt sein müsste.";
+      return (
+        "Für diese Rückstellung liegt im Topf mindestens so viel, wie zum jetzigen " +
+        "Zeitpunkt im Zyklus zurückgelegt sein müsste."
+      );
     case "behind": {
       const short = -row.delta;
       const rates = row.monthlyRate > 0 ? ` (${formatRateCount(short / row.monthlyRate)})` : "";
@@ -105,23 +106,14 @@ function statusTooltip(row, fmt) {
         `Die Rechnung war am ${due} fällig — das ist über einen Monat her. Solange die ` +
         "Zahlung nicht als Entnahme erfasst ist, rückt die Fälligkeit nicht weiter."
       );
-    case "reached":
-      return "Der Zielbetrag ist erreicht. Über „Ziel abschließen“ wandert das Ziel ins Archiv.";
-    case "offTrack": {
-      const need = row.prognosis?.requiredMonthly;
-      return need
-        ? `Mit dem bisherigen Tempo reicht es nicht bis ${due}. Nötig wären ${fmt(need)} pro Monat.`
-        : `Mit dem bisherigen Tempo reicht es nicht bis ${due}.`;
-    }
-    case "missed":
-      return `Die Deadline (${due}) ist vorbei, der Zielbetrag ist noch nicht erreicht.`;
     default:
       return undefined;
   }
 }
 
 /**
- * Der Spaltenkatalog der Sparen-Tabelle.
+ * Der Spaltenkatalog der Rücklagen-Tabelle (Rückstellungen und freie
+ * Rücklagen; Sparziele stehen als Karten darunter).
  *
  * Zeilen sind die Objekte aus `buildSavingsModel()` (savingsUtils), plus die
  * Überleitungszeilen mit `isRemainder: true`. Beträge laufen ausnahmslos über
@@ -195,9 +187,8 @@ export function buildSavingsColumns({ fmt, groupNameById }) {
     },
     {
       id: "goalAmount",
-      // Bei einer Rückstellung der Rechnungsbetrag je Zyklus, bei einem
-      // Sparziel der Zielbetrag — in beiden Fällen der Betrag, auf den gespart wird.
-      label: "Zielbetrag",
+      // Rechnungsbetrag je Zyklus; freie Rücklagen haben keinen.
+      label: "Rechnungsbetrag",
       align: "right",
       sortValue: position((row) => row.goalAmount ?? null),
       render: position((row) => (row.goalAmount ? fmt(row.goalAmount) : null)),
@@ -262,8 +253,7 @@ export function buildSavingsColumns({ fmt, groupNameById }) {
     },
     {
       id: "nextDate",
-      // Nächste Fälligkeit einer Rückstellung bzw. Deadline eines Sparziels.
-      label: "Termin",
+      label: "Fällig am",
       sortValue: position((row) => row.nextDate ?? null),
       render: position((row) => (row.nextDate ? formatDateDE(row.nextDate) : null)),
     },

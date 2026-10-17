@@ -18,20 +18,21 @@ import { useToast } from "../components/toastContext.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { buildSavingsColumns, RULE_LABEL } from "./savings/savingsColumns.jsx";
 import ReserveDetail from "./savings/ReserveDetail.jsx";
-import GoalDetail from "./savings/GoalDetail.jsx";
+import GoalCards from "./savings/GoalCards.jsx";
 import GoalArchive from "./savings/GoalArchive.jsx";
 import SavingsPositionDialog from "./savings/SavingsPositionDialog.jsx";
 import BillPaidDialog from "./savings/BillPaidDialog.jsx";
 import BacklogCatchUpDialog from "./savings/BacklogCatchUpDialog.jsx";
 
 /**
- * Sparen-View — wofür liegt das Geld in den Töpfen (F2, Konzept C).
+ * Rücklagen-View — wofür liegt das Geld in den Töpfen (F2, Konzept C).
  *
- * Ersetzt die früheren Views Rückstellungen und Sparziele. Jede Sparposition
- * (Zweck mit Art) ist eine Zeile in ihrem Topf; der Topf ist das Band mit
- * seinem Stand. Unter den Positionen steht die Überleitung: was im Topf liegt,
- * ohne einer aktiven Sparposition zu gehören. Damit ergeben die Zeilen eines
- * Topfs immer genau seinen Stand.
+ * Ersetzt die früheren Views Rückstellungen und Sparziele. Rückstellungen und
+ * freie Rücklagen sind Zeilen in ihrem Topf; der Topf ist das Band mit seinem
+ * Stand. Aktive Sparziele stehen als Karten darunter, damit Wünsche und
+ * Vorsorge für Rechnungen nicht vermischt lesen. Unter den Zeilen eines Topfs
+ * steht die Überleitung: seine Sparziele und was keiner aktiven Sparposition
+ * gehört. Damit ergeben die Zeilen eines Topfs immer genau seinen Stand.
  *
  * Rollenteilung zur Fixkosten-View: hier wird angelegt, bewertet und der
  * Zyklus abgeschlossen; dort wird monatlich gebucht.
@@ -77,7 +78,7 @@ export default function SavingsView({
     setDialog({ key: dialogKey.current, ...opts });
   }, []);
   const openCreate = useCallback(
-    (potId) => openDialog({ purpose: null, defaultPotId: potId || pots[0]?.id }),
+    (potId, rule) => openDialog({ purpose: null, defaultPotId: potId || pots[0]?.id, defaultRule: rule }),
     [openDialog, pots]
   );
   const openEdit = useCallback((row) => openDialog({ purpose: row.purpose }), [openDialog]);
@@ -243,6 +244,14 @@ export default function SavingsView({
     () =>
       model.sections.map((s) => {
         const tail = [];
+        if (s.goalRows.length > 0) {
+          tail.push({
+            id: `goals:${s.pot.id}`,
+            isRemainder: true,
+            label: "Sparziele",
+            actual: s.goalBalance,
+          });
+        }
         if (isVisibleRemainder(s.archivedBalance)) {
           tail.push({
             id: `archived:${s.pot.id}`,
@@ -267,7 +276,7 @@ export default function SavingsView({
           tail,
           total: fmt(s.balance),
           totalColumnId: "actual",
-          countLabel: (n) => `${n} Sparposition${n === 1 ? "" : "en"}`,
+          countLabel: (n) => (n === 0 ? "keine Rücklagen" : `${n} Sparposition${n === 1 ? "" : "en"}`),
           aside: (
             <button
               type="button"
@@ -285,15 +294,7 @@ export default function SavingsView({
   );
 
   function renderDetail(row, hiddenColumns) {
-    return row.rule === "goal" ? (
-      <GoalDetail
-        row={row}
-        hiddenColumns={hiddenColumns}
-        fmt={fmt}
-        onComplete={completeGoal}
-        onEdit={openEdit}
-      />
-    ) : (
+    return (
       <ReserveDetail
         row={row}
         hiddenColumns={hiddenColumns}
@@ -307,24 +308,18 @@ export default function SavingsView({
     );
   }
 
-  // Zeilenaktionen: die Hauptaktion der Art (nur wenn gerade sinnvoll),
-  // Bearbeiten und das Menü.
+  // Zeilenaktionen: „Rechnung bezahlt" (nur wenn gerade sinnvoll), Bearbeiten
+  // und das Menü. Sparziele haben ihre Aktionen auf der Karte.
   function renderRowActions(row) {
     const name = row.purpose?.name ?? "";
     const canPay = row.status === "due" || row.status === "overdue";
     const menu = [];
     if (canCatchUp(row)) menu.push({ label: "Rückstand ausgleichen", onClick: () => openCatchUp(row) });
-    if (row.rule === "goal" && row.status !== "reached") {
-      menu.push({ label: "Ziel vorzeitig abschließen", onClick: () => completeGoalEarly(row) });
-    }
     menu.push({ label: "Löschen", danger: true, onClick: () => deletePosition(row.purpose) });
     return (
       <>
         {canPay && (
           <Button size="sm" variant="outline" onClick={() => openBillPaid(row)}>Rechnung bezahlt</Button>
-        )}
-        {row.status === "reached" && (
-          <Button size="sm" variant="outline" onClick={() => completeGoal(row)}>Ziel abschließen</Button>
         )}
         <button
           type="button"
@@ -362,7 +357,7 @@ export default function SavingsView({
               <div className="hb-empty-icon"><IconSavings /></div>
               <div className="hb-empty-title">Noch keine Töpfe</div>
               <div className="hb-empty-text">
-                Sparpositionen liegen in Töpfen: Rücklagen, Rückstellungen für wiederkehrende
+                Rücklagen liegen in Töpfen: freie Rücklagen, Rückstellungen für wiederkehrende
                 Rechnungen und Sparziele. Lege zuerst einen Topf an.
               </div>
               <Button onClick={() => onNavigateToPots?.()}>Zu den Töpfen</Button>
@@ -382,7 +377,7 @@ export default function SavingsView({
             <div className="hb-stat-pill hb-stat-pill--transfer">
               <div className="hb-stat-pill-label">Monatlich eingeplant</div>
               <div className="hb-stat-pill-value">{fmt(kpis.rates)}</div>
-              <div className="hb-stat-pill-sub">davon {fmt(kpis.reserveRates)} für Rückstellungen</div>
+              <div className="hb-stat-pill-sub">davon {fmt(kpis.goalRates)} für Sparziele</div>
             </div>
             <div className={"hb-stat-pill " + (attention === 0 ? "hb-stat-pill--ok" : "hb-stat-pill--warn")}>
               <div className="hb-stat-pill-label">Handlungsbedarf</div>
@@ -406,11 +401,23 @@ export default function SavingsView({
                 defaultSort={null}
                 renderDetail={renderDetail}
                 renderRowActions={renderRowActions}
-                label="Sparpositionen"
-                toolbar={<h3 className="hb-card-title">Sparpositionen</h3>}
+                label="Rückstellungen und freie Rücklagen"
+                toolbar={<h3 className="hb-card-title">Rückstellungen &amp; freie Rücklagen</h3>}
               />
             </CardContent>
           </Card>
+
+          <GoalCards
+            goals={model.activeGoals}
+            potNameById={potNameById}
+            fmt={fmt}
+            hasArchive={model.archivedGoals.length > 0}
+            onCreate={() => openCreate(undefined, "goal")}
+            onEdit={openEdit}
+            onComplete={completeGoal}
+            onCompleteEarly={completeGoalEarly}
+            onDelete={deletePosition}
+          />
 
           <GoalArchive
             goals={model.archivedGoals}
@@ -429,6 +436,7 @@ export default function SavingsView({
           purpose={dialog.purpose}
           initialDraft={dialog.initialDraft}
           defaultPotId={dialog.defaultPotId}
+          defaultRule={dialog.defaultRule}
           pots={pots}
           transferCategories={transferCategories}
           fixedCostGroups={fixedCostGroups}

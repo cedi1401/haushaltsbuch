@@ -39,10 +39,10 @@ function turnusOptionsFor(turnus) {
   return [...TURNUS_OPTIONS, { value: String(turnus), label: `${label} (Bestandswert)` }];
 }
 
-function draftFrom(purpose, defaultPotId) {
+function draftFrom(purpose, defaultPotId, defaultRule) {
   const rateText = (v) => (Number(v) > 0 ? String(v) : "");
   return {
-    rule: purpose?.rule || "free",
+    rule: purpose?.rule || defaultRule || "free",
     name: purpose?.name || "",
     potId: purpose?.potId || defaultPotId || "",
     groupId: purpose?.groupId || null,
@@ -80,6 +80,7 @@ export default function SavingsPositionDialog({
   purpose,
   initialDraft,
   defaultPotId,
+  defaultRule,
   pots,
   transferCategories,
   fixedCostGroups,
@@ -90,7 +91,7 @@ export default function SavingsPositionDialog({
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
-  const [draft, setDraft] = useState(() => initialDraft || draftFrom(purpose, defaultPotId));
+  const [draft, setDraft] = useState(() => initialDraft || draftFrom(purpose, defaultPotId, defaultRule));
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const isEdit = Boolean(purpose);
 

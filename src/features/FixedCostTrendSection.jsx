@@ -29,7 +29,7 @@ import { MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 const HELP_FCT =
   'Zeigt, wie viel du für Fixkosten gebucht hast, und darunter die hinterlegten Positionen. ' +
   'In die Kennzahlen zählen Ausgaben und Rückstellungen, Letztere mit ihrer Monatsrate. ' +
-  'Rücklagen ohne Turnus gelten als freies Sparen: Sie stehen in der Übersicht, zählen aber ' +
+  'Freie Rücklagen (ohne Turnus) stehen in der Übersicht, zählen aber ' +
   'nicht mit.';
 
 const HELP_OVERVIEW =

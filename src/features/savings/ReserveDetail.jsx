@@ -5,8 +5,8 @@ import { formatDateDE } from "../../utils/formatUtils.js";
 import { formatRateCount } from "./reserveFormat.js";
 
 /**
- * Der aufklappbare Detailbereich einer Rückstellung oder Rücklage in der
- * Sparen-View.
+ * Der aufklappbare Detailbereich einer Rückstellung oder freien Rücklage in der
+ * Rücklagen-View.
  *
  * Er löst drei Dinge auf einmal, die in einer Tabellenzelle keinen Platz haben:
  * die abgewählten Spalten, die Erklärung des Zyklus (wo der Anker herkommt) und
@@ -39,7 +39,7 @@ export default function ReserveDetail({
   // gibt es keine linke Zone, mit sehr wenigen bekäme sie mehr Breite, als sie
   // füllen kann. Beides hängt an einer Zahl, die nur hier bekannt ist.
   // Der Status trägt zusätzlich den Ton — "free" schaltet dabei zugleich die
-  // einspaltige Form, weil eine Rücklage weder Zyklus noch Bewertung hat.
+  // einspaltige Form, weil eine freie Rücklage weder Zyklus noch Bewertung hat.
   const facts = hiddenColumns.length;
   const cls = [
     "hb-res-detail",
@@ -92,7 +92,7 @@ export default function ReserveDetail({
           </>
         ) : (
           <section className="hb-res-note hb-res-note--plain">
-            <h4 className="hb-res-note-title">Rücklage</h4>
+            <h4 className="hb-res-note-title">Freie Rücklage</h4>
             <p className="hb-res-note-text">
               Freies Sparen ohne Turnus: keine Rechnung, kein Zyklus, kein Soll-Stand. Der
               monatliche Betrag geht in den Topf und bleibt dort, bis du ihn brauchst.
@@ -104,7 +104,7 @@ export default function ReserveDetail({
           </section>
         )}
 
-        {/* Nur bei Rückstellungen: Rücklagen zählen im Trend nicht als Fixkosten. */}
+        {/* Nur bei Rückstellungen: freie Rücklagen zählen im Trend nicht als Fixkosten. */}
         {pot?.isSavings && row.isSinkingFund && (
           <div className="hb-res-detail-hints">
             <HbTooltip

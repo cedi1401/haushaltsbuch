@@ -530,7 +530,7 @@ button.hb-alert:hover .hb-alert-chevron {
    Detail), --lg 8 px (Listenbalken). Track neutral; --tinted tönt ihn in der
    Farbe der Füllung (--meter-tone). Übergang nur mit --animated: bei vielen
    Zeilen flimmerte er sonst bei jedem Re-Render.
-   Die älteren Klassen (.hb-dt-progress-track …) stehen
+   Die älteren Klassen (.hb-goal-progress-bg, .hb-dt-progress-track …) stehen
    nur noch als Layout-Haken daneben (Abstand, Breite, Ton).
    ===================================================== */
 .hb-meter {
@@ -1438,7 +1438,7 @@ select.hb-input option {
 /* Gespart: Teal wie „Sparen“ im Aufteilungs-Donut, damit nicht drei KPI-Karten
    grün sind (Review O3). Grün bleibt bei Einnahmen und Frei. */
 .hb-stat-pill--teal     { --pill-edge: var(--teal); }
-/* Handlungsbedarf (Sparen): Gelb wie die Pille „Rückstand". */
+/* Handlungsbedarf (Rücklagen): Gelb wie die Pille „Rückstand". */
 .hb-stat-pill--warn     { --pill-edge: var(--yellow); }
 /* Plan-/Soll-Werte (Kostenrechner): Violett wie die Rücklagenlinie im Chart.
    Bewusst nicht Orange — das liegt im hellen Theme zu nah an --red und würde
@@ -3498,8 +3498,17 @@ select.hb-input option {
 }
 
 /* =====================================================
-   SPARZIELE (Sparen-View: Prognose im Detail, Archiv)
+   SPARZIELE (Rücklagen-View: Karten unter der Tabelle, Archiv)
    ===================================================== */
+.hb-goal-progress-bg {
+  --meter-tone: var(--green);
+}
+
+/* Kopf des Karten-Abschnitts: gleicher Abstand zur Tabelle wie das Archiv. */
+.hb-goal-section-head {
+  margin: 28px 0 12px;
+}
+
 .hb-goal-header {
   display: flex;
   align-items: flex-start;
@@ -3533,6 +3542,43 @@ select.hb-input option {
   font-weight: 500;
   color: var(--muted);
 }
+.hb-goal-badge--deadline {
+  background: var(--yellow-soft);
+  color: var(--yellow-text);
+  border-color: var(--yellow-border);
+}
+.hb-goal-progress-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.hb-goal-amounts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hb-goal-amount-current {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+.hb-goal-amount-target {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.hb-goal-percent {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  color: var(--text);
+  flex-shrink: 0;
+}
+.hb-goal-percent--done { color: var(--green); }
 .hb-goal-prognosis {
   display: flex;
   flex-direction: column;
@@ -3562,13 +3608,56 @@ select.hb-input option {
 }
 .hb-goal-prognosis-value--warn { color: var(--yellow-text); }
 
-/* Im Detailbereich der Sparen-Tabelle steht die Prognose in einem Notizblock
-   (.hb-res-note) — der eigene Kasten der früheren Ziel-Karten entfällt dort. */
-.hb-res-note .hb-goal-prognosis {
-  padding: 0;
-  margin-top: 0;
-  background: none;
-  border: 0;
+/* Füllt den verbleibenden Leerraum der im Grid gestreckten Card und
+   zentriert die Pill darin vertikal — bleibt bei fehlendem Leerraum
+   einfach ein 12px-Abstand unter dem Fortschritt. */
+.hb-goal-success-wrap {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  margin-top: 12px;
+}
+
+.hb-goal-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--green-soft);
+  border-radius: var(--radius-md);
+  color: var(--green);
+  font-weight: 500;
+  font-size: 15px;
+  /* Translucent statt voll gesättigter Border — ruhiger, Fluent-typischer
+     Chip, der den grünen Akzent trotzdem klar trägt. */
+  border: 1px solid var(--green-border);
+}
+.hb-goal-success svg {
+  flex-shrink: 0;
+}
+
+/* Erreichtes Ziel: Glückwunsch-Pill + Abschließen-Button in einer Reihe.
+   Die Pill nimmt den verfügbaren Platz ein, der Button bleibt rechts und
+   schrumpft nicht. Bei zu schmaler Karte bricht der Button unter die Pill
+   und bleibt dort rechtsbündig. */
+.hb-goal-success-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+/* Gleiche Metrik wie der kleine Button daneben, damit beide gleich hoch sind. */
+.hb-goal-success-row .hb-goal-success {
+  flex: 1 1 auto;
+  justify-content: center;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+}
+.hb-goal-success-row .hb-btn {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 /* ===== Archiv: abgeschlossene Sparziele ===== */
@@ -3634,7 +3723,7 @@ select.hb-input option {
   text-align: right;
 }
 
-/* Kopf des Archivs unter der Sparen-Tabelle: ein Umschalter, zugeklappt. Der
+/* Kopf des Archivs unter den Sparziel-Karten: ein Umschalter, zugeklappt. Der
    Chevron ist derselbe wie in den Tabellenzeilen. */
 .hb-goal-archive {
   margin-top: 28px;
