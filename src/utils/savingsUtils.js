@@ -1,15 +1,17 @@
 // src/utils/savingsUtils.js
 //
-// Rechenmodell der Sparen-View (F2, Konzept C, Etappe 7c). Jede aktive
+// Rechenmodell der Rücklagen-View (F2, Konzept C, Etappe 7c). Jede aktive
 // Sparposition (Zweck) wird zu einer Zeile in ihrem Topf; die Bewertung hängt an
 // der Art:
 //
-//   Rücklage     — keine Bewertung, nur Ist-Stand und optionale Rate
-//   Rückstellung — Zyklus, Soll/Ist und Status aus sinkingFundStatus()
-//   Sparziel     — Fortschritt und Prognose aus goalUtils
+//   Freie Rücklage — keine Bewertung, nur Ist-Stand und optionale Rate
+//   Rückstellung   — Zyklus, Soll/Ist und Status aus sinkingFundStatus()
+//   Sparziel       — Fortschritt und Prognose aus goalUtils
 //
-// Je Topf entsteht zusätzlich die Überleitung: Topf-Stand = Summe der
-// Sparpositionen + abgeschlossene Sparziele + Rest „ohne Sparposition"
+// Freie Rücklagen und Rückstellungen stehen in der Tabelle (`rows`), aktive
+// Sparziele getrennt davon als Karten (`goalRows`, flach `activeGoals`).
+// Je Topf entsteht zusätzlich die Überleitung: Topf-Stand = Tabellenzeilen +
+// aktive Sparziele + abgeschlossene Sparziele + Rest „ohne Sparposition"
 // (Buchungen ohne Zweck und solche auf gelöschte Zwecke). Damit lässt sich jede
 // Abweichung zwischen Topf und Positionen in der View ablesen.
 
@@ -35,7 +37,7 @@ export function goalStatus(progress, prognosis, hasDeadline) {
 }
 
 /**
- * Eine Zeile der Sparen-View. Die Felder aus sinkingFundStatus() liegen flach
+ * Eine Zeile der Rücklagen-View. Die Felder aus sinkingFundStatus() liegen flach
  * in der Zeile, weil der Detailbereich und die Dialoge der Rückstellungen sie
  * so erwarten; `item` ist der Zweck in Form einer Fixkosten-Position.
  */
@@ -73,7 +75,7 @@ function buildRow(purpose, entries, opts) {
     };
   }
 
-  // Rücklage (auch eine Rückstellung ohne gültigen Anker fällt hierher)
+  // Freie Rücklage (auch eine Rückstellung ohne gültigen Anker fällt hierher)
   return {
     ...status,
     ...base,
@@ -84,16 +86,17 @@ function buildRow(purpose, entries, opts) {
 }
 
 /**
- * Das komplette Modell der Sparen-View.
+ * Das komplette Modell der Rücklagen-View.
  *
  * @param {{ pots?: Array, transferCategories?: Array }} book
  * @param {Array} entries - alle Einträge des Buchs
  * @param {{ monthStartDay?: number, today?: string }} [opts]
  * @returns {{
- *   sections: Array<{ pot: object, balance: number, rows: Array,
- *                     archivedBalance: number, unassigned: number }>,
+ *   sections: Array<{ pot: object, balance: number, rows: Array, goalRows: Array,
+ *                     goalBalance: number, archivedBalance: number, unassigned: number }>,
+ *   activeGoals: Array,
  *   archivedGoals: Array,
- *   kpis: { saved: number, potCount: number, rates: number, reserveRates: number,
+ *   kpis: { saved: number, potCount: number, rates: number, goalRates: number,
  *           behind: number, due: number }
  * }}
  */
@@ -106,7 +109,7 @@ export function buildSavingsModel(book, entries, opts = {}) {
   );
 
   const rowsByPot = new Map();
-  const archivedByPot = new Map();
+  const goalsByPot = new Map();
   const archivedGoals = [];
   for (const purpose of purposes) {
     if (purpose.rule === "goal" && purpose.completedAt) {
@@ -114,40 +117,44 @@ export function buildSavingsModel(book, entries, opts = {}) {
       archivedGoals.push({ ...goal, archive: calcGoalArchiveStats(goal, entries) });
       continue;
     }
-    if (!rowsByPot.has(purpose.potId)) rowsByPot.set(purpose.potId, []);
-    rowsByPot.get(purpose.potId).push(buildRow(purpose, entries, o));
+    const target = purpose.rule === "goal" ? goalsByPot : rowsByPot;
+    if (!target.has(purpose.potId)) target.set(purpose.potId, []);
+    target.get(purpose.potId).push(buildRow(purpose, entries, o));
   }
   archivedGoals.sort((a, b) => String(b.completedAt).localeCompare(String(a.completedAt)));
 
   const sections = pots.map((pot) => {
     const rows = rowsByPot.get(pot.id) || [];
+    const goalRows = goalsByPot.get(pot.id) || [];
     const balance = calcPotBalance(entries, pot.id);
     const byPurpose = potPurposeBalances(entries, pot.id);
     let archivedBalance = 0;
     for (const g of archivedGoals) {
       if (g.potId === pot.id) archivedBalance += byPurpose.get(g.id) || 0;
     }
-    archivedByPot.set(pot.id, archivedBalance);
     const assigned = rows.reduce((s, r) => s + (Number(r.actual) || 0), 0);
+    const goalBalance = goalRows.reduce((s, r) => s + (Number(r.actual) || 0), 0);
     return {
       pot,
       balance,
       rows,
+      goalRows,
+      goalBalance,
       archivedBalance,
-      unassigned: balance - assigned - archivedBalance,
+      unassigned: balance - assigned - goalBalance - archivedBalance,
     };
   });
 
   let saved = 0;
   let rates = 0;
-  let reserveRates = 0;
+  let goalRates = 0;
   let behind = 0;
   let due = 0;
   for (const section of sections) {
-    for (const row of section.rows) {
+    for (const row of [...section.rows, ...section.goalRows]) {
       saved += Number(row.actual) || 0;
       rates += Number(row.monthlyRate) || 0;
-      if (row.rule === "reserve") reserveRates += Number(row.monthlyRate) || 0;
+      if (row.rule === "goal") goalRates += Number(row.monthlyRate) || 0;
       if (row.status === "due" || row.status === "overdue") due += 1;
       else if (row.status === "behind" || row.status === "offTrack" || row.status === "missed") behind += 1;
     }
@@ -155,12 +162,13 @@ export function buildSavingsModel(book, entries, opts = {}) {
 
   return {
     sections,
+    activeGoals: sections.flatMap((s) => s.goalRows),
     archivedGoals,
     kpis: {
       saved,
-      potCount: sections.filter((s) => s.rows.length > 0).length,
+      potCount: sections.filter((s) => s.rows.length + s.goalRows.length > 0).length,
       rates,
-      reserveRates,
+      goalRates,
       behind,
       due,
     },

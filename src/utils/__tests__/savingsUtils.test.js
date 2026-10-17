@@ -37,7 +37,15 @@ describe('buildSavingsModel', () => {
     const { sections } = buildSavingsModel(book, ENTRIES, opts);
     expect(sections.map((s) => s.pot.id)).toEqual(['pot_r', 'pot_u']);
     expect(sections[0].rows.map((r) => r.id)).toEqual(['tc_steuern', 'tc_not']);
-    expect(sections[1].rows.map((r) => r.id)).toEqual(['tc_velo']);
+    expect(sections[1].rows).toEqual([]);
+  });
+
+  it('führt aktive Sparziele getrennt von der Tabelle', () => {
+    const { sections, activeGoals } = buildSavingsModel(book, ENTRIES, opts);
+    expect(sections[0].goalRows).toEqual([]);
+    expect(sections[1].goalRows.map((r) => r.id)).toEqual(['tc_velo']);
+    expect(sections[1].goalBalance).toBe(400);
+    expect(activeGoals.map((r) => r.id)).toEqual(['tc_velo']);
   });
 
   it('leitet den Topf-Stand auf die Positionen über', () => {
@@ -55,7 +63,7 @@ describe('buildSavingsModel', () => {
   it('bewertet jede Art nach ihrer Regel', () => {
     const { sections } = buildSavingsModel(book, ENTRIES, opts);
     const [steuern, not] = sections[0].rows;
-    const velo = sections[1].rows[0];
+    const velo = sections[1].goalRows[0];
     expect(steuern).toMatchObject({ rule: 'reserve', isSinkingFund: true, actual: 100, goalAmount: 1200, nextDate: '2027-03-15' });
     expect(steuern.monthlyRate).toBe(100);
     expect(not).toMatchObject({ rule: 'free', status: 'free', actual: 300, monthlyRate: 150, goalAmount: null, target: null });
@@ -73,7 +81,7 @@ describe('buildSavingsModel', () => {
     expect(kpis.saved).toBe(800);
     expect(kpis.potCount).toBe(2);
     expect(kpis.rates).toBe(250);
-    expect(kpis.reserveRates).toBe(100);
+    expect(kpis.goalRates).toBe(0);
   });
 
   it('zählt Rückstand und Fälligkeit als Handlungsbedarf', () => {
@@ -87,7 +95,7 @@ describe('buildSavingsModel', () => {
   it('übergeht Zwecke ohne gültigen Topf und kommt ohne Daten aus', () => {
     const lost = { ...NOT, id: 'tc_lost', potId: 'pot_weg' };
     const { sections } = buildSavingsModel({ pots: POTS, transferCategories: [lost] }, [], opts);
-    expect(sections.every((s) => s.rows.length === 0)).toBe(true);
+    expect(sections.every((s) => s.rows.length === 0 && s.goalRows.length === 0)).toBe(true);
     expect(buildSavingsModel(undefined, undefined, opts).sections).toEqual([]);
   });
 });
