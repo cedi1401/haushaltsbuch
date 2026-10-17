@@ -55,6 +55,7 @@ export default function CategoryManagerDialog({
   expenseCategories,
   incomeCategories,
   transferCategories = [],
+  pots = [],
   onUpdateExpenseCategories,
   onUpdateIncomeCategories,
   onUpdateTransferCategories,
@@ -63,6 +64,10 @@ export default function CategoryManagerDialog({
   const toast = useToast();
   const { confirm } = useConfirm();
   const [newTransferName, setNewTransferName] = useState("");
+  // Ein Zweck gehört genau einem Topf (Schema 7) — er wird beim Anlegen gewählt.
+  const [newTransferPotId, setNewTransferPotId] = useState("");
+  const newPotId = pots.some((p) => p.id === newTransferPotId) ? newTransferPotId : pots[0]?.id || "";
+  const potNameById = useMemo(() => new Map(pots.map((p) => [p.id, p.name])), [pots]);
   // `transferCategories` ist die volle Liste inkl. gelöschter Zwecke (die
   // bleiben für bestehende Buchungen erhalten); angezeigt werden nur die aktiven.
   const activeTransfers = useMemo(
@@ -138,9 +143,14 @@ export default function CategoryManagerDialog({
       if (newTransferName.trim()) toast.warning(error);
       return;
     }
+    if (!newPotId) {
+      toast.warning("Lege zuerst einen Topf an.");
+      return;
+    }
     const trimmed = newTransferName.trim();
-    // Ein gleichnamiger gelöschter Zweck wird reaktiviert, samt seiner Buchungen.
-    onUpdateTransferCategories?.(addTransferCategoryToList(transferCategories, trimmed).list);
+    // Ein gleichnamiger gelöschter Zweck im selben Topf wird reaktiviert, samt
+    // seiner Buchungen.
+    onUpdateTransferCategories?.(addTransferCategoryToList(transferCategories, trimmed, newPotId).list);
     setNewTransferName("");
     toast.success(`Transfer-Zweck „${trimmed}“ erstellt.`);
   }
@@ -206,9 +216,17 @@ export default function CategoryManagerDialog({
       toast.warning("Du brauchst mindestens einen Transfer-Zweck.");
       return;
     }
+    // Seit Schema 7 ist der Zweck auch die Sparposition — mit ihm verschwindet
+    // die Rate aus den Fixkosten bzw. das Sparziel.
+    const positionNote =
+      cat.rule === "goal"
+        ? "\n\nDamit entfällt auch das Sparziel."
+        : cat.rule === "reserve" || Number(cat.monthlyRate) > 0
+          ? "\n\nDamit entfällt auch die monatliche Rate in den Fixkosten."
+          : "";
     const ok = await confirm({
       title: "Transfer-Zweck löschen",
-      message: `Transfer-Zweck „${cat.name}“ wirklich löschen?\n\nBestehende Buchungen behalten den Zweck, er steht aber nicht mehr zur Auswahl.`,
+      message: `Transfer-Zweck „${cat.name}“ wirklich löschen?\n\nBestehende Buchungen behalten den Zweck, er steht aber nicht mehr zur Auswahl.${positionNote}`,
       confirmLabel: "Löschen",
       danger: true,
     });
@@ -690,10 +708,22 @@ export default function CategoryManagerDialog({
                     }
                   }}
                 />
+                <select
+                  className="hb-input"
+                  style={{ width: "auto", maxWidth: 180 }}
+                  aria-label="Topf des neuen Zwecks"
+                  value={newPotId}
+                  onChange={(e) => setNewTransferPotId(e.target.value)}
+                >
+                  {pots.length === 0 && <option value="">Kein Topf vorhanden</option>}
+                  {pots.map((pot) => (
+                    <option key={pot.id} value={pot.id}>{pot.name}</option>
+                  ))}
+                </select>
                 <Button
                   size="sm"
                   onClick={addTransferCategory}
-                  disabled={!newTransferName.trim()}
+                  disabled={!newTransferName.trim() || !newPotId}
                 >
                   <IconPlus /> Hinzufügen
                 </Button>
@@ -749,6 +779,11 @@ export default function CategoryManagerDialog({
                             title={cat.name}
                           >
                             {cat.name}
+                            {potNameById.has(cat.potId) && (
+                              <span className="hb-muted hb-muted--sm" style={{ fontWeight: 500 }}>
+                                {" "}· {potNameById.get(cat.potId)}
+                              </span>
+                            )}
                           </span>
                         )}
 

@@ -5,7 +5,11 @@ import { useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { parseAmount } from "../utils/formatUtils.js";
 import { TEMPLATE_NAME_MAX } from "../utils/entryTemplateUtils.js";
 import { EMPTY_ARRAY } from "../utils/constants.js";
-import { getTransferCategoryOptions } from "../utils/transferCategoryUtils.js";
+import {
+  getPurposesForPot,
+  getTransferCategoryOptions,
+  validTransferCategoryId,
+} from "../utils/transferCategoryUtils.js";
 
 const EMPTY_DRAFT = {
   name: "",
@@ -18,14 +22,23 @@ const EMPTY_DRAFT = {
   potId: "",
 };
 
+// Ein Zweck gehört genau einem Topf: der gewählte muss zum Topf passen, sonst
+// der erste des Topfs (oder keiner).
+function withPotPurpose(draft, transferCategories) {
+  if (draft.kind !== "transfer" && draft.kind !== "withdrawal") return draft;
+  const choices = getPurposesForPot(transferCategories, draft.potId);
+  if (choices.some((c) => c.id === draft.transferCategoryId)) return draft;
+  return { ...draft, transferCategoryId: validTransferCategoryId(choices, draft.transferCategoryId) };
+}
+
 function draftFromTemplate(template, { transferCategories, pots }) {
   if (!template) {
     return {
       ...EMPTY_DRAFT,
-      transferCategoryId: transferCategories[0]?.id || "",
       potId: pots[0]?.id || "",
     };
   }
+  // Ein gelöschter Zweck bleibt stehen und erscheint als eigene Option.
   return {
     name: template.name || "",
     kind: template.kind || "expense",
@@ -33,7 +46,10 @@ function draftFromTemplate(template, { transferCategories, pots }) {
     note: template.note || "",
     categoryId: template.categoryId || null,
     subcategoryId: template.subcategoryId || null,
-    transferCategoryId: template.transferCategoryId || transferCategories[0]?.id || "",
+    transferCategoryId:
+      template.transferCategoryId ||
+      getPurposesForPot(transferCategories, template.potId || pots[0]?.id)[0]?.id ||
+      "",
     potId: template.potId || pots[0]?.id || "",
   };
 }
@@ -71,6 +87,10 @@ export default function EntryTemplateFormDialog({
   }
 
   const isTransferKind = draft.kind === "transfer" || draft.kind === "withdrawal";
+  const potPurposes = useMemo(
+    () => getPurposesForPot(transferCategories, draft.potId),
+    [transferCategories, draft.potId]
+  );
 
   const nameError = useMemo(() => {
     const trimmed = draft.name.trim();
@@ -92,10 +112,12 @@ export default function EntryTemplateFormDialog({
       const n = parseAmount(draft.amount);
       if (!Number.isFinite(n) || n <= 0) return false;
     }
-    // Eine Transfer-Vorlage ohne Topf oder Zweck wäre wertlos
-    if (isTransferKind && (!draft.potId || !draft.transferCategoryId)) return false;
+    // Eine Transfer-Vorlage ohne Topf wäre wertlos; ein Zweck ist Pflicht,
+    // sobald der Topf welche hat.
+    if (isTransferKind && !draft.potId) return false;
+    if (isTransferKind && potPurposes.length > 0 && !draft.transferCategoryId) return false;
     return true;
-  }, [draft, nameError, isTransferKind]);
+  }, [draft, nameError, isTransferKind, potPurposes]);
 
   function handleSave() {
     if (!canSave) return;
@@ -109,24 +131,26 @@ export default function EntryTemplateFormDialog({
       note: draft.note.trim(),
       categoryId: draft.categoryId,
       subcategoryId: draft.subcategoryId,
-      transferCategoryId: draft.transferCategoryId,
+      transferCategoryId: draft.transferCategoryId || null,
       potId: draft.potId,
     });
   }
 
   function setKind(kind) {
-    setDraft((d) => ({
-      ...d,
-      kind,
-      // Kategoriefelder und Transferfelder schließen sich aus
-      categoryId: kind === "income" ? "cat_einnahmen" : null,
-      subcategoryId: null,
-      transferCategoryId:
-        kind === "transfer" || kind === "withdrawal"
-          ? d.transferCategoryId || transferCategories[0]?.id || ""
-          : "",
-      potId: kind === "transfer" || kind === "withdrawal" ? d.potId || pots[0]?.id || "" : "",
-    }));
+    setDraft((d) =>
+      withPotPurpose(
+        {
+          ...d,
+          kind,
+          // Kategoriefelder und Transferfelder schließen sich aus
+          categoryId: kind === "income" ? "cat_einnahmen" : null,
+          subcategoryId: null,
+          transferCategoryId: kind === "transfer" || kind === "withdrawal" ? d.transferCategoryId : "",
+          potId: kind === "transfer" || kind === "withdrawal" ? d.potId || pots[0]?.id || "" : "",
+        },
+        transferCategories
+      )
+    );
   }
 
   return (
@@ -217,8 +241,10 @@ export default function EntryTemplateFormDialog({
                 value={draft.transferCategoryId}
                 onChange={(e) => setDraft((d) => ({ ...d, transferCategoryId: e.target.value }))}
               >
-                {transferCategories.length === 0 && <option value="">Kein Zweck vorhanden</option>}
-                {getTransferCategoryOptions(allTransferCategories, draft.transferCategoryId, transferCategories).map((opt) => (
+                {potPurposes.length === 0 && !draft.transferCategoryId && (
+                  <option value="">Kein Zweck</option>
+                )}
+                {getTransferCategoryOptions(allTransferCategories, draft.transferCategoryId, potPurposes).map((opt) => (
                   <option key={opt.id} value={opt.id}>{opt.label}</option>
                 ))}
               </select>
@@ -228,7 +254,9 @@ export default function EntryTemplateFormDialog({
               <select
                 className="hb-input"
                 value={draft.potId}
-                onChange={(e) => setDraft((d) => ({ ...d, potId: e.target.value }))}
+                onChange={(e) =>
+                  setDraft((d) => withPotPurpose({ ...d, potId: e.target.value }, transferCategories))
+                }
               >
                 {pots.length === 0 && <option value="">Kein Topf vorhanden</option>}
                 {pots.map((pot) => (

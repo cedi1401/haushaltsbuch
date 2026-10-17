@@ -9,12 +9,9 @@ import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
  * „Rechnung bezahlt" — erfasst die Zahlung als Entnahme aus dem Topf und
  * beendet damit den Zyklus.
  *
- * Warum ein eigener Dialog und nicht der globale „Buchung hinzufügen": dessen
- * Zweck-Auswahl speist sich aus `getWithdrawalCategoriesForPot()` und bietet nur
- * Zwecke an, aus denen aus diesem Topf **schon einmal** entnommen wurde. Der
- * klassische Fall hier ist aber die *erste* Entnahme für einen Zweck — der
- * stünde dort schlicht nicht in der Liste. Dazu kommt, dass Topf und Zweck hier
- * feststehen und gar nicht zur Wahl stehen dürfen.
+ * Warum ein eigener Dialog und nicht der globale „Buchung hinzufügen": Topf
+ * und Zweck stehen hier fest und dürfen gar nicht zur Wahl stehen; vorbelegt
+ * ist die Rechnung, nicht die Monatsrate.
  *
  * Der Dialog rechnet nichts und schreibt nichts: `actual` kommt fertig herein,
  * der Draft liegt beim Aufrufer (das Projekt vermeidet set-state-in-effect und

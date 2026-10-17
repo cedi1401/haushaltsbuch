@@ -27,8 +27,7 @@ export default function EntryFormDialog({
   pots,
   expenseCategories,
   incomeCategories,
-  transferCategories,
-  availableWithdrawalCategories,
+  availablePurposes,
   onOpenCategoryManager,
   onOpenTemplateManager,
   templates = EMPTY_ARRAY,
@@ -234,7 +233,8 @@ export default function EntryFormDialog({
               <div className="hb-field">
                 <div className="hb-label">Transfer-Zweck</div>
                 <select className="hb-input" value={transferCategoryId} onChange={(e) => setField("transferCategoryId", e.target.value)}>
-                  {availableWithdrawalCategories.map((cat) => (
+                  {availablePurposes.length === 0 && <option value="">Kein Zweck</option>}
+                  {availablePurposes.map((cat) => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>
@@ -253,7 +253,8 @@ export default function EntryFormDialog({
               <div className="hb-field">
                 <div className="hb-label">Transfer-Zweck</div>
                 <select className="hb-input" value={transferCategoryId} onChange={(e) => setField("transferCategoryId", e.target.value)}>
-                  {transferCategories.map((cat) => (
+                  {availablePurposes.length === 0 && <option value="">Kein Zweck</option>}
+                  {availablePurposes.map((cat) => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>

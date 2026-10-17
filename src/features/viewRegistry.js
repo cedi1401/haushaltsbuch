@@ -176,7 +176,8 @@ export const VIEWS = [
     Component: TrendView,
     getProps: (ctx) => ({
       entries: ctx.entries,
-      recurringExpenses: ctx.activeBook?.recurringExpenses || [],
+      // Ausgaben-Positionen plus Zwecke mit Rate (Schema 7)
+      recurringExpenses: ctx.fixedCostItems,
       expenseCategories: ctx.activeBook?.expenseCategories || [],
       monthStartDay: ctx.monthStartDay,
       pots: ctx.activeBook?.pots || [],

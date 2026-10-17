@@ -219,7 +219,12 @@ export default function PotsManager({ activeBook, onUpdateBook }) {
       setEditingId(null);
       setEditName("");
     }
-    onUpdateBook?.({ ...activeBook, pots: pots.filter((p) => p.id !== potId) });
+    // Die Zwecke des Topfs gehen mit (weich, wie ihre Buchungen): ein Zweck
+    // gehört genau einem Topf und ist ohne ihn nicht mehr buchbar.
+    const transferCategories = (activeBook?.transferCategories || []).map((c) =>
+      c.potId === potId ? { ...c, deleted: true } : c
+    );
+    onUpdateBook?.({ ...activeBook, pots: pots.filter((p) => p.id !== potId), transferCategories });
     toast.success("Topf gelöscht.");
   }
 

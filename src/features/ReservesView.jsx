@@ -7,6 +7,7 @@ import { todayISO } from "../utils/formatUtils.js";
 import { fixedCostKind } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { buildSinkingFundRows, buildCatchUpRates } from "../utils/fixedCostUtils.js";
+import { getRatedPurposes, purposeToFixedItem } from "../utils/transferCategoryUtils.js";
 import { getFinancialMonth } from "../utils/financialMonthUtils.js";
 import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
@@ -26,7 +27,7 @@ const UNGROUPED_KEY = "ungrouped";
  *
  * Rollenteilung zur Fixkosten-View: dort wird angelegt und monatlich gebucht,
  * hier wird überwacht und der Zyklus abgeschlossen. Beide Views lesen dieselben
- * `recurringExpenses`; dieser hier zeigt ausschließlich die Transfer-Positionen.
+ * Zwecke mit Rate (seit Schema 7 ist der Zweck die Position).
  *
  * Gezeigt werden ausschließlich Positionen mit Turnus und Fälligkeit — die,
  * die auf eine konkrete Rechnung zu einem konkreten Termin ansparen und damit
@@ -43,27 +44,25 @@ export default function ReservesView({
 }) {
   const fmt = useFmt();
   const toast = useToast();
-  const recurringExpenses = activeBook?.recurringExpenses || EMPTY_ARRAY;
   const pots = activeBook?.pots || EMPTY_ARRAY;
   const fixedCostGroups = activeBook?.fixedCostGroups || EMPTY_ARRAY;
   const transferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
 
   const items = useMemo(
-    () => recurringExpenses.filter((r) => fixedCostKind(r) === "transfer"),
-    [recurringExpenses]
+    () => getRatedPurposes(transferCategories).map(purposeToFixedItem),
+    [transferCategories]
   );
 
   // Gebuchte Beträge des laufenden Finanzmonats je Position. Zugeordnet wird
-  // über `recurringId` — der Notiztext ist seit P2 nicht mehr die Grundlage,
-  // eine umbenannte Position behält so ihre Historie.
-  const bookedByRecurringId = useMemo(() => {
+  // über den Zweck — er ist die Position (Schema 7).
+  const bookedByPurposeId = useMemo(() => {
     const currentMonth = getFinancialMonth(todayISO(), monthStartDay)?.yyyymm;
     const map = new Map();
     if (!currentMonth) return map;
     for (const e of entries || []) {
-      if (e.kind !== "transfer" || !e.recurringId) continue;
+      if (e.kind !== "transfer" || !e.transferCategoryId) continue;
       if (getFinancialMonth(e.date, monthStartDay)?.yyyymm !== currentMonth) continue;
-      map.set(e.recurringId, (map.get(e.recurringId) || 0) + Number(e.amount || 0));
+      map.set(e.transferCategoryId, (map.get(e.transferCategoryId) || 0) + Number(e.amount || 0));
     }
     return map;
   }, [entries, monthStartDay]);
@@ -73,9 +72,9 @@ export default function ReservesView({
       buildSinkingFundRows(items, entries, { monthStartDay }).map((row) => ({
         ...row,
         id: row.item.id,
-        bookedThisMonth: bookedByRecurringId.get(row.item.id) ?? null,
+        bookedThisMonth: bookedByPurposeId.get(row.item.id) ?? null,
       })),
-    [items, entries, monthStartDay, bookedByRecurringId]
+    [items, entries, monthStartDay, bookedByPurposeId]
   );
 
   // Die Trennung läuft über `isSinkingFund` aus dem Status, nicht über das Item:
@@ -106,12 +105,12 @@ export default function ReservesView({
   // verfügbar: sobald eine Monatsrate gebucht ist, gibt es nichts mehr
   // nachzuholen, was nicht auch von Hand gebucht werden könnte. Ein Set über
   // alle Einträge statt `entries.some(...)` je Zeile — sonst wäre die Prüfung
-  // quadratisch. `kind === "transfer"` grenzt bewusst auf Monatsraten ein: eine
+  // quadratisch. `kind === "transfer"` grenzt bewusst auf Einzahlungen ein: eine
   // Entnahme aus „Rechnung bezahlt" darf die Verfügbarkeit nicht verbrauchen.
-  const bookedRecurringIds = useMemo(() => {
+  const bookedPurposeIds = useMemo(() => {
     const set = new Set();
     for (const e of entries || []) {
-      if (e.recurringId && e.kind === "transfer") set.add(e.recurringId);
+      if (e.transferCategoryId && e.kind === "transfer") set.add(e.transferCategoryId);
     }
     return set;
   }, [entries]);
@@ -153,13 +152,13 @@ export default function ReservesView({
         fmt={fmt}
         pot={potById.get(row.item?.potId)}
         purposeName={purposeNameById.get(row.item?.transferCategoryId) ?? ""}
-        canCatchUp={row.elapsed > 0 && !bookedRecurringIds.has(row.item?.id)}
+        canCatchUp={row.elapsed > 0 && !bookedPurposeIds.has(row.item?.id)}
         onBillPaid={openBillPaid}
         onCatchUp={openCatchUp}
         onEdit={onNavigateToFixed}
       />
     ),
-    [fmt, potById, purposeNameById, bookedRecurringIds, openBillPaid, openCatchUp, onNavigateToFixed]
+    [fmt, potById, purposeNameById, bookedPurposeIds, openBillPaid, openCatchUp, onNavigateToFixed]
   );
 
   // Die Raten werden hier berechnet und dem Dialog fertig gereicht: dieselbe
@@ -201,11 +200,10 @@ export default function ReservesView({
       subcategoryId: null,
       kind: "transfer",
       potId: item.potId,
+      // Der Zweck macht diese Raten für die Trend-Zuordnung zu regulären
+      // Monatsraten — und verbraucht damit die einmalige Verfügbarkeit dieser
+      // Aktion.
       note: item.name,
-      // Die Herkunftskennung macht diese Raten für die Trend-Zuordnung zu
-      // regulären Monatsraten — und verbraucht damit die einmalige
-      // Verfügbarkeit dieser Aktion.
-      recurringId: item.id,
     }));
     // Eine Batch-Buchung: ein patchActiveBook, ein Commit, ein Save.
     onAddEntries?.(newEntries);

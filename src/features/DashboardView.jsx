@@ -238,8 +238,7 @@ export default function DashboardView({
         pots={activeBook?.pots || []}
         expenseCategories={expenseCategories}
         incomeCategories={incomeCategories}
-        transferCategories={indicateTransferCategories}
-        availableWithdrawalCategories={entryActions.availableWithdrawalCategories}
+        availablePurposes={entryActions.availablePurposes}
         onOpenCategoryManager={() => {
           entryActions.setAddEntryOpen(false);
           onOpenCategoryManager();

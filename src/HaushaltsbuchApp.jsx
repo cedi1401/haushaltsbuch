@@ -17,7 +17,7 @@ import CategoryManagerDialog from "./components/CategoryManagerDialog.jsx";
 
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./utils/bookDefaults.js";
 import { sumAmounts } from "./utils/hbUtils.js";
-import { getActiveTransferCategories } from "./utils/transferCategoryUtils.js";
+import { getActiveTransferCategories, getFixedCostItems } from "./utils/transferCategoryUtils.js";
 import { calcExpenseByHierarchy, calcIncomeByHierarchy } from "./utils/budgetUtils.js";
 import { EMPTY_ARRAY, MONTHS_LONG, MONTHS_SHORT } from "./utils/constants.js";
 import { CurrencyContext } from "./contexts/CurrencyContext.jsx";
@@ -68,6 +68,12 @@ export default function HaushaltsbuchApp() {
   const indicateTransferCategories = useMemo(
     () => getActiveTransferCategories(allTransferCategories),
     [allTransferCategories]
+  );
+  // Ausgaben-Positionen plus Zwecke mit Rate — die Fixkosten-Sicht für den Trend.
+  const recurringExpenses = activeBook?.recurringExpenses;
+  const fixedCostItems = useMemo(
+    () => getFixedCostItems({ recurringExpenses, transferCategories: allTransferCategories }),
+    [recurringExpenses, allTransferCategories]
   );
 
   const entryActions = useEntryActions({
@@ -174,7 +180,7 @@ export default function HaushaltsbuchApp() {
     totalIncome, totalExpense, totalTransfers,
     totalSavingsTransfers, totalReserveTransfers, balance,
     potBalances, expenseByHierarchy, incomeByHierarchy,
-    expenseCategories, allTransferCategories, indicateTransferCategories,
+    expenseCategories, allTransferCategories, indicateTransferCategories, fixedCostItems,
     monthFilter, monthLabel, monthStartDay, baseCurrency,
     entryActions, updateBook, patchActiveBook,
     selectedPotId, setSelectedPotId,
@@ -286,7 +292,7 @@ export default function HaushaltsbuchApp() {
             incomeCategories={activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES}
             transferCategories={indicateTransferCategories}
             allTransferCategories={allTransferCategories}
-            withdrawalCategories={entryActions.editWithdrawalCategories}
+            purposes={entryActions.editPurposes}
           />
 
           <CategoryManagerDialog
@@ -295,6 +301,7 @@ export default function HaushaltsbuchApp() {
             expenseCategories={expenseCategories}
             incomeCategories={incomeCategories}
             transferCategories={allTransferCategories}
+            pots={activeBook?.pots || EMPTY_ARRAY}
             onUpdateExpenseCategories={(newCats) =>
               patchActiveBook((b) => ({ ...b, expenseCategories: newCats }))
             }

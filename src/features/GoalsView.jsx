@@ -10,8 +10,14 @@ import {
   calcGoalArchiveStats,
 } from "../utils/goalUtils.js";
 import { formatPercent, parseAmount, todayISO } from "../utils/formatUtils.js";
-import { generateId } from "../utils/idUtils.js";
-import { getTransferCategoryName, getTransferCategoryOptions } from "../utils/transferCategoryUtils.js";
+import {
+  findTransferCategoryByName,
+  getGoalPurposes,
+  makeTransferCategory,
+  MAX_TRANSFER_NAME_LENGTH,
+  purposeHasEntries,
+  purposeToGoal,
+} from "../utils/transferCategoryUtils.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/toastContext.js";
 import { IconGoals, IconPlus, IconCheck } from "../components/icons.jsx";
@@ -25,9 +31,14 @@ export default function GoalsView({
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
-  const goals = activeBook?.goals || EMPTY_ARRAY;
   const pots = activeBook?.pots || EMPTY_ARRAY;
-  const transferCategories = activeBook?.transferCategories || [];
+  const transferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
+  // Seit Schema 7 ist ein Sparziel ein Zweck mit der Regel „goal"; sein
+  // Ist-Stand ist das Netto dieses Zwecks im Topf.
+  const goals = useMemo(
+    () => getGoalPurposes(transferCategories).map(purposeToGoal),
+    [transferCategories]
+  );
   const { confirm } = useConfirm();
   const toast = useToast();
 
@@ -39,21 +50,17 @@ export default function GoalsView({
     targetAmount: "",
     deadline: "",
     potId: pots[0]?.id || "",
-    transferCategoryId: "",     // "" = Topf-Gesamtstand
-    startMode: "zero",          // "zero" | "date" | "custom"
-    startDate: "",
-    startAmount: "",
   });
 
   // Berechne Fortschritt und Prognose für alle Ziele
   const goalsWithProgress = useMemo(() => {
     return goals.map((goal) => ({
       ...goal,
-      progress: calcGoalProgress(goal, entries, pots),
+      progress: calcGoalProgress(goal, entries),
       prognosis: calcGoalPrognosis(goal, entries, todayISO(), monthStartDay),
     }));
     // todayISO is a stable module import → intentionally not a dependency
-  }, [goals, entries, pots, monthStartDay]);
+  }, [goals, entries, monthStartDay]);
 
   // Aktive vs. abgeschlossene (archivierte) Ziele
   const activeGoals = useMemo(
@@ -122,10 +129,6 @@ export default function GoalsView({
       targetAmount: "",
       deadline: "",
       potId: pots[0]?.id || "",
-      transferCategoryId: "",
-      startMode: "zero",
-      startDate: "",
-      startAmount: "",
     });
     setDialogOpen(true);
   }
@@ -137,10 +140,6 @@ export default function GoalsView({
       targetAmount: String(goal.targetAmount || ""),
       deadline: goal.deadline || "",
       potId: goal.potId || pots[0]?.id || "",
-      transferCategoryId: goal.transferCategoryId || "",
-      startMode: goal.startMode || "zero",
-      startDate: goal.startDate || "",
-      startAmount: String(goal.startAmount || ""),
     });
     setDialogOpen(true);
   }
@@ -150,39 +149,43 @@ export default function GoalsView({
     setEditingGoal(null);
   }
 
+  // Schreibt in den Zweck des Ziels; alle Ziel-Aktionen laufen hierüber.
+  function updatePurpose(id, patch) {
+    const updated = transferCategories.map((c) => (c.id === id ? { ...c, ...patch } : c));
+    onUpdateBook({ ...activeBook, transferCategories: updated });
+  }
+
   function saveGoal() {
     if (!activeBook) return;
-
-    const numericAmount = parseAmount(draft.targetAmount);
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
-    if (!draft.name.trim()) return;
-    if (!draft.potId) return;
+    if (!canSave) return;
 
     const goalData = {
       name: draft.name.trim(),
-      targetAmount: numericAmount,
+      targetAmount: parseAmount(draft.targetAmount),
       deadline: draft.deadline || null,
       potId: draft.potId,
-      transferCategoryId: draft.transferCategoryId || null,
-      startMode: draft.startMode,
-      startDate: draft.startMode === "date" ? (draft.startDate || null) : null,
-      startAmount: draft.startMode === "custom"
-        ? (parseAmount(draft.startAmount) || 0)
-        : 0,
     };
 
     if (editingGoal) {
-      const updatedGoals = goals.map((g) =>
-        g.id === editingGoal.id ? { ...g, ...goalData } : g
-      );
-      onUpdateBook({ ...activeBook, goals: updatedGoals });
-    } else {
-      const newGoal = {
-        id: generateId("goal"),
+      updatePurpose(editingGoal.id, goalData);
+    } else if (adoptPurpose) {
+      updatePurpose(adoptPurpose.id, {
         ...goalData,
+        rule: "goal",
         createdAt: todayISO(),
+        completedAt: null,
+        completedAmount: null,
+      });
+    } else {
+      const newPurpose = {
+        ...makeTransferCategory(goalData.name, goalData.potId),
+        ...goalData,
+        rule: "goal",
+        createdAt: todayISO(),
+        completedAt: null,
+        completedAmount: null,
       };
-      onUpdateBook({ ...activeBook, goals: [...goals, newGoal] });
+      onUpdateBook({ ...activeBook, transferCategories: [...transferCategories, newPurpose] });
     }
 
     closeDialog();
@@ -201,41 +204,59 @@ export default function GoalsView({
       danger: true,
     });
     if (!ok) return;
-    const updatedGoals = goals.filter((g) => g.id !== goalId);
-    onUpdateBook({ ...activeBook, goals: updatedGoals });
+    // Wie beim Löschen eines Zwecks: weich, damit bestehende Buchungen ihren
+    // Namen behalten. Das Geld bleibt im Topf.
+    updatePurpose(goalId, { deleted: true });
     toast.success("Sparziel gelöscht.");
   }
 
   // Erreichtes Ziel abschließen → wandert ins Archiv (Geld bleibt im Topf)
   function archiveGoal(goal) {
     if (!activeBook) return;
-    const updatedGoals = goals.map((g) =>
-      g.id === goal.id
-        ? { ...g, completedAt: todayISO(), completedAmount: goal.progress.current }
-        : g
-    );
-    onUpdateBook({ ...activeBook, goals: updatedGoals });
+    updatePurpose(goal.id, { completedAt: todayISO(), completedAmount: goal.progress.current });
     toast.success(`Sparziel „${goal.name}“ abgeschlossen.`);
   }
 
   // Abgeschlossenes Ziel wieder aktivieren
   function reactivateGoal(goal) {
     if (!activeBook) return;
-    const updatedGoals = goals.map((g) =>
-      g.id === goal.id ? { ...g, completedAt: null, completedAmount: null } : g
-    );
-    onUpdateBook({ ...activeBook, goals: updatedGoals });
+    updatePurpose(goal.id, { completedAt: null, completedAmount: null });
     toast.success(`Sparziel „${goal.name}“ wieder aktiviert.`);
   }
 
-  const canSave = useMemo(() => {
-    if (!draft.name.trim()) return false;
-    const n = parseAmount(draft.targetAmount);
-    if (!Number.isFinite(n) || n <= 0) return false;
-    if (!draft.potId) return false;
-    if (draft.startMode === "date" && !draft.startDate) return false;
-    return true;
-  }, [draft]);
+  // Ein Sparziel ist ein Zweck, und Zweck-Namen sind eindeutig. Beim Anlegen
+  // darf der Name einen freien Zweck im selben Topf treffen: Der wird dann zum
+  // Ziel, seine bisherigen Buchungen zählen mit.
+  const sameNamePurpose = draft.name.trim()
+    ? findTransferCategoryByName(transferCategories, draft.name, { excludeId: editingGoal?.id })
+    : null;
+  const adoptPurpose =
+    !editingGoal && sameNamePurpose?.rule === "free" && sameNamePurpose.potId === draft.potId
+      ? sameNamePurpose
+      : null;
+  let nameError = null;
+  if (draft.name.trim().length > MAX_TRANSFER_NAME_LENGTH) {
+    nameError = `Der Name ist zu lang (max. ${MAX_TRANSFER_NAME_LENGTH} Zeichen).`;
+  } else if (sameNamePurpose && !adoptPurpose) {
+    // Wie in den Fixkosten: Ein freier Zweck in einem anderen Topf ließe sich
+    // übernehmen, wenn der Topf passt — darauf hinweisen.
+    nameError =
+      !editingGoal && sameNamePurpose.rule === "free" && sameNamePurpose.potId !== draft.potId
+        ? "Es gibt bereits einen Transfer-Zweck mit diesem Namen, aber in einem anderen Topf."
+        : "Es gibt bereits einen Transfer-Zweck mit diesem Namen.";
+  }
+
+  // Hat das Ziel schon Buchungen, steht sein Topf fest — ein Wechsel ließe sie
+  // im alten Topf zurück.
+  const potLocked = !!editingGoal && purposeHasEntries(entries, editingGoal.id);
+
+  const draftTarget = parseAmount(draft.targetAmount);
+  const canSave =
+    !!draft.name.trim() &&
+    !nameError &&
+    Number.isFinite(draftTarget) &&
+    draftTarget > 0 &&
+    !!draft.potId;
 
   function getPotName(goal) {
     const pot = pots.find((p) => p.id === goal.potId);
@@ -253,18 +274,6 @@ export default function GoalsView({
       });
     } catch {
       return dateStr;
-    }
-  }
-
-  function getStartModeLabel(goal) {
-    switch (goal.startMode) {
-      case "date":
-        return `Ab ${formatDate(goal.startDate)}`;
-      case "custom":
-        return `Anfangsbetrag: ${fmt(goal.startAmount || 0)}`;
-      case "zero":
-      default:
-        return "Ab Null (alle Buchungen)";
     }
   }
 
@@ -411,17 +420,11 @@ export default function GoalsView({
                     <h3 className="hb-goal-title">{goal.name}</h3>
                     <div className="hb-goal-badges">
                       <span className="hb-goal-badge">Topf: {getPotName(goal)}</span>
-                      {goal.transferCategoryId && (
-                        <span className="hb-goal-badge hb-goal-badge--accent">
-                          Zweck: {getTransferCategoryName(transferCategories, goal.transferCategoryId) || "—"}
-                        </span>
-                      )}
                       {goal.deadline && (
                         <span className="hb-goal-badge hb-goal-badge--deadline">
                           Bis {formatDate(goal.deadline)}
                         </span>
                       )}
-                      <span className="hb-goal-badge">{getStartModeLabel(goal)}</span>
                     </div>
                   </div>
                   <OverflowMenu
@@ -555,11 +558,6 @@ export default function GoalsView({
                                 Erreicht am {formatDate(goal.completedAt)}
                               </span>
                               <span className="hb-goal-badge">Topf: {getPotName(goal)}</span>
-                              {goal.transferCategoryId && (
-                                <span className="hb-goal-badge hb-goal-badge--accent">
-                                  Zweck: {getTransferCategoryName(transferCategories, goal.transferCategoryId) || "—"}
-                                </span>
-                              )}
                             </div>
                           </div>
                           <OverflowMenu
@@ -644,8 +642,16 @@ export default function GoalsView({
                 type="text"
                 placeholder="z.B. Urlaub 2026"
                 value={draft.name}
+                aria-invalid={nameError ? "true" : undefined}
                 onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
               />
+              {nameError && <div className="hb-fixed-field-error">{nameError}</div>}
+              {adoptPurpose && (
+                <div className="hb-muted" style={{ marginTop: 4 }}>
+                  Der bestehende Zweck „{adoptPurpose.name}“ wird zum Sparziel, seine Buchungen
+                  zählen mit.
+                </div>
+              )}
             </div>
 
             {/* Zielbetrag + Deadline gehören logisch zusammen (Ziel + Zeitrahmen) */}
@@ -676,87 +682,27 @@ export default function GoalsView({
 
           <div style={{ height: 1, background: "var(--border)" }} />
 
-          {/* Bereich: Topf-Zuordnung (was und wie gemessen wird) */}
+          {/* Bereich: Topf-Zuordnung. Das Ziel ist selbst ein Transfer-Zweck im
+              Topf; es zählen alle Buchungen auf diesen Zweck. */}
           <div className="hb-form-stack">
             <div className="hb-field">
               <div className="hb-label">Spartopf</div>
               <select
                 className="hb-input"
                 value={draft.potId}
+                disabled={potLocked}
                 onChange={(e) => setDraft((d) => ({ ...d, potId: e.target.value }))}
               >
                 {pots.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-            </div>
-
-            <div className="hb-field">
-              <div className="hb-label">Transfer-Zweck (optional)</div>
-              <select
-                className="hb-input"
-                value={draft.transferCategoryId}
-                onChange={(e) => setDraft((d) => ({ ...d, transferCategoryId: e.target.value }))}
-              >
-                <option value="">Alle (Topf-Gesamtstand)</option>
-                {getTransferCategoryOptions(transferCategories, draft.transferCategoryId).map((opt) => (
-                  <option key={opt.id} value={opt.id}>{opt.label}</option>
-                ))}
-              </select>
-              {draft.transferCategoryId && (
-                <div className="hb-muted" style={{ marginTop: 4 }}>
-                  Nur Transfers mit diesem Zweck werden gezählt
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div style={{ height: 1, background: "var(--border)" }} />
-
-          {/* Bereich: Startpunkt */}
-          <div className="hb-form-stack">
-            <div className="hb-field">
-              <div className="hb-label">Startpunkt</div>
-              <select
-                className="hb-input"
-                value={draft.startMode}
-                onChange={(e) => setDraft((d) => ({ ...d, startMode: e.target.value }))}
-              >
-                <option value="zero">Ab Null (alle Buchungen zählen)</option>
-                <option value="date">Ab bestimmtem Datum</option>
-                <option value="custom">Manueller Anfangsbetrag</option>
-              </select>
-            </div>
-
-            {draft.startMode === "date" && (
-              <div className="hb-field">
-                <div className="hb-label">Startdatum</div>
-                <HbDatePicker
-                  value={draft.startDate}
-                  onChange={(v) => setDraft((d) => ({ ...d, startDate: v }))}
-                />
-                <div className="hb-muted" style={{ marginTop: 4 }}>
-                  Nur Buchungen ab diesem Datum werden berücksichtigt
-                </div>
+              <div className="hb-muted" style={{ marginTop: 4 }}>
+                {potLocked
+                  ? "Das Ziel hat schon Buchungen in diesem Topf, der Topf steht deshalb fest."
+                  : `${editingGoal ? "Das Ziel ist ein Transfer-Zweck in diesem Topf." : "Das Ziel wird als Transfer-Zweck in diesem Topf angelegt."} Es zählen alle Transfers und Entnahmen mit diesem Zweck.`}
               </div>
-            )}
-
-            {draft.startMode === "custom" && (
-              <div className="hb-field">
-                <div className="hb-label">Anfangsbetrag ({baseCurrency})</div>
-                <input
-                  className="hb-input"
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="z.B. 500"
-                  value={draft.startAmount}
-                  onChange={(e) => setDraft((d) => ({ ...d, startAmount: e.target.value }))}
-                />
-                <div className="hb-muted" style={{ marginTop: 4 }}>
-                  Dieser Betrag wird als Startbasis zum berechneten Fortschritt addiert
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </EditDialog>

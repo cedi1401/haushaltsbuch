@@ -14,7 +14,17 @@ import {
 } from "../utils/formatUtils.js";
 import { DEFAULT_EXPENSE_CATEGORIES } from "../utils/bookDefaults.js";
 import { fixedCostKind } from "../utils/hbUtils.js";
-import { getActiveTransferCategories, getTransferCategoryOptions } from "../utils/transferCategoryUtils.js";
+import {
+  applyFixedFieldsToPurpose,
+  clearPurposeRate,
+  findTransferCategoryByName,
+  getRatedPurposes,
+  hasPurposeRate,
+  makeTransferCategory,
+  MAX_TRANSFER_NAME_LENGTH,
+  purposeHasEntries,
+  purposeToFixedItem,
+} from "../utils/transferCategoryUtils.js";
 import { isSinkingFund, monthlyRate } from "../utils/fixedCostUtils.js";
 import { getFinancialMonth } from "../utils/financialMonthUtils.js";
 import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
@@ -94,6 +104,14 @@ function bookingKey(kind, id) {
   return `${kind}:${id}`;
 }
 
+// Die Position einer Buchung: Ausgaben über `recurringId`, Transfers über den
+// Zweck — seit Schema 7 ist der Zweck die Position.
+function entryPositionId(e) {
+  if (e.kind === "transfer") return e.transferCategoryId || null;
+  if (e.kind === "expense") return e.recurringId || null;
+  return null;
+}
+
 export default function FixedCostsView({
   activeBook,
   entries,
@@ -104,14 +122,16 @@ export default function FixedCostsView({
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
+  // Seit Schema 7 stehen hier nur Ausgaben; die Transfer-Positionen sind die
+  // Zwecke mit Rate (transferCategoryUtils.purposeToFixedItem).
   const recurringExpenses = activeBook?.recurringExpenses || EMPTY_ARRAY;
   const fixedCostGroups = activeBook?.fixedCostGroups || EMPTY_ARRAY;
   const pots = activeBook?.pots || EMPTY_ARRAY;
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
   const allTransferCategories = activeBook?.transferCategories || EMPTY_ARRAY;
-  const transferCategories = useMemo(
-    () => getActiveTransferCategories(allTransferCategories),
-    [allTransferCategories]
+  const allItems = useMemo(
+    () => [...recurringExpenses, ...getRatedPurposes(allTransferCategories).map(purposeToFixedItem)],
+    [recurringExpenses, allTransferCategories]
   );
   const { confirm } = useConfirm();
   const toast = useToast();
@@ -131,7 +151,6 @@ export default function FixedCostsView({
     kind: "expense",
     categoryId: null,
     subcategoryId: null,
-    transferCategoryId: transferCategories[0]?.id || "",
     potId: pots[0]?.id || "",
     // Nur für Transfers: Turnus als Zahl (null | 1 | 3 | 6 | 12), Fälligkeit als
     // ISO-String. `""` ist bei HbDatePicker die Darstellung für „kein Datum".
@@ -167,15 +186,16 @@ export default function FixedCostsView({
   }, [fixedCostGroups]);
 
   // Buchungen des laufenden Finanzmonats je Position — zugeordnet über
-  // `recurringId`, wie im Rückstellungs-View.
+  // entryPositionId(), wie im Rückstellungs-View.
   const bookedThisMonth = useMemo(() => {
     const map = new Map();
     const currentMonth = getFinancialMonth(todayISO(), monthStartDay)?.yyyymm;
     if (!currentMonth) return map;
     for (const e of entries || EMPTY_ARRAY) {
-      if (!e.recurringId || (e.kind !== "expense" && e.kind !== "transfer")) continue;
+      const positionId = entryPositionId(e);
+      if (!positionId) continue;
       if (getFinancialMonth(e.date, monthStartDay)?.yyyymm !== currentMonth) continue;
-      const key = bookingKey(e.kind, e.recurringId);
+      const key = bookingKey(e.kind, positionId);
       const prev = map.get(key);
       map.set(key, {
         count: (prev?.count || 0) + 1,
@@ -192,7 +212,7 @@ export default function FixedCostsView({
     let fixed = 0;
     let free = 0;
     let booked = 0;
-    for (const item of recurringExpenses) {
+    for (const item of allItems) {
       const kind = fixedCostKind(item);
       const bookedEntry = bookedThisMonth.get(bookingKey(kind, item.id)) ?? null;
       byKind[kind].push({ id: item.id, item, booked: bookedEntry });
@@ -203,14 +223,13 @@ export default function FixedCostsView({
       else free += monthlyRate(item);
     }
     return { rowsByKind: byKind, fixedMonthly: fixed, freeMonthly: free, bookedCount: booked };
-  }, [recurringExpenses, bookedThisMonth]);
+  }, [allItems, bookedThisMonth]);
 
   const columnCtx = useMemo(
     () => ({
       fmt,
       categoryById: new Map(expenseCategories.map((c) => [c.id, c])),
       potNameById: new Map(pots.map((p) => [p.id, p.name])),
-      // Inklusive gelöschter Zwecke: eine Position darf noch auf einen zeigen.
       purposeNameById: new Map(allTransferCategories.map((c) => [c.id, c.name])),
       groupNameById: new Map(fixedCostGroups.map((g) => [g.id, g.name])),
     }),
@@ -227,9 +246,9 @@ export default function FixedCostsView({
 
   const allBookTags = useMemo(() => {
     const set = new Set();
-    recurringExpenses.forEach((r) => (r.tags || []).forEach((t) => set.add(t)));
+    allItems.forEach((r) => (r.tags || []).forEach((t) => set.add(t)));
     return [...set].sort();
-  }, [recurringExpenses]);
+  }, [allItems]);
 
   const availableTagSuggestions = useMemo(() => {
     const existing = new Set(draft.tags);
@@ -277,7 +296,7 @@ export default function FixedCostsView({
   }
 
   async function deleteGroup(group) {
-    const itemCount = recurringExpenses.filter((r) => sectionKeyOfItem(r) === group.id).length;
+    const itemCount = allItems.filter((r) => sectionKeyOfItem(r) === group.id).length;
     const ok = await confirm({
       title: "Gruppe löschen",
       message: itemCount > 0
@@ -290,8 +309,16 @@ export default function FixedCostsView({
     const updatedItems = recurringExpenses.map((r) =>
       r.groupId === group.id ? { ...r, groupId: null } : r
     );
+    const updatedPurposes = allTransferCategories.map((c) =>
+      c.groupId === group.id ? { ...c, groupId: null } : c
+    );
     const updatedGroups = fixedCostGroups.filter((g) => g.id !== group.id);
-    onUpdateBook({ ...activeBook, recurringExpenses: updatedItems, fixedCostGroups: updatedGroups });
+    onUpdateBook({
+      ...activeBook,
+      recurringExpenses: updatedItems,
+      transferCategories: updatedPurposes,
+      fixedCostGroups: updatedGroups,
+    });
     toast.success("Gruppe gelöscht.");
   }
 
@@ -306,7 +333,6 @@ export default function FixedCostsView({
       kind,
       categoryId: null,
       subcategoryId: null,
-      transferCategoryId: transferCategories[0]?.id || "",
       potId: pots[0]?.id || "",
       turnus: null,
       faelligkeit: "",
@@ -318,10 +344,13 @@ export default function FixedCostsView({
     setDialogOpen(true);
   }
 
+  // Beim Bearbeiten steht die Art fest: Ausgaben und Transfer-Positionen leben
+  // seit Schema 7 in verschiedenen Listen (Fixkosten bzw. Zwecke). Wer die Art
+  // wechseln will, dupliziert.
   function openEditDialog(item) {
     setEditingItem(item);
     setDuplicateSourceId(null);
-    setKindLocked(false);
+    setKindLocked(true);
     setDraft(draftFromItem(item));
     setTagInput("");
     setDialogOpen(true);
@@ -345,7 +374,6 @@ export default function FixedCostsView({
       kind: fixedCostKind(item),
       categoryId: item.categoryId || null,
       subcategoryId: item.subcategoryId || null,
-      transferCategoryId: item.transferCategoryId || transferCategories[0]?.id || "",
       potId: item.potId || pots[0]?.id || "",
       turnus: item.turnus ?? null,
       faelligkeit: item.faelligkeit || "",
@@ -355,8 +383,14 @@ export default function FixedCostsView({
     };
   }
 
+  // Auch die Namen aller Zwecke sind belegt: eine kopierte Transfer-Position
+  // wird ein neuer Zweck, und Zweck-Namen sind eindeutig.
   function makeCopyName(baseName) {
-    const taken = new Set(recurringExpenses.map((r) => (r.name || "").trim()));
+    const taken = new Set(
+      [...recurringExpenses, ...allTransferCategories.filter((c) => !c.deleted)].map((r) =>
+        (r.name || "").trim()
+      )
+    );
     const first = `${baseName} (Kopie)`;
     if (!taken.has(first)) return first;
     let n = 2;
@@ -415,6 +449,7 @@ export default function FixedCostsView({
       if (!draft.faelligkeit) return;
       if (monthlyRate({ kind: "transfer", amount: numericAmount, turnus: draft.turnus }) < 0.01) return;
     }
+    if (transferNameError) return;
 
     // Absicherung gegen inkonsistente Zustände: eine Gruppe der anderen Tabelle
     // wird nie übernommen.
@@ -428,6 +463,39 @@ export default function FixedCostsView({
     const nextTurnus = isTransfer ? (draft.turnus || null) : null;
     const nextFaelligkeit = nextTurnus ? (draft.faelligkeit || null) : null;
 
+    // Transfer-Positionen sind Zwecke (Schema 7): Anlegen legt einen Zweck im
+    // Topf an, Bearbeiten schreibt in ihn.
+    if (isTransfer) {
+      const fields = {
+        name: draft.name.trim(),
+        amount: numericAmount,
+        potId: draft.potId,
+        turnus: nextTurnus,
+        faelligkeit: nextFaelligkeit,
+        groupId: targetGroupId,
+        tags: draft.tags || [],
+        showInOverview: draft.showInOverview === true,
+      };
+      const targetId = editingItem?.id ?? adoptPurpose?.id ?? null;
+      if (targetId) {
+        const updated = allTransferCategories.map((c) =>
+          c.id === targetId ? applyFixedFieldsToPurpose(c, fields) : c
+        );
+        onUpdateBook({ ...activeBook, transferCategories: updated });
+      } else {
+        const created = applyFixedFieldsToPurpose(makeTransferCategory(fields.name, fields.potId), fields);
+        const idx = duplicateSourceId
+          ? allTransferCategories.findIndex((c) => c.id === duplicateSourceId)
+          : -1;
+        const next = idx === -1
+          ? [...allTransferCategories, created]
+          : [...allTransferCategories.slice(0, idx + 1), created, ...allTransferCategories.slice(idx + 1)];
+        onUpdateBook({ ...activeBook, transferCategories: next });
+      }
+      closeDialog();
+      return;
+    }
+
     if (editingItem) {
       const updatedItems = recurringExpenses.map((item) =>
         item.id === editingItem.id
@@ -435,13 +503,9 @@ export default function FixedCostsView({
               ...item,
               name: draft.name.trim(),
               amount: numericAmount,
-              kind: draft.kind,
-              categoryId: draft.kind === "expense" ? draft.categoryId : undefined,
-              subcategoryId: draft.kind === "expense" ? (draft.subcategoryId || null) : undefined,
-              transferCategoryId: draft.kind === "transfer" ? (draft.transferCategoryId || null) : undefined,
-              potId: draft.kind === "transfer" ? draft.potId : undefined,
-              turnus: isTransfer ? nextTurnus : undefined,
-              faelligkeit: isTransfer ? nextFaelligkeit : undefined,
+              kind: "expense",
+              categoryId: draft.categoryId,
+              subcategoryId: draft.subcategoryId || null,
               groupId: targetGroupId,
               showInOverview: draft.showInOverview === true,
               tags: draft.tags || [],
@@ -454,20 +518,13 @@ export default function FixedCostsView({
         id: generateId("rec"),
         name: draft.name.trim(),
         amount: numericAmount,
-        kind: draft.kind,
+        kind: "expense",
+        categoryId: draft.categoryId,
+        subcategoryId: draft.subcategoryId || null,
         groupId: targetGroupId,
         showInOverview: draft.showInOverview === true,
         tags: draft.tags || [],
       };
-      if (draft.kind === "expense") {
-        newItem.categoryId = draft.categoryId;
-        newItem.subcategoryId = draft.subcategoryId || null;
-      } else if (draft.kind === "transfer") {
-        newItem.transferCategoryId = draft.transferCategoryId || null;
-        newItem.potId = draft.potId;
-        newItem.turnus = nextTurnus;
-        newItem.faelligkeit = nextFaelligkeit;
-      }
       // Kopien direkt hinter dem Original einfügen, sonst ans Ende anhängen
       const idx = duplicateSourceId
         ? recurringExpenses.findIndex((r) => r.id === duplicateSourceId)
@@ -480,16 +537,28 @@ export default function FixedCostsView({
     closeDialog();
   }
 
+  // Eine Transfer-Position verliert beim Löschen nur ihre Rate: Der Zweck
+  // bleibt mit seinen Buchungen im Topf (clearPurposeRate).
   async function deleteItem(item) {
     if (!activeBook) return;
+    const isTransfer = fixedCostKind(item) === "transfer";
     const ok = await confirm({
       title: "Fixkosten löschen",
-      message: `Fixkosten „${item.name}“ wirklich löschen?`,
+      message: isTransfer
+        ? `Fixkosten „${item.name}“ wirklich löschen?\n\nDer Zweck bleibt mit seinen Buchungen im Topf, nur die monatliche Rate entfällt.`
+        : `Fixkosten „${item.name}“ wirklich löschen?`,
       confirmLabel: "Löschen",
       danger: true,
     });
     if (!ok) return;
-    onUpdateBook({ ...activeBook, recurringExpenses: recurringExpenses.filter((i) => i.id !== item.id) });
+    if (isTransfer) {
+      onUpdateBook({
+        ...activeBook,
+        transferCategories: allTransferCategories.map((c) => (c.id === item.id ? clearPurposeRate(c) : c)),
+      });
+    } else {
+      onUpdateBook({ ...activeBook, recurringExpenses: recurringExpenses.filter((i) => i.id !== item.id) });
+    }
     toast.success("Fixkosten gelöscht.");
   }
 
@@ -502,19 +571,22 @@ export default function FixedCostsView({
       // Gebucht wird die Monatsrate — bei einer Rückstellung also der anteilige
       // Betrag, nicht der Zyklusbetrag aus `item.amount`.
       amount: monthlyRate(item),
-      transferCategoryId: kind === "transfer" ? (item.transferCategoryId || null) : undefined,
+      transferCategoryId: kind === "transfer" ? item.id : undefined,
       categoryId: kind === "expense" ? (item.categoryId || null) : null,
       subcategoryId: kind === "expense" ? (item.subcategoryId || null) : null,
       kind,
-      // Herkunftskennung: die Trend-Auswertung und der Status „Diesen Monat"
-      // ordnen Buchungen darüber ihrer Fixkosten-Position zu. Die Notiz bleibt
-      // die Anzeige-Beschriftung in der Eintragsliste — eine umbenannte
-      // Position behält so ihre Historie.
-      recurringId: item.id,
+      // Die Notiz bleibt die Anzeige-Beschriftung in der Eintragsliste.
       note: item.name,
     };
+    // Herkunftskennung: Trend und Status „Diesen Monat" ordnen Buchungen
+    // darüber ihrer Position zu — Ausgaben über `recurringId`, Transfers über
+    // den Zweck (er ist die Position). Eine umbenannte Position behält so ihre
+    // Historie.
     if (kind === "transfer") entry.potId = item.potId;
-    if (kind === "expense") entry.source = "month";
+    if (kind === "expense") {
+      entry.source = "month";
+      entry.recurringId = item.id;
+    }
     return entry;
   }
 
@@ -608,8 +680,41 @@ export default function FixedCostsView({
   const showTurnusSwitchWarning =
     !!editingItem && draft.kind === "transfer" && !editingItem.turnus && !!draft.turnus;
 
+  // Eine Transfer-Position ist ein Zweck, und Zweck-Namen sind eindeutig.
+  const editingPurpose =
+    editingItem && draft.kind === "transfer"
+      ? allTransferCategories.find((c) => c.id === editingItem.id) || null
+      : null;
+  const sameNamePurpose =
+    draft.kind === "transfer" && draft.name.trim()
+      ? findTransferCategoryByName(allTransferCategories, draft.name, { excludeId: editingPurpose?.id })
+      : null;
+  // Beim Anlegen darf der Name einen bestehenden Zweck ohne Rate im selben Topf
+  // treffen: Der bekommt dann die Rate, samt seiner bisherigen Buchungen.
+  const adoptPurpose =
+    !editingItem && sameNamePurpose && !hasPurposeRate(sameNamePurpose) && sameNamePurpose.potId === draft.potId
+      ? sameNamePurpose
+      : null;
+  const transferNameError = (() => {
+    if (draft.kind !== "transfer") return null;
+    if (draft.name.trim().length > MAX_TRANSFER_NAME_LENGTH) {
+      return `Der Name ist zu lang (max. ${MAX_TRANSFER_NAME_LENGTH} Zeichen).`;
+    }
+    if (sameNamePurpose && !adoptPurpose) {
+      return sameNamePurpose.potId !== draft.potId && !hasPurposeRate(sameNamePurpose)
+        ? "Es gibt bereits einen Transfer-Zweck mit diesem Namen, aber in einem anderen Topf."
+        : "Es gibt bereits einen Transfer-Zweck mit diesem Namen.";
+    }
+    return null;
+  })();
+  // Der Topf eines Zwecks mit Buchungen steht fest — ein Wechsel ließe die
+  // bisherigen Buchungen im alten Topf zurück.
+  const potLocked = !!editingPurpose && purposeHasEntries(entries, editingPurpose.id);
+  // Ein Sparziel bleibt Sparziel; hier wird nur seine Rate gepflegt.
+  const isGoalPurpose = editingPurpose?.rule === "goal";
+
   const canSave =
-    !!draft.name.trim() && draftAmountValid && !missingDueDate && !rateTooSmall;
+    !!draft.name.trim() && draftAmountValid && !missingDueDate && !rateTooSmall && !transferNameError;
 
   const dialogGroupOptions = useMemo(
     () => fixedCostGroups.filter((g) => fixedCostKind(g) === draft.kind),
@@ -748,7 +853,7 @@ export default function FixedCostsView({
     );
   }
 
-  const isEmpty = recurringExpenses.length === 0 && fixedCostGroups.length === 0;
+  const isEmpty = allItems.length === 0 && fixedCostGroups.length === 0;
 
   return (
     <div>
@@ -837,7 +942,7 @@ export default function FixedCostsView({
               zählen nach der Kostenregel aber nicht als Fixkosten. */}
           {/* Bewusst ohne CardContent: dessen 20 px Innenabstand machten aus der
               schmalen Abschlusszeile eine weitere volle Karte. */}
-          {recurringExpenses.length > 0 && (
+          {allItems.length > 0 && (
             <Card>
               <div className="hb-fixed-total">
                 <div className="hb-fixed-total-row">
@@ -856,7 +961,7 @@ export default function FixedCostsView({
                         <span aria-hidden="true"> · </span>
                       </>
                     )}
-                    {bookedCount} von {recurringExpenses.length} diesen Monat gebucht
+                    {bookedCount} von {allItems.length} diesen Monat gebucht
                   </HbTooltip>
                 </div>
               </div>
@@ -892,8 +997,18 @@ export default function FixedCostsView({
                   placeholder="z.B. Spotify, Miete, Versicherung"
                   value={draft.name}
                   onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                  aria-invalid={transferNameError ? "true" : undefined}
                   autoFocus
                 />
+                {transferNameError && (
+                  <div className="hb-fixed-field-error">{transferNameError}</div>
+                )}
+                {adoptPurpose && (
+                  <div className="hb-fixed-field-hint">
+                    Der bestehende Zweck „{adoptPurpose.name}“ bekommt diese Rate, seine
+                    Buchungen zählen mit.
+                  </div>
+                )}
               </div>
               <div className="hb-field">
                 {/* Kurz genug, dass das Label einzeilig bleibt — ein Umbruch würde
@@ -953,7 +1068,9 @@ export default function FixedCostsView({
               </select>
               {kindLocked && (
                 <div className="hb-fixed-field-hint">
-                  Durch die Tabelle „{tableLabel(draft.kind)}“ vorgegeben.
+                  {editingItem
+                    ? "Steht beim Bearbeiten fest. Zum Wechseln die Position duplizieren."
+                    : `Durch die Tabelle „${tableLabel(draft.kind)}“ vorgegeben.`}
                 </div>
               )}
             </div>
@@ -1044,38 +1161,34 @@ export default function FixedCostsView({
 
           {draft.kind === "transfer" && (
             <>
-              <div className="hb-field">
-                <div className="hb-label">Transfer-Zweck</div>
-                <select
-                  className="hb-input"
-                  value={draft.transferCategoryId}
-                  onChange={(e) => setDraft((d) => ({ ...d, transferCategoryId: e.target.value }))}
-                >
-                  {transferCategories.length === 0 && <option value="">Kein Zweck vorhanden</option>}
-                  {getTransferCategoryOptions(allTransferCategories, draft.transferCategoryId).map((opt) => (
-                    <option key={opt.id} value={opt.id}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Seit Schema 7 ist die Position selbst der Transfer-Zweck — ihr
+                  Name ist der Zweck, eine eigene Zweck-Auswahl entfällt. */}
               <div className="hb-field">
                 <div className="hb-label">In Topf</div>
                 <select
                   className="hb-input"
                   value={draft.potId}
+                  disabled={potLocked}
                   onChange={(e) => setDraft((d) => ({ ...d, potId: e.target.value }))}
                 >
                   {pots.map((pot) => (
                     <option key={pot.id} value={pot.id}>{pot.name}</option>
                   ))}
                 </select>
+                {potLocked && (
+                  <div className="hb-fixed-field-hint">
+                    Die Position hat schon Buchungen in diesem Topf, der Topf steht deshalb fest.
+                  </div>
+                )}
               </div>
-              {/* Zweck und Topf sagen wohin, Turnus und Fälligkeit wann und wie oft. */}
+              {/* Topf sagt wohin, Turnus und Fälligkeit wann und wie oft. */}
               <div className="hb-two hb-two--dialog" style={{ width: "100%" }}>
                 <div className="hb-field">
                   <div className="hb-label">Turnus</div>
                   <select
                     className="hb-input"
                     value={draft.turnus ?? ""}
+                    disabled={isGoalPurpose}
                     onChange={(e) => handleTurnusChange(e.target.value)}
                   >
                     {turnusOptionsFor(draft.turnus).map((opt) => (
@@ -1083,9 +1196,9 @@ export default function FixedCostsView({
                     ))}
                   </select>
                   <div className="hb-fixed-field-hint">
-                    Mit einem Turnus wird die Position als Rückstellung geführt: Der Betrag
-                    gilt für den ganzen Zyklus, gebucht wird monatlich der anteilige Betrag.
-                    Ohne Turnus ist es eine Rücklage — freies Sparen ohne festen Termin.
+                    {isGoalPurpose
+                      ? "Die Position ist ein Sparziel: Hier wird nur die monatliche Rate gepflegt, Zielbetrag und Deadline stehen unter „Sparziele“."
+                      : "Mit einem Turnus wird die Position als Rückstellung geführt: Der Betrag gilt für den ganzen Zyklus, gebucht wird monatlich der anteilige Betrag. Ohne Turnus ist es eine Rücklage — freies Sparen ohne festen Termin."}
                   </div>
                 </div>
                 <div className="hb-field">

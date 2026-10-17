@@ -19,7 +19,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { calcPotSeries, potPurposeBalances } from "../utils/potUtils.js";
-import { getTransferCategoryName } from "../utils/transferCategoryUtils.js";
+import { getPurposesForPot, getTransferCategoryName } from "../utils/transferCategoryUtils.js";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import { CHART_STROKE, CHART_HEIGHT, BAR_MAX_SIZE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, zeroLineProps, lineCursorProps } from "../utils/chartStyle.js";
@@ -109,6 +109,12 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
   const selectedPot = useMemo(() => {
     return pots.find((p) => p.id === selectedPotId) || pots[0] || null;
   }, [pots, selectedPotId]);
+
+  // Wählbar sind nur die Zwecke dieses Topfs — ein Zweck gehört genau einem.
+  const potPurposes = useMemo(
+    () => getPurposesForPot(transferCategories, selectedPot?.id),
+    [transferCategories, selectedPot?.id]
+  );
 
   // Topf-Dropdown (Titel als aufklappbares Menü, Muster wie im Kostenrechner)
   const [menuOpen, setMenuOpen] = useState(false);
@@ -399,7 +405,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
               setNewEntryDraft({
                 date: todayISO(),
                 amount: "",
-                transferCategoryId: transferCategories[0]?.id || "",
+                transferCategoryId: potPurposes[0]?.id || "",
                 note: "",
               });
               setAddEntryOpen(true);
@@ -445,7 +451,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
                   setNewEntryDraft({
                     date: todayISO(),
                     amount: "",
-                    transferCategoryId: transferCategories[0]?.id || "",
+                    transferCategoryId: potPurposes[0]?.id || "",
                     note: "",
                   });
                   setAddEntryOpen(true);
@@ -841,7 +847,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
             id: generateId("entry"),
             date: newEntryDraft.date,
             amount: numericAmount,
-            transferCategoryId: newEntryDraft.transferCategoryId,
+            transferCategoryId: newEntryDraft.transferCategoryId || null,
             kind: "transfer",
             potId: selectedPot.id,
             note: newEntryDraft.note.trim(),
@@ -854,7 +860,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
           newEntryDraft.date &&
           newEntryDraft.amount &&
           parseAmount(newEntryDraft.amount) > 0 &&
-          Boolean(newEntryDraft.transferCategoryId)
+          (potPurposes.length === 0 || Boolean(newEntryDraft.transferCategoryId))
         }
         saveLabel="Hinzufügen"
         size="medium"
@@ -894,7 +900,8 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
               value={newEntryDraft.transferCategoryId}
               onChange={(e) => setNewEntryDraft((d) => ({ ...d, transferCategoryId: e.target.value }))}
             >
-              {transferCategories.map((cat) => (
+              {potPurposes.length === 0 && <option value="">Kein Zweck</option>}
+              {potPurposes.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
                 </option>

@@ -7,9 +7,8 @@ import {
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../utils/bookDefaults.js";
 import { getEntryCategoryName } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
-import { getWithdrawalCategoriesForPot } from "../utils/potUtils.js";
 import { templateToDraftPatch } from "../utils/entryTemplateUtils.js";
-import { validTransferCategoryId } from "../utils/transferCategoryUtils.js";
+import { getPurposesForPot, validTransferCategoryId } from "../utils/transferCategoryUtils.js";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 
 const INITIAL_ADD_DRAFT = {
@@ -59,6 +58,22 @@ const TEMPLATE_INVALIDATING_FIELDS = new Set([
 // `category` string in a single state update — no Effect → setState → Effect chain.
 // `transferCategories` sind nur die aktiven Zwecke (Objekte mit id).
 function applyKindToDraft(draft, kind, transferCategories) {
+  return withValidPurpose({ ...applyKindFields(draft, kind) }, transferCategories);
+}
+
+// Ein Zweck gehört genau einem Topf (Schema 7): Bei Transfer und Entnahme muss
+// der gewählte Zweck zum Topf passen, sonst der erste des Topfs — oder keiner,
+// wenn der Topf keine Zwecke hat.
+function withValidPurpose(draft, transferCategories) {
+  if (draft.kind !== "transfer" && draft.kind !== "withdrawal") return draft;
+  const valid = validTransferCategoryId(
+    getPurposesForPot(transferCategories, draft.potId),
+    draft.transferCategoryId
+  );
+  return valid === draft.transferCategoryId ? draft : { ...draft, transferCategoryId: valid };
+}
+
+function applyKindFields(draft, kind) {
   const next = { ...draft, kind };
   if (kind === "expense") {
     next.categoryId = null;
@@ -69,10 +84,9 @@ function applyKindToDraft(draft, kind, transferCategories) {
     next.subcategoryId = null;
     if (next.category !== "Allgemein") next.category = "Allgemein";
   } else {
-    // transfer | withdrawal — transferCategoryId must be a valid transfer category
+    // transfer | withdrawal — der Zweck wird in withValidPurpose geprüft
     next.categoryId = null;
     next.subcategoryId = null;
-    next.transferCategoryId = validTransferCategoryId(transferCategories, next.transferCategoryId);
   }
   return next;
 }
@@ -101,7 +115,6 @@ export function useEntryActions({
     date: todayISO(),
   }));
 
-  const entries = activeBook?.entries || EMPTY_ARRAY;
 
   function setAddField(field, value) {
     // Manuelle Änderung an einem vorlagenbestimmten Feld hebt den Aktiv-Zustand
@@ -109,6 +122,10 @@ export function useEntryActions({
     if (TEMPLATE_INVALIDATING_FIELDS.has(field)) setAppliedTemplateId(null);
     if (field === "kind") {
       setAddDraft((d) => applyKindToDraft(d, value, indicateTransferCategories));
+      return;
+    }
+    if (field === "potId") {
+      setAddDraft((d) => withValidPurpose({ ...d, potId: value }, indicateTransferCategories));
       return;
     }
     setAddDraft((d) => ({ ...d, [field]: value }));
@@ -134,15 +151,10 @@ export function useEntryActions({
         fallbackPotId: d.potId,
       });
 
-      // Bei Entnahmen hängt die Zweck-Liste am Topf. availableWithdrawalCategories
-      // basiert noch auf dem alten potId — deshalb hier mit dem aufgelösten Topf
-      // frisch rechnen, sonst steht im <select> ein Wert ohne passende Option.
-      if (patch.kind === "withdrawal") {
-        const allowed = getWithdrawalCategoriesForPot(entries, patch.potId, indicateTransferCategories);
-        patch.transferCategoryId = validTransferCategoryId(allowed, patch.transferCategoryId);
-      }
-
-      return { ...base, ...patch };
+      // Die Zweck-Liste hängt am Topf. availablePurposes basiert noch auf dem
+      // alten potId — deshalb hier mit dem aufgelösten Topf frisch prüfen,
+      // sonst steht im <select> ein Wert ohne passende Option.
+      return withValidPurpose({ ...base, ...patch }, indicateTransferCategories);
     });
   }
 
@@ -155,7 +167,9 @@ export function useEntryActions({
     setPrevPots(pots);
     setAddDraft((d) => {
       if (pots.length === 0) return d.potId === "" ? d : { ...d, potId: "" };
-      if (!pots.some((p) => p.id === d.potId)) return { ...d, potId: pots[0].id };
+      if (!pots.some((p) => p.id === d.potId)) {
+        return withValidPurpose({ ...d, potId: pots[0].id }, indicateTransferCategories);
+      }
       return d;
     });
   }
@@ -174,10 +188,9 @@ export function useEntryActions({
     setPrevBookId(bookId);
     setPrevTransferCats(indicateTransferCategories);
     setAddDraft((d) => {
-      const { kind, category, transferCategoryId } = d;
+      const { kind, category } = d;
       if (kind === "transfer" || kind === "withdrawal") {
-        const valid = validTransferCategoryId(indicateTransferCategories, transferCategoryId);
-        if (valid !== transferCategoryId) return { ...d, transferCategoryId: valid };
+        return withValidPurpose(d, indicateTransferCategories);
       } else if (kind === "income") {
         if (category !== "Allgemein") return { ...d, category: "Allgemein" };
       }
@@ -187,14 +200,15 @@ export function useEntryActions({
     });
   }
 
-  const availableWithdrawalCategories = useMemo(
-    () => getWithdrawalCategoriesForPot(entries, addDraft.potId, indicateTransferCategories),
-    [entries, addDraft.potId, indicateTransferCategories]
+  // Die wählbaren Zwecke für Transfer und Entnahme: die des gewählten Topfs.
+  const availablePurposes = useMemo(
+    () => getPurposesForPot(indicateTransferCategories, addDraft.potId),
+    [addDraft.potId, indicateTransferCategories]
   );
 
-  const editWithdrawalCategories = useMemo(
-    () => getWithdrawalCategoriesForPot(entries, editDraft.potId, indicateTransferCategories),
-    [entries, editDraft.potId, indicateTransferCategories]
+  const editPurposes = useMemo(
+    () => getPurposesForPot(indicateTransferCategories, editDraft.potId),
+    [editDraft.potId, indicateTransferCategories]
   );
 
   function closeAddEntry() {
@@ -324,9 +338,9 @@ export function useEntryActions({
       categoryId: entry.categoryId ?? null,
       subcategoryId: entry.subcategoryId ?? null,
       // Auch ein gelöschter Zweck bleibt erhalten — der Dialog zeigt ihn als
-      // eigene Option. Ohne Zweck (z.B. Monatsüberschuss) oder beim späteren
-      // Wechsel auf Transfer: erster aktiver.
-      transferCategoryId: entry.transferCategoryId || indicateTransferCategories[0]?.id || "",
+      // eigene Option. Ohne Zweck (z.B. Monatsüberschuss) bleibt es dabei; der
+      // Dialog bietet dann „Kein Zweck" an.
+      transferCategoryId: entry.transferCategoryId || "",
       note: entry.note || "",
       amount: String(entry.amount ?? ""),
     });
@@ -407,10 +421,14 @@ export function useEntryActions({
     if (!date) return false;
     const n = parseAmount(amount);
     if (!Number.isFinite(n) || n <= 0) return false;
-    if (kind === "transfer" && (!potId || !transferCategoryId)) return false;
-    if (kind === "withdrawal" && (!potId || !transferCategoryId)) return false;
+    // Ein Zweck ist Pflicht, sobald der Topf welche hat. Ein Topf ohne Zwecke
+    // (z.B. für den Monatsüberschuss) nimmt Buchungen ohne Zweck an.
+    if (kind === "transfer" || kind === "withdrawal") {
+      if (!potId) return false;
+      if (availablePurposes.length > 0 && !transferCategoryId) return false;
+    }
     return true;
-  }, [addDraft]);
+  }, [addDraft, availablePurposes]);
 
   const canSaveEdit = useMemo(() => {
     if (!editDraft.date) return false;
@@ -419,24 +437,25 @@ export function useEntryActions({
     if (!editDraft.kind) return false;
     if (
       (editDraft.kind === "transfer" || editDraft.kind === "withdrawal") &&
+      editPurposes.length > 0 &&
       !editDraft.transferCategoryId
     )
       return false;
     return true;
-  }, [editDraft]);
+  }, [editDraft, editPurposes]);
 
   return {
     // Add dialog
     addEntryOpen, setAddEntryOpen,
     addDraft, setAddField,
     closeAddEntry, handleAddEntry, canAddEntry,
-    availableWithdrawalCategories,
+    availablePurposes,
     applyTemplate, appliedTemplateId,
     // Edit dialog
     editOpen, editingId,
     editDraft, setEditDraft,
     closeEdit, saveEdit, canSaveEdit,
-    editWithdrawalCategories,
+    editPurposes,
     // Shared actions
     addTransferEntry, addEntries, removeEntry, startEdit,
   };
