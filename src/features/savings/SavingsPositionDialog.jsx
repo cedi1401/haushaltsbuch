@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import EditDialog from "../../components/EditDialog.jsx";
 import { Button, RangeTabs } from "../../components/ui.jsx";
 import { HbDatePicker } from "../../components/HbDatePicker.jsx";
+import { IconWarning } from "../../components/icons.jsx";
 import TagInputField from "../../components/TagInputField.jsx";
 import TrendToggle from "../../components/TrendToggle.jsx";
 import { parseAmount } from "../../utils/formatUtils.js";
@@ -22,6 +23,14 @@ const RULE_HELP = {
   free: "Freies Sparen ohne Termin und ohne Ziel. Die Rate ist optional; das Geld bleibt im Topf, bis du es brauchst.",
   reserve: "Spart auf eine wiederkehrende Rechnung: Der Rechnungsbetrag wird über den Turnus verteilt, gebucht wird monatlich der anteilige Betrag.",
   goal: "Spart einmalig auf einen Zielbetrag, optional bis zu einer Deadline. Ist das Ziel erreicht, schließt du es ab.",
+};
+
+// Beim Anlegen nennt der Titel die gewählte Art. Beim Bearbeiten bleibt er
+// neutral, weil sich die Art dort wechseln lässt.
+const CREATE_TITLE = {
+  free: "Neue freie Rücklage",
+  reserve: "Neue Rückstellung",
+  goal: "Neues Sparziel",
 };
 
 // „Monatlich" fehlt bewusst: Bei Turnus 1 wäre die Rate der volle
@@ -179,7 +188,7 @@ export default function SavingsPositionDialog({
   return (
     <EditDialog
       open={open}
-      title={isEdit ? "Sparposition bearbeiten" : "Neue Sparposition"}
+      title={isEdit ? "Sparposition bearbeiten" : CREATE_TITLE[draft.rule]}
       onClose={onClose}
       onSave={handleSave}
       canSave={canSave}
@@ -289,6 +298,17 @@ export default function SavingsPositionDialog({
                 Termin wiederholt sich im Turnus, auch wenn eine Rechnung einmal verspätet kommt.
               </div>
             </div>
+            {!draft.faelligkeit && (
+              <div className="hb-infobar hb-infobar--dialog hb-infobar--warning" role="status">
+                <div className="hb-infobar-icon"><IconWarning /></div>
+                <div className="hb-infobar-content">
+                  <div className="hb-infobar-message">
+                    Trage die nächste Fälligkeit ein. Ohne diesen Termin lässt sich der Turnus
+                    nicht berechnen, und die Rückstellung kann nicht gespeichert werden.
+                  </div>
+                </div>
+              </div>
+            )}
             {reserveRate !== null && reserveRate < 0.01 ? (
               <div className="hb-fixed-field-error">
                 Der Betrag ergibt weniger als {fmt(0.01)} pro Monat — erhöhe ihn oder verkürze
