@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, CardContent } from "../components/ui.jsx";
 import { IconBudget, IconChevron, IconEdit, IconInfo, IconPlus } from "../components/icons.jsx";
 import { useToast } from "../components/toastContext.js";
@@ -10,11 +10,6 @@ import BudgetEditDialog from "./budget/BudgetEditDialog.jsx";
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const percent = (ratio) => formatPercent(ratio * 100, { digits: 0, sign: false });
-
-// So viele aufgeteilte Unterkategorien zeigt eine Karte zugeklappt. Mehr
-// stehen hinter „Weitere anzeigen“, damit die Karten nicht mit jeder
-// Aufteilung höher werden.
-const VISIBLE_SUBS = 3;
 
 /**
  * Budget-View — welche Kategorie hat ein Budget, welche nicht, und wie viel
@@ -52,6 +47,8 @@ export default function BudgetView({
   // die ID statt das Objekt, damit eine inzwischen gelöschte Kategorie den
   // Dialog schließt statt ihn mit veralteten Daten offen zu halten.
   const [editCategoryId, setEditCategoryId] = useState(null);
+  // Höchstens eine Karte ist aufgeklappt; nicht persistent.
+  const [openCardId, setOpenCardId] = useState(null);
   const editCategory = editCategoryId
     ? (expenseCategories || []).find((c) => c.id === editCategoryId) || null
     : null;
@@ -151,13 +148,16 @@ export default function BudgetView({
       )}
 
       {hasBudgets && (
-        <div className="hb-pot-grid hb-budget-grid">
+        <div className={`hb-pot-grid hb-budget-grid${openCardId ? " has-open" : ""}`}>
           {budgeted.map((row) => (
             <BudgetCategoryCard
               key={row.id}
               row={row}
               money={money}
               onEdit={() => setEditCategoryId(row.categoryId)}
+              isOpen={openCardId === row.id}
+              onToggle={() => setOpenCardId((id) => (id === row.id ? null : row.id))}
+              onClose={() => setOpenCardId(null)}
             />
           ))}
         </div>
@@ -211,96 +211,135 @@ export default function BudgetView({
  * und — falls vorhanden — die Aufteilung: Unterkategorien mit eigenem Budget,
  * je mit eigenem Balken.
  */
-function BudgetCategoryCard({ row, money, onEdit }) {
+function BudgetCategoryCard({ row, money, onEdit, isOpen, onToggle, onClose }) {
   const isOver = row.status === "over";
   // Nur die Aufteilung zählt: Unterkategorien ohne eigenes Budget stehen
   // nicht in der Karte, ihr Ist steckt bereits in der Summe oben.
   const subs = row.subs.filter((sub) => sub.budget != null);
-  const [showAllSubs, setShowAllSubs] = useState(false);
-  const hiddenSubs = subs.length - VISIBLE_SUBS;
-  const visibleSubs = showAllSubs || hiddenSubs <= 0 ? subs : subs.slice(0, VISIBLE_SUBS);
+  // Zugeklappt zeigt die Karte nur das Gesamtbudget; die Aufteilung steht
+  // hinter dem Aufklapper. Den Status meldet allein die Pille oben rechts,
+  // die Unterkategorien zeigen ihn nur über die Balkenfarbe.
+  const showSubs = isOpen && subs.length > 0;
+
+  // Aufgeklappt löst sich die Karte aus dem Raster (position: absolute) und
+  // legt sich über die Karten darunter. Der Platzhalter behält dafür die
+  // zugeklappte Höhe, damit die Reihe bleibt, wie sie ist.
+  const slotRef = useRef(null);
+  const toggleRef = useRef(null);
+  const [slotHeight, setSlotHeight] = useState(null);
+
+  function toggle() {
+    if (!isOpen) setSlotHeight(slotRef.current?.offsetHeight ?? null);
+    onToggle();
+  }
+
+  // Klick daneben oder Escape klappt wieder zu.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    function onPointerDown(e) {
+      if (!slotRef.current?.contains(e.target)) onClose();
+    }
+    function onKeyDown(e) {
+      if (e.key !== "Escape") return;
+      onClose();
+      toggleRef.current?.focus();
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   return (
-    <article className="hb-pot-card hb-budget-card" aria-label={row.name}>
-      <div className="hb-pot-card-top">
-        <div className="hb-pot-card-head">
-          <div className="hb-pot-card-name">
-            <span className="hb-cat-dot" style={{ background: row.color || "var(--muted)" }} />
-            <span className="hb-budget-card-name-text" title={row.name}>{row.name}</span>
+    <div
+      ref={slotRef}
+      className={`hb-budget-card-slot${showSubs ? " is-open" : ""}`}
+      style={showSubs && slotHeight ? { height: slotHeight } : undefined}
+    >
+      <article className="hb-pot-card hb-budget-card" aria-label={row.name}>
+        <div className="hb-pot-card-top">
+          <div className="hb-pot-card-head">
+            <div className="hb-pot-card-name">
+              <span className="hb-cat-dot" style={{ background: row.color || "var(--muted)" }} />
+              <span className="hb-budget-card-name-text" title={row.name}>{row.name}</span>
+            </div>
+            <div className="hb-budget-card-amounts">
+              <span className="hb-pot-card-amount">{money(row.spent)}</span>
+              <span className="hb-budget-card-of">von {money(row.budget)}</span>
+            </div>
           </div>
-          <div className="hb-budget-card-amounts">
-            <span className="hb-pot-card-amount">{money(row.spent)}</span>
-            <span className="hb-budget-card-of">von {money(row.budget)}</span>
-          </div>
-        </div>
-        <div className="hb-budget-card-actions">
-          <StatusPill status={row.status} />
-          <button
-            type="button"
-            className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
-            onClick={onEdit}
-            title="Budget bearbeiten"
-            aria-label={`Budget bearbeiten: „${row.name}“`}
-          >
-            <IconEdit />
-          </button>
-        </div>
-      </div>
-
-      <UsageMeter pct={row.pct} status={row.status} />
-
-      {subs.length > 0 && (
-        <div className="hb-budget-subs">
-          <div className="hb-budget-subs-head">
-            <span>Unterkategorien</span>
-            <span>{money(row.allocated)} von {money(row.budget)} aufgeteilt</span>
-          </div>
-          <ul className="hb-budget-subs-list">
-            {visibleSubs.map((sub) => (
-              <li key={sub.id} className="hb-budget-sub">
-                <div className="hb-budget-sub-line">
-                  <span className="hb-budget-sub-name" title={sub.name}>{sub.name}</span>
-                  {sub.status !== "ok" && <StatusPill status={sub.status} />}
-                  <span className="hb-budget-sub-amount">
-                    {money(sub.spent)}
-                    <span className="hb-budget-sub-of"> / {money(sub.budget)}</span>
-                  </span>
-                </div>
-                <span
-                  className="hb-meter hb-meter--sm"
-                  style={{ "--meter-tone": BUDGET_STATUS_COLOR[sub.status] }}
-                  aria-hidden="true"
-                >
-                  <span className="hb-meter-fill" style={{ width: `${Math.min(sub.pct, 1) * 100}%` }} />
-                </span>
-              </li>
-            ))}
-          </ul>
-          {hiddenSubs > 0 && (
+          <div className="hb-budget-card-actions">
+            <StatusPill status={row.status} />
             <button
               type="button"
-              className="hb-link-btn hb-budget-subs-toggle"
-              onClick={() => setShowAllSubs((v) => !v)}
-              aria-expanded={showAllSubs}
+              className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+              onClick={onEdit}
+              title="Budget bearbeiten"
+              aria-label={`Budget bearbeiten: „${row.name}“`}
             >
-              {showAllSubs ? "Weniger anzeigen" : `Weitere ${hiddenSubs} anzeigen`}
-              <IconChevron className={showAllSubs ? "is-open" : undefined} />
+              <IconEdit />
             </button>
-          )}
+          </div>
         </div>
-      )}
 
-      <div className="hb-pot-card-foot">
-        <span className="hb-pot-card-foot-label">{isOver ? "Über Budget" : "Verbleibend"}</span>
-        <span className="hb-pot-card-foot-value">
-          {isOver ? (
-            <span className="hb-pot-foot-out">+{money(-row.remaining)}</span>
-          ) : (
-            money(row.remaining)
-          )}
-        </span>
-      </div>
-    </article>
+        <UsageMeter pct={row.pct} status={row.status} />
+
+        {subs.length > 0 && (
+          <button
+            type="button"
+            className="hb-link-btn hb-budget-subs-toggle"
+            ref={toggleRef}
+            onClick={toggle}
+            aria-expanded={showSubs}
+          >
+            {showSubs ? "Unterkategorien ausblenden" : plural(subs.length, "Unterkategorie", "Unterkategorien")}
+            <IconChevron className={showSubs ? "is-open" : undefined} />
+          </button>
+        )}
+
+        {showSubs && (
+          <div className="hb-budget-subs">
+            <div className="hb-budget-subs-head">
+              <span>Unterkategorien</span>
+              <span>{money(row.allocated)} von {money(row.budget)} aufgeteilt</span>
+            </div>
+            <ul className="hb-budget-subs-list">
+              {subs.map((sub) => (
+                <li key={sub.id} className="hb-budget-sub">
+                  <div className="hb-budget-sub-line">
+                    <span className="hb-budget-sub-name" title={sub.name}>{sub.name}</span>
+                    <span className="hb-budget-sub-amount">
+                      {money(sub.spent)}
+                      <span className="hb-budget-sub-of"> / {money(sub.budget)}</span>
+                    </span>
+                  </div>
+                  <span
+                    className="hb-meter hb-meter--sm"
+                    style={{ "--meter-tone": BUDGET_STATUS_COLOR[sub.status] }}
+                    aria-hidden="true"
+                  >
+                    <span className="hb-meter-fill" style={{ width: `${Math.min(sub.pct, 1) * 100}%` }} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="hb-pot-card-foot">
+          <span className="hb-pot-card-foot-label">{isOver ? "Über Budget" : "Verbleibend"}</span>
+          <span className="hb-pot-card-foot-value">
+            {isOver ? (
+              <span className="hb-pot-foot-out">+{money(-row.remaining)}</span>
+            ) : (
+              money(row.remaining)
+            )}
+          </span>
+        </div>
+      </article>
+    </div>
   );
 }
 

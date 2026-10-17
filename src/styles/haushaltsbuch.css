@@ -6515,7 +6515,42 @@ select.hb-input option {
   color: var(--muted);
 }
 
-/* „Weitere anzeigen“ unter der dritten Unterkategorie. */
+/* Rasterzelle der Budget-Karte. Aufgeklappt (.is-open) hält sie die
+   zugeklappte Höhe (Inline-Style), und die Karte schwebt darüber und
+   überlappt die Karten darunter — die Reihe wird nicht höher. */
+.hb-budget-card-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.hb-budget-card-slot > .hb-budget-card {
+  flex: 1;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.hb-budget-card-slot.is-open > .hb-budget-card {
+  position: absolute;
+  inset: 0 0 auto 0;
+  min-height: 100%;
+  z-index: 1;
+  border-color: var(--border);
+  box-shadow: var(--shadow-dialog);
+}
+
+/* Fokus auf die aufgeklappte Karte: die übrigen treten zurück. */
+.hb-budget-grid.has-open > .hb-budget-card-slot:not(.is-open) {
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-budget-card-slot,
+  .hb-budget-card-slot > .hb-budget-card { transition: none; }
+}
+
+/* Aufklapper der Unterkategorien unter dem Balken. */
 .hb-budget-subs-toggle {
   display: inline-flex;
   align-items: center;
