@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Button, Card, CardContent } from "../components/ui.jsx";
-import { IconBudget, IconEdit, IconInfo, IconPlus } from "../components/icons.jsx";
+import { IconBudget, IconChevron, IconEdit, IconInfo, IconPlus } from "../components/icons.jsx";
 import { useToast } from "../components/toastContext.js";
 import { formatPercent } from "../utils/formatUtils.js";
 import { BUDGET_STATUS_COLOR, BUDGET_STATUS_LABEL, buildBudgetRows, setCategoryBudgets } from "../utils/budgetUtils.js";
@@ -10,6 +10,11 @@ import BudgetEditDialog from "./budget/BudgetEditDialog.jsx";
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const percent = (ratio) => formatPercent(ratio * 100, { digits: 0, sign: false });
+
+// So viele aufgeteilte Unterkategorien zeigt eine Karte zugeklappt. Mehr
+// stehen hinter „Weitere anzeigen“, damit die Karten nicht mit jeder
+// Aufteilung höher werden.
+const VISIBLE_SUBS = 3;
 
 /**
  * Budget-View — welche Kategorie hat ein Budget, welche nicht, und wie viel
@@ -21,7 +26,7 @@ const percent = (ratio) => formatPercent(ratio * 100, { digits: 0, sign: false }
  *
  * Layout: eine Karte je budgetierter Oberkategorie (Muster der Topf-Karten),
  * ihre Unterkategorien stehen in der Karte. Darunter die Kategorien ohne
- * Budget als schlichte Liste mit Plus.
+ * Budget als kleine Karten mit Plus.
  *
  * Budgets werden nur hier gepflegt: über die Karten, die Liste und den
  * Bearbeiten-Dialog. Der Kategorien-Dialog zeigt sie bloß an.
@@ -41,7 +46,7 @@ export default function BudgetView({
     () => buildBudgetRows({ entries, expenseCategories, monthStartDay }),
     [entries, expenseCategories, monthStartDay]
   );
-  const { budgeted, unbudgeted, totals, unbudgetedSpent, monthInfo } = model;
+  const { budgeted, unbudgeted, totals, monthInfo } = model;
 
   // Bearbeitet wird immer die Oberkategorie samt ihrer Aufteilung. Über
   // die ID statt das Objekt, damit eine inzwischen gelöschte Kategorie den
@@ -159,40 +164,33 @@ export default function BudgetView({
       )}
 
       {unbudgeted.length > 0 && (
-        <Card>
-          <CardContent>
-            <div className="hb-card-head">
-              <h3 className="hb-card-title">Ohne Budget</h3>
-              <span className="hb-budget-free-sum">
-                {plural(unbudgeted.length, "Kategorie", "Kategorien")} · {money(unbudgetedSpent)} ausgegeben
-              </span>
-            </div>
-            <ul className="hb-budget-free-list">
-              {unbudgeted.map((row) => (
-                <li key={row.id} className="hb-budget-free-row">
-                  <span className="hb-cat-dot" style={{ background: row.color || "var(--muted)" }} />
-                  <span className="hb-budget-free-name" title={row.name}>{row.name}</span>
-                  <span className="hb-budget-free-amount">{money(row.spent)}</span>
-                  {/* Unkategorisierte Ausgaben haben keine Kategorie, an der ein
-                      Budget hängen könnte — der Platzhalter hält die Beträge bündig. */}
-                  {row.categoryId ? (
-                    <button
-                      type="button"
-                      className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
-                      onClick={() => setEditCategoryId(row.categoryId)}
-                      title="Budget festlegen"
-                      aria-label={`Budget festlegen: „${row.name}“`}
-                    >
-                      <IconPlus />
-                    </button>
-                  ) : (
-                    <span className="hb-budget-free-spacer" aria-hidden="true" />
-                  )}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+        <section aria-labelledby="hb-budget-free-title">
+          <h3 id="hb-budget-free-title" className="hb-budget-section-title">Ohne Budget</h3>
+          <ul className="hb-budget-free-grid">
+            {unbudgeted.map((row) => (
+              <li key={row.id} className="hb-budget-free-card">
+                <span className="hb-cat-dot" style={{ background: row.color || "var(--muted)" }} />
+                <span className="hb-budget-free-name" title={row.name}>{row.name}</span>
+                <span className="hb-budget-free-amount">{money(row.spent)}</span>
+                {/* Unkategorisierte Ausgaben haben keine Kategorie, an der ein
+                    Budget hängen könnte — der Platzhalter hält die Beträge bündig. */}
+                {row.categoryId ? (
+                  <button
+                    type="button"
+                    className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+                    onClick={() => setEditCategoryId(row.categoryId)}
+                    title="Budget festlegen"
+                    aria-label={`Budget festlegen: „${row.name}“`}
+                  >
+                    <IconPlus />
+                  </button>
+                ) : (
+                  <span className="hb-budget-free-spacer" aria-hidden="true" />
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {editCategory && (
@@ -218,6 +216,9 @@ function BudgetCategoryCard({ row, money, onEdit }) {
   // Nur die Aufteilung zählt: Unterkategorien ohne eigenes Budget stehen
   // nicht in der Karte, ihr Ist steckt bereits in der Summe oben.
   const subs = row.subs.filter((sub) => sub.budget != null);
+  const [showAllSubs, setShowAllSubs] = useState(false);
+  const hiddenSubs = subs.length - VISIBLE_SUBS;
+  const visibleSubs = showAllSubs || hiddenSubs <= 0 ? subs : subs.slice(0, VISIBLE_SUBS);
 
   return (
     <article className="hb-pot-card hb-budget-card" aria-label={row.name}>
@@ -255,7 +256,7 @@ function BudgetCategoryCard({ row, money, onEdit }) {
             <span>{money(row.allocated)} von {money(row.budget)} aufgeteilt</span>
           </div>
           <ul className="hb-budget-subs-list">
-            {subs.map((sub) => (
+            {visibleSubs.map((sub) => (
               <li key={sub.id} className="hb-budget-sub">
                 <div className="hb-budget-sub-line">
                   <span className="hb-budget-sub-name" title={sub.name}>{sub.name}</span>
@@ -275,6 +276,17 @@ function BudgetCategoryCard({ row, money, onEdit }) {
               </li>
             ))}
           </ul>
+          {hiddenSubs > 0 && (
+            <button
+              type="button"
+              className="hb-link-btn hb-budget-subs-toggle"
+              onClick={() => setShowAllSubs((v) => !v)}
+              aria-expanded={showAllSubs}
+            >
+              {showAllSubs ? "Weniger anzeigen" : `Weitere ${hiddenSubs} anzeigen`}
+              <IconChevron className={showAllSubs ? "is-open" : undefined} />
+            </button>
+          )}
         </div>
       )}
 

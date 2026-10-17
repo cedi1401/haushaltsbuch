@@ -6419,11 +6419,14 @@ button.hb-budget-alert:hover .hb-budget-alert-chevron {
   white-space: nowrap;
 }
 
+/* Ist und „von Budget“ immer untereinander: so stehen die Balken aller
+   Karten auf derselben Höhe, egal wie lang die Beträge sind. */
 .hb-budget-card-amounts {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding-top: 6px;
 }
 
 .hb-budget-card-of {
@@ -6506,34 +6509,57 @@ button.hb-budget-alert:hover .hb-budget-alert-chevron {
   color: var(--muted);
 }
 
-/* „Ohne Budget": bewusst unauffällig — Punkt, Name, Ist und Plus, in so
-   vielen Spalten, wie die Breite hergibt. */
-.hb-budget-free-sum {
-  font-size: 13px;
-  color: var(--muted);
+/* „Weitere anzeigen“ unter der dritten Unterkategorie. */
+.hb-budget-subs-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
 }
 
-.hb-budget-free-list {
+.hb-budget-subs-toggle svg {
+  transition: transform var(--transition-fast);
+}
+
+.hb-budget-subs-toggle svg.is-open {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-budget-subs-toggle svg { transition: none; }
+}
+
+/* „Ohne Budget": Überschrift direkt auf der Seite, darunter kleine Karten —
+   Punkt, Name, Ist und Plus. Bewusst flacher als die Budget-Karten. */
+.hb-budget-section-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Gleiches Spaltenraster wie .hb-budget-grid, damit die kleinen Karten
+   unter den Budget-Karten in denselben Spalten stehen. */
+.hb-budget-free-grid {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 2px 24px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
 }
 
-.hb-budget-free-row {
+.hb-budget-free-card {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 38px;
-  padding: 0 4px 0 8px;
-  border-radius: var(--radius-sm);
-  transition: background var(--transition-fast);
-}
-
-.hb-budget-free-row:hover {
-  background: var(--hover-bg);
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 8px 0 14px;
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .hb-budget-free-name {
