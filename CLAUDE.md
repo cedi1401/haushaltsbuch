@@ -18,3 +18,4 @@ These rules must never be broken, regardless of what seems convenient:
 - **Design System**: WinUI 3 / Fluent Design — Details sind in der ui-expert-Agent-Definition. Für UI-Änderungen immer den ui-expert konsultieren.
 - **Sprache UI**: Deutsch (korrekte deutsche Grammatik und Rechtschreibung)
 - **Währung**: Konfigurierbar pro Buch (mehrere Formate verfügbar); kein einzelnes Format annehmen
+- **Warnmeldungen (rot)**: Immer `AlertBar` aus `src/components/ui.jsx` verwenden (`title`, `message`, optional `onClick`, `compact`) — nie `hb-infobar`/Icon von Hand zusammenbauen

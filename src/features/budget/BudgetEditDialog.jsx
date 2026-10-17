@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import EditDialog from "../../components/EditDialog.jsx";
-import { Button } from "../../components/ui.jsx";
-import { IconWarningRounded } from "../../components/icons.jsx";
+import { AlertBar, Button } from "../../components/ui.jsx";
 import { parseAmount } from "../../utils/formatUtils.js";
 import { useBaseCurrency, useFmt } from "../../contexts/CurrencyContext.jsx";
 import { budgetMoney } from "./budgetFormat.js";
@@ -151,15 +150,11 @@ export default function BudgetEditDialog({ category, onSave, onRemove, onClose }
                 Dashboard — sie sperrt das Speichern, ist also mehr als ein Hinweis. */}
             <div aria-live="polite">
               {exceeded ? (
-                <div className="hb-infobar hb-infobar--dialog hb-budget-alert">
-                  <span className="hb-infobar-icon"><IconWarningRounded /></span>
-                  <span className="hb-infobar-content">
-                    <span className="hb-infobar-title">Budget überschritten</span>
-                    <span className="hb-infobar-message">
-                      Die Unterkategorien übersteigen das Budget um {money(-free)}.
-                    </span>
-                  </span>
-                </div>
+                <AlertBar
+                  role={null}
+                  title="Budget überschritten"
+                  message={`Die Unterkategorien übersteigen das Budget um ${money(-free)}.`}
+                />
               ) : (
                 <div className="hb-budget-edit-hint">
                   {distribution ||

@@ -2,7 +2,8 @@ import React, { memo, useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { useThemeColors } from "../../hooks/themeColors.js";
-import { IconChevronRight, IconInbox, IconWarningRounded } from "../../components/icons.jsx";
+import { IconChevronRight, IconInbox } from "../../components/icons.jsx";
+import { AlertBar } from "../../components/ui.jsx";
 import { formatPercent } from "../../utils/formatUtils.js";
 import { BUDGET_STATUS_LABEL } from "../../utils/budgetUtils.js";
 import { budgetMoney } from "../budget/budgetFormat.js";
@@ -95,16 +96,6 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, totals, isFallbackMon
   const alertTitle = `${plural(overItems.length, "Budget", "Budgets")} überschritten`;
   const alertMessage = alertRest > 0 ? `${alertNames} und ${alertRest} weitere` : alertNames;
 
-  const alertBody = (
-    <>
-      <span className="hb-infobar-icon"><IconWarningRounded /></span>
-      <span className="hb-infobar-content">
-        <span className="hb-infobar-title">{alertTitle}</span>
-        <span className="hb-infobar-message">{alertMessage}</span>
-      </span>
-    </>
-  );
-
   return (
     <div className="hb-insights-pane hb-insights-pane--active hb-budget-insight">
       <div className="hb-budget-gauge-head">
@@ -192,21 +183,12 @@ const BudgetCard = memo(function BudgetCard({ budgetItems, totals, isFallbackMon
       {/* Die Warnung führt selbst in den Budget-View, dann entfällt der Button. */}
       <div className="hb-budget-gauge-foot">
         {overItems.length > 0 ? (
-          onNavigateToBudget ? (
-            <button
-              type="button"
-              className="hb-infobar hb-infobar--dialog hb-budget-alert"
-              onClick={onNavigateToBudget}
-              aria-label={`${alertTitle}: ${alertMessage}. Zum Budget-View`}
-            >
-              {alertBody}
-              <span className="hb-budget-alert-chevron" aria-hidden="true"><IconChevronRight /></span>
-            </button>
-          ) : (
-            <div className="hb-infobar hb-infobar--dialog hb-budget-alert" role="status">
-              {alertBody}
-            </div>
-          )
+          <AlertBar
+            title={alertTitle}
+            message={alertMessage}
+            onClick={onNavigateToBudget}
+            ariaLabel={`${alertTitle}: ${alertMessage}. Zum Budget-View`}
+          />
         ) : (
           goToBudget
         )}

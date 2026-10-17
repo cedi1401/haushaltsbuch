@@ -382,6 +382,85 @@ button, input, select, textarea {
   color: var(--yellow);
 }
 
+/*
+  Rote Warnbox: Fehler-Variante der InfoBar für Zustände, die der Nutzer
+  beheben muss. Nicht von Hand zusammenbauen, sondern `AlertBar` aus
+  src/components/ui.jsx verwenden. Als Button (mit `onClick`) machen
+  Chevron, Cursor und Hover das Drücken erkennbar.
+*/
+.hb-alert {
+  width: 100%;
+  align-items: center;
+  gap: 16px;
+  font: inherit;
+  text-align: left;
+  background: var(--red-soft);
+  border-color: var(--red-border);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+button.hb-alert {
+  cursor: pointer;
+}
+
+button.hb-alert:hover {
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+}
+
+button.hb-alert:active {
+  background: color-mix(in srgb, var(--red) 18%, transparent);
+}
+
+.hb-alert .hb-infobar-icon {
+  color: var(--red);
+  margin-top: 0;
+}
+
+.hb-alert .hb-infobar-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.hb-alert-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform var(--transition-fast);
+}
+
+.hb-alert-chevron svg {
+  width: 16px;
+  height: 16px;
+}
+
+button.hb-alert:hover .hb-alert-chevron {
+  transform: translateX(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-alert-chevron { transition: none; }
+}
+
+/* Einzeilige Variante: Titel und Text nebeneinander, zu langer Text wird
+   abgeschnitten statt umzubrechen. */
+.hb-alert--compact {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.hb-alert--compact .hb-infobar-content {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.hb-alert--compact .hb-infobar-message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 
 /* =====================================================
    HEADER / TOP BAR
@@ -6291,84 +6370,11 @@ select.hb-input option {
   padding: 3px 10px;
 }
 
-/* Warnung bei überschrittenen Budgets: InfoBar-Muster in Rot, als Button
-   — ein Klick springt in den Budget-View. Chevron, Cursor und Hover machen
-   das Drücken erkennbar. */
-.hb-budget-alert {
-  width: 100%;
-  align-items: center;
-  gap: 16px;
-  font: inherit;
-  text-align: left;
-  background: var(--red-soft);
-  border-color: var(--red-border);
-  transition: border-color var(--transition-fast), background var(--transition-fast);
-}
-
-button.hb-budget-alert {
-  cursor: pointer;
-}
-
-button.hb-budget-alert:hover {
-  border-color: var(--red);
-  background: color-mix(in srgb, var(--red) 14%, transparent);
-}
-
-button.hb-budget-alert:active {
-  background: color-mix(in srgb, var(--red) 18%, transparent);
-}
-
-.hb-budget-alert .hb-infobar-icon {
-  color: var(--red);
-  margin-top: 0;
-}
-
-.hb-budget-alert .hb-infobar-icon svg {
-  width: 24px;
-  height: 24px;
-}
-
-.hb-budget-alert-chevron {
-  display: inline-flex;
-  flex-shrink: 0;
-  color: var(--text-secondary);
-  transition: transform var(--transition-fast);
-}
-
-.hb-budget-alert-chevron svg {
-  width: 16px;
-  height: 16px;
-}
-
-button.hb-budget-alert:hover .hb-budget-alert-chevron {
-  transform: translateX(2px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hb-budget-alert-chevron { transition: none; }
-}
-
-/* Überbucht-Hinweis unter der Aufteilungs-Legende: Budget-Warnung, aber auf
-   eine Zeile gestaucht — Titel und Text nebeneinander, zu langer Text wird
-   abgeschnitten statt umzubrechen. Steht in .hb-chart-legend und hat damit
-   dieselbe Breite wie die Tabelle darüber. */
+/* Überbucht-Hinweis unter der Aufteilungs-Legende (AlertBar compact). Steht
+   in .hb-chart-legend und hat damit dieselbe Breite wie die Tabelle darüber. */
 .hb-allocation-alert {
   flex-shrink: 0;
   margin-top: 8px;
-  padding-top: 8px;
-  padding-bottom: 8px;
-}
-
-.hb-allocation-alert .hb-infobar-content {
-  flex-direction: row;
-  align-items: baseline;
-  gap: 8px;
-  white-space: nowrap;
-}
-
-.hb-allocation-alert .hb-infobar-message {
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Status-Pill */

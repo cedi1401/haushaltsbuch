@@ -1,5 +1,5 @@
 import React from "react";
-import { IconChevronLeft, IconChevronRight } from "./icons.jsx";
+import { IconChevronLeft, IconChevronRight, IconWarningRounded } from "./icons.jsx";
 
 export function Card({ children, style, className }) {
   return (
@@ -27,6 +27,37 @@ export function Button({ children, onClick, variant = "solid", size, disabled, t
       {children}
     </button>
   );
+}
+
+// Rote Warnbox (InfoBar-Muster in Rot) für Zustände, die der Nutzer beheben
+// muss — der Standard für jede neue Warnmeldung. Mit `onClick` wird sie zum
+// Button mit Chevron, `compact` stellt Titel und Text einzeilig nebeneinander.
+// `role` ist standardmäßig "status"; `null` übergeben, wenn ein umgebender
+// aria-live-Bereich die Ansage schon übernimmt.
+export function AlertBar({ title, message, onClick, ariaLabel, compact = false, role = "status", className }) {
+  const cls = [
+    "hb-infobar hb-infobar--dialog hb-alert",
+    compact ? "hb-alert--compact" : null,
+    className,
+  ].filter(Boolean).join(" ");
+  const body = (
+    <>
+      <span className="hb-infobar-icon"><IconWarningRounded /></span>
+      <span className="hb-infobar-content">
+        {title && <span className="hb-infobar-title">{title}</span>}
+        {message && <span className="hb-infobar-message">{message}</span>}
+      </span>
+    </>
+  );
+  if (onClick) {
+    return (
+      <button type="button" className={cls} onClick={onClick} aria-label={ariaLabel}>
+        {body}
+        <span className="hb-alert-chevron" aria-hidden="true"><IconChevronRight /></span>
+      </button>
+    );
+  }
+  return <div className={cls} role={role ?? undefined}>{body}</div>;
 }
 
 // Segmentierte Auswahl (Zeitraum-/Modus-Umschalter) auf Basis von
