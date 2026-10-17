@@ -323,20 +323,20 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
             <span className="hb-stat-pill-label">Ø Ausgaben pro Monat</span>
             <span className="hb-stat-pill-value hb-bad" style={{ marginTop: 14 }}>{fmt(avg.expense)}</span>
           </div>
-          <div className={`hb-stat-pill hb-stat-pill--has-help ${savingsRate >= 0 ? "hb-stat-pill--ok" : "hb-stat-pill--bad"}`}>
+          <div className={`hb-stat-pill hb-stat-pill--has-help ${savingsRate >= 0 ? "hb-stat-pill--purple" : "hb-stat-pill--bad"}`}>
             <span className="hb-stat-pill-label">Sparquote (Ø)</span>
             <HbTooltip
               size={16}
               className="hb-stat-pill-help"
               text="Einzahlungen in Spar-Töpfe geteilt durch die Einnahmen, über alle erfassten Monate."
             />
-            <span className={`hb-stat-pill-value ${savingsRate >= 0 ? "hb-ok" : "hb-bad"}`}>{formatPercent(savingsRate, { sign: false })}</span>
+            <span className={`hb-stat-pill-value ${savingsRate >= 0 ? "hb-purple" : "hb-bad"}`}>{formatPercent(savingsRate, { sign: false })}</span>
             <div className="hb-meter hb-meter--sm hb-meter--animated hb-stat-pill-gauge-track">
               <div
                 className="hb-meter-fill"
                 style={{
                   width: `${Math.min(Math.max(savingsRate, 0), 100)}%`,
-                  background: savingsRate >= 0 ? "var(--green)" : "var(--red)",
+                  background: savingsRate >= 0 ? "var(--purple)" : "var(--red)",
                 }}
               />
             </div>
@@ -391,7 +391,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                   </div>
                   <ChartLegend
                     items={[
-                      { label: "Sparquote", type: "line", color: themeColors.blue },
+                      { label: "Sparquote", type: "line", color: themeColors.purple },
                       { label: "3M Ø", type: "line", color: avgLine.stroke, strokeWidth: avgLine.strokeWidth, dash: avgLine.strokeDasharray },
                       { label: "6M Ø", type: "line", color: avg6Line.stroke, strokeWidth: avg6Line.strokeWidth, dash: avg6Line.strokeDasharray },
                     ]}
@@ -410,7 +410,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                         content={({ active, payload, label }) => {
                           if (!active || !payload?.length) return null;
                           const labelMap = { savingsRate: "Sparquote", avg3: "3M Ø", avg6: "6M Ø" };
-                          const colorMap = { savingsRate: themeColors.blue, avg3: avgLine.stroke, avg6: avg6Line.stroke };
+                          const colorMap = { savingsRate: themeColors.purple, avg3: avgLine.stroke, avg6: avg6Line.stroke };
                           return (
                             <ChartTooltip title={label}>
                               {payload.filter((p) => p.value != null).map((p) => (
@@ -425,12 +425,11 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
                           );
                         }}
                       />
-                      <Line type="monotone" dataKey="savingsRate" dot={false} strokeWidth={CHART_STROKE.main} stroke={themeColors.blue} />
+                      <Line type="monotone" dataKey="savingsRate" dot={false} strokeWidth={CHART_STROKE.main} stroke={themeColors.purple} />
                       <Line type="monotone" dataKey="avg3" dot={false} {...avgLine} />
-                      {/* Teal statt Violett: Violett war von der blauen Sparquoten-Linie unter
-                          Rot-Grün-Schwäche praktisch nicht zu trennen (ΔE 11.3 hell / 4.0 dunkel).
-                          Teal kommt auf 50.9 / 39.7 gegen Blau und 73.7 / 75.1 gegen Orange.
-                          Die Strichmuster allein trugen das nicht. */}
+                      {/* Teal für die 6M-Linie: Violett ist jetzt die Sparquote selbst. Ursprünglich
+                          gewählt, weil Violett von der damals blauen Sparquoten-Linie unter
+                          Rot-Grün-Schwäche kaum zu trennen war; Teal kommt auf 73.7 / 75.1 gegen Orange. */}
                       <Line type="monotone" dataKey="avg6" dot={false} {...avg6Line} />
                     </LineChart>
                   </ResponsiveContainer>
