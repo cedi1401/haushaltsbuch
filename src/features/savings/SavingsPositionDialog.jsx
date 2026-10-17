@@ -2,6 +2,8 @@ import React, { useMemo, useState } from "react";
 import EditDialog from "../../components/EditDialog.jsx";
 import { Button, RangeTabs } from "../../components/ui.jsx";
 import { HbDatePicker } from "../../components/HbDatePicker.jsx";
+import TagInputField from "../../components/TagInputField.jsx";
+import TrendToggle from "../../components/TrendToggle.jsx";
 import { parseAmount } from "../../utils/formatUtils.js";
 import { fixedCostKind } from "../../utils/hbUtils.js";
 import { monthlyRate } from "../../utils/fixedCostUtils.js";
@@ -39,13 +41,15 @@ function turnusOptionsFor(turnus) {
   return [...TURNUS_OPTIONS, { value: String(turnus), label: `${label} (Bestandswert)` }];
 }
 
-function draftFrom(purpose, defaultPotId, defaultRule) {
+function draftFrom(purpose, { defaultPotId, defaultRule, defaultGroupId }) {
   const rateText = (v) => (Number(v) > 0 ? String(v) : "");
   return {
     rule: purpose?.rule || defaultRule || "free",
     name: purpose?.name || "",
     potId: purpose?.potId || defaultPotId || "",
-    groupId: purpose?.groupId || null,
+    groupId: purpose ? purpose.groupId || null : defaultGroupId || null,
+    tags: purpose?.tags || [],
+    showInOverview: purpose?.showInOverview === true,
     monthlyRate: rateText(purpose?.monthlyRate),
     amount: purpose?.rule === "reserve" ? String(purpose.amount ?? "") : "",
     turnus: purpose?.rule === "reserve" ? String(purpose.turnus ?? "12") : "12",
@@ -81,6 +85,8 @@ export default function SavingsPositionDialog({
   initialDraft,
   defaultPotId,
   defaultRule,
+  defaultGroupId,
+  knownTags,
   pots,
   transferCategories,
   fixedCostGroups,
@@ -91,7 +97,9 @@ export default function SavingsPositionDialog({
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
-  const [draft, setDraft] = useState(() => initialDraft || draftFrom(purpose, defaultPotId, defaultRule));
+  const [draft, setDraft] = useState(
+    () => initialDraft || draftFrom(purpose, { defaultPotId, defaultRule, defaultGroupId })
+  );
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const isEdit = Boolean(purpose);
 
@@ -146,6 +154,8 @@ export default function SavingsPositionDialog({
   } else {
     ruleValid = rate.valid;
   }
+  // Nur Sparpositionen mit Rate stehen in den Fixkosten und damit im Trend.
+  const hasRate = draft.rule === "reserve" || (rate.valid && rate.value !== null);
   const canSave = !!draft.name.trim() && !nameError && !reusable && !!draft.potId && ruleValid;
 
   function handleSave() {
@@ -161,6 +171,8 @@ export default function SavingsPositionDialog({
       faelligkeit: draft.faelligkeit || null,
       targetAmount: target,
       deadline: draft.deadline || null,
+      tags: draft.tags,
+      showInOverview: hasRate && draft.showInOverview,
     });
   }
 
@@ -330,8 +342,8 @@ export default function SavingsPositionDialog({
                 onChange={(e) => set({ monthlyRate: e.target.value })}
               />
               <div className="hb-fixed-field-hint">
-                Mit Rate erscheint die Sparposition in den Fixkosten und lässt sich dort monatlich
-                buchen.
+                Mit Rate erscheint die Sparposition in den Fixkosten unter „Sparraten“ und lässt
+                sich dort monatlich buchen.
               </div>
             </div>
           ) : (
@@ -352,6 +364,20 @@ export default function SavingsPositionDialog({
             <div className="hb-fixed-field-hint">Gliedert die Sparraten in den Fixkosten.</div>
           </div>
         </div>
+
+        <TagInputField
+          tags={draft.tags}
+          onChange={(tags) => set({ tags })}
+          knownTags={knownTags}
+        />
+
+        {hasRate && (
+          <TrendToggle
+            checked={draft.showInOverview}
+            onChange={(showInOverview) => set({ showInOverview })}
+            subject="Die Sparrate"
+          />
+        )}
       </div>
     </EditDialog>
   );

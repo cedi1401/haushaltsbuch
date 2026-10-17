@@ -300,10 +300,11 @@ const ALL_RULE_FIELDS = [...new Set(Object.values(RULE_FIELDS).flat())];
  * darf wechseln: der Zweck bleibt derselbe (gleiche ID, gleiche Buchungen), nur
  * seine Regel ändert sich.
  * @param {object} purpose
+ * Tags und „Im Trend auflisten" werden nur geschrieben, wenn sie mitkommen.
  * @param {{ rule: "free"|"reserve"|"goal", name: string, potId: string,
  *           groupId?: string|null, monthlyRate?: number|null, amount?: number,
  *           turnus?: number, faelligkeit?: string, targetAmount?: number,
- *           deadline?: string|null }} fields
+ *           deadline?: string|null, tags?: string[], showInOverview?: boolean }} fields
  * @param {string} [today] - Anlagedatum eines neuen Sparziels
  */
 export function applySavingsFields(purpose, fields, today) {
@@ -316,6 +317,8 @@ export function applySavingsFields(purpose, fields, today) {
     potId: fields.potId,
     groupId: fields.groupId ?? null,
   };
+  if (fields.tags !== undefined) common.tags = fields.tags || [];
+  if (fields.showInOverview !== undefined) common.showInOverview = fields.showInOverview === true;
   if (fields.rule === "reserve") {
     return { ...common, amount: fields.amount, turnus: fields.turnus, faelligkeit: fields.faelligkeit };
   }

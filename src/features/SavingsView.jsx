@@ -12,6 +12,7 @@ import {
   addTransferCategory,
   applySavingsFields,
   deleteTransferCategory,
+  findTransferCategory,
 } from "../utils/transferCategoryUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { useToast } from "../components/toastContext.js";
@@ -35,8 +36,33 @@ import BacklogCatchUpDialog from "./savings/BacklogCatchUpDialog.jsx";
  * gehört. Damit ergeben die Zeilen eines Topfs immer genau seinen Stand.
  *
  * Rollenteilung zur Fixkosten-View: hier wird angelegt, bewertet und der
- * Zyklus abgeschlossen; dort wird monatlich gebucht.
+ * Zyklus abgeschlossen; dort wird monatlich gebucht. „Bearbeiten" und
+ * „+ Sparposition" in den Fixkosten springen hierher und öffnen den Dialog
+ * (`initialIntent`, siehe `dialogFromIntent`).
  */
+
+/**
+ * Dialog-Zustand zum Sprung aus den Fixkosten: `{ purposeId }` bearbeitet eine
+ * Sparposition, sonst wird eine neue angelegt (optional in `groupId`). Mit
+ * `returnTo` geht es nach dem Schließen dorthin zurück. Ein unbekannter Zweck
+ * (inzwischen gelöscht) öffnet nichts.
+ */
+function dialogFromIntent(intent, transferCategories, pots) {
+  if (!intent) return null;
+  if (intent.purposeId) {
+    const purpose = findTransferCategory(transferCategories, intent.purposeId);
+    return purpose && !purpose.deleted ? { key: 1, purpose, returnTo: intent.returnTo } : null;
+  }
+  if (pots.length === 0) return null;
+  return {
+    key: 1,
+    purpose: null,
+    defaultPotId: pots[0].id,
+    defaultGroupId: intent.groupId || null,
+    returnTo: intent.returnTo,
+  };
+}
+
 export default function SavingsView({
   activeBook,
   entries,
@@ -45,6 +71,8 @@ export default function SavingsView({
   onAddEntry,
   onAddEntries,
   onNavigateToPots,
+  initialIntent = null,
+  onNavigate,
 }) {
   const fmt = useFmt();
   const toast = useToast();
@@ -70,9 +98,11 @@ export default function SavingsView({
   );
 
   // ── Dialog Sparposition ────────────────────────────────────────────────
-  // `key` zählt hoch, damit der Dialog bei jeder Öffnung frisch startet.
-  const [dialog, setDialog] = useState(null);
-  const dialogKey = useRef(0);
+  // `key` zählt hoch, damit der Dialog bei jeder Öffnung frisch startet. Die
+  // View wird bei jedem Wechsel neu gemountet; ein Sprung aus den Fixkosten
+  // öffnet den Dialog deshalb direkt im Anfangszustand, ohne Effekt.
+  const [dialog, setDialog] = useState(() => dialogFromIntent(initialIntent, transferCategories, pots));
+  const dialogKey = useRef(1);
   const openDialog = useCallback((opts) => {
     dialogKey.current += 1;
     setDialog({ key: dialogKey.current, ...opts });
@@ -82,6 +112,24 @@ export default function SavingsView({
     [openDialog, pots]
   );
   const openEdit = useCallback((row) => openDialog({ purpose: row.purpose }), [openDialog]);
+
+  // Vorschläge im Tag-Feld: die Tags der Fixkosten und aller Sparpositionen.
+  const recurringExpenses = activeBook?.recurringExpenses || EMPTY_ARRAY;
+  const knownTags = useMemo(() => {
+    const set = new Set();
+    for (const item of [...recurringExpenses, ...transferCategories]) {
+      if (!item.deleted) (item.tags || []).forEach((t) => set.add(t));
+    }
+    return [...set].sort();
+  }, [recurringExpenses, transferCategories]);
+
+  // Schließt den Dialog; kam er per Sprung aus den Fixkosten, geht es dorthin
+  // zurück.
+  function closeDialog() {
+    const returnTo = dialog?.returnTo;
+    setDialog(null);
+    if (returnTo) onNavigate?.(returnTo);
+  }
 
   function saveTransferCategories(next) {
     onUpdateBook({ ...activeBook, transferCategories: next });
@@ -103,13 +151,19 @@ export default function SavingsView({
       );
       toast.success(`${RULE_LABEL[fields.rule]} „${fields.name}“ angelegt.`);
     }
-    setDialog(null);
+    closeDialog();
   }
 
   // „Bestehende verwenden": derselbe Dialog, jetzt als Bearbeiten der
-  // gefundenen Rücklage — mit den bisher eingegebenen Werten.
+  // gefundenen Rücklage — mit den bisher eingegebenen Werten. Ihre Tags bleiben
+  // und werden um die eingegebenen ergänzt.
   function adoptExisting(purpose, draft) {
-    openDialog({ purpose, initialDraft: { ...draft, name: purpose.name, potId: purpose.potId } });
+    const tags = [...new Set([...(purpose.tags || []), ...draft.tags])];
+    openDialog({
+      purpose,
+      initialDraft: { ...draft, name: purpose.name, potId: purpose.potId, tags },
+      returnTo: dialog?.returnTo,
+    });
   }
 
   async function deletePosition(purpose) {
@@ -437,11 +491,13 @@ export default function SavingsView({
           initialDraft={dialog.initialDraft}
           defaultPotId={dialog.defaultPotId}
           defaultRule={dialog.defaultRule}
+          defaultGroupId={dialog.defaultGroupId}
+          knownTags={knownTags}
           pots={pots}
           transferCategories={transferCategories}
           fixedCostGroups={fixedCostGroups}
           entries={entries}
-          onClose={() => setDialog(null)}
+          onClose={closeDialog}
           onSave={savePosition}
           onUseExisting={adoptExisting}
         />

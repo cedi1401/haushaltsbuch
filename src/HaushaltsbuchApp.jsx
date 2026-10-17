@@ -1,4 +1,4 @@
-import React, { useState, useMemo, Suspense } from "react";
+import React, { useState, useMemo, useCallback, Suspense } from "react";
 
 import "./styles/haushaltsbuch.css";
 
@@ -34,6 +34,18 @@ export default function HaushaltsbuchApp() {
   const { confirm } = useConfirm();
 
   const [view, setView] = useState(DEFAULT_VIEW_ID);
+  // Sprung aus den Fixkosten in die Rücklagen mit offenem Dialog (siehe
+  // SavingsView). Jeder andere Wechsel verwirft ihn, damit ein späterer Besuch
+  // der Rücklagen den Dialog nicht erneut öffnet.
+  const [savingsIntent, setSavingsIntent] = useState(null);
+  const changeView = useCallback((id) => {
+    setSavingsIntent(null);
+    setView(id);
+  }, []);
+  const openSavingsPosition = useCallback((intent) => {
+    setSavingsIntent(intent);
+    setView("savings");
+  }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // Der Kategorien-Dialog wird vom Dashboard und vom Budget-View aus geöffnet.
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
@@ -87,7 +99,7 @@ export default function HaushaltsbuchApp() {
   function handleCreateBook(name) {
     createBook(name);
     entryActions.setAddField("category", "Allgemein");
-    setView(DEFAULT_VIEW_ID);
+    changeView(DEFAULT_VIEW_ID);
   }
 
   // Derived data
@@ -185,7 +197,8 @@ export default function HaushaltsbuchApp() {
     entryActions, updateBook, patchActiveBook,
     selectedPotId, setSelectedPotId,
     costGroupRange, setCostGroupRange,
-    navigate: setView,
+    navigate: changeView,
+    savingsIntent, openSavingsPosition,
     openCategoryManager: () => setCategoryManagerOpen(true),
   };
 
@@ -195,7 +208,7 @@ export default function HaushaltsbuchApp() {
     <CurrencyContext.Provider value={currencyContextValue}>
       <NavPane
         view={currentView.id}
-        onChangeView={setView}
+        onChangeView={changeView}
         expanded={navExpanded}
         onExpandedChange={setNavExpanded}
         settingsOpen={settingsOpen}

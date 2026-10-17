@@ -84,6 +84,14 @@ describe('applySavingsFields', () => {
     expect(r.showInOverview).toBe(true);
   });
 
+  it('schreibt Tags und „Im Trend auflisten", wenn sie mitkommen', () => {
+    const r = applySavingsFields({ ...base, rule: 'free' }, {
+      rule: 'free', name: 'Alt', potId: 'pot_a', monthlyRate: 30, tags: ['neu'], showInOverview: false,
+    });
+    expect(r.tags).toEqual(['neu']);
+    expect(r.showInOverview).toBe(false);
+  });
+
   it('entfernt beim Wechsel zur Rücklage Turnus und Fälligkeit', () => {
     const reserve = { ...base, rule: 'reserve', amount: 600, turnus: 6, faelligkeit: '2027-01-01' };
     const r = applySavingsFields(reserve, { rule: 'free', name: 'Alt', potId: 'pot_a', monthlyRate: '' });
