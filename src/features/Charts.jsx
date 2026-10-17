@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 import { formatPercent } from "../utils/formatUtils.js";
 import { Card, CardContent, Button, RangeTabs } from "../components/ui.jsx";
-import { IconChevronRight, IconInbox } from "../components/icons.jsx";
+import { IconChevronRight, IconInbox, IconWarningRounded } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
 import {
@@ -153,13 +153,8 @@ export default function Charts({
             <div className="hb-chart-body">
               <div className="hb-chart-legend">
                 <div className="hb-legend-total-row">
-                  <span>Einnahmen</span>
+                  <span>Mittelverwendung</span>
                 </div>
-                {allocationData.isOverbudget && (
-                  <div style={{ fontSize: 11, color: themeColors.red, padding: "4px 0 2px" }}>
-                    Überbucht — Ausgaben übersteigen Einnahmen
-                  </div>
-                )}
                 <div className="hb-legend-items-scroll">
                   {allocationData.items.map((item) => {
                     const pct = allocationData.totalValue > 0
@@ -177,6 +172,17 @@ export default function Charts({
                     );
                   })}
                 </div>
+                {/* Gleiche rote Warnbox wie bei überschrittenen Budgets in den
+                    Insights, hier aber einzeilig und ohne Klickziel. */}
+                {allocationData.isOverbudget && (
+                  <div className="hb-infobar hb-infobar--dialog hb-budget-alert hb-allocation-alert" role="status">
+                    <span className="hb-infobar-icon"><IconWarningRounded /></span>
+                    <span className="hb-infobar-content">
+                      <span className="hb-infobar-title">Überbucht</span>
+                      <span className="hb-infobar-message">Ausgaben übersteigen Einnahmen</span>
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="hb-chart-pie-wrap">
                 <ResponsiveContainer width="100%" height={340}>
