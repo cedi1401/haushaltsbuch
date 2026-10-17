@@ -3,11 +3,10 @@ import EditDialog from "../components/EditDialog.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import { EntryKindSelector } from "../components/EntryKindSelector.jsx";
-import {
-  getPurposesForPot,
-  getTransferCategoryOptions,
-  validTransferCategoryId,
-} from "../utils/transferCategoryUtils.js";
+import PurposeSelect from "../components/PurposeSelect.jsx";
+import { getTransferCategoryOptions, purposeForPot } from "../utils/transferCategoryUtils.js";
+
+const isPotKind = (kind) => kind === "transfer" || kind === "withdrawal";
 
 export default function EditEntryDialog({
   open,
@@ -27,36 +26,22 @@ export default function EditEntryDialog({
   const purposeOptions = getTransferCategoryOptions(allTransferCategories, selectedPurposeId, purposes);
 
   // Ein Zweck gehört genau einem Topf: Wechselt der Topf (oder die Art auf
-  // Transfer/Entnahme), muss der Zweck zum neuen Topf passen.
-  function withPurposeFor(d) {
-    if (d.kind !== "transfer" && d.kind !== "withdrawal") return d;
-    const choices = getPurposesForPot(transferCategories, d.potId);
-    if (choices.some((c) => c.id === d.transferCategoryId)) return d;
-    return { ...d, transferCategoryId: validTransferCategoryId(choices, d.transferCategoryId) };
+  // Transfer/Entnahme), muss der Zweck zum neuen Topf passen; vorgeschlagen
+  // wird dann die erste Sparposition (siehe purposeForPot). Ein bewusst
+  // gewähltes „Ohne" bleibt beim Topfwechsel stehen.
+  function withPurposeFor(d, suggest) {
+    if (!isPotKind(d.kind)) return d;
+    const id = purposeForPot(transferCategories, d.potId, d.transferCategoryId, { suggest });
+    return id === d.transferCategoryId ? d : { ...d, transferCategoryId: id };
   }
 
   function renderPurposeSelect() {
     return (
-      <div className="hb-field">
-        <div className="hb-label">Transfer-Zweck</div>
-        <select
-          className="hb-input"
-          value={selectedPurposeId}
-          onChange={(e) => setEditDraft((d) => ({ ...d, transferCategoryId: e.target.value }))}
-        >
-          {/* Eine Buchung ohne Zweck (z.B. Monatsüberschuss) in einem Topf mit
-              Zwecken: Ohne Platzhalter zeigte das Feld still den ersten Zweck,
-              während das Speichern gesperrt bleibt. */}
-          {purposeOptions.length === 0 ? (
-            <option value="">Kein Zweck</option>
-          ) : (
-            !selectedPurposeId && <option value="" disabled>Zweck wählen …</option>
-          )}
-          {purposeOptions.map((opt) => (
-            <option key={opt.id} value={opt.id}>{opt.label}</option>
-          ))}
-        </select>
-      </div>
+      <PurposeSelect
+        value={selectedPurposeId}
+        options={purposeOptions}
+        onChange={(id) => setEditDraft((d) => ({ ...d, transferCategoryId: id }))}
+      />
     );
   }
 
@@ -77,10 +62,10 @@ export default function EditEntryDialog({
               <div className="hb-label">Art</div>
               <EntryKindSelector
                 value={editDraft.kind}
-                onChange={(kind) => setEditDraft((d) => withPurposeFor({ ...d, kind }))}
+                onChange={(kind) => setEditDraft((d) => withPurposeFor({ ...d, kind }, !isPotKind(d.kind)))}
               />
               {editDraft.kind === "expense" && (
-                <div className="hb-entry-form__hint">Quelle: Monat</div>
+                <div className="hb-field-hint">Quelle: Monat</div>
               )}
             </div>
 
@@ -103,7 +88,7 @@ export default function EditEntryDialog({
                   value={editDraft.amount}
                   onChange={(e) => setEditDraft((d) => ({ ...d, amount: e.target.value }))}
                 />
-                <div className="hb-entry-form__field-hint">
+                <div className="hb-field-hint">
                   Komma geht auch (z.B. 12,50).
                 </div>
               </div>
@@ -126,7 +111,7 @@ export default function EditEntryDialog({
               und kein Begrüßungsfehler.
             */}
             {!canSave ? (
-              <div className="hb-entry-form__error">
+              <div className="hb-field-error">
                 Bitte Datum &amp; einen gültigen Betrag (&gt; 0) setzen.
               </div>
             ) : null}
@@ -158,7 +143,7 @@ export default function EditEntryDialog({
                   <select
                     className="hb-input"
                     value={editDraft.potId}
-                    onChange={(e) => setEditDraft((d) => withPurposeFor({ ...d, potId: e.target.value }))}
+                    onChange={(e) => setEditDraft((d) => withPurposeFor({ ...d, potId: e.target.value }, Boolean(d.transferCategoryId)))}
                   >
                     {pots.map((pot) => (
                       <option key={pot.id} value={pot.id}>{pot.name}</option>
@@ -174,7 +159,7 @@ export default function EditEntryDialog({
                   <select
                     className="hb-input"
                     value={editDraft.potId}
-                    onChange={(e) => setEditDraft((d) => withPurposeFor({ ...d, potId: e.target.value }))}
+                    onChange={(e) => setEditDraft((d) => withPurposeFor({ ...d, potId: e.target.value }, Boolean(d.transferCategoryId)))}
                   >
                     {pots.map((pot) => (
                       <option key={pot.id} value={pot.id}>{pot.name}</option>

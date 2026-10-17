@@ -8,7 +8,7 @@ import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../utils/
 import { getEntryCategoryName } from "../utils/hbUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { templateToDraftPatch } from "../utils/entryTemplateUtils.js";
-import { getPurposesForPot, validTransferCategoryId } from "../utils/transferCategoryUtils.js";
+import { getPurposesForPot, purposeForPot } from "../utils/transferCategoryUtils.js";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 
 const INITIAL_ADD_DRAFT = {
@@ -58,18 +58,23 @@ const TEMPLATE_INVALIDATING_FIELDS = new Set([
 // `category` string in a single state update — no Effect → setState → Effect chain.
 // `transferCategories` sind nur die aktiven Zwecke (Objekte mit id).
 function applyKindToDraft(draft, kind, transferCategories) {
-  return withValidPurpose({ ...applyKindFields(draft, kind) }, transferCategories);
+  // Erst beim Wechsel auf Transfer/Entnahme die erste Sparposition vorschlagen;
+  // zwischen Transfer und Entnahme bleibt die Wahl (auch „Ohne") stehen.
+  const suggest = !isPotKind(draft.kind);
+  return withValidPurpose({ ...applyKindFields(draft, kind) }, transferCategories, suggest);
+}
+
+function isPotKind(kind) {
+  return kind === "transfer" || kind === "withdrawal";
 }
 
 // Ein Zweck gehört genau einem Topf (Schema 7): Bei Transfer und Entnahme muss
-// der gewählte Zweck zum Topf passen, sonst der erste des Topfs — oder keiner,
-// wenn der Topf keine Zwecke hat.
-function withValidPurpose(draft, transferCategories) {
-  if (draft.kind !== "transfer" && draft.kind !== "withdrawal") return draft;
-  const valid = validTransferCategoryId(
-    getPurposesForPot(transferCategories, draft.potId),
-    draft.transferCategoryId
-  );
+// der gewählte Zweck zum Topf passen. „Ohne Sparposition" ("") ist immer
+// gültig; `suggest` schlägt stattdessen die erste Sparposition vor (siehe
+// purposeForPot).
+function withValidPurpose(draft, transferCategories, suggest = false) {
+  if (!isPotKind(draft.kind)) return draft;
+  const valid = purposeForPot(transferCategories, draft.potId, draft.transferCategoryId, { suggest });
   return valid === draft.transferCategoryId ? draft : { ...draft, transferCategoryId: valid };
 }
 
@@ -125,7 +130,10 @@ export function useEntryActions({
       return;
     }
     if (field === "potId") {
-      setAddDraft((d) => withValidPurpose({ ...d, potId: value }, indicateTransferCategories));
+      // Bewusst gewähltes „Ohne Sparposition" bleibt beim Topfwechsel stehen.
+      setAddDraft((d) =>
+        withValidPurpose({ ...d, potId: value }, indicateTransferCategories, Boolean(d.transferCategoryId))
+      );
       return;
     }
     setAddDraft((d) => ({ ...d, [field]: value }));
@@ -168,7 +176,7 @@ export function useEntryActions({
     setAddDraft((d) => {
       if (pots.length === 0) return d.potId === "" ? d : { ...d, potId: "" };
       if (!pots.some((p) => p.id === d.potId)) {
-        return withValidPurpose({ ...d, potId: pots[0].id }, indicateTransferCategories);
+        return withValidPurpose({ ...d, potId: pots[0].id }, indicateTransferCategories, true);
       }
       return d;
     });
@@ -210,6 +218,17 @@ export function useEntryActions({
     () => getPurposesForPot(indicateTransferCategories, editDraft.potId),
     [editDraft.potId, indicateTransferCategories]
   );
+
+  // Öffnet den Add-Dialog mit dem bisherigen Draft wieder, z.B. nach dem
+  // Anlegen einer Sparposition aus dem Dialog heraus; `patch` setzt Felder
+  // darüber (Topf und die neue Sparposition).
+  function reopenAddEntry(patch = null) {
+    if (patch) {
+      setAppliedTemplateId(null);
+      setAddDraft((d) => ({ ...d, ...patch }));
+    }
+    setAddEntryOpen(true);
+  }
 
   function closeAddEntry() {
     setAddEntryOpen(false);
@@ -338,8 +357,8 @@ export function useEntryActions({
       categoryId: entry.categoryId ?? null,
       subcategoryId: entry.subcategoryId ?? null,
       // Auch ein gelöschter Zweck bleibt erhalten — der Dialog zeigt ihn als
-      // eigene Option. Ohne Zweck (z.B. Monatsüberschuss) bleibt es dabei; der
-      // Dialog bietet dann „Kein Zweck" an.
+      // eigene Option. Ohne Zweck (z.B. Monatsüberschuss) steht „Ohne
+      // Sparposition".
       transferCategoryId: entry.transferCategoryId || "",
       note: entry.note || "",
       amount: String(entry.amount ?? ""),
@@ -417,36 +436,26 @@ export function useEntryActions({
   }
 
   const canAddEntry = useMemo(() => {
-    const { date, amount, kind, transferCategoryId, potId } = addDraft;
+    const { date, amount, kind, potId } = addDraft;
     if (!date) return false;
     const n = parseAmount(amount);
     if (!Number.isFinite(n) || n <= 0) return false;
-    // Ein Zweck ist Pflicht, sobald der Topf welche hat. Ein Topf ohne Zwecke
-    // (z.B. für den Monatsüberschuss) nimmt Buchungen ohne Zweck an.
-    if (kind === "transfer" || kind === "withdrawal") {
-      if (!potId) return false;
-      if (availablePurposes.length > 0 && !transferCategoryId) return false;
-    }
+    // Ein Topf ist Pflicht, eine Sparposition nicht („Ohne Sparposition").
+    if (isPotKind(kind) && !potId) return false;
     return true;
-  }, [addDraft, availablePurposes]);
+  }, [addDraft]);
 
   const canSaveEdit = useMemo(() => {
     if (!editDraft.date) return false;
     const n = parseAmount(editDraft.amount);
     if (!Number.isFinite(n) || n <= 0) return false;
     if (!editDraft.kind) return false;
-    if (
-      (editDraft.kind === "transfer" || editDraft.kind === "withdrawal") &&
-      editPurposes.length > 0 &&
-      !editDraft.transferCategoryId
-    )
-      return false;
     return true;
-  }, [editDraft, editPurposes]);
+  }, [editDraft]);
 
   return {
     // Add dialog
-    addEntryOpen, setAddEntryOpen,
+    addEntryOpen, setAddEntryOpen, reopenAddEntry,
     addDraft, setAddField,
     closeAddEntry, handleAddEntry, canAddEntry,
     availablePurposes,

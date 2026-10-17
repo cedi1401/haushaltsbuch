@@ -101,7 +101,7 @@ export default function BillPaidDialog({
             {/* Vorbelegt ist der Betrag pro Zyklus, nicht die Monatsrate — die
                 Rechnung kommt aber selten auf den Franken genau so, wie sie
                 geplant war. Deshalb ist das Feld zwingend änderbar. */}
-            <div className="hb-fixed-field-hint">
+            <div className="hb-field-hint">
               Vorbelegt mit dem geplanten Betrag pro Zyklus. Steht auf der Rechnung ein
               anderer Betrag, trag ihn hier ein.
             </div>

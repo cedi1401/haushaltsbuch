@@ -252,7 +252,7 @@ export default function PotsManager({ activeBook, onUpdateBook }) {
                   {isEditing ? (
                     <input
                       ref={inputRef}
-                      className={`hb-input hb-potmgr-input${error ? " hb-potmgr-input--invalid" : ""}`}
+                      className={`hb-input hb-potmgr-input${error ? " hb-input--invalid" : ""}`}
                       type="text"
                       value={editName}
                       maxLength={MAX_NAME_LENGTH}
@@ -365,7 +365,7 @@ export default function PotsManager({ activeBook, onUpdateBook }) {
             <div className="hb-potmgr-main">
               <input
                 ref={inputRef}
-                className={`hb-input hb-potmgr-input${showNewPotError ? " hb-potmgr-input--invalid" : ""}`}
+                className={`hb-input hb-potmgr-input${showNewPotError ? " hb-input--invalid" : ""}`}
                 type="text"
                 value={newPotName}
                 maxLength={MAX_NAME_LENGTH}

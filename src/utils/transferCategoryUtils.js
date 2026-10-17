@@ -41,6 +41,18 @@ export function makeTransferCategory(name, potId) {
   };
 }
 
+/**
+ * Anzeigename für Geld eines Topfs ohne Zweck (Auswahl in den Buchungsdialogen,
+ * Überleitungszeile in den Rücklagen, Zusammensetzung in den Töpfen). Als
+ * Name einer echten Sparposition gesperrt, sonst wären beide nicht zu
+ * unterscheiden.
+ */
+export const NO_PURPOSE_LABEL = "Ohne Sparposition";
+
+export function isReservedPurposeName(name) {
+  return nameKey(name) === nameKey(NO_PURPOSE_LABEL);
+}
+
 /** Nur die nicht gelöschten Zwecke — für Auswahllisten und Standardwerte. */
 export function getActiveTransferCategories(list) {
   return (list || []).filter((c) => c && !c.deleted);
@@ -126,6 +138,25 @@ export function validTransferCategoryId(list, id) {
   const items = list || [];
   if (id && items.some((c) => c.id === id)) return id;
   return items[0]?.id || "";
+}
+
+/**
+ * Der Zweck eines Buchungs-Drafts, passend zum Topf. "" heißt „Ohne
+ * Sparposition" und ist in jedem Topf eine gültige Wahl (z.B. für den
+ * Monatsüberschuss). Ein Zweck aus einem anderen Topf wird ersetzt. Mit
+ * `suggest` (Topf gewechselt, frisch auf Transfer/Entnahme gewechselt) gilt
+ * auch "" nicht als Wahl: dann wird die erste Sparposition des Topfs
+ * vorgeschlagen, falls er eine hat.
+ * @param {Array} list - aktive Zwecke
+ * @param {string} potId
+ * @param {string} id - bisheriger Zweck im Draft
+ * @param {{ suggest?: boolean }} [opts]
+ */
+export function purposeForPot(list, potId, id, { suggest = false } = {}) {
+  const choices = getPurposesForPot(list, potId);
+  if (id && choices.some((c) => c.id === id)) return id;
+  if (!id && !suggest) return "";
+  return choices[0]?.id || "";
 }
 
 /**

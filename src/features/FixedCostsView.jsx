@@ -677,7 +677,7 @@ export default function FixedCostsView({
             onKeyDown={(e) => { if (e.key === "Enter" && groupNameDraft.trim()) saveGroup(); }}
           />
           {groupDialog?.mode === "create" && (
-            <div className="hb-fixed-field-hint">
+            <div className="hb-field-hint">
               Wird in der Tabelle „{tableLabel(groupDialog.kind)}“ angelegt.
             </div>
           )}

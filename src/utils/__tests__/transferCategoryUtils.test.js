@@ -9,6 +9,7 @@ import {
   getTransferCategoryName,
   getTransferCategoryOptions,
   validTransferCategoryId,
+  purposeForPot,
 } from '../transferCategoryUtils.js';
 
 const LIST = [
@@ -66,6 +67,29 @@ describe('transferCategoryUtils', () => {
     expect(getTransferCategoryOptions(LIST, 'tcat_steuern').map((o) => o.label)).toEqual(['Steuern', 'Ferien']);
     expect(getTransferCategoryOptions(LIST, 'tcat_auto').map((o) => o.label)).toEqual(['Steuern', 'Ferien', 'Auto (gelöscht)']);
     expect(getTransferCategoryOptions(LIST, 'tcat_auto', [LIST[0]]).map((o) => o.id)).toEqual(['tcat_steuern', 'tcat_auto']);
+  });
+});
+
+describe('purposeForPot', () => {
+  const list = [
+    { id: 'tcat_a1', name: 'A1', potId: 'pot_a' },
+    { id: 'tcat_a2', name: 'A2', potId: 'pot_a' },
+    { id: 'tcat_b1', name: 'B1', potId: 'pot_b' },
+  ];
+
+  it('behält eine Sparposition des Topfs', () => {
+    expect(purposeForPot(list, 'pot_a', 'tcat_a2')).toBe('tcat_a2');
+    expect(purposeForPot(list, 'pot_a', 'tcat_a2', { suggest: true })).toBe('tcat_a2');
+  });
+
+  it('lässt „Ohne Sparposition“ stehen, schlägt mit suggest die erste vor', () => {
+    expect(purposeForPot(list, 'pot_a', '')).toBe('');
+    expect(purposeForPot(list, 'pot_a', '', { suggest: true })).toBe('tcat_a1');
+  });
+
+  it('ersetzt eine Sparposition aus einem anderen Topf', () => {
+    expect(purposeForPot(list, 'pot_b', 'tcat_a1')).toBe('tcat_b1');
+    expect(purposeForPot(list, 'pot_c', 'tcat_a1')).toBe('');
   });
 });
 

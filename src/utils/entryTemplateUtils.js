@@ -1,7 +1,7 @@
 // src/utils/entryTemplateUtils.js
 //
 // Buchungsvorlagen: Shape, Normalisierung und die zentrale Auflösung von
-// Referenzen (Kategorie, Unterkategorie, Transfer-Zweck, Topf) auf den
+// Referenzen (Kategorie, Unterkategorie, Sparposition, Topf) auf den
 // Buchungs-Draft. Bewusst eine eigene Datei statt bookMigration.js — analog zu
 // potUtils/goalUtils/budgetUtils/costGroupUtils.
 //
@@ -117,9 +117,12 @@ export function templateToDraftPatch(template, ctx = {}) {
         : null;
     patch.subcategoryId = sub ? sub.id : null;
   } else {
-    // Transfer-Zweck: unbekannt oder gelöscht → erster verfügbarer (wie
-    // applyKindToDraft). transferCategories enthält nur die aktiven Zwecke.
-    patch.transferCategoryId = validTransferCategoryId(transferCategories, template.transferCategoryId);
+    // Sparposition: keine hinterlegt → „Ohne Sparposition" (""); unbekannt
+    // oder gelöscht → erste verfügbare. Ob sie zum Topf passt, prüft der
+    // Aufrufer. transferCategories enthält nur die aktiven Zwecke.
+    patch.transferCategoryId = template.transferCategoryId
+      ? validTransferCategoryId(transferCategories, template.transferCategoryId)
+      : "";
     // Topf: unbekannt → aktueller Draft-Topf, sonst erster Topf
     const fallback = pots.some((p) => p.id === fallbackPotId)
       ? fallbackPotId
@@ -168,8 +171,8 @@ export function getTemplateIssues(template, ctx = {}) {
       const name = getTransferCategoryName(allTransferCategories, tcId);
       issues.push(
         name
-          ? `Der Transfer-Zweck „${name}“ existiert nicht mehr.`
-          : "Der hinterlegte Transfer-Zweck existiert nicht mehr."
+          ? `Die Sparposition „${name}“ existiert nicht mehr.`
+          : "Die hinterlegte Sparposition existiert nicht mehr."
       );
     }
     if (pots.length === 0) {

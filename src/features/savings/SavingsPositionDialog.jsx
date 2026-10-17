@@ -13,6 +13,8 @@ import {
   hasPurposeRate,
   MAX_TRANSFER_NAME_LENGTH,
   purposeHasEntries,
+  isReservedPurposeName,
+  NO_PURPOSE_LABEL,
 } from "../../utils/transferCategoryUtils.js";
 import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
 import { RULE_LABEL } from "./savingsColumns.jsx";
@@ -138,6 +140,8 @@ export default function SavingsPositionDialog({
   let nameError = null;
   if (draft.name.trim().length > MAX_TRANSFER_NAME_LENGTH) {
     nameError = `Der Name ist zu lang (max. ${MAX_TRANSFER_NAME_LENGTH} Zeichen).`;
+  } else if (isReservedPurposeName(draft.name)) {
+    nameError = `„${NO_PURPOSE_LABEL}“ ist für Geld ohne Sparposition reserviert.`;
   } else if (sameName && !reusable) {
     nameError =
       sameName.potId !== draft.potId
@@ -208,22 +212,23 @@ export default function SavingsPositionDialog({
             size="md"
             full
           />
-          <div className="hb-fixed-field-hint">{RULE_HELP[draft.rule]}</div>
+          <div className="hb-field-hint">{RULE_HELP[draft.rule]}</div>
         </div>
 
         <div className="hb-two hb-two--dialog" style={{ width: "100%" }}>
           <div className="hb-field">
             <div className="hb-label">Name</div>
             <input
-              className="hb-input"
+              className={`hb-input${nameError ? " hb-input--invalid" : ""}`}
               type="text"
               placeholder="z.B. Steuern, Notgroschen, Velo"
               value={draft.name}
               aria-invalid={nameError ? "true" : undefined}
+              aria-describedby={nameError ? "hb-savings-name-error" : undefined}
               onChange={(e) => set({ name: e.target.value })}
               autoFocus
             />
-            {nameError && <div className="hb-fixed-field-error">{nameError}</div>}
+            {nameError && <div id="hb-savings-name-error" className="hb-field-error">{nameError}</div>}
           </div>
           <div className="hb-field">
             <div className="hb-label">Topf</div>
@@ -238,7 +243,7 @@ export default function SavingsPositionDialog({
               ))}
             </select>
             {potLocked && (
-              <div className="hb-fixed-field-hint">
+              <div className="hb-field-hint">
                 Die Sparposition hat schon Buchungen in diesem Topf, der Topf steht deshalb fest.
               </div>
             )}
@@ -293,7 +298,7 @@ export default function SavingsPositionDialog({
                 value={draft.faelligkeit}
                 onChange={(v) => set({ faelligkeit: v })}
               />
-              <div className="hb-fixed-field-hint">
+              <div className="hb-field-hint">
                 Wann die Rechnung das nächste Mal fällig wird — nicht die letzte Zahlung. Der
                 Termin wiederholt sich im Turnus, auch wenn eine Rechnung einmal verspätet kommt.
               </div>
@@ -310,12 +315,12 @@ export default function SavingsPositionDialog({
               </div>
             )}
             {reserveRate !== null && reserveRate < 0.01 ? (
-              <div className="hb-fixed-field-error">
+              <div className="hb-field-error">
                 Der Betrag ergibt weniger als {fmt(0.01)} pro Monat — erhöhe ihn oder verkürze
                 den Turnus.
               </div>
             ) : reserveRate !== null ? (
-              <div className="hb-fixed-field-hint">
+              <div className="hb-field-hint">
                 Ergibt <strong>{fmt(reserveRate)}</strong> pro Monat — diesen Betrag bucht die
                 Fixkosten-Ansicht monatlich in den Topf.
               </div>
@@ -361,7 +366,7 @@ export default function SavingsPositionDialog({
                 aria-invalid={rate.valid ? undefined : "true"}
                 onChange={(e) => set({ monthlyRate: e.target.value })}
               />
-              <div className="hb-fixed-field-hint">
+              <div className="hb-field-hint">
                 Mit Rate erscheint die Sparposition in den Fixkosten unter „Sparraten“ und lässt
                 sich dort monatlich buchen.
               </div>
@@ -381,7 +386,7 @@ export default function SavingsPositionDialog({
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
             </select>
-            <div className="hb-fixed-field-hint">Gliedert die Sparraten in den Fixkosten.</div>
+            <div className="hb-field-hint">Gliedert die Sparraten in den Fixkosten.</div>
           </div>
         </div>
 

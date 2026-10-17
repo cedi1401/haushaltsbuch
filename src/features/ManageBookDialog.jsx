@@ -57,7 +57,7 @@ export default function ManageBookDialog({ open, bookName, canDelete, onClose, o
           autoFocus
         />
         {!canDelete && (
-          <div className="hb-muted hb-field-hint">Das letzte Buch kann nicht gelöscht werden.</div>
+          <div className="hb-field-hint">Das letzte Buch kann nicht gelöscht werden.</div>
         )}
       </div>
     </EditDialog>

@@ -100,7 +100,7 @@ export default function AppToolbar({
             onChange={(e) => setNewBookName(e.target.value)}
             placeholder="z.B. 2026, WG, Urlaub, ..."
           />
-          <div className="hb-muted hb-field-hint">
+          <div className="hb-field-hint">
             Du kannst mehrere Bücher führen und oben wechseln.
           </div>
         </div>

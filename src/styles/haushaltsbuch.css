@@ -3166,17 +3166,6 @@ select.hb-input option {
   color: var(--text);
 }
 
-.hb-entry-form__hint,
-.hb-entry-form__field-hint {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.hb-entry-form__error {
-  color: var(--red);
-  font-size: 12px;
-}
-
 @media (max-height: 880px) {
   .hb-entry-form__panes {
     min-height: 320px;
@@ -3946,30 +3935,37 @@ select.hb-input option {
   white-space: nowrap;
 }
 
-/* Hinweis unter einem Dialog-Feld (allgemein) */
-.hb-field-hint {
-  margin-top: 8px;
-}
+/* ── Feldmeldungen (allgemein) ─────────────────────────────────────────
+   Für jedes Formularfeld, egal in welchem Dialog: Hinweis, Fehler und die
+   rote Umrandung eines ungültigen Eingabefelds. Keine view-eigenen Varianten
+   mehr anlegen. */
 
-/* Hinweiszeile unter einem Dialog-Feld (Spalten-/Gruppen-Bindung) */
-.hb-fixed-field-hint {
+/* Hinweiszeile unter einem Feld */
+.hb-field-hint {
   font-size: 12px;
   color: var(--muted);
   line-height: 1.4;
 }
 
 /* Hervorgehobener Wert in einer Hinweiszeile (z.B. die abgeleitete Monatsrate) */
-.hb-fixed-field-hint strong {
+.hb-field-hint strong {
   font-weight: 700;
   color: var(--text-secondary);
 }
 
-/* Fehlerzeile unter einem Dialog-Feld — gleiche Rolle wie der Hint daneben,
-   aber blockierend: solange sie steht, ist das Speichern gesperrt. */
-.hb-fixed-field-error {
+/* Fehlerzeile unter einem Feld — gleiche Rolle wie der Hinweis, aber
+   blockierend: solange sie steht, ist das Speichern gesperrt. */
+.hb-field-error {
   font-size: 12px;
   color: var(--red);
   line-height: 1.4;
+}
+
+/* Ungültiges Eingabefeld; dazu gehört aria-invalid am Feld. */
+.hb-input.hb-input--invalid,
+.hb-input.hb-input--invalid:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 1px var(--red);
 }
 
 /* Tag-Pill (read-only, z.B. in Tabellenzellen) */
@@ -4566,7 +4562,7 @@ select.hb-input option {
   width: 100%;
 }
 
-/* Kopfzeile: Tabs (Kategorien / Transfer-Zwecke) links, Filter (Alle / Eigene) rechts */
+/* Kopfzeile: Tabs (Kategorien / Sparpositionen) links, Filter (Alle / Eigene) rechts */
 .hb-cat-tabbar {
   display: flex;
   align-items: center;
@@ -4581,7 +4577,7 @@ select.hb-input option {
   flex: 0 0 auto;
 }
 
-/* Transfer-Zwecke-Tab */
+/* Tab Sparpositionen */
 .hb-cat-transfer-panel {
   display: flex;
   flex-direction: column;
@@ -4632,18 +4628,6 @@ select.hb-input option {
   max-width: 320px;
   min-width: 0;
   padding: 0 8px;
-}
-
-.hb-cat-transfer-input--invalid.hb-input,
-.hb-cat-transfer-input--invalid.hb-input:focus {
-  border-color: var(--red);
-  box-shadow: 0 0 0 1px var(--red);
-}
-
-.hb-cat-transfer-error {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--red);
 }
 
 .hb-cat-list {
@@ -7413,12 +7397,6 @@ select.hb-input option {
   max-width: 320px;
   min-width: 0;
   padding: 0 8px;
-}
-
-.hb-potmgr-input--invalid.hb-input,
-.hb-potmgr-input--invalid.hb-input:focus {
-  border-color: var(--red);
-  box-shadow: 0 0 0 1px var(--red);
 }
 
 .hb-potmgr-meta {

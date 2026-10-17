@@ -4,6 +4,7 @@ import { Button } from "../components/ui.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import { EntryKindSelector } from "../components/EntryKindSelector.jsx";
+import PurposeSelect from "../components/PurposeSelect.jsx";
 import { getTemplateColor } from "../utils/entryTemplateUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { EMPTY_ARRAY, ENTRY_KIND_LABELS } from "../utils/constants.js";
@@ -28,7 +29,7 @@ export default function EntryFormDialog({
   expenseCategories,
   incomeCategories,
   availablePurposes,
-  onOpenCategoryManager,
+  onCreatePurpose,
   onOpenTemplateManager,
   templates = EMPTY_ARRAY,
   appliedTemplateId = null,
@@ -37,6 +38,7 @@ export default function EntryFormDialog({
   const { kind, date, amount, potId, transferCategoryId, note, categoryId, subcategoryId } = draft;
   const fmt = useFmt();
   const amountInputRef = useRef(null);
+  const purposeOptions = availablePurposes.map((c) => ({ id: c.id, label: c.name }));
 
   // Meistgenutzte Vorlagen zuerst; bei Gleichstand alphabetisch, damit die
   // Reihenfolge nicht bei jedem Render springt.
@@ -149,7 +151,7 @@ export default function EntryFormDialog({
             <div className="hb-label">Art</div>
             <EntryKindSelector value={kind} onChange={(v) => setField("kind", v)} />
             {kind === "expense" && (
-              <div className="hb-entry-form__hint">Quelle: Monat</div>
+              <div className="hb-field-hint">Quelle: Monat</div>
             )}
           </div>
 
@@ -170,7 +172,7 @@ export default function EntryFormDialog({
                 value={amount}
                 onChange={(e) => setField("amount", e.target.value)}
               />
-              <div className="hb-entry-form__field-hint">
+              <div className="hb-field-hint">
                 Komma geht auch (z.B. 12,50).
               </div>
             </div>
@@ -193,7 +195,7 @@ export default function EntryFormDialog({
             zu begrüßen. (Im Edit-Dialog liegt immer schon ein Wert vor.)
           */}
           {!canSave && amount ? (
-            <div className="hb-entry-form__error">
+            <div className="hb-field-error">
               Bitte Datum &amp; einen gültigen Betrag (&gt; 0) setzen.
             </div>
           ) : null}
@@ -230,15 +232,11 @@ export default function EntryFormDialog({
                   ))}
                 </select>
               </div>
-              <div className="hb-field">
-                <div className="hb-label">Transfer-Zweck</div>
-                <select className="hb-input" value={transferCategoryId} onChange={(e) => setField("transferCategoryId", e.target.value)}>
-                  {availablePurposes.length === 0 && <option value="">Kein Zweck</option>}
-                  {availablePurposes.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
+              <PurposeSelect
+                value={transferCategoryId}
+                options={purposeOptions}
+                onChange={(id) => setField("transferCategoryId", id)}
+              />
             </>
           ) : kind === "transfer" ? (
             <>
@@ -250,24 +248,22 @@ export default function EntryFormDialog({
                   ))}
                 </select>
               </div>
-              <div className="hb-field">
-                <div className="hb-label">Transfer-Zweck</div>
-                <select className="hb-input" value={transferCategoryId} onChange={(e) => setField("transferCategoryId", e.target.value)}>
-                  {availablePurposes.length === 0 && <option value="">Kein Zweck</option>}
-                  {availablePurposes.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-                {onOpenCategoryManager && (
+              <PurposeSelect
+                value={transferCategoryId}
+                options={purposeOptions}
+                onChange={(id) => setField("transferCategoryId", id)}
+              >
+                {onCreatePurpose && (
                   <button
                     type="button"
                     className="hb-link-btn"
-                    onClick={onOpenCategoryManager}
+                    title="Legt die Sparposition in den Rücklagen an und kehrt danach hierher zurück"
+                    onClick={onCreatePurpose}
                   >
-                    + Neuer Zweck
+                    + Neue Sparposition
                   </button>
                 )}
-              </div>
+              </PurposeSelect>
             </>
           ) : null}
         </div>

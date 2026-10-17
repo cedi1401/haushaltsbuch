@@ -140,6 +140,11 @@ describe('templateToDraftPatch', () => {
     }
   });
 
+  it('keeps a template without purpose on „Ohne Sparposition“', () => {
+    const patch = templateToDraftPatch({ kind: 'transfer', transferCategoryId: null, potId: 'pot_b' }, CTX);
+    expect(patch.transferCategoryId).toBe('');
+  });
+
   it('falls back to the first pot when the pot was deleted', () => {
     const patch = templateToDraftPatch(
       { kind: 'transfer', transferCategoryId: 'tcat_ferien', potId: 'pot_weg' },
@@ -200,7 +205,7 @@ describe('getTemplateIssues', () => {
 
   it('names a soft-deleted transfer purpose in the warning', () => {
     const issues = getTemplateIssues({ kind: 'transfer', transferCategoryId: 'tcat_alt', potId: 'pot_a' }, CTX);
-    expect(issues).toEqual(['Der Transfer-Zweck „Auto“ existiert nicht mehr.']);
+    expect(issues).toEqual(['Die Sparposition „Auto“ existiert nicht mehr.']);
   });
 
   it('reports missing pots', () => {

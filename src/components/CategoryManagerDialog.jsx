@@ -17,6 +17,8 @@ import {
   addTransferCategory as addTransferCategoryToList,
   renameTransferCategory,
   deleteTransferCategory as deleteTransferCategoryFromList,
+  isReservedPurposeName,
+  NO_PURPOSE_LABEL,
 } from "../utils/transferCategoryUtils.js";
 
 // Sieb auf Item-Ebene: erst entscheiden, welche Unterkategorien sichtbar sind,
@@ -123,7 +125,7 @@ export default function CategoryManagerDialog({
   }
 
   // -------------------------------------------------------
-  // Transfer-Zwecke CRUD
+  // Sparpositionen (Transfer-Zwecke) CRUD
   // -------------------------------------------------------
   // excludeId: der eigene Zweck beim Umbenennen, damit die Zeile nicht mit
   // sich selbst kollidiert. Gelöschte Zwecke zählen nicht als Duplikat.
@@ -132,8 +134,10 @@ export default function CategoryManagerDialog({
     if (!trimmed) return "Name darf nicht leer sein.";
     if (trimmed.length > MAX_TRANSFER_NAME_LENGTH)
       return `Name ist zu lang (max. ${MAX_TRANSFER_NAME_LENGTH} Zeichen).`;
+    if (isReservedPurposeName(trimmed))
+      return `„${NO_PURPOSE_LABEL}“ ist für Geld ohne Sparposition reserviert.`;
     if (findTransferCategoryByName(transferCategories, trimmed, { excludeId }))
-      return "Dieser Transfer-Zweck existiert bereits.";
+      return "Diese Sparposition existiert bereits.";
     return null;
   }
 
@@ -152,7 +156,7 @@ export default function CategoryManagerDialog({
     // seiner Buchungen.
     onUpdateTransferCategories?.(addTransferCategoryToList(transferCategories, trimmed, newPotId).list);
     setNewTransferName("");
-    toast.success(`Transfer-Zweck „${trimmed}“ erstellt.`);
+    toast.success(`Sparposition „${trimmed}“ erstellt.`);
   }
 
   function startTransferEdit(cat) {
@@ -184,7 +188,7 @@ export default function CategoryManagerDialog({
     setEditingTransfer(null);
     setTransferDraft("");
     requestAnimationFrame(() => transferEditBtnRefs.current[id]?.focus());
-    toast.success(`Transfer-Zweck „${oldName}“ in „${trimmed}“ umbenannt.`);
+    toast.success(`Sparposition „${oldName}“ in „${trimmed}“ umbenannt.`);
   }
 
   // Wegklicken speichert, solange die Eingabe gültig ist — sonst wird verworfen,
@@ -212,12 +216,9 @@ export default function CategoryManagerDialog({
   }
 
   async function deleteTransferCategory(cat) {
-    if (activeTransfers.length <= 1) {
-      toast.warning("Du brauchst mindestens einen Transfer-Zweck.");
-      return;
-    }
     // Seit Schema 7 ist der Zweck auch die Sparposition — mit ihm verschwindet
-    // die Rate aus den Fixkosten bzw. das Sparziel.
+    // die Rate aus den Fixkosten bzw. das Sparziel. Eine Mindestzahl gibt es
+    // nicht mehr: „Ohne Sparposition" ist in jedem Topf wählbar.
     const positionNote =
       cat.rule === "goal"
         ? "\n\nDamit entfällt auch das Sparziel."
@@ -225,8 +226,8 @@ export default function CategoryManagerDialog({
           ? "\n\nDamit entfällt auch die monatliche Rate in den Fixkosten."
           : "";
     const ok = await confirm({
-      title: "Transfer-Zweck löschen",
-      message: `Transfer-Zweck „${cat.name}“ wirklich löschen?\n\nBestehende Buchungen behalten den Zweck, er steht aber nicht mehr zur Auswahl.${positionNote}`,
+      title: "Sparposition löschen",
+      message: `Sparposition „${cat.name}“ wirklich löschen?\n\nDas Geld bleibt im Topf und zählt in den Rücklagen unter „${NO_PURPOSE_LABEL}“. Bestehende Buchungen behalten ihren Namen.${positionNote}`,
       confirmLabel: "Löschen",
       danger: true,
     });
@@ -236,7 +237,7 @@ export default function CategoryManagerDialog({
       setTransferDraft("");
     }
     onUpdateTransferCategories?.(deleteTransferCategoryFromList(transferCategories, cat.id));
-    toast.success("Transfer-Zweck gelöscht.");
+    toast.success("Sparposition gelöscht.");
   }
 
   // -------------------------------------------------------
@@ -619,7 +620,7 @@ export default function CategoryManagerDialog({
                 className={`hb-segmented__item${activeTab === "transfer" ? " hb-segmented__item--active" : ""}`}
                 onClick={() => setActiveTab("transfer")}
               >
-                Transfer-Zwecke
+                Sparpositionen
               </button>
             </div>
 
@@ -690,7 +691,7 @@ export default function CategoryManagerDialog({
               </div>
             </>
           ) : (
-            /* Tab: Transfer-Zwecke */
+            /* Tab: Sparpositionen */
             <div className="hb-cat-transfer-panel">
               {/* Hinzufügen-Input oben */}
               <div className="hb-cat-transfer-add">
@@ -699,7 +700,7 @@ export default function CategoryManagerDialog({
                   type="text"
                   value={newTransferName}
                   onChange={(e) => setNewTransferName(e.target.value)}
-                  placeholder="Neuer Transfer-Zweck..."
+                  placeholder="Neue Sparposition …"
                   style={{ flex: 1 }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -711,7 +712,7 @@ export default function CategoryManagerDialog({
                 <select
                   className="hb-input"
                   style={{ width: "auto", maxWidth: 180 }}
-                  aria-label="Topf des neuen Zwecks"
+                  aria-label="Topf der neuen Sparposition"
                   value={newPotId}
                   onChange={(e) => setNewTransferPotId(e.target.value)}
                 >
@@ -729,14 +730,15 @@ export default function CategoryManagerDialog({
                 </Button>
               </div>
 
-              {/* Liste der Transfer-Zwecke */}
+              {/* Liste der Sparpositionen */}
               <div className="hb-cat-list">
                 {activeTransfers.length === 0 ? (
                   <div className="hb-empty hb-empty--sm">
                     <div className="hb-empty-icon"><IconTransfer /></div>
-                    <div className="hb-empty-title">Noch keine Transfer-Zwecke</div>
+                    <div className="hb-empty-title">Noch keine Sparpositionen</div>
                     <div className="hb-empty-text">
-                      Lege einen Transfer-Zweck an, um Umbuchungen zwischen Töpfen zu kategorisieren.
+                      Lege eine Sparposition an, um Geld in einem Topf einem Zweck zuzuordnen.
+                      Raten, Ziele und Fälligkeiten legst du in den Rücklagen fest.
                     </div>
                   </div>
                 ) : (
@@ -755,7 +757,7 @@ export default function CategoryManagerDialog({
                           <div className="hb-cat-transfer-edit">
                             <input
                               ref={transferInputRef}
-                              className={`hb-input hb-cat-transfer-input${error ? " hb-cat-transfer-input--invalid" : ""}`}
+                              className={`hb-input hb-cat-transfer-input${error ? " hb-input--invalid" : ""}`}
                               type="text"
                               value={transferDraft}
                               maxLength={MAX_TRANSFER_NAME_LENGTH}
@@ -767,7 +769,7 @@ export default function CategoryManagerDialog({
                               onBlur={handleTransferEditBlur}
                             />
                             {error && (
-                              <span id={`transfer-error-${cat.id}`} className="hb-cat-transfer-error">
+                              <span id={`transfer-error-${cat.id}`} className="hb-field-error">
                                 {error}
                               </span>
                             )}
@@ -831,7 +833,6 @@ export default function CategoryManagerDialog({
                               onClick={() => deleteTransferCategory(cat)}
                               aria-label={`„${cat.name}“ löschen`}
                               title="Löschen"
-                              disabled={activeTransfers.length <= 1}
                             >
                               <IconDelete />
                             </button>

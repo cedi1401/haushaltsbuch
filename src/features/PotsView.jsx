@@ -19,7 +19,8 @@ import {
   ReferenceLine,
 } from "recharts";
 import { calcPotSeries, potPurposeBalances } from "../utils/potUtils.js";
-import { getPurposesForPot, getTransferCategoryName } from "../utils/transferCategoryUtils.js";
+import { getPurposesForPot, getTransferCategoryName, NO_PURPOSE_LABEL } from "../utils/transferCategoryUtils.js";
+import PurposeSelect from "../components/PurposeSelect.jsx";
 import { TRANSFER_PALETTE } from "../utils/hbPalette.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import { CHART_STROKE, CHART_HEIGHT, BAR_MAX_SIZE, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProps, zeroLineProps, lineCursorProps } from "../utils/chartStyle.js";
@@ -248,7 +249,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
     // gleich heißen und sollen im Donut ein Segment bleiben.
     const display = new Map();
     for (const [purposeId, value] of potPurposeBalances(entries, selectedPot.id)) {
-      const name = getTransferCategoryName(allTransferCategories, purposeId) || "Sonstiges";
+      const name = getTransferCategoryName(allTransferCategories, purposeId) || NO_PURPOSE_LABEL;
       display.set(name, (display.get(name) || 0) + value);
     }
 
@@ -292,7 +293,8 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
       });
     }
 
-    return { total, rows, segments, restCount: rest.length };
+    const positionCount = rows.filter((r) => r.name !== NO_PURPOSE_LABEL).length;
+    return { total, rows, segments, restCount: rest.length, positionCount };
   }, [transfersByCategory]);
 
   // Alle Einzelbuchungen (Transfers + Entnahmen) für den gewählten Topf, optional nach Monat gefiltert
@@ -610,16 +612,19 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
               </Card>
             </div>
 
-            {/* Zusammensetzung nach Zweck: 100-%-Stapelbalken + Rangliste, volle Breite */}
+            {/* Zusammensetzung nach Sparposition: 100-%-Stapelbalken + Rangliste, volle Breite */}
             {composition ? (
               <Card>
                 <CardContent>
                   <div className="hb-card-head">
                     <div className="hb-title-group">
                       <h3 className="hb-card-title">Zusammensetzung</h3>
-                      <span className="hb-info-pill hb-info-pill--title">
-                        {composition.rows.length} {composition.rows.length === 1 ? "Zweck" : "Zwecke"}
-                      </span>
+                      {/* Gezählt werden nur echte Sparpositionen, nicht „Ohne". */}
+                      {composition.positionCount > 0 && (
+                        <span className="hb-info-pill hb-info-pill--title">
+                          {composition.positionCount} {composition.positionCount === 1 ? "Sparposition" : "Sparpositionen"}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -658,7 +663,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
                       <span className="hb-chart-tooltip-label">
                         <span className="hb-tooltip-dot" style={{ background: compTip.seg.color }} />
                         {compTip.seg.restCount > 0
-                          ? `${compTip.seg.name} (${compTip.seg.restCount} Zwecke)`
+                          ? `${compTip.seg.name} (${compTip.seg.restCount} weitere)`
                           : compTip.seg.name}
                       </span>
                       <span>{fmt(compTip.seg.value)} · {sharePct(compTip.seg.share)} %</span>
@@ -717,7 +722,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
                   <div className="hb-empty hb-empty--sm">
                     <div className="hb-empty-icon"><IconInbox /></div>
                     <div className="hb-empty-title">Noch keine Zusammensetzung</div>
-                    <div className="hb-empty-text">Noch keine positiven Netto-Beträge je Zweck vorhanden.</div>
+                    <div className="hb-empty-text">Noch keine positiven Netto-Beträge je Sparposition vorhanden.</div>
                   </div>
                 </CardContent>
               </Card>
@@ -760,7 +765,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
                     <tr>
                       <th className="hb-col-date">Datum</th>
                       <th className="hb-col-type">Art</th>
-                      <th className="hb-col-category">Zweck</th>
+                      <th className="hb-col-category">Sparposition</th>
                       <th className="hb-col-note">Notiz</th>
                       <th className="hb-col-amount hb-right">Betrag</th>
                       <th className="hb-col-actions"></th>
@@ -859,8 +864,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
         canSave={
           newEntryDraft.date &&
           newEntryDraft.amount &&
-          parseAmount(newEntryDraft.amount) > 0 &&
-          (potPurposes.length === 0 || Boolean(newEntryDraft.transferCategoryId))
+          parseAmount(newEntryDraft.amount) > 0
         }
         saveLabel="Hinzufügen"
         size="medium"
@@ -893,21 +897,11 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
             </div>
           </div>
 
-          <div className="hb-field">
-            <div className="hb-label">Transfer-Zweck</div>
-            <select
-              className="hb-input"
-              value={newEntryDraft.transferCategoryId}
-              onChange={(e) => setNewEntryDraft((d) => ({ ...d, transferCategoryId: e.target.value }))}
-            >
-              {potPurposes.length === 0 && <option value="">Kein Zweck</option>}
-              {potPurposes.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <PurposeSelect
+            value={newEntryDraft.transferCategoryId}
+            options={potPurposes.map((c) => ({ id: c.id, label: c.name }))}
+            onChange={(id) => setNewEntryDraft((d) => ({ ...d, transferCategoryId: id }))}
+          />
 
           <div className="hb-field">
             <div className="hb-label">Notiz (optional)</div>

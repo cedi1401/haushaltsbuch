@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import EditDialog from "./EditDialog.jsx";
 import { HierarchicalCategoryPicker } from "./HierarchicalCategoryPicker.jsx";
+import PurposeSelect from "./PurposeSelect.jsx";
 import { useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { parseAmount } from "../utils/formatUtils.js";
 import { TEMPLATE_NAME_MAX } from "../utils/entryTemplateUtils.js";
@@ -8,7 +9,7 @@ import { EMPTY_ARRAY } from "../utils/constants.js";
 import {
   getPurposesForPot,
   getTransferCategoryOptions,
-  validTransferCategoryId,
+  purposeForPot,
 } from "../utils/transferCategoryUtils.js";
 
 const EMPTY_DRAFT = {
@@ -22,23 +23,26 @@ const EMPTY_DRAFT = {
   potId: "",
 };
 
-// Ein Zweck gehört genau einem Topf: der gewählte muss zum Topf passen, sonst
-// der erste des Topfs (oder keiner).
-function withPotPurpose(draft, transferCategories) {
-  if (draft.kind !== "transfer" && draft.kind !== "withdrawal") return draft;
-  const choices = getPurposesForPot(transferCategories, draft.potId);
-  if (choices.some((c) => c.id === draft.transferCategoryId)) return draft;
-  return { ...draft, transferCategoryId: validTransferCategoryId(choices, draft.transferCategoryId) };
+const isPotKind = (kind) => kind === "transfer" || kind === "withdrawal";
+
+// Ein Zweck gehört genau einem Topf: der gewählte muss zum Topf passen.
+// „Ohne Sparposition" bleibt stehen; mit `suggest` (Topf gewechselt, frisch
+// auf Transfer/Entnahme gewechselt) wird die erste Sparposition vorgeschlagen.
+function withPotPurpose(draft, transferCategories, suggest = false) {
+  if (!isPotKind(draft.kind)) return draft;
+  const id = purposeForPot(transferCategories, draft.potId, draft.transferCategoryId, { suggest });
+  return id === draft.transferCategoryId ? draft : { ...draft, transferCategoryId: id };
 }
 
-function draftFromTemplate(template, { transferCategories, pots }) {
+function draftFromTemplate(template, { pots }) {
   if (!template) {
     return {
       ...EMPTY_DRAFT,
       potId: pots[0]?.id || "",
     };
   }
-  // Ein gelöschter Zweck bleibt stehen und erscheint als eigene Option.
+  // Ein gelöschter Zweck bleibt stehen und erscheint als eigene Option; ohne
+  // Zweck steht „Ohne Sparposition".
   return {
     name: template.name || "",
     kind: template.kind || "expense",
@@ -46,10 +50,7 @@ function draftFromTemplate(template, { transferCategories, pots }) {
     note: template.note || "",
     categoryId: template.categoryId || null,
     subcategoryId: template.subcategoryId || null,
-    transferCategoryId:
-      template.transferCategoryId ||
-      getPurposesForPot(transferCategories, template.potId || pots[0]?.id)[0]?.id ||
-      "",
+    transferCategoryId: template.transferCategoryId || "",
     potId: template.potId || pots[0]?.id || "",
   };
 }
@@ -74,7 +75,7 @@ export default function EntryTemplateFormDialog({
 }) {
   const baseCurrency = useBaseCurrency();
   const [draft, setDraft] = useState(() =>
-    draftFromTemplate(template, { transferCategories, pots })
+    draftFromTemplate(template, { pots })
   );
 
   // Draft beim Öffnen aus der Vorlage ableiten — aus dem open/template-Übergang
@@ -83,10 +84,10 @@ export default function EntryTemplateFormDialog({
   const key = open ? template?.id ?? "__new__" : null;
   if (key !== prevKey) {
     setPrevKey(key);
-    if (open) setDraft(draftFromTemplate(template, { transferCategories, pots }));
+    if (open) setDraft(draftFromTemplate(template, { pots }));
   }
 
-  const isTransferKind = draft.kind === "transfer" || draft.kind === "withdrawal";
+  const isTransferKind = isPotKind(draft.kind);
   const potPurposes = useMemo(
     () => getPurposesForPot(transferCategories, draft.potId),
     [transferCategories, draft.potId]
@@ -112,12 +113,11 @@ export default function EntryTemplateFormDialog({
       const n = parseAmount(draft.amount);
       if (!Number.isFinite(n) || n <= 0) return false;
     }
-    // Eine Transfer-Vorlage ohne Topf wäre wertlos; ein Zweck ist Pflicht,
-    // sobald der Topf welche hat.
+    // Eine Transfer-Vorlage ohne Topf wäre wertlos; die Sparposition ist
+    // optional („Ohne Sparposition").
     if (isTransferKind && !draft.potId) return false;
-    if (isTransferKind && potPurposes.length > 0 && !draft.transferCategoryId) return false;
     return true;
-  }, [draft, nameError, isTransferKind, potPurposes]);
+  }, [draft, nameError, isTransferKind]);
 
   function handleSave() {
     if (!canSave) return;
@@ -145,10 +145,11 @@ export default function EntryTemplateFormDialog({
           // Kategoriefelder und Transferfelder schließen sich aus
           categoryId: kind === "income" ? "cat_einnahmen" : null,
           subcategoryId: null,
-          transferCategoryId: kind === "transfer" || kind === "withdrawal" ? d.transferCategoryId : "",
-          potId: kind === "transfer" || kind === "withdrawal" ? d.potId || pots[0]?.id || "" : "",
+          transferCategoryId: isPotKind(kind) ? d.transferCategoryId : "",
+          potId: isPotKind(kind) ? d.potId || pots[0]?.id || "" : "",
         },
-        transferCategories
+        transferCategories,
+        !isPotKind(d.kind)
       )
     );
   }
@@ -168,18 +169,18 @@ export default function EntryTemplateFormDialog({
           <div className="hb-field">
             <div className="hb-label">Name</div>
             <input
-              className="hb-input"
+              className={`hb-input${nameError ? " hb-input--invalid" : ""}`}
               style={{ width: "100%", minWidth: 0 }}
               type="text"
               maxLength={TEMPLATE_NAME_MAX}
               placeholder="z.B. Wocheneinkauf"
               value={draft.name}
+              aria-invalid={nameError ? "true" : undefined}
+              aria-describedby={nameError ? "hb-tpl-name-error" : undefined}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
               autoFocus
             />
-            {nameError && (
-              <div style={{ marginTop: 6, color: "var(--red)", fontSize: 12 }}>{nameError}</div>
-            )}
+            {nameError && <div id="hb-tpl-name-error" className="hb-field-error">{nameError}</div>}
           </div>
           <div className="hb-field">
             <div className="hb-label">Betrag ({baseCurrency})</div>
@@ -235,27 +236,15 @@ export default function EntryTemplateFormDialog({
         {isTransferKind && (
           <>
             <div className="hb-field">
-              <div className="hb-label">Transfer-Zweck</div>
-              <select
-                className="hb-input"
-                value={draft.transferCategoryId}
-                onChange={(e) => setDraft((d) => ({ ...d, transferCategoryId: e.target.value }))}
-              >
-                {potPurposes.length === 0 && !draft.transferCategoryId && (
-                  <option value="">Kein Zweck</option>
-                )}
-                {getTransferCategoryOptions(allTransferCategories, draft.transferCategoryId, potPurposes).map((opt) => (
-                  <option key={opt.id} value={opt.id}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="hb-field">
               <div className="hb-label">{draft.kind === "transfer" ? "In Topf" : "Aus Topf"}</div>
               <select
                 className="hb-input"
                 value={draft.potId}
                 onChange={(e) =>
-                  setDraft((d) => withPotPurpose({ ...d, potId: e.target.value }, transferCategories))
+                  // Bewusst gewähltes „Ohne" bleibt beim Topfwechsel stehen.
+                  setDraft((d) =>
+                    withPotPurpose({ ...d, potId: e.target.value }, transferCategories, Boolean(d.transferCategoryId))
+                  )
                 }
               >
                 {pots.length === 0 && <option value="">Kein Topf vorhanden</option>}
@@ -264,6 +253,12 @@ export default function EntryTemplateFormDialog({
                 ))}
               </select>
             </div>
+            {/* Nach dem Topf: die Auswahl hängt an ihm. */}
+            <PurposeSelect
+              value={draft.transferCategoryId}
+              options={getTransferCategoryOptions(allTransferCategories, draft.transferCategoryId, potPurposes)}
+              onChange={(id) => setDraft((d) => ({ ...d, transferCategoryId: id }))}
+            />
           </>
         )}
       </div>

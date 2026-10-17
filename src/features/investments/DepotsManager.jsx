@@ -197,7 +197,7 @@ export default function DepotsManager({ investments, onChange }) {
                     <>
                       <input
                         ref={inputRef}
-                        className={`hb-input hb-potmgr-input${error ? " hb-potmgr-input--invalid" : ""}`}
+                        className={`hb-input hb-potmgr-input${error ? " hb-input--invalid" : ""}`}
                         type="text"
                         value={editName}
                         maxLength={DEPOT_NAME_MAX}
@@ -308,7 +308,7 @@ export default function DepotsManager({ investments, onChange }) {
             <div className="hb-potmgr-main">
               <input
                 ref={inputRef}
-                className={`hb-input hb-potmgr-input${showNewError ? " hb-potmgr-input--invalid" : ""}`}
+                className={`hb-input hb-potmgr-input${showNewError ? " hb-input--invalid" : ""}`}
                 type="text"
                 value={newName}
                 maxLength={DEPOT_NAME_MAX}
