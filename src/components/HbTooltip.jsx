@@ -22,8 +22,7 @@ function getTriggerCenter(triggerEl) {
  * flackert die Blase beim Überstreichen einer Tabellenspalte), per
  * Tastaturfokus sofort. `focusable={false}` nimmt den Auslöser aus der
  * Tab-Reihenfolge (Tabellenzeilen, Inhalte fokussierbarer Karten).
- * `inline` für Fließtext, der umbrechen darf; `underline` kennzeichnet ein
- * reines Textlabel gepunktet (Pillen und Zahlen bleiben unverändert).
+ * `inline` für Fließtext, der umbrechen darf.
  */
 const WRAP_DELAY = 400;
 
@@ -36,7 +35,6 @@ export default function HbTooltip({
   children,
   focusable = true,
   inline = false,
-  underline = false,
 }) {
   const [state, setState] = useState(null); // { coords, arrowX, effectivePlacement }
   const triggerRef = useRef(null);
@@ -121,7 +119,6 @@ export default function HbTooltip({
     "hb-tooltip",
     wraps && "hb-tooltip--wrap",
     wraps && inline && "hb-tooltip--inline",
-    wraps && underline && "hb-tooltip--underline",
     className,
   ].filter(Boolean).join(" ");
 

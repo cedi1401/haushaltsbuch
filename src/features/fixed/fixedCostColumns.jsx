@@ -254,20 +254,16 @@ function catalog(kind, { fmt, categoryById, potNameById, groupNameById }) {
     name,
     {
       // Die Art der Sparposition (Freie Rücklage, Rückstellung, Sparziel).
-      // Freie Rücklagen und Sparziele zählen nicht zu den Fixkosten pro Monat.
+      // Freie Rücklagen und Sparziele zählen nicht zu den Fixkosten pro Monat —
+      // das erklärt einmal der Spaltenkopf statt jede Zeile.
       id: "rule",
       label: "Art",
+      help:
+        "Nur Rückstellungen zählen zu den Fixkosten pro Monat. Die Raten für freie " +
+        "Rücklagen und Sparziele werden hier gebucht, zählen aber nicht dazu.",
       shrink: true,
       sortValue: (row) => RULE_LABEL[row.item?.rule] ?? null,
-      render: (row) => {
-        const label = RULE_LABEL[row.item?.rule];
-        if (isSinkingFund(row.item)) return label;
-        return (
-          <HbTooltip text="Zählt nicht zu den Fixkosten pro Monat" focusable={false} underline>
-            <span className="hb-fixed-free">{label}</span>
-          </HbTooltip>
-        );
-      },
+      render: (row) => RULE_LABEL[row.item?.rule],
     },
     {
       id: "pot",

@@ -2033,6 +2033,16 @@ select.hb-input option {
 /* Zahlenspalten: Beschriftung und Pfeil rücken nach rechts. */
 .hb-dt-num .hb-dt-th-btn { justify-content: flex-end; }
 
+/* Spaltenkopf mit „?"-Tooltip: Sortier-Button und Icon nebeneinander, der
+   Button ist dann nur so breit wie Beschriftung und Pfeil. */
+.hb-dt-th-help {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.hb-dt-th-help .hb-dt-th-btn { width: auto; }
+.hb-dt-num .hb-dt-th-help { justify-content: flex-end; }
+
 /* Der Pfeil steht nur an der aktiven Spalte; an der überfahrenen erscheint er
    halbtransparent als Hinweis darauf, dass die Spalte sortierbar ist. Er
    belegt seinen Platz immer, sonst springt die Beschriftung beim Hover. */
@@ -3888,12 +3898,6 @@ select.hb-input option {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-}
-
-/* Rücklage ohne Turnus in der Turnus-Spalte — zurückhaltend, mit Tooltip.
-   Dasselbe Idiom trägt die Trend-Übersichtsliste in .hb-fct-overview-cat--free. */
-.hb-fixed-free {
-  color: var(--muted);
 }
 
 /* Status „Diesen Monat": gefüllter grüner Kreis mit ausgespartem Haken
@@ -5882,12 +5886,6 @@ select.hb-input option {
 .hb-tooltip--inline,
 .hb-tooltip--inline > .hb-tooltip-target {
   display: inline;
-}
-/* Reines Textlabel: gepunktet unterstrichen, damit die Erklärung auffindbar ist */
-.hb-tooltip--underline > .hb-tooltip-target {
-  text-decoration: underline dotted;
-  text-decoration-color: var(--muted);
-  text-underline-offset: 3px;
 }
 
 .hb-tooltip-bubble {

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTableColumns } from "../hooks/useTableColumns.js";
 import ColumnsFlyout from "./ColumnsFlyout.jsx";
+import HbTooltip from "./HbTooltip.jsx";
 import { IconChevron } from "./icons.jsx";
 
 // Stabile Identität für den Ausgangszustand — ein Literal im useState-Aufruf
@@ -24,7 +25,8 @@ const ACTIONS_LINGER_MS = 300;
  *   {
  *     id,                       // Persistenz- und Sortierschlüssel
  *     label,
- *     align,                    // "right" ⇒ rechtsbündig
+ *     help,                     // Text ⇒ „?"-Tooltip neben der Beschriftung
+ *     align,                   // "right" ⇒ rechtsbündig
  *     maxWidth,                 // px ⇒ Text wird gedeckelt und mit … gekürzt
  *     shrink,                   // true ⇒ Spalte nur so breit wie ihr Inhalt;
  *                               // die übrige Breite geht an die anderen Spalten
@@ -256,14 +258,30 @@ export default function DataTable({
                     // .hb-dt-shrink überstimmt.
                     style={col.width ? { width: col.width } : undefined}
                   >
-                    <button
-                      type="button"
-                      className="hb-dt-th-btn"
-                      onClick={() => toggleSort(col.id)}
-                    >
-                      <span>{col.label}</span>
-                      <SortArrow active={active} dir={sort?.dir} />
-                    </button>
+                    {col.help ? (
+                      // Das „?" steht neben dem Sortier-Button, nicht darin:
+                      // Buttons lassen sich nicht verschachteln.
+                      <span className="hb-dt-th-help">
+                        <button
+                          type="button"
+                          className="hb-dt-th-btn"
+                          onClick={() => toggleSort(col.id)}
+                        >
+                          <span>{col.label}</span>
+                          <SortArrow active={active} dir={sort?.dir} />
+                        </button>
+                        <HbTooltip size={14} text={col.help} />
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="hb-dt-th-btn"
+                        onClick={() => toggleSort(col.id)}
+                      >
+                        <span>{col.label}</span>
+                        <SortArrow active={active} dir={sort?.dir} />
+                      </button>
+                    )}
                   </th>
                 );
               })}
