@@ -44,6 +44,7 @@ export const VIEWS = [
     usesMonth: true,
     Component: DashboardView,
     getProps: (ctx) => ({
+      books: ctx.books,
       activeBook: ctx.activeBook,
       filteredEntries: ctx.filteredEntries,
       totalIncome: ctx.totalIncome,

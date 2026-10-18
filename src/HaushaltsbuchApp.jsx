@@ -191,7 +191,7 @@ export default function HaushaltsbuchApp() {
 
   // Alles, woraus die Registry die Props der Views baut (siehe viewRegistry.js).
   const viewContext = {
-    activeBook, entries, filteredEntries, entriesSorted,
+    books, activeBook, entries, filteredEntries, entriesSorted,
     totalIncome, totalExpense, totalTransfers,
     totalSavingsTransfers, totalReserveTransfers, balance,
     potBalances, expenseByHierarchy, incomeByHierarchy,

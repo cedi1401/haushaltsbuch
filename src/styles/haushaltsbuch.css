@@ -3243,6 +3243,159 @@ select.hb-input option {
 }
 
 /* =====================================================
+   BANKIMPORT-DIALOG (Kontoauszug importieren)
+   Breiter Dialog, der ganze Body scrollt — die Tabelle selbst nie.
+   ===================================================== */
+/* Viel Inhalt pro Zeile: rund 50 % breiter als die übliche volle Breite. */
+.hb-modal-panel-full:has(.hb-bankimport) {
+  max-width: 1350px;
+}
+
+.hb-modal-panel-full .hb-modal-body:has(> .hb-bankimport) {
+  display: block;
+  overflow-y: auto;
+}
+
+.hb-bankimport {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hb-bankimport-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hb-bankimport-other {
+  margin-left: 6px;
+}
+
+.hb-bankimport-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hb-bankimport-alerts:empty {
+  display: none;
+}
+
+.hb-bankimport-drop {
+  min-height: 240px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.hb-bankimport-drop--over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.hb-bankimport-table td {
+  vertical-align: top;
+  padding-block: 10px;
+}
+
+.hb-bankimport-table .hb-bankimport-col-check {
+  width: 36px;
+  padding-inline: 10px 0;
+}
+
+.hb-bankimport-table input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 8px 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.hb-bankimport-table th input[type="checkbox"] {
+  margin-top: 0;
+  vertical-align: middle;
+}
+
+.hb-bankimport-table input[type="checkbox"]:disabled {
+  cursor: default;
+}
+
+.hb-bankimport-table .hb-col-date {
+  width: 96px;
+}
+
+/* Text- und Datumszellen auf die Höhe der 32-px-Felder bringen. */
+.hb-bankimport-table td.hb-col-date,
+.hb-bankimport-table td.hb-col-amount,
+.hb-bankimport-text,
+.hb-bankimport-static {
+  line-height: 32px;
+}
+
+.hb-bankimport-table .hb-bankimport-col-text {
+  width: 230px;
+}
+
+/* Kategorie und Notiz ohne feste Breite: bei table-layout: fixed teilen sie
+   sich den Platz zwischen Buchung und Betrag zu gleichen Teilen. */
+.hb-bankimport-table .hb-col-category,
+.hb-bankimport-table .hb-col-note {
+  width: auto;
+  max-width: none;
+}
+
+.hb-bankimport-table .hb-col-amount {
+  width: 110px;
+}
+
+.hb-bankimport-text {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-bankimport-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-top: 2px;
+}
+
+.hb-bankimport-static {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-bankimport-table .hb-input {
+  height: 32px;
+  min-height: 32px;
+  padding-block: 0;
+  width: 100%;
+}
+
+.hb-bankimport-table .hb-input {
+  min-width: 0;
+}
+
+.hb-bankimport-apply {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.hb-bankimport-row--locked td {
+  opacity: 0.55;
+}
+
+.hb-bankimport-row--locked:hover td {
+  background: transparent;
+}
+
+/* =====================================================
    NAVIGATIONSLEISTE (WinUI NavigationView)
    Fixiert am linken Rand. Eingeklappt 48 px (nur Icons, Tooltips),
    ausgeklappt 240 px mit Gruppenüberschriften. Unter 2240 px Fensterbreite
@@ -5226,6 +5379,116 @@ select.hb-input option {
   white-space: nowrap;
 }
 
+/* „Zuletzt verwendet“ über der Liste: flache Zeilen ohne Einzug, getrennt
+   durch die normale Gruppenlinie. */
+.hb-hcat-section-label {
+  padding: 8px 12px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.hb-hcat-recent {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Gegenstück zu „Zuletzt verwendet“: trennt die vollständige Liste sichtbar ab. */
+.hb-hcat-section-label--all {
+  padding-top: 10px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.hb-hcat-recent .hb-hcat-recent-row {
+  padding-left: 12px;
+  border-bottom: none;
+}
+
+/* =====================================================
+   KATEGORIE-FLYOUT (CategoryFlyout)
+   Feld im Stil von select.hb-input, das den Kategorie-Picker als Flyout
+   öffnet. Liegt per Portal über dem Dialog (position: fixed).
+   ===================================================== */
+.hb-catflyout-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.hb-catflyout-trigger--open {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.hb-catflyout-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-catflyout-value--empty {
+  color: var(--muted);
+}
+
+.hb-catflyout-chevron {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+
+.hb-catflyout-trigger--open .hb-catflyout-chevron {
+  transform: rotate(180deg);
+}
+
+.hb-catflyout {
+  position: fixed;
+  z-index: var(--z-popover);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 10px;
+  animation: hb-dp-in 0.12s var(--ease-decelerate);
+  /* max-height setzt CategoryFlyout aus dem freien Platz; die Liste schrumpft mit. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hb-catflyout .hb-hcat-picker {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.hb-catflyout .hb-hcat-box {
+  min-height: 0;
+  flex: 0 1 auto;
+}
+
+.hb-catflyout--up {
+  animation-name: hb-dp-in-up;
+}
+
+.hb-catflyout .hb-hcat-picker {
+  margin: 0;
+}
+
+.hb-catflyout-foot {
+  flex-shrink: 0;
+}
+
+.hb-catflyout-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+
 /* =====================================================
    ANALYSIS GRID (Charts + InsightsPanel, 55/45 split)
    ===================================================== */
@@ -5379,116 +5642,6 @@ select.hb-input option {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   overflow: hidden;
-/* „Zuletzt verwendet“ über der Liste: flache Zeilen ohne Einzug, getrennt
-   durch die normale Gruppenlinie. */
-.hb-hcat-section-label {
-  padding: 8px 12px 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.hb-hcat-recent {
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border);
-}
-
-/* Gegenstück zu „Zuletzt verwendet“: trennt die vollständige Liste sichtbar ab. */
-.hb-hcat-section-label--all {
-  padding-top: 10px;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.hb-hcat-recent .hb-hcat-recent-row {
-  padding-left: 12px;
-  border-bottom: none;
-}
-
-/* =====================================================
-   KATEGORIE-FLYOUT (CategoryFlyout)
-   Feld im Stil von select.hb-input, das den Kategorie-Picker als Flyout
-   öffnet. Liegt per Portal über dem Dialog (position: fixed).
-   ===================================================== */
-.hb-catflyout-trigger {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-}
-
-.hb-catflyout-trigger--open {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
-}
-
-.hb-catflyout-value {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hb-catflyout-value--empty {
-  color: var(--muted);
-}
-
-.hb-catflyout-chevron {
-  flex-shrink: 0;
-  color: var(--muted);
-  transition: transform 0.2s ease;
-}
-
-.hb-catflyout-trigger--open .hb-catflyout-chevron {
-  transform: rotate(180deg);
-}
-
-.hb-catflyout {
-  position: fixed;
-  z-index: var(--z-popover);
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  padding: 10px;
-  animation: hb-dp-in 0.12s var(--ease-decelerate);
-  /* max-height setzt CategoryFlyout aus dem freien Platz; die Liste schrumpft mit. */
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.hb-catflyout .hb-hcat-picker {
-  flex: 0 1 auto;
-  min-height: 0;
-}
-
-.hb-catflyout .hb-hcat-box {
-  min-height: 0;
-  flex: 0 1 auto;
-}
-
-.hb-catflyout--up {
-  animation-name: hb-dp-in-up;
-}
-
-.hb-catflyout .hb-hcat-picker {
-  margin: 0;
-}
-
-.hb-catflyout-foot {
-  flex-shrink: 0;
-}
-
-.hb-catflyout-foot {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 8px;
-}
-
   padding: 3px;
   gap: 1px;
 }

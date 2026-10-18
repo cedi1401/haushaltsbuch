@@ -13,6 +13,7 @@ import { MONTHS_SHORT, EMPTY_ARRAY } from "../utils/constants.js";
 import SurplusSweepDialog, { SWEEP_FALLBACK_POT } from "./insights/SurplusSweepDialog.jsx";
 
 import EntryFormDialog from "./EntryFormDialog.jsx";
+import BankImportDialog from "./BankImportDialog.jsx";
 import Charts from "./Charts.jsx";
 import InsightsPanel from "./InsightsPanel.jsx";
 import EntriesTable from "./EntriesTable.jsx";
@@ -25,6 +26,7 @@ function fmtTileDate(iso) {
 }
 
 export default function DashboardView({
+  books,
   activeBook,
   filteredEntries,
   totalIncome,
@@ -53,6 +55,7 @@ export default function DashboardView({
   const [showAllPots, setShowAllPots] = useState(false);
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
   const [sweepOpen, setSweepOpen] = useState(false);
+  const [bankImportOpen, setBankImportOpen] = useState(false);
 
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
   const incomeCategories = activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES;
@@ -203,6 +206,9 @@ export default function DashboardView({
     <>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         <Button onClick={() => entryActions.setAddEntryOpen(true)}>Buchung hinzufügen</Button>
+        <Button variant="outline" onClick={() => setBankImportOpen(true)}>
+          Kontoauszug importieren
+        </Button>
         <Button variant="outline" onClick={onOpenCategoryManager}>
           Kategorien bearbeiten
         </Button>
@@ -216,6 +222,16 @@ export default function DashboardView({
           </Button>
         )}
       </div>
+
+      {bankImportOpen && (
+        <BankImportDialog
+          open
+          books={books}
+          activeBook={activeBook}
+          patchActiveBook={patchActiveBook}
+          onClose={() => setBankImportOpen(false)}
+        />
+      )}
 
       {sweepOpen && (
         <SurplusSweepDialog
