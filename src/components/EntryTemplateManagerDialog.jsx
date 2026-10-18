@@ -192,7 +192,7 @@ export default function EntryTemplateManagerDialog({
             Vorlagen bearbeiten
             <HbTooltip
               placement="bottom"
-              text="Vorlagen erscheinen als Chips oben im Buchungsdialog und füllen Art, Kategorie, Notiz und optional den Betrag vor. Ohne Betrag bleibt das Betragsfeld leer und wird jedes Mal neu erfasst. Die Chips sind nach Häufigkeit sortiert."
+              text="Vorlagen stehen oben im Fenster „Buchung hinzufügen“. Ein Klick auf eine Vorlage trägt Art, Kategorie, Notiz und – falls hinterlegt – den Betrag ein. Ist kein Betrag hinterlegt, gibst du ihn jedes Mal selbst ein. Oft genutzte Vorlagen stehen zuerst."
             />
           </span>
         }

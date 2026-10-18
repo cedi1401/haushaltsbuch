@@ -91,7 +91,7 @@ export default function EntriesTable({
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <h3 className="hb-card-title">Buchungen</h3>
             <HbTooltip
-              text="Wenn du im Monatsfilter editierst und das Datum in einen anderen Monat änderst, verschwindet der Eintrag aus der aktuellen Ansicht."
+              text="Ist ein Monat ausgewählt, zeigt die Tabelle nur dessen Buchungen. Änderst du beim Bearbeiten das Datum auf einen anderen Monat, verschwindet die Buchung hier und erscheint in jenem Monat."
               placement="right"
             />
           </div>
