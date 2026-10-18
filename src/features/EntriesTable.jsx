@@ -1,22 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
-import { IconEdit, IconDelete, IconInbox, IconPlus, IconSearch, IconClose } from "../components/icons.jsx";
+import { IconEdit, IconDelete, IconInbox, IconPlus, IconSearch } from "../components/icons.jsx";
 import { formatDateDE } from "../utils/formatUtils.js";
 import { getEntryCategoryName } from "../utils/hbUtils.js";
 import { searchEntries, searchHighlightPattern } from "../utils/entrySearch.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
+import EntrySearchField, { SearchHighlight } from "../components/EntrySearchField.jsx";
 
 const CHUNK_SIZE = 100;
-
-/** Markiert die Treffer der Suche in einem Zellentext. */
-function highlight(text, pattern) {
-  if (!pattern || !text) return text;
-  // split() mit Fanggruppe: Treffer stehen an den ungeraden Indizes.
-  return text.split(pattern).map((part, i) =>
-    i % 2 === 1 ? <mark key={i} className="hb-search-hit">{part}</mark> : part
-  );
-}
 
 export default function EntriesTable({
   entriesSorted,
@@ -96,36 +88,12 @@ export default function EntriesTable({
             />
           </div>
           {showSearch ? (
-            <div className="hb-search-field hb-entries-search">
-              <span className="hb-search-icon"><IconSearch width={16} height={16} /></span>
-              <input
-                ref={searchInputRef}
-                className={`hb-input${query ? " hb-input--clearable" : ""}`}
-                type="search"
-                placeholder="Notiz, Betrag oder Kategorie suchen…"
-                aria-label="Buchungen durchsuchen"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape" && query) {
-                    e.preventDefault();
-                    setQuery("");
-                  }
-                }}
-                autoComplete="off"
-              />
-              {query ? (
-                <button
-                  type="button"
-                  className="hb-icon-btn hb-icon-btn--subtle hb-search-clear"
-                  onClick={clearSearch}
-                  aria-label="Suche leeren"
-                  title="Suche leeren"
-                >
-                  <IconClose width={14} height={14} />
-                </button>
-              ) : null}
-            </div>
+            <EntrySearchField
+              ref={searchInputRef}
+              query={query}
+              onQueryChange={setQuery}
+              onClear={clearSearch}
+            />
           ) : null}
           <div className="hb-info-pills">
             <span className="hb-info-pill">
@@ -215,15 +183,18 @@ export default function EntriesTable({
                   }
 
                   const amountText = fmt(Number(e.amount || 0));
+                  const categoryName = getEntryCategoryName(e, expenseCategories, incomeCategories, transferCategories);
 
                   return (
                     <tr key={e.id}>
                       <td className="hb-col-date">{formatDateDE(e.date)}</td>
                       <td className="hb-col-type">{typeLabel}</td>
                       <td className="hb-col-category">
-                        {highlight(getEntryCategoryName(e, expenseCategories, incomeCategories, transferCategories), highlightPattern) || "—"}
+                        {categoryName ? <SearchHighlight text={categoryName} pattern={highlightPattern} /> : "—"}
                       </td>
-                      <td className="hb-col-note">{highlight(e.note, highlightPattern) || "—"}</td>
+                      <td className="hb-col-note">
+                        {e.note ? <SearchHighlight text={e.note} pattern={highlightPattern} /> : "—"}
+                      </td>
                       <td className={`hb-col-amount hb-right ${colorClass}`}>
                         {arrow ? (
                           <>

@@ -116,6 +116,7 @@ export const VIEWS = [
       onRemoveEntry: ctx.entryActions.removeEntry,
       monthStartDay: ctx.monthStartDay,
       monthFilter: ctx.monthFilter,
+      onMonthFilterChange: ctx.setMonthFilter,
       monthLabel: ctx.monthLabel,
     }),
   },

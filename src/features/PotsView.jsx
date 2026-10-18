@@ -38,7 +38,10 @@ import {
   IconInbox,
   IconCheck,
   IconChevron,
+  IconSearch,
 } from "../components/icons.jsx";
+import EntrySearchField, { SearchHighlight } from "../components/EntrySearchField.jsx";
+import { searchEntries, searchHighlightPattern } from "../utils/entrySearch.js";
 
 const fmtYearMonth = formatYearMonth;
 
@@ -81,7 +84,7 @@ function tipCoords(e) {
   return { x, y: rect.top };
 }
 
-export default function PotsView({ activeBook, selectedPotId, onSelectPot, entries, onAddTransferEntry, onUpdateBook, transferCategories, onEditEntry, onRemoveEntry, monthStartDay = 1, monthFilter, monthLabel }) {
+export default function PotsView({ activeBook, selectedPotId, onSelectPot, entries, onAddTransferEntry, onUpdateBook, transferCategories, onEditEntry, onRemoveEntry, monthStartDay = 1, monthFilter, onMonthFilterChange, monthLabel }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const pots = useMemo(() => activeBook?.pots || [], [activeBook?.pots]);
@@ -92,6 +95,8 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
   const [addEntryOpen, setAddEntryOpen] = useState(false);
   const [managePotsOpen, setManagePotsOpen] = useState(false);
   const [showAllEntries, setShowAllEntries] = useState(false);
+  const [entryQuery, setEntryQuery] = useState("");
+  const entrySearchRef = useRef(null);
   const [showAllPurposes, setShowAllPurposes] = useState(false);
   // Hover-Tooltip über dem Zusammensetzungsbalken: { seg, x, y } in
   // Viewport-Koordinaten (das Panel liegt fixed, siehe .hb-potcomp-tip).
@@ -315,6 +320,21 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
         return String(b.id || "").localeCompare(String(a.id || ""));
       });
   }, [entries, selectedPot, monthFilter, monthStartDay]);
+
+  // Suche wie in der Buchungstabelle des Dashboards; während der Suche nicht
+  // auf fünf Zeilen einklappen, damit alle Treffer sichtbar sind.
+  const isSearchingEntries = entryQuery.trim() !== "";
+  const entryMatches = useMemo(
+    () => searchEntries(potEntries, entryQuery, { transferCategories: allTransferCategories }),
+    [potEntries, entryQuery, allTransferCategories]
+  );
+  const entryHighlightPattern = useMemo(() => searchHighlightPattern(entryQuery), [entryQuery]);
+  const showEntrySearch = potEntries.length > 0 || isSearchingEntries;
+
+  function clearEntrySearch() {
+    setEntryQuery("");
+    entrySearchRef.current?.focus();
+  }
 
 
   if (!selectedPot) {
@@ -739,8 +759,21 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
               <h3 className="hb-card-title">Buchungen</h3>
               <span className="hb-info-pill hb-info-pill--title">{selectedPot.name}</span>
             </div>
+            {showEntrySearch ? (
+              <EntrySearchField
+                ref={entrySearchRef}
+                query={entryQuery}
+                onQueryChange={setEntryQuery}
+                onClear={clearEntrySearch}
+                placeholder="Notiz, Betrag oder Sparposition suchen…"
+              />
+            ) : null}
             <div className="hb-info-pills">
-              <span className="hb-info-pill">{potEntries.length} Einträge</span>
+              <span className="hb-info-pill">
+                {isSearchingEntries
+                  ? `${entryMatches.length} von ${potEntries.length} Einträgen`
+                  : `${potEntries.length} Einträge`}
+              </span>
               {monthLabel
                 ? monthLabel.split(" · ").map((part, i) => (
                     <span key={i} className="hb-info-pill">{part}</span>
@@ -749,7 +782,24 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
             </div>
           </div>
 
-          {potEntries.length === 0 ? (
+          {potEntries.length > 0 && entryMatches.length === 0 ? (
+            <div className="hb-empty">
+              <div className="hb-empty-icon"><IconSearch /></div>
+              <div className="hb-empty-title">Keine Treffer</div>
+              <div className="hb-empty-text">
+                Keine Buchung passt zu „{entryQuery.trim()}“{monthFilter ? ` in ${monthLabel.split(" · ")[0]}` : ""}.
+              </div>
+              {monthFilter && onMonthFilterChange ? (
+                <Button variant="outline" onClick={() => onMonthFilterChange("")}>
+                  In allen Monaten suchen
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={clearEntrySearch}>
+                  Suche leeren
+                </Button>
+              )}
+            </div>
+          ) : potEntries.length === 0 ? (
             <div className="hb-empty">
               <div className="hb-empty-icon"><IconInbox /></div>
               <div className="hb-empty-title">Noch keine Buchungen</div>
@@ -772,14 +822,19 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
                     </tr>
                   </thead>
                   <tbody>
-                    {(showAllEntries ? potEntries : potEntries.slice(0, 5)).map((e) => {
+                    {(showAllEntries || isSearchingEntries ? entryMatches : entryMatches.slice(0, 5)).map((e) => {
                       const isTransfer = e.kind === "transfer";
+                      const purposeName = getTransferCategoryName(allTransferCategories, e.transferCategoryId);
                       return (
                         <tr key={e.id}>
                           <td className="hb-col-date">{formatDateDE(e.date)}</td>
                           <td className="hb-col-type">{isTransfer ? "Einzahlung" : "Entnahme"}</td>
-                          <td className="hb-col-category">{getTransferCategoryName(allTransferCategories, e.transferCategoryId) || "—"}</td>
-                          <td className="hb-col-note">{e.note || "—"}</td>
+                          <td className="hb-col-category">
+                            {purposeName ? <SearchHighlight text={purposeName} pattern={entryHighlightPattern} /> : "—"}
+                          </td>
+                          <td className="hb-col-note">
+                            {e.note ? <SearchHighlight text={e.note} pattern={entryHighlightPattern} /> : "—"}
+                          </td>
                           <td className={`hb-col-amount hb-right ${isTransfer ? "hb-ok" : "hb-bad"}`}>
                             {isTransfer ? "+" : "−"}{fmt(Number(e.amount || 0))}
                           </td>
@@ -811,7 +866,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
                   </tbody>
                 </table>
               </div>
-              {potEntries.length > 5 && (
+              {!isSearchingEntries && potEntries.length > 5 && (
                 <div style={{ marginTop: 12, textAlign: "center" }}>
                   <Button
                     variant="outline"
