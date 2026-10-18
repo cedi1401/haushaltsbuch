@@ -83,3 +83,29 @@ describe('importing an old version 1 backup', () => {
     expect(book.entries[0].amount).toBe(1200);
   });
 });
+
+// Importierte Buchungen tragen `bankRef`; ohne das Feld würde ein
+// zurückgespieltes Backup denselben Kontoauszug erneut als neu anbieten.
+describe('backup round trip with bank-imported entries', () => {
+  it('keeps bankRef through export, JSON and import', () => {
+    const bankRef = { ref: 'ZV20261001/000001/1', iban: 'CH9300762011623852957', text: 'Laden Muster 1234' };
+    const entry = {
+      id: 'e1',
+      kind: 'expense',
+      source: 'month',
+      amount: 12.5,
+      date: '2026-10-01',
+      note: '',
+      categoryId: null,
+      subcategoryId: null,
+      category: '',
+      bankRef,
+    };
+    const exported = backupOf({ books: [normalizeBook({ id: 'b1', name: 'Haushalt', entries: [entry] })] });
+    const restored = JSON.parse(JSON.stringify(exported));
+
+    expect(validateBackupObject(restored)).toBe(true);
+    const book = normalizeBook(restored.books[0]);
+    expect(book.entries[0].bankRef).toEqual(bankRef);
+  });
+});

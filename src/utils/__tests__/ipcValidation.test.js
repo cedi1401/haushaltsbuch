@@ -144,3 +144,15 @@ describe('validateBookSync', () => {
     expect(validateBookSync({ order: ['b1'] })).toBe(false);
   });
 });
+
+describe('bank-imported entries', () => {
+  it('accept books whose entries carry bankRef', () => {
+    const book = {
+      id: 'b1',
+      name: 'Haushalt',
+      entries: [{ id: 'e1', kind: 'expense', amount: 1, bankRef: { ref: 'R1', iban: 'CH93', text: 'Laden' } }],
+    };
+    expect(validateBook(book)).toBe(true);
+    expect(validateBookSync({ upserts: [book], order: ['b1'] })).toBe(true);
+  });
+});

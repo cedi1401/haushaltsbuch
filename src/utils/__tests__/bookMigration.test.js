@@ -118,6 +118,53 @@ describe('normalizeEntry', () => {
   });
 });
 
+// ─── bankRef (Bankimport) ─────────────────────────────────────────────────
+
+describe('bankRef on imported entries', () => {
+  const bankRef = { ref: 'ZV20261001/000001/1', iban: 'CH9300762011623852957', text: 'Laden Muster 1234' };
+  const importedEntry = {
+    id: 'e_imp',
+    kind: 'expense',
+    source: 'month',
+    amount: 12.5,
+    date: '2026-10-01',
+    note: 'Laden Muster 1234',
+    categoryId: 'cat_lebensmittel',
+    subcategoryId: null,
+    category: 'Lebensmittel',
+    bankRef,
+  };
+
+  it('normalizeEntry keeps bankRef', () => {
+    expect(normalizeEntry(importedEntry).bankRef).toEqual(bankRef);
+  });
+
+  it('normalizeBook keeps bankRef on current and old schema versions', () => {
+    for (const schemaVersion of [CURRENT_SCHEMA_VERSION, 6, undefined]) {
+      const book = { ...makeDefaultBook('Test'), schemaVersion, entries: [importedEntry] };
+      const result = normalizeBook(book);
+      expect(result.entries[0].bankRef).toEqual(bankRef);
+    }
+  });
+
+  it('keeps bankRef on an uncategorised expense and on income', () => {
+    const book = {
+      ...makeDefaultBook('Test'),
+      entries: [
+        { ...importedEntry, id: 'a', categoryId: null, category: '' },
+        { ...importedEntry, id: 'b', kind: 'income', source: undefined, categoryId: 'cat_einnahmen' },
+      ],
+    };
+    const result = normalizeBook(book);
+    expect(result.entries.map((e) => e.bankRef)).toEqual([bankRef, bankRef]);
+  });
+
+  it('is idempotent with bankRef', () => {
+    const once = normalizeBook({ ...makeDefaultBook('Test'), entries: [importedEntry] });
+    expect(normalizeBook(once).entries).toEqual(once.entries);
+  });
+});
+
 // ─── normalizeBook ────────────────────────────────────────────────────────
 
 describe('normalizeBook', () => {
