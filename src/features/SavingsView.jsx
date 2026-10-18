@@ -390,7 +390,6 @@ export default function SavingsView({
         row={row}
         hiddenColumns={hiddenColumns}
         fmt={fmt}
-        pot={potById.get(row.purpose?.potId)}
         canCatchUp={canCatchUp(row)}
         canRevertCatchUp={canRevertCatchUp(row)}
         onBillPaid={openBillPaid}

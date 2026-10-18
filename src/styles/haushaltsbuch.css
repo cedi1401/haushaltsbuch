@@ -2884,20 +2884,7 @@ select.hb-input option {
   --hb-res-tone: var(--accent);
 }
 
-/* ---------- Hinweise & Aktionen ---------- */
-.hb-res-detail-hints {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 2px;
-}
-
-/* Die Hinweis-Pillen tragen ihre Erklärung als HbTooltip. */
-.hb-res-hint {
-  font-size: 12px;
-  padding: 3px 9px;
-}
-
+/* ---------- Aktionen ---------- */
 /* Die Linie über die volle Breite schließt den Streifen ab — dieselbe Geste wie
    der Fuß eines Dialogs. */
 .hb-res-detail-actions {

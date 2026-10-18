@@ -1,5 +1,4 @@
 import React from "react";
-import HbTooltip from "../../components/HbTooltip.jsx";
 import { Button } from "../../components/ui.jsx";
 import { formatDateDE } from "../../utils/formatUtils.js";
 import { formatRateCount } from "./reserveFormat.js";
@@ -25,7 +24,6 @@ export default function ReserveDetail({
   row,
   hiddenColumns,
   fmt,
-  pot,
   canCatchUp,
   canRevertCatchUp,
   onBillPaid,
@@ -33,7 +31,6 @@ export default function ReserveDetail({
   onRevertCatchUp,
   onEdit,
 }) {
-  const potName = pot?.name ?? "—";
   const canPay = row.status === "due" || row.status === "overdue";
   const assessment = buildAssessment(row, fmt);
 
@@ -104,22 +101,6 @@ export default function ReserveDetail({
               auf Rückstellung um — dann bewertet diese Ansicht den Sparstand.
             </p>
           </section>
-        )}
-
-        {/* Nur bei Rückstellungen: freie Rücklagen zählen im Trend nicht als Fixkosten. */}
-        {pot?.isSavings && row.isSinkingFund && (
-          <div className="hb-res-detail-hints">
-            <HbTooltip
-              text={
-                `Der Topf „${potName}“ ist als Spartopf markiert. Diese Rückstellung erscheint ` +
-                `deshalb im Dashboard unter „Gespart“ und gleichzeitig im Trend als ` +
-                `Fixkostenbelastung. Beides ist gewollt: Das Dashboard zeigt, wohin das Geld ` +
-                `fließt, der Trend, was es monatlich kostet.`
-              }
-            >
-              <span className="hb-badge hb-res-hint">Spartopf</span>
-            </HbTooltip>
-          </div>
         )}
       </div>
 
