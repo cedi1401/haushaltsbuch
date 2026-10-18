@@ -270,3 +270,38 @@ export function getAccountImportStatus(books, bookId, iban) {
   }
   return { lastImportedDate, otherBookNames };
 }
+
+/**
+ * Zuletzt zugewiesene Kategorien für „Zuletzt verwendet“ im Picker.
+ * Zuerst die Zuweisungen aus dem laufenden Dialog (`picks`, neueste zuerst),
+ * dann die jüngsten Buchungen derselben Art im Buch. Ohne Doppelte, nur noch
+ * existierende Kategorien (gelöschte Unterkategorie → Eintrag fällt weg).
+ *
+ * @param {object} book
+ * @param {"expense"|"income"} kind
+ * @param {{ categoryId: string, subcategoryId: string|null }[]} [picks]
+ * @param {number} [limit]
+ * @returns {{ categoryId: string, subcategoryId: string|null }[]}
+ */
+export function recentCategories(book, kind, picks = [], limit = 5) {
+  const categories = kind === "income" ? book?.incomeCategories : book?.expenseCategories;
+  const result = [];
+  const seen = new Set();
+  function add(categoryId, subcategoryId) {
+    if (!categoryId || result.length >= limit) return;
+    const valid = validCategory(categories, categoryId, subcategoryId);
+    if (!valid || (subcategoryId && valid.subcategoryId !== subcategoryId)) return;
+    const key = `${valid.categoryId}|${valid.subcategoryId || ""}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(valid);
+  }
+  for (const p of picks) add(p.categoryId, p.subcategoryId);
+  const entries = book?.entries || [];
+  // Die Liste wächst durch Anhängen: weiter hinten = später erfasst.
+  for (let i = entries.length - 1; i >= 0 && result.length < limit; i--) {
+    const e = entries[i];
+    if (e?.kind === kind) add(e.categoryId, e.subcategoryId);
+  }
+  return result;
+}

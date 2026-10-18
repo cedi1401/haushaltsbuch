@@ -5,6 +5,7 @@ import {
   buildImportRows,
   buildEntriesFromRows,
   getAccountImportStatus,
+  recentCategories,
   ROW_HINTS,
 } from '../bankImportUtils.js';
 
@@ -468,5 +469,47 @@ describe('getAccountImportStatus', () => {
     const status = getAccountImportStatus(books, 'b3', IBAN);
     expect(status.lastImportedDate).toBe('');
     expect(status.otherBookNames).toEqual(['Haushalt', 'Ferienkasse']);
+  });
+});
+
+describe('recentCategories', () => {
+  const e = (id, kind, categoryId, subcategoryId = null) => ({ id, kind, categoryId, subcategoryId, amount: 1, date: '2026-10-01' });
+
+  it('takes the newest entries of the same kind first, without duplicates', () => {
+    const book = bookWith([
+      e('a', 'expense', 'cat_freizeit'),
+      e('b', 'expense', 'cat_lebensmittel', 'sub_supermarkt'),
+      e('c', 'income', 'cat_einnahmen'),
+      e('d', 'expense', 'cat_freizeit'),
+    ]);
+    expect(recentCategories(book, 'expense')).toEqual([
+      { categoryId: 'cat_freizeit', subcategoryId: null },
+      { categoryId: 'cat_lebensmittel', subcategoryId: 'sub_supermarkt' },
+    ]);
+    expect(recentCategories(book, 'income')).toEqual([{ categoryId: 'cat_einnahmen', subcategoryId: null }]);
+  });
+
+  it('puts picks from the dialog before the book entries', () => {
+    const book = bookWith([e('a', 'expense', 'cat_freizeit')]);
+    const picks = [{ categoryId: 'cat_lebensmittel', subcategoryId: 'sub_supermarkt' }];
+    expect(recentCategories(book, 'expense', picks)).toEqual([
+      { categoryId: 'cat_lebensmittel', subcategoryId: 'sub_supermarkt' },
+      { categoryId: 'cat_freizeit', subcategoryId: null },
+    ]);
+  });
+
+  it('skips deleted categories and subcategories and respects the limit', () => {
+    const book = bookWith([
+      e('a', 'expense', 'cat_freizeit'),
+      e('b', 'expense', 'cat_lebensmittel'),
+      e('c', 'expense', 'cat_lebensmittel', 'sub_geloescht'),
+      e('d', 'expense', 'cat_geloescht'),
+      e('f', 'expense', null),
+    ]);
+    expect(recentCategories(book, 'expense')).toEqual([
+      { categoryId: 'cat_lebensmittel', subcategoryId: null },
+      { categoryId: 'cat_freizeit', subcategoryId: null },
+    ]);
+    expect(recentCategories(book, 'expense', [], 1)).toHaveLength(1);
   });
 });
