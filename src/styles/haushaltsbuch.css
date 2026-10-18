@@ -3122,9 +3122,12 @@ select.hb-input option {
   Hochformat, damit Formularfelder (links) und Kategorieliste (rechts) gleich-
   zeitig sichtbar sind statt übereinander gestapelt zu werden. Der Body behält
   overflow:visible (HbDatePicker-Popover), nur die Vorlagen-Zone und die
-  Picker-Box scrollen intern. min-height auf .hb-entry-form__panes verhindert
-  Springen beim Wechsel der Buchungs-Art — kürzere Varianten (Transfer/
-  Entnahme) lassen rechts Leerraum statt die Höhe zu ändern.
+  Picker-Box scrollen intern. Feste height (nicht min-height) auf
+  .hb-entry-form__panes: Mit min-height wuchs der Grid mit der Kategorienliste
+  mit — eine aufgeklappte Kategorie mit vielen Unterkategorien blähte den
+  Dialog bis auf Fensterhöhe auf. Die feste Höhe verhindert außerdem Springen
+  beim Wechsel der Buchungs-Art — kürzere Varianten (Transfer/Entnahme) lassen
+  rechts Leerraum statt die Höhe zu ändern.
 */
 .hb-modal-panel--form:has(.hb-entry-form) {
   max-width: 900px;
@@ -3149,10 +3152,11 @@ select.hb-input option {
 }
 
 .hb-entry-form__panes {
-  flex: 1;
-  min-height: 420px;
+  flex: 0 0 auto;
+  height: 420px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-rows: minmax(0, 1fr);
   gap: 24px;
   align-items: stretch;
 }
@@ -3201,12 +3205,16 @@ select.hb-input option {
 
 @media (max-height: 880px) {
   .hb-entry-form__panes {
-    min-height: 320px;
+    height: 320px;
   }
 }
 
+/* Sehr niedrige Fenster: Panes teilen sich den Rest der Panel-Höhe
+   (max-height: 100vh - 40px), die Kategorienliste scrollt entsprechend kürzer. */
 @media (max-height: 720px) {
   .hb-entry-form__panes {
+    flex: 1 1 0;
+    height: auto;
     min-height: 0;
   }
 }
