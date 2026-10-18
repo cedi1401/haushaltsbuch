@@ -6,6 +6,7 @@ import { generateId } from "../utils/idUtils.js";
 import { getFinancialMonth } from "../utils/financialMonthUtils.js";
 import { loadBooks, saveBooks, getSetting, setSetting, createAutoBackup } from "../dal/storage.js";
 import makeLogger from "../utils/logger.js";
+import { useUndoHistory } from "./useUndoHistory.js";
 
 const log = makeLogger("useBookManager");
 
@@ -13,6 +14,10 @@ export function useBookManager({ toast, confirm }) {
   const [books, setBooks] = useState([]);
   const [activeBookId, setActiveBookId] = useState(null);
   const isInitialLoad = useRef(true);
+  // Vor dem Effect, der isInitialLoad zurücksetzt (siehe useUndoHistory).
+  const undoHistory = useUndoHistory({
+    books, setBooks, activeBookId, isInitialLoad, toast,
+  });
 
   useEffect(() => {
     async function load() {
@@ -111,8 +116,11 @@ export function useBookManager({ toast, confirm }) {
     setBooks((prev) => prev.map((b) => (b.id === activeBook.id ? patchFn(b) : b)));
   }
 
-  function updateBook(updatedBook) {
+  // `{ history: false }` hält die Änderung aus dem Rückgängig-Verlauf heraus —
+  // nur für Schreibvorgänge, die der Nutzer nicht selbst auslöst.
+  function updateBook(updatedBook, { history = true } = {}) {
     if (!updatedBook) return;
+    if (!history) undoHistory.skipNextChange();
     setBooks((prev) => prev.map((b) => (b.id === updatedBook.id ? updatedBook : b)));
   }
 
@@ -130,7 +138,7 @@ export function useBookManager({ toast, confirm }) {
     setBooks((prev) =>
       prev.map((b) => (b.id === activeBook.id ? { ...b, name: trimmed } : b))
     );
-    toast.success(`Buch in „${trimmed}" umbenannt.`);
+    undoHistory.offer(`Buch in „${trimmed}" umbenannt.`);
   }
 
   // Liefert true, wenn das Buch gelöscht wurde (false bei Abbruch).
@@ -146,7 +154,7 @@ export function useBookManager({ toast, confirm }) {
     const remaining = books.filter((b) => b.id !== activeBook.id);
     setBooks(remaining);
     setActiveBookId(remaining[0]?.id || null);
-    toast.success("Buch gelöscht.");
+    toast.success(`Buch „${activeBook.name}“ gelöscht.`);
     return true;
   }
 
@@ -173,5 +181,6 @@ export function useBookManager({ toast, confirm }) {
     createBook, applyRenameActiveBook, deleteActiveBook,
     importBook, handleMonthStartDayChange,
     isInitialLoad,
+    undoHistory,
   };
 }

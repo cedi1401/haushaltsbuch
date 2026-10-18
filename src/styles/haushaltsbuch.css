@@ -4908,7 +4908,7 @@ select.hb-input option {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   background: var(--card);
   border: 1px solid var(--border-light);
   border-left: 3px solid var(--accent);
@@ -4922,14 +4922,20 @@ select.hb-input option {
   color: var(--accent);
   display: inline-flex;
   align-items: center;
-  margin-top: 2px;
+  /* 18-px-Icon auf die Mitte der 28-px-Steuerzeile (×, Aktionsknopf). */
+  margin-top: 5px;
 }
 
+/* Die erste Textzeile sitzt auf derselben 28-px-Achse wie Icon, Knopf und ×:
+   einzeilig exakt mittig, bei Umbruch bleiben die Steuerelemente oben. */
 .hb-toast-body {
   flex: 1;
   min-width: 0;
+  min-height: 28px;
+  padding: 4px 0;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 2px;
 }
 
@@ -4946,10 +4952,20 @@ select.hb-input option {
   word-break: break-word;
 }
 
+/* Gleiche Höhe wie das × (28 px), damit beide auf einer Linie liegen. */
+.hb-toast-action {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 12px;
+  line-height: 1;
+}
+
 .hb-toast-close {
   width: 28px;
   height: 28px;
   flex-shrink: 0;
+  /* Knopf und × gehören zusammen: 8 px statt der 12 px Inhaltsabstand. */
+  margin-left: -4px;
   border-color: transparent;
   background: transparent;
 }

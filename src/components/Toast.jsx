@@ -21,6 +21,9 @@ export function ToastProvider({ children }) {
       title: opts.title || null,
       message: opts.message || "",
       duration: opts.duration ?? 4000,
+      // Optionaler Knopf `{ label, onClick }`, z.B. „Rückgängig“. Ein Klick
+      // führt ihn aus und schließt den Toast.
+      action: opts.action || null,
     };
     setToasts((prev) => [...prev, toast]);
     return id;
@@ -76,12 +79,26 @@ function ToastItem({ toast, onDismiss }) {
       role={toast.severity === "error" ? "alert" : "status"}
       onMouseEnter={clearTimer}
       onMouseLeave={startTimer}
+      onFocus={clearTimer}
+      onBlur={startTimer}
     >
       <div className="hb-toast-icon">{severityIcon(toast.severity)}</div>
       <div className="hb-toast-body">
         {toast.title ? <div className="hb-toast-title">{toast.title}</div> : null}
         <div className="hb-toast-message">{toast.message}</div>
       </div>
+      {toast.action ? (
+        <button
+          type="button"
+          className="hb-btn hb-btn-outline hb-btn-sm hb-toast-action"
+          onClick={() => {
+            onDismiss(toast.id);
+            toast.action.onClick();
+          }}
+        >
+          {toast.action.label}
+        </button>
+      ) : null}
       <button
         type="button"
         className="hb-icon-btn hb-toast-close"

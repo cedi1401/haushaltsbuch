@@ -102,6 +102,7 @@ export function useEntryActions({
   fmt,
   confirm,
   indicateTransferCategories,
+  offerUndo,
 }) {
   const [addEntryOpen, setAddEntryOpen] = useState(false);
   const [addDraft, setAddDraft] = useState(() => ({
@@ -343,6 +344,7 @@ export function useEntryActions({
       ...b,
       entries: (b.entries || []).filter((e) => e.id !== id),
     }));
+    offerUndo?.("Eintrag gelöscht.");
   }
 
   function startEdit(entry) {

@@ -21,6 +21,7 @@ import { getActiveTransferCategories, getFixedCostItems } from "./utils/transfer
 import { calcExpenseByHierarchy, calcIncomeByHierarchy } from "./utils/budgetUtils.js";
 import { EMPTY_ARRAY, MONTHS_LONG, MONTHS_SHORT } from "./utils/constants.js";
 import { CurrencyContext } from "./contexts/CurrencyContext.jsx";
+import { UndoContext } from "./contexts/UndoContext.js";
 import { getEntryFinancialMonth, getFinancialMonthRange } from "./utils/financialMonthUtils.js";
 import { calcPotBalance } from "./utils/potUtils.js";
 
@@ -67,6 +68,7 @@ export default function HaushaltsbuchApp() {
     patchActiveBook, updateBook,
     createBook, applyRenameActiveBook, deleteActiveBook,
     importBook, handleMonthStartDayChange,
+    undoHistory,
   } = bookManager;
 
   const appSettings = useAppSettings();
@@ -94,6 +96,7 @@ export default function HaushaltsbuchApp() {
     fmt,
     confirm,
     indicateTransferCategories,
+    offerUndo: undoHistory.offer,
   });
 
   function handleCreateBook(name) {
@@ -206,6 +209,7 @@ export default function HaushaltsbuchApp() {
 
   return (
     <CurrencyContext.Provider value={currencyContextValue}>
+    <UndoContext.Provider value={undoHistory}>
       <NavPane
         view={currentView.id}
         onChangeView={changeView}
@@ -340,6 +344,7 @@ export default function HaushaltsbuchApp() {
           />
         </div>
       </div>
+    </UndoContext.Provider>
     </CurrencyContext.Provider>
   );
 }
