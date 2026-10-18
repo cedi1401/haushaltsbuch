@@ -274,6 +274,16 @@ export function IconInbox(props) {
   );
 }
 
+export function IconUpload(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path d="M12 15V4" />
+      <path d="M7 9l5-5 5 5" />
+      <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
+    </svg>
+  );
+}
+
 export function IconTransfer(props) {
   return (
     <svg {...baseProps} {...props}>

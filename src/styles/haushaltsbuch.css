@@ -5379,6 +5379,116 @@ select.hb-input option {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   overflow: hidden;
+/* „Zuletzt verwendet“ über der Liste: flache Zeilen ohne Einzug, getrennt
+   durch die normale Gruppenlinie. */
+.hb-hcat-section-label {
+  padding: 8px 12px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.hb-hcat-recent {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Gegenstück zu „Zuletzt verwendet“: trennt die vollständige Liste sichtbar ab. */
+.hb-hcat-section-label--all {
+  padding-top: 10px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.hb-hcat-recent .hb-hcat-recent-row {
+  padding-left: 12px;
+  border-bottom: none;
+}
+
+/* =====================================================
+   KATEGORIE-FLYOUT (CategoryFlyout)
+   Feld im Stil von select.hb-input, das den Kategorie-Picker als Flyout
+   öffnet. Liegt per Portal über dem Dialog (position: fixed).
+   ===================================================== */
+.hb-catflyout-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.hb-catflyout-trigger--open {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.hb-catflyout-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-catflyout-value--empty {
+  color: var(--muted);
+}
+
+.hb-catflyout-chevron {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+
+.hb-catflyout-trigger--open .hb-catflyout-chevron {
+  transform: rotate(180deg);
+}
+
+.hb-catflyout {
+  position: fixed;
+  z-index: var(--z-popover);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 10px;
+  animation: hb-dp-in 0.12s var(--ease-decelerate);
+  /* max-height setzt CategoryFlyout aus dem freien Platz; die Liste schrumpft mit. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hb-catflyout .hb-hcat-picker {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.hb-catflyout .hb-hcat-box {
+  min-height: 0;
+  flex: 0 1 auto;
+}
+
+.hb-catflyout--up {
+  animation-name: hb-dp-in-up;
+}
+
+.hb-catflyout .hb-hcat-picker {
+  margin: 0;
+}
+
+.hb-catflyout-foot {
+  flex-shrink: 0;
+}
+
+.hb-catflyout-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+
   padding: 3px;
   gap: 1px;
 }
