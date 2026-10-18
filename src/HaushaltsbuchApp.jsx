@@ -17,7 +17,7 @@ import CategoryManagerDialog from "./components/CategoryManagerDialog.jsx";
 
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./utils/bookDefaults.js";
 import { sumAmounts } from "./utils/hbUtils.js";
-import { getActiveTransferCategories, getFixedCostItems } from "./utils/transferCategoryUtils.js";
+import { getActiveTransferCategories, getFixedCostItems, makeIsSavingsTransfer } from "./utils/transferCategoryUtils.js";
 import { calcExpenseByHierarchy, calcIncomeByHierarchy } from "./utils/budgetUtils.js";
 import { EMPTY_ARRAY, MONTHS_LONG, MONTHS_SHORT } from "./utils/constants.js";
 import { CurrencyContext } from "./contexts/CurrencyContext.jsx";
@@ -130,17 +130,17 @@ export default function HaushaltsbuchApp() {
   );
   const balance = totalIncome - totalExpense - totalTransfers;
 
-  const savingsPotIds = useMemo(
-    () => new Set((activeBook?.pots || []).filter((p) => p.isSavings).map((p) => p.id)),
-    [activeBook?.pots]
+  const isSavingsTransfer = useMemo(
+    () => makeIsSavingsTransfer(activeBook?.pots, allTransferCategories),
+    [activeBook?.pots, allTransferCategories]
   );
   const totalSavingsTransfers = useMemo(
-    () => sumAmounts(filteredEntries, (e) => e.kind === "transfer" && savingsPotIds.has(e.potId)),
-    [filteredEntries, savingsPotIds]
+    () => sumAmounts(filteredEntries, isSavingsTransfer),
+    [filteredEntries, isSavingsTransfer]
   );
   const totalReserveTransfers = useMemo(
-    () => sumAmounts(filteredEntries, (e) => e.kind === "transfer" && !savingsPotIds.has(e.potId)),
-    [filteredEntries, savingsPotIds]
+    () => sumAmounts(filteredEntries, (e) => e.kind === "transfer" && !isSavingsTransfer(e)),
+    [filteredEntries, isSavingsTransfer]
   );
 
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;

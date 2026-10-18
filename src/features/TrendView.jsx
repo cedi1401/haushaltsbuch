@@ -38,6 +38,7 @@ import { useFixedCostTrend } from "../hooks/useFixedCostTrend.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import FixedCostTrendSection from "./FixedCostTrendSection.jsx";
 import { MONTHS_SHORT, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
+import { makeIsSavingsTransfer } from "../utils/transferCategoryUtils.js";
 
 const monthLabel = formatYearMonth;
 
@@ -102,9 +103,9 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
   // Zweit-Durchschnitt (6M): Teal und gepunktet, damit er sich vom 3M-Ø abhebt.
   const avg6Line = { stroke: themeColors.teal, strokeWidth: CHART_STROKE.ref, strokeDasharray: CHART_DASH.secondary };
 
-  const savingsPotIds = useMemo(
-    () => new Set((pots || []).filter((p) => p.isSavings).map((p) => p.id)),
-    [pots]
+  const isSavingsTransfer = useMemo(
+    () => makeIsSavingsTransfer(pots, transferCategories),
+    [pots, transferCategories]
   );
 
   const monthly = useMemo(() => {
@@ -120,7 +121,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
       } else if (e.kind === "expense" && e.source === "month") {
         prev.expense += amt;
       } else if (e.kind === "transfer") {
-        if (savingsPotIds.has(e.potId)) {
+        if (isSavingsTransfer(e)) {
           prev.savings += amt;
           // Überschuss-Sweep: gesparter Frei-Rest. Wird für den „Höchster
           // Überschuss"-KPI zurückgerechnet, damit gesweepte Monate nicht 0 zeigen.
@@ -160,7 +161,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
     });
 
     return withCum.map((d) => ({ ...d, label: monthLabel(d.month) }));
-  }, [entries, monthStartDay, savingsPotIds]);
+  }, [entries, monthStartDay, isSavingsTransfer]);
 
   const saldoRangePool = useMemo(() => {
     if (saldoRangeOption === "12") return monthly.slice(-12);
@@ -272,7 +273,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
         b[yStr] = (b[yStr] || 0) + amt;
         expenseMap.set(mStr, b);
       } else if (e.kind === "transfer") {
-        const map = savingsPotIds.has(e.potId) ? savingsMap : transferMap;
+        const map = isSavingsTransfer(e) ? savingsMap : transferMap;
         const b = map.get(mStr) || {};
         b[yStr] = (b[yStr] || 0) + amt;
         map.set(mStr, b);
@@ -287,7 +288,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
       for (const y of years) row[y] = bucket[y] ?? null;
       return row;
     });
-  }, [entries, monthStartDay, savingsPotIds, yoyMode]);
+  }, [entries, monthStartDay, isSavingsTransfer, yoyMode]);
 
   const yoyYears = useMemo(() => {
     if (!yoyData.length) return [];

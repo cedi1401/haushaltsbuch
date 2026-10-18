@@ -13,11 +13,11 @@ import { getEntryFinancialMonth } from "./financialMonthUtils.js";
  * Entnahmen (`withdrawal`) fließen — wie in der App — in keine dieser Zahlen.
  *
  * @param {Array} entries - alle Einträge des Buchs
- * @param {Set<string>} savingsPotIds - Topf-IDs, die als „Sparen" markiert sind
+ * @param {(entry) => boolean} isSavingsTransfer - siehe makeIsSavingsTransfer
  * @param {number} monthStartDay - Starttag des Finanzmonats
  * @returns {Array<{month, income, expense, reserve, savings, free}>}
  */
-export function calcMonthlyTotals(entries, savingsPotIds, monthStartDay = 1) {
+export function calcMonthlyTotals(entries, isSavingsTransfer, monthStartDay = 1) {
   const map = new Map();
 
   for (const e of entries || []) {
@@ -32,7 +32,7 @@ export function calcMonthlyTotals(entries, savingsPotIds, monthStartDay = 1) {
     } else if (e.kind === "expense" && e.source === "month") {
       row.expense += amt;
     } else if (e.kind === "transfer") {
-      if (savingsPotIds?.has(e.potId)) row.savings += amt;
+      if (isSavingsTransfer?.(e)) row.savings += amt;
       else row.reserve += amt;
     }
 

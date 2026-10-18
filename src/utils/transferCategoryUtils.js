@@ -194,6 +194,23 @@ export function hasPurposeRate(purpose) {
   return Number(purpose.monthlyRate) > 0;
 }
 
+/**
+ * Prädikat „zählt als Sparen“ für Buchungen. Gespart ist ein Transfer auf
+ * einen Spar-Topf — außer er läuft auf eine Rückstellung: Die ist für eine
+ * feste Rechnung zurückgelegt, also aufgeschobener Konsum, und zählt wie
+ * Transfers auf andere Töpfe unter „Rücklagen“. Rücklagen, Sparziele und
+ * Transfers ohne Sparposition folgen dem Topf. So kommt auch ein Buch mit nur
+ * einem Topf zu einer ehrlichen Sparquote.
+ */
+export function makeIsSavingsTransfer(pots, transferCategories) {
+  const savingsPotIds = new Set((pots || []).filter((p) => p.isSavings).map((p) => p.id));
+  const reserveIds = new Set(
+    (transferCategories || []).filter((c) => c.rule === "reserve").map((c) => c.id)
+  );
+  return (e) =>
+    e?.kind === "transfer" && savingsPotIds.has(e.potId) && !reserveIds.has(e.transferCategoryId);
+}
+
 /** Aktive Zwecke mit Rate, in Listenreihenfolge. */
 export function getRatedPurposes(list) {
   return getActiveTransferCategories(list).filter(hasPurposeRate);

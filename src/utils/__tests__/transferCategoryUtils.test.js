@@ -8,6 +8,7 @@ import {
   getActiveTransferCategories,
   getTransferCategoryName,
   getTransferCategoryOptions,
+  makeIsSavingsTransfer,
   validTransferCategoryId,
   purposeForPot,
 } from '../transferCategoryUtils.js';
@@ -145,5 +146,36 @@ describe('applySavingsFields', () => {
     expect(r).toMatchObject({ rule: 'free', potId: 'pot_b', monthlyRate: 20 });
     expect(r).not.toHaveProperty('targetAmount');
     expect(r).not.toHaveProperty('createdAt');
+  });
+});
+
+describe('makeIsSavingsTransfer', () => {
+  const pots = [{ id: 'spar', isSavings: true }, { id: 'bar' }];
+  const purposes = [
+    { id: 'tcat_ferien', potId: 'spar', rule: 'free' },
+    { id: 'tcat_auto', potId: 'spar', rule: 'goal' },
+    { id: 'tcat_steuern', potId: 'spar', rule: 'reserve' },
+    { id: 'tcat_kasse', potId: 'bar', rule: 'free' },
+  ];
+  const isSavings = makeIsSavingsTransfer(pots, purposes);
+  const t = (potId, transferCategoryId) => ({ kind: 'transfer', potId, transferCategoryId });
+
+  it('counts free and goal purposes in a savings pot', () => {
+    expect(isSavings(t('spar', 'tcat_ferien'))).toBe(true);
+    expect(isSavings(t('spar', 'tcat_auto'))).toBe(true);
+  });
+
+  it('excludes reserve purposes even in a savings pot', () => {
+    expect(isSavings(t('spar', 'tcat_steuern'))).toBe(false);
+  });
+
+  it('lets transfers without purpose follow the pot', () => {
+    expect(isSavings(t('spar', null))).toBe(true);
+    expect(isSavings(t('bar', null))).toBe(false);
+  });
+
+  it('ignores purposes in non-savings pots and non-transfer entries', () => {
+    expect(isSavings(t('bar', 'tcat_kasse'))).toBe(false);
+    expect(isSavings({ kind: 'withdrawal', potId: 'spar' })).toBe(false);
   });
 });

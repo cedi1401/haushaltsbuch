@@ -22,7 +22,7 @@ export const POTS_MANAGER_TITLE = (
     Töpfe verwalten
     <HbTooltip
       placement="bottom"
-      text="Als Spar-Topf markierte Töpfe zählen ihre Einzahlungen als Sparbetrag — dieser fließt in die Berechnung der Sparquote ein."
+      text="Als Spar-Topf markierte Töpfe zählen ihre Einzahlungen als Sparbetrag — dieser fließt in die Berechnung der Sparquote ein. Ausgenommen sind Rückstellungen: Sie sind für eine feste Rechnung zurückgelegt und zählen deshalb unter Rücklagen."
     />
   </span>
 );

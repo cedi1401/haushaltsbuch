@@ -9,6 +9,7 @@ import HbSparklineHover from "../components/HbSparklineHover.jsx";
 import { generateId } from "../utils/idUtils.js";
 import { getFinancialMonthRange } from "../utils/financialMonthUtils.js";
 import { calcMonthlyTotals } from "../utils/dashboardTrend.js";
+import { makeIsSavingsTransfer } from "../utils/transferCategoryUtils.js";
 import { MONTHS_SHORT, EMPTY_ARRAY } from "../utils/constants.js";
 import SurplusSweepDialog, { SWEEP_FALLBACK_POT } from "./insights/SurplusSweepDialog.jsx";
 
@@ -71,13 +72,13 @@ export default function DashboardView({
   // ── Stat-Tile-Trend: Vormonatsdelta je Kennzahl ───────────────────────────
   // Monats-Zeitreihe aus allen Buchungen (nicht monatsgefiltert), damit die
   // Pills ein Delta gegenüber dem Vormonat zeigen können.
-  const savingsPotIds = useMemo(
-    () => new Set((activeBook?.pots || []).filter((p) => p.isSavings).map((p) => p.id)),
-    [activeBook?.pots]
+  const isSavingsTransfer = useMemo(
+    () => makeIsSavingsTransfer(activeBook?.pots, activeBook?.transferCategories),
+    [activeBook?.pots, activeBook?.transferCategories]
   );
   const monthlySeries = useMemo(
-    () => calcMonthlyTotals(activeBook?.entries || [], savingsPotIds, monthStartDay),
-    [activeBook?.entries, savingsPotIds, monthStartDay]
+    () => calcMonthlyTotals(activeBook?.entries || [], isSavingsTransfer, monthStartDay),
+    [activeBook?.entries, isSavingsTransfer, monthStartDay]
   );
   // Delta = ausgewählter Monat ggü. vorherigem Monat der Reihe. Ohne Monatsfilter
   // zeigt der Wert eine Gesamtsumme → dann kein Delta.
