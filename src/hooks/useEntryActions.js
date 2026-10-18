@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   parseAmount,
   todayISO,
@@ -114,6 +114,11 @@ export function useEntryActions({
   // zum Hochzählen von usageCount beim tatsächlichen Speichern.
   const [appliedTemplateId, setAppliedTemplateId] = useState(null);
 
+  // Betrag, den die zuletzt angewendete Vorlage gesetzt hat. Wechselt man
+  // danach auf eine „Betrag offen"-Vorlage, wird er wieder geleert — aber nur,
+  // solange er noch unverändert im Feld steht. Selbst getippte Beträge bleiben.
+  const templateAmountRef = useRef(null);
+
   const [editOpen, setEditOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState(() => ({
@@ -146,6 +151,7 @@ export function useEntryActions({
   function applyTemplate(template) {
     if (!template) return;
     setAppliedTemplateId(template.id);
+    const prevTemplateAmount = templateAmountRef.current;
     setAddDraft((d) => {
       // Reihenfolge zwingend: erst die kind-abhängigen Defaults (eine Quelle
       // der Wahrheit), dann das aufgelöste Patch darüber. Umgekehrt würde
@@ -159,12 +165,16 @@ export function useEntryActions({
         pots,
         fallbackPotId: d.potId,
       });
+      if (!("amount" in patch) && prevTemplateAmount !== null && d.amount === prevTemplateAmount) {
+        patch.amount = "";
+      }
 
       // Die Zweck-Liste hängt am Topf. availablePurposes basiert noch auf dem
       // alten potId — deshalb hier mit dem aufgelösten Topf frisch prüfen,
       // sonst steht im <select> ein Wert ohne passende Option.
       return withValidPurpose({ ...base, ...patch }, indicateTransferCategories);
     });
+    templateAmountRef.current = templateToDraftPatch(template).amount ?? null;
   }
 
   // Sync potId when available pots change — derived from the prop transition
@@ -234,6 +244,7 @@ export function useEntryActions({
   function closeAddEntry() {
     setAddEntryOpen(false);
     setAppliedTemplateId(null);
+    templateAmountRef.current = null;
     setAddDraft((prev) => ({ ...INITIAL_ADD_DRAFT, date: todayISO(), potId: prev.potId }));
   }
 

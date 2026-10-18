@@ -103,6 +103,7 @@ export function templateToDraftPatch(template, ctx = {}) {
 
   // amount === null → Draft-Betrag unangetastet lassen, damit nichts verloren
   // geht, wenn der Nutzer den Betrag vor dem Klick auf den Chip getippt hat.
+  // (Einen von der vorigen Vorlage gesetzten Betrag leert applyTemplate.)
   if (template.amount !== null && template.amount !== undefined && Number.isFinite(Number(template.amount))) {
     patch.amount = String(template.amount);
   }
