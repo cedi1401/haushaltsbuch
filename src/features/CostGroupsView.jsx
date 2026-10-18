@@ -20,7 +20,7 @@ import { ChartTooltip, ChartTooltipRow } from "../components/ChartTooltip.jsx";
 import { ChartLegend } from "../components/ChartLegend.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
-import { useToast } from "../components/toastContext.js";
+import { useUndo } from "../contexts/UndoContext.js";
 import { IconCostGroups, IconPlus, IconEdit, IconDelete, IconCheck, IconChevron, IconInbox, IconFixed, IconTrend } from "../components/icons.jsx";
 import { useClickOutside } from "../hooks/useClickOutside.js";
 import { useThemeColors } from "../hooks/themeColors.js";
@@ -98,7 +98,7 @@ export default function CostGroupsView({
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const { confirm } = useConfirm();
-  const toast = useToast();
+  const undo = useUndo();
   const themeColors = useThemeColors();
   const avgLine = averageLineProps(themeColors);
 
@@ -427,7 +427,7 @@ export default function CostGroupsView({
     onUpdateBook({ ...activeBook, costGroups: updated });
     if (selectedGroupId === group.id) setSelectedGroupId(updated[0]?.id || null);
     setViewMode("overview");
-    toast.success("Kostengruppe gelöscht.");
+    undo.offer("Kostengruppe gelöscht.");
   }
 
   // ── Planungsposten direkt aus der Planungs-Card ──────────────────────────
@@ -477,7 +477,7 @@ export default function CostGroupsView({
     const isEdit = Boolean(planItemDraft.id) && current.some((p) => p.id === planItemDraft.id);
     persistPlannedItems(isEdit ? current.map((p) => (p.id === item.id ? item : p)) : [...current, item]);
     setPlanItemOpen(false);
-    toast.success(isEdit ? "Posten aktualisiert." : "Posten hinzugefügt.");
+    undo.offer(isEdit ? "Posten aktualisiert." : "Posten hinzugefügt.");
   }
 
   async function deletePlanItem(item) {
@@ -489,7 +489,7 @@ export default function CostGroupsView({
     });
     if (!ok) return;
     persistPlannedItems((activeGroup?.plannedItems || []).filter((p) => p.id !== item.id));
-    toast.success("Posten gelöscht.");
+    undo.offer("Posten gelöscht.");
   }
 
   // ── Render ──────────────────────────────────────────────────────────────

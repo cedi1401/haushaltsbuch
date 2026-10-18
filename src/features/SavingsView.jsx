@@ -16,7 +16,7 @@ import {
   NO_PURPOSE_LABEL,
 } from "../utils/transferCategoryUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
-import { useToast } from "../components/toastContext.js";
+import { useUndo } from "../contexts/UndoContext.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { buildSavingsColumns, RULE_LABEL } from "./savings/savingsColumns.jsx";
 import ReserveDetail from "./savings/ReserveDetail.jsx";
@@ -81,7 +81,7 @@ export default function SavingsView({
   onNavigate,
 }) {
   const fmt = useFmt();
-  const toast = useToast();
+  const undo = useUndo();
   const { confirm } = useConfirm();
   const pots = activeBook?.pots || EMPTY_ARRAY;
   const fixedCostGroups = activeBook?.fixedCostGroups || EMPTY_ARRAY;
@@ -149,7 +149,7 @@ export default function SavingsView({
       saveTransferCategories(
         transferCategories.map((c) => (c.id === target.id ? applySavingsFields(c, fields, todayISO()) : c))
       );
-      toast.success(`Sparposition „${fields.name}“ gespeichert.`);
+      undo.offer(`Sparposition „${fields.name}“ gespeichert.`);
     } else {
       // Ein gelöschter Zweck gleichen Namens im selben Topf lebt dabei mit
       // seinen Buchungen wieder auf (addTransferCategory).
@@ -158,7 +158,7 @@ export default function SavingsView({
       saveTransferCategories(
         list.map((c) => (c.id === category.id ? applySavingsFields(c, fields, todayISO()) : c))
       );
-      toast.success(`${RULE_LABEL[fields.rule]} „${fields.name}“ angelegt.`);
+      undo.offer(`${RULE_LABEL[fields.rule]} „${fields.name}“ angelegt.`);
     }
     closeDialog({ id: savedId, potId: fields.potId });
   }
@@ -188,7 +188,7 @@ export default function SavingsView({
     });
     if (!ok) return;
     saveTransferCategories(deleteTransferCategory(transferCategories, purpose.id));
-    toast.success("Sparposition gelöscht.");
+    undo.offer("Sparposition gelöscht.");
   }
 
   function patchPurpose(id, patch) {
@@ -197,7 +197,7 @@ export default function SavingsView({
 
   function completeGoal(row) {
     patchPurpose(row.id, { completedAt: todayISO(), completedAmount: row.goalProgress.current });
-    toast.success(`Sparziel „${row.purpose.name}“ abgeschlossen.`);
+    undo.offer(`Sparziel „${row.purpose.name}“ abgeschlossen.`);
   }
 
   async function completeGoalEarly(row) {
@@ -213,7 +213,7 @@ export default function SavingsView({
 
   function reactivateGoal(goal) {
     patchPurpose(goal.id, { completedAt: null, completedAmount: null });
-    toast.success(`Sparziel „${goal.name}“ wieder aktiviert.`);
+    undo.offer(`Sparziel „${goal.name}“ wieder aktiviert.`);
   }
 
   // ── Rechnung bezahlt / Rückstand ausgleichen ──────────────────────────
@@ -274,7 +274,7 @@ export default function SavingsView({
     setBillTarget(null);
     // Die ID entsteht außerhalb des State-Updaters (StrictMode ruft doppelt auf).
     onAddEntry?.({ id: generateId("entry"), ...entry });
-    toast.success(`Zahlung für „${item?.name ?? ""}“ gebucht.`);
+    undo.offer(`Zahlung für „${item?.name ?? ""}“ gebucht.`);
   }
 
   function confirmCatchUp(rates) {
@@ -296,7 +296,7 @@ export default function SavingsView({
     }));
     // Eine Batch-Buchung: ein patchActiveBook, ein Commit, ein Save.
     onAddEntries?.(newEntries);
-    toast.success(
+    undo.offer(
       rates.length === 1
         ? `1 Rate für „${item.name}“ gebucht.`
         : `${rates.length} Raten für „${item.name}“ gebucht.`

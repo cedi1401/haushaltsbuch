@@ -5,6 +5,7 @@ import DataTable from "../components/DataTable.jsx";
 import EditDialog from "../components/EditDialog.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
 import { useToast } from "../components/toastContext.js";
+import { useUndo } from "../contexts/UndoContext.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import {
   IconInbox,
@@ -66,6 +67,7 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const toast = useToast();
+  const undo = useUndo();
   const { confirm } = useConfirm();
 
   const investments = activeBook?.investments || emptyInvestments();
@@ -162,6 +164,13 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
     },
     [activeBook, onUpdateBook]
   );
+  // Der Snapshot schreibt still mit: kein eigener Schritt im Rückgängig-Verlauf.
+  const recordInvestments = useCallback(
+    (next) => {
+      onUpdateBook?.({ ...activeBook, investments: next }, { history: false });
+    },
+    [activeBook, onUpdateBook]
+  );
 
   // Tages-Snapshot für die Verlaufskurve (Beschluss F). Läuft erst, wenn der
   // Abruf durch ist — während `loading` wären noch nicht alle Kurse da und
@@ -171,7 +180,7 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
     depotSummaries,
     baseCurrency,
     enabled: !loading && positions.length > 0,
-    onChange: applyInvestments,
+    onChange: recordInvestments,
   });
 
   function openNewTransaction(depotId = "", assetId = "") {
@@ -203,7 +212,7 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
 
     if (editingTx?.transaction) {
       applyInvestments(updateTransaction(working, editingTx.transaction.id, { ...transaction, assetId }));
-      toast.success("Transaktion gespeichert.");
+      undo.offer("Transaktion gespeichert.");
     } else {
       const res = addTransaction(working, { ...transaction, assetId });
       if (!res) {
@@ -211,7 +220,7 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
         return;
       }
       applyInvestments(res.investments);
-      toast.success("Transaktion erfasst.");
+      undo.offer("Transaktion erfasst.");
     }
 
     setTxOpen(false);
@@ -227,7 +236,7 @@ export default function InvestmentsView({ activeBook, onUpdateBook }) {
     });
     if (!ok) return;
     applyInvestments(removeTransaction(investments, tx.id));
-    toast.success("Transaktion gelöscht.");
+    undo.offer("Transaktion gelöscht.");
   }
 
   // --- Detailbereich einer Position ---------------------------------------

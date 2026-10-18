@@ -5,7 +5,7 @@ import OverflowMenu from "./OverflowMenu.jsx";
 import HbTooltip from "./HbTooltip.jsx";
 import { Button } from "./ui.jsx";
 import { useConfirm } from "./ConfirmDialog.jsx";
-import { useToast } from "./toastContext.js";
+import { useUndo } from "../contexts/UndoContext.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { IconSearch, IconEdit, IconPlus, IconTemplate } from "./icons.jsx";
 import {
@@ -29,7 +29,7 @@ export default function EntryTemplateManagerDialog({
 }) {
   const fmt = useFmt();
   const { confirm } = useConfirm();
-  const toast = useToast();
+  const undo = useUndo();
 
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
@@ -100,12 +100,12 @@ export default function EntryTemplateManagerDialog({
       const normalized = normalizeEntryTemplate(fields);
       if (!normalized) return;
       onUpdateTemplates(templates.map((t) => (t.id === normalized.id ? normalized : t)));
-      toast.success("Vorlage gespeichert.");
+      undo.offer("Vorlage gespeichert.");
     } else {
       const created = makeEntryTemplate(fields);
       if (!created) return;
       onUpdateTemplates([...templates, created]);
-      toast.success("Vorlage angelegt.");
+      undo.offer("Vorlage angelegt.");
     }
     closeForm();
   }
@@ -122,7 +122,7 @@ export default function EntryTemplateManagerDialog({
     const idx = visibleTemplates.findIndex((t) => t.id === template.id);
     const nextId = visibleTemplates[idx + 1]?.id || visibleTemplates[idx - 1]?.id || null;
     onUpdateTemplates(templates.filter((t) => t.id !== template.id));
-    toast.success("Vorlage gelöscht.");
+    undo.offer("Vorlage gelöscht.");
     focusRow(nextId);
   }
 

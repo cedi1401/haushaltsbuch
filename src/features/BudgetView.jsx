@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, CardContent } from "../components/ui.jsx";
 import { IconBudget, IconChevron, IconEdit, IconInfo, IconPlus } from "../components/icons.jsx";
-import { useToast } from "../components/toastContext.js";
+import { useUndo } from "../contexts/UndoContext.js";
 import { formatPercent } from "../utils/formatUtils.js";
 import { BUDGET_STATUS_COLOR, BUDGET_STATUS_LABEL, buildBudgetRows, setCategoryBudgets } from "../utils/budgetUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
@@ -34,7 +34,7 @@ export default function BudgetView({
   onOpenCategoryManager,
 }) {
   const fmt = useFmt();
-  const toast = useToast();
+  const undo = useUndo();
   const money = useMemo(() => (value) => budgetMoney(fmt, value), [fmt]);
 
   const model = useMemo(
@@ -55,13 +55,13 @@ export default function BudgetView({
 
   function saveBudget(change) {
     onUpdateExpenseCategories(setCategoryBudgets(expenseCategories, editCategory.id, change));
-    toast.success(`Budget für „${editCategory.name}“ gespeichert.`);
+    undo.offer(`Budget für „${editCategory.name}“ gespeichert.`);
     setEditCategoryId(null);
   }
 
   function removeBudget() {
     onUpdateExpenseCategories(setCategoryBudgets(expenseCategories, editCategory.id));
-    toast.success(`Budget für „${editCategory.name}“ entfernt.`);
+    undo.offer(`Budget für „${editCategory.name}“ entfernt.`);
     setEditCategoryId(null);
   }
 

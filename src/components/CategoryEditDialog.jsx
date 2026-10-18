@@ -40,7 +40,7 @@ export default function CategoryEditDialog({
   async function handleDelete() {
     const confirmed = await confirm({
       title: "Kategorie löschen",
-      message: `Kategorie „${category?.name}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
+      message: `Kategorie „${category?.name}“ wirklich löschen?`,
       confirmLabel: "Löschen",
       danger: true,
     });

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui.jsx";
 import OverflowMenu from "../../components/OverflowMenu.jsx";
-import { useToast } from "../../components/toastContext.js";
+import { useUndo } from "../../contexts/UndoContext.js";
 import { useConfirm } from "../../components/ConfirmDialog.jsx";
 import { IconPlus, IconWallet, IconEdit, IconCheck, IconClose } from "../../components/icons.jsx";
 import { DEPOT_NAME_MAX } from "../../utils/investmentModel.js";
@@ -32,7 +32,7 @@ function usageLabel(count) {
  * @param {{investments: object, onChange: (next: object) => void}} props
  */
 export default function DepotsManager({ investments, onChange }) {
-  const toast = useToast();
+  const undo = useUndo();
   const { confirm } = useConfirm();
 
   const [editingId, setEditingId] = useState(null);
@@ -103,7 +103,7 @@ export default function DepotsManager({ investments, onChange }) {
     const trimmedNote = editNote.trim().slice(0, NOTE_MAX);
     if (trimmedName !== depot.name || trimmedNote !== (depot.note || "")) {
       onChange(updateDepot(investments, editingId, { name: trimmedName, note: trimmedNote }));
-      toast.success("Depot gespeichert.");
+      undo.offer("Depot gespeichert.");
     }
     cancelEdit();
   }
@@ -139,7 +139,7 @@ export default function DepotsManager({ investments, onChange }) {
     });
     if (!result) return;
     onChange(result.investments);
-    toast.success(`Depot „${newName.trim()}“ erstellt.`);
+    undo.offer(`Depot „${newName.trim()}“ erstellt.`);
     cancelAdding();
   }
 
@@ -172,7 +172,7 @@ export default function DepotsManager({ investments, onChange }) {
 
     if (editingId === depot.id) cancelEdit();
     onChange(removeDepot(investments, depot.id));
-    toast.success("Depot gelöscht.");
+    undo.offer("Depot gelöscht.");
   }
 
   const newError = validateName(newName, null);

@@ -20,7 +20,7 @@ import { isSinkingFund, monthlyRate } from "../utils/fixedCostUtils.js";
 import { getFinancialMonth } from "../utils/financialMonthUtils.js";
 import { GROUP_ACCENT_PALETTE } from "../utils/hbPalette.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
-import { useToast } from "../components/toastContext.js";
+import { useUndo } from "../contexts/UndoContext.js";
 import { IconEdit, IconFixed, IconPlus } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { EMPTY_ARRAY } from "../utils/constants.js";
@@ -96,7 +96,7 @@ export default function FixedCostsView({
     [recurringExpenses, allTransferCategories]
   );
   const { confirm } = useConfirm();
-  const toast = useToast();
+  const undo = useUndo();
 
   // Dialog-State — nur für Ausgaben. Sparraten werden in den Rücklagen
   // angelegt und bearbeitet (onOpenSavingsPosition).
@@ -263,7 +263,7 @@ export default function FixedCostsView({
       transferCategories: updatedPurposes,
       fixedCostGroups: updatedGroups,
     });
-    toast.success("Gruppe gelöscht.");
+    undo.offer("Gruppe gelöscht.");
   }
 
   // Dialog (nur Ausgaben)
@@ -383,7 +383,7 @@ export default function FixedCostsView({
     });
     if (!ok) return;
     onUpdateBook({ ...activeBook, recurringExpenses: recurringExpenses.filter((i) => i.id !== item.id) });
-    toast.success("Fixkosten gelöscht.");
+    undo.offer("Fixkosten gelöscht.");
   }
 
   // Eine Sparrate verliert beim Entfernen nur ihre Rate: Die Sparposition
@@ -404,7 +404,7 @@ export default function FixedCostsView({
       ...activeBook,
       transferCategories: allTransferCategories.map((c) => (c.id === item.id ? clearPurposeRate(c) : c)),
     });
-    toast.success("Sparrate entfernt.");
+    undo.offer("Sparrate entfernt.");
   }
 
   // Einzige Quelle für die Entry-Erzeugung — Einzel- und Sammelbuchung teilen sie.
@@ -454,7 +454,7 @@ export default function FixedCostsView({
       if (!ok) return;
     }
     onAddEntry(buildEntryFromItem(item, todayISO()));
-    toast.success(`„${item.name}“ wurde gebucht.`);
+    undo.offer(`„${item.name}“ wurde gebucht.`);
   }
 
   // Sammelbuchung einer Gruppe, der Positionen ohne Gruppe oder einer ganzen
@@ -496,7 +496,7 @@ export default function FixedCostsView({
       // Aufrufe auf demselben Snapshot sind daher unkritisch.
       newEntries.forEach((entry) => onAddEntry(entry));
     }
-    toast.success(
+    undo.offer(
       `${count} ${count === 1 ? "Position" : "Positionen"} aus „${label}“ gebucht.`
     );
   }

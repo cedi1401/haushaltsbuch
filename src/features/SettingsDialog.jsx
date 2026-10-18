@@ -6,6 +6,7 @@ import { exportBackup, validateBackupObject } from "../backup.js";
 import { normalizeBook } from "../utils/bookMigration.js";
 import { validateMonthStartDay } from "../utils/hbUtils.js";
 import { useToast } from "../components/toastContext.js";
+import { useUndo } from "../contexts/UndoContext.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
 import makeLogger from "../utils/logger.js";
@@ -30,6 +31,7 @@ export default function SettingsDialog({
   const backupInputRef = useRef(null);
 
   const toast = useToast();
+  const undo = useUndo();
   const { confirm } = useConfirm();
 
   const [isElectronEnv] = useState(() => window.electronAPI?.isElectron === true);
@@ -84,7 +86,7 @@ export default function SettingsDialog({
     if (!ok) return;
 
     onImportBook?.(bookToImport);
-    toast.success(`„${bookToImport.name}“ importiert.`);
+    undo.offer(`„${bookToImport.name}“ importiert.`);
     onClose?.();
   }
 
@@ -261,7 +263,7 @@ export default function SettingsDialog({
               if (!activeBook) return;
               onUpdateBook?.({ ...activeBook, monthStartDay: monthStartDayDraft });
               onMonthStartDayChange?.(monthStartDayDraft);
-              toast.success("Monatsbeginn gespeichert.");
+              undo.offer("Monatsbeginn gespeichert.");
             }}
           >
             Speichern

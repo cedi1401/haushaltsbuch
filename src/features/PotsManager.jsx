@@ -4,7 +4,7 @@ import HbTooltip from "../components/HbTooltip.jsx";
 import HbSwitch from "../components/HbSwitch.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
 import { generateId } from "../utils/idUtils.js";
-import { useToast } from "../components/toastContext.js";
+import { useUndo } from "../contexts/UndoContext.js";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { IconPlus, IconPots, IconEdit, IconCheck, IconClose } from "../components/icons.jsx";
 
@@ -34,7 +34,7 @@ function usageLabel(count) {
 }
 
 export default function PotsManager({ activeBook, onUpdateBook }) {
-  const toast = useToast();
+  const undo = useUndo();
   const { confirm } = useConfirm();
 
   const [editingId, setEditingId] = useState(null);
@@ -122,7 +122,7 @@ export default function PotsManager({ activeBook, onUpdateBook }) {
     setEditingId(null);
     setEditName("");
     focusEditButton(potId);
-    toast.success("Topf umbenannt.");
+    undo.offer("Topf umbenannt.");
   }
 
   // Wegklicken speichert, solange die Eingabe gültig ist — sonst wird verworfen,
@@ -180,7 +180,7 @@ export default function PotsManager({ activeBook, onUpdateBook }) {
       pots: [...pots, { id: generateId("pot"), name: trimmed, isSavings: newPotIsSavings }],
     });
     cancelAdding();
-    toast.success(`Topf „${trimmed}“ erstellt.`);
+    undo.offer(`Topf „${trimmed}“ erstellt.`);
   }
 
   function handleAddKeyDown(e) {
@@ -225,7 +225,7 @@ export default function PotsManager({ activeBook, onUpdateBook }) {
       c.potId === potId ? { ...c, deleted: true } : c
     );
     onUpdateBook?.({ ...activeBook, pots: pots.filter((p) => p.id !== potId), transferCategories });
-    toast.success("Topf gelöscht.");
+    undo.offer("Topf gelöscht.");
   }
 
   const newPotError = validateName(newPotName, null);

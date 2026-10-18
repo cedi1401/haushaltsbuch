@@ -7,6 +7,7 @@ import HbTooltip from "./HbTooltip.jsx";
 import { CHART_COLORS, DEFAULT_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { Button } from "./ui.jsx";
 import { useToast } from "./toastContext.js";
+import { useUndo } from "../contexts/UndoContext.js";
 import { useConfirm } from "./ConfirmDialog.jsx";
 import { generateId } from "../utils/idUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
@@ -64,6 +65,7 @@ export default function CategoryManagerDialog({
 }) {
   const fmt = useFmt();
   const toast = useToast();
+  const undo = useUndo();
   const { confirm } = useConfirm();
   const [newTransferName, setNewTransferName] = useState("");
   // Ein Zweck gehört genau einem Topf (Schema 7) — er wird beim Anlegen gewählt.
@@ -156,7 +158,7 @@ export default function CategoryManagerDialog({
     // seiner Buchungen.
     onUpdateTransferCategories?.(addTransferCategoryToList(transferCategories, trimmed, newPotId).list);
     setNewTransferName("");
-    toast.success(`Sparposition „${trimmed}“ erstellt.`);
+    undo.offer(`Sparposition „${trimmed}“ erstellt.`);
   }
 
   function startTransferEdit(cat) {
@@ -188,7 +190,7 @@ export default function CategoryManagerDialog({
     setEditingTransfer(null);
     setTransferDraft("");
     requestAnimationFrame(() => transferEditBtnRefs.current[id]?.focus());
-    toast.success(`Sparposition „${oldName}“ in „${trimmed}“ umbenannt.`);
+    undo.offer(`Sparposition „${oldName}“ in „${trimmed}“ umbenannt.`);
   }
 
   // Wegklicken speichert, solange die Eingabe gültig ist — sonst wird verworfen,
@@ -237,7 +239,7 @@ export default function CategoryManagerDialog({
       setTransferDraft("");
     }
     onUpdateTransferCategories?.(deleteTransferCategoryFromList(transferCategories, cat.id));
-    toast.success("Sparposition gelöscht.");
+    undo.offer("Sparposition gelöscht.");
   }
 
   // -------------------------------------------------------
@@ -410,6 +412,7 @@ export default function CategoryManagerDialog({
         onUpdateIncomeCategories(updateList(incomeCategories || []));
       }
     }
+    undo.offer(`Kategorie „${category.name}“ gelöscht.`);
   }
 
   // -------------------------------------------------------
