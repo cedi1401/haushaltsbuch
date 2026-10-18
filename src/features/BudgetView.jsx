@@ -16,8 +16,9 @@ const percent = (ratio) => formatPercent(ratio * 100, { digits: 0, sign: false }
  * davon ist im laufenden Finanzmonat verbraucht?
  *
  * Der View ist bewusst schmal: kein Verlauf, keine Vorschlagswerte, keine
- * Prognose. Er zeigt immer den laufenden Finanzmonat, unabhängig vom
- * Monatsfilter der Toolbar.
+ * Prognose. Er zeigt den Finanzmonat aus dem Monatsfilter der Toolbar, ohne
+ * Filter („Alle Monate“) den laufenden. Vergangene Monate werden am heutigen
+ * Budget gemessen — Budgets haben keine Historie.
  *
  * Layout: eine Karte je budgetierter Oberkategorie (Muster der Topf-Karten),
  * ihre Unterkategorien stehen in der Karte. Darunter die Kategorien ohne
@@ -29,6 +30,7 @@ const percent = (ratio) => formatPercent(ratio * 100, { digits: 0, sign: false }
 export default function BudgetView({
   entries,
   expenseCategories,
+  monthFilter = "",
   monthStartDay = 1,
   onUpdateExpenseCategories,
 }) {
@@ -37,8 +39,8 @@ export default function BudgetView({
   const money = useMemo(() => (value) => budgetMoney(fmt, value), [fmt]);
 
   const model = useMemo(
-    () => buildBudgetRows({ entries, expenseCategories, monthStartDay }),
-    [entries, expenseCategories, monthStartDay]
+    () => buildBudgetRows({ entries, expenseCategories, monthFilter, monthStartDay }),
+    [entries, expenseCategories, monthFilter, monthStartDay]
   );
   const { budgeted, unbudgeted, totals, monthInfo } = model;
 
@@ -91,10 +93,10 @@ export default function BudgetView({
 
   let remainingSub = "kein Budget festgelegt";
   if (hasBudgets && monthInfo) {
-    remainingSub =
-      monthInfo.daysRemaining === 0
-        ? "letzter Tag des Monats"
-        : `noch ${plural(monthInfo.daysRemaining, "Tag", "Tage")}`;
+    if (monthInfo.isFutureMonth) remainingSub = "Monat noch nicht begonnen";
+    else if (!monthInfo.isCurrentMonth) remainingSub = "Monat abgeschlossen";
+    else if (monthInfo.daysRemaining === 0) remainingSub = "letzter Tag des Monats";
+    else remainingSub = `noch ${plural(monthInfo.daysRemaining, "Tag", "Tage")}`;
   }
 
   const spentTone = !hasBudgets

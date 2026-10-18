@@ -75,11 +75,12 @@ export const VIEWS = [
     label: "Budgets",
     Icon: IconBudget,
     group: "daily",
-    usesMonth: false,
+    usesMonth: true,
     Component: BudgetView,
     getProps: (ctx) => ({
       entries: ctx.entries,
       expenseCategories: ctx.expenseCategories,
+      monthFilter: ctx.monthFilter,
       monthStartDay: ctx.monthStartDay,
       onUpdateExpenseCategories: (newCats) =>
         ctx.patchActiveBook((b) => ({ ...b, expenseCategories: newCats })),
