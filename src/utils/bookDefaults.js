@@ -4,7 +4,6 @@
 
 import { DEFAULT_CATEGORY_COLOR } from "./hbPalette.js";
 import { generateId } from "./idUtils.js";
-import { emptyInvestments } from "./investmentModel.js";
 
 // ============================================
 // NEU: Töpfe-System
@@ -267,7 +266,6 @@ export function makeDefaultBook(name = "Mein Haushaltsbuch") {
     fixedCostGroups: [],
     costGroups: [],
     entryTemplates: [],
-    investments: emptyInvestments(),
     baseCurrency: "CHF",
     monthStartDay: 1,
   };

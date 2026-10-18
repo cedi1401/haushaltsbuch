@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, Suspense } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 
 import "./styles/haushaltsbuch.css";
 
@@ -291,9 +291,7 @@ export default function HaushaltsbuchApp() {
           />
 
           <ErrorBoundary key={currentView.id} context={currentView.label}>
-            <Suspense fallback={<div className="hb-view-loading">Lädt…</div>}>
-              <CurrentViewComponent {...currentView.getProps(viewContext)} />
-            </Suspense>
+            <CurrentViewComponent {...currentView.getProps(viewContext)} />
           </ErrorBoundary>
 
           {/* EditEntryDialog global — wird auch aus PotsView heraus geöffnet */}

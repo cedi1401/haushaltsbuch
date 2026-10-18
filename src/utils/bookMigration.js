@@ -5,7 +5,6 @@
 
 import { CUSTOM_CATEGORY_PALETTE } from "./hbPalette.js";
 import { normalizeEntryTemplate } from "./entryTemplateUtils.js";
-import { normalizeInvestments } from "./investmentModel.js";
 import { DEFAULT_POTS, DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./bookDefaults.js";
 import { fixedCostKind, validateMonthStartDay } from "./hbUtils.js";
 import { migrateTransferCategoryIds } from "./transferCategoryMigration.js";
@@ -15,7 +14,8 @@ import { migrateSavingsPurposes, normalizeSavingsPurposes } from "./savingsPurpo
 //     damit eine feste Spalte im Fixkosten-View (siehe migrateFixedCostKinds).
 // 4 = Einträge tragen `recurringId` — die Herkunftskennung ihrer Fixkosten-
 //     Position (siehe stampRecurringIds).
-// 5 = Bücher tragen `investments` (Depots, Assets, Transaktionen, Snapshots).
+// 5 = Bücher tragen `investments` (Depots, Assets, Transaktionen, Snapshots);
+//     die Funktion ist seit 18.10.2026 entfernt, vorhandene Daten bleiben unangetastet.
 // 6 = Transfer-Zwecke sind Objekte mit ID, Referenzen laufen über
 //     `transferCategoryId` (siehe transferCategoryMigration.js).
 // 7 = Zweck = Sparposition: Zwecke tragen Topf und Regel, Transfer-Positionen
@@ -640,11 +640,6 @@ export function normalizeBook(book) {
     normalized.transferCategories,
     normalized.pots
   );
-
-  // Investments (Depots, Assets, Transaktionen, Snapshots). Läuft bewusst bei
-  // jedem Start und nicht nur einmalig: normalizeInvestments ist idempotent und
-  // hält die Struktur auch nach einem Import sauber.
-  normalized.investments = normalizeInvestments(normalized.investments);
 
   // Basiswährung: Standard CHF (bisherige implizite Währung)
   if (!normalized.baseCurrency) {

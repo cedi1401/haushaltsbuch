@@ -130,30 +130,11 @@ describe('normalizeBook', () => {
     expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });
 
-  it('adds an empty investments structure when missing', () => {
-    const result = normalizeBook({ id: 'b1' });
-    expect(result.investments).toEqual({
-      depots: [],
-      assets: [],
-      transactions: [],
-      snapshots: [],
-    });
-  });
-
-  it('keeps existing investments and strips orphaned transactions', () => {
-    const result = normalizeBook({
-      id: 'b1',
-      investments: {
-        depots: [{ id: 'dep_1', name: 'Swissquote' }],
-        assets: [{ id: 'ast_1', symbol: 'VWRL.SW', assetClass: 'etf', quoteCurrency: 'CHF' }],
-        transactions: [
-          { id: 'itx_1', depotId: 'dep_1', assetId: 'ast_1', type: 'buy', date: '2026-03-14', quantity: 10, price: 100 },
-          { id: 'itx_2', depotId: 'dep_gone', assetId: 'ast_1', type: 'buy', date: '2026-03-14', quantity: 10, price: 100 },
-        ],
-      },
-    });
-    expect(result.investments.depots).toHaveLength(1);
-    expect(result.investments.transactions.map((t) => t.id)).toEqual(['itx_1']);
+  // Die Investment-Funktion ist entfernt; Altdaten bleiben trotzdem erhalten.
+  it('leaves an existing investments field untouched', () => {
+    const investments = { depots: [{ id: 'dep_1', name: 'Swissquote' }], assets: [], transactions: [], snapshots: [] };
+    const result = normalizeBook({ id: 'b1', investments });
+    expect(result.investments).toEqual(investments);
   });
 
   it('adds DEFAULT_POTS when pots is missing', () => {

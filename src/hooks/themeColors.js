@@ -21,11 +21,6 @@ export const DEFAULT_COLORS = {
   yoyOld: "#8ab6e0",
   yoyMid: "#2b7fd4",
   yoyNew: "#153a70",
-  invStock: "#3b82f6",
-  invEtf: "#22c55e",
-  invMetal: "#eab308",
-  invCrypto: "#8b5cf6",
-  invOther: "#8e949c",
 };
 
 export function readColors() {
@@ -51,11 +46,6 @@ export function readColors() {
     yoyOld: get("--yoy-old", DEFAULT_COLORS.yoyOld),
     yoyMid: get("--yoy-mid", DEFAULT_COLORS.yoyMid),
     yoyNew: get("--yoy-new", DEFAULT_COLORS.yoyNew),
-    invStock: get("--inv-class-stock", DEFAULT_COLORS.invStock),
-    invEtf: get("--inv-class-etf", DEFAULT_COLORS.invEtf),
-    invMetal: get("--inv-class-metal", DEFAULT_COLORS.invMetal),
-    invCrypto: get("--inv-class-crypto", DEFAULT_COLORS.invCrypto),
-    invOther: get("--inv-class-other", DEFAULT_COLORS.invOther),
   };
 }
 

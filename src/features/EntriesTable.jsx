@@ -194,7 +194,7 @@ export default function EntriesTable({
                   // Einnahme/Ausgabe: Vorzeichen direkt am Betrag („−CHF 200.00“),
                   // wie es formatCurrency für negative Werte schreibt.
                   // Transfer/Entnahme: Richtungspfeil mit schmalem geschütztem
-                  // Leerzeichen (U+202F), wie in den Investment-Transaktionen.
+                  // Leerzeichen (U+202F).
                   let typeLabel = "Ausgabe";
                   let sign = "−";
                   let arrow = null;

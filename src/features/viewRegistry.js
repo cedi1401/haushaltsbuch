@@ -1,5 +1,3 @@
-import { lazy } from "react";
-
 import {
   IconBook,
   IconBudget,
@@ -8,7 +6,6 @@ import {
   IconFixed,
   IconTrend,
   IconCostGroups,
-  IconInvest,
 } from "../components/icons.jsx";
 
 import DashboardView from "./DashboardView.jsx";
@@ -19,16 +16,6 @@ import SavingsView from "./SavingsView.jsx";
 import TrendView from "./TrendView.jsx";
 import CostGroupsView from "./CostGroupsView.jsx";
 
-// Investment-View (eingefroren) und Marktdaten-Testbench: nur im Dev-Modus geladen.
-// Der dynamische Import steht in einem Zweig, den der Production-Build als toten
-// Code entfernt — so bleiben beide aus dem Release.
-const InvestmentsView = import.meta.env.DEV
-  ? lazy(() => import("./InvestmentsView.jsx"))
-  : null;
-const MarketDebugView = import.meta.env.DEV
-  ? lazy(() => import("./MarketDebugView.jsx"))
-  : null;
-
 export const DEFAULT_VIEW_ID = "book";
 
 /** Gruppen der Navigationsleiste, in dieser Reihenfolge. */
@@ -36,7 +23,6 @@ export const VIEW_GROUPS = [
   { id: "daily", label: "Alltag" },
   { id: "planning", label: "Planung" },
   { id: "analysis", label: "Analyse" },
-  ...(import.meta.env.DEV ? [{ id: "dev", label: "Entwicklung" }] : []),
 ];
 
 /**
@@ -189,31 +175,6 @@ export const VIEWS = [
       onCustomRangeChange: ctx.setCostGroupRange,
     }),
   },
-  ...(import.meta.env.DEV
-    ? [
-        {
-          id: "investments",
-          label: "Investments",
-          Icon: IconInvest,
-          group: "dev",
-          usesMonth: false,
-          Component: InvestmentsView,
-          getProps: (ctx) => ({
-            activeBook: ctx.activeBook,
-            onUpdateBook: ctx.updateBook,
-          }),
-        },
-        {
-          id: "marketdebug",
-          label: "Marktdaten (Debug)",
-          Icon: IconTrend,
-          group: "dev",
-          usesMonth: false,
-          Component: MarketDebugView,
-          getProps: (ctx) => ({ baseCurrency: ctx.baseCurrency }),
-        },
-      ]
-    : []),
 ];
 
 const VIEWS_BY_ID = Object.fromEntries(VIEWS.map((v) => [v.id, v]));

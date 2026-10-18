@@ -53,7 +53,7 @@ export function IconPots(props) {
   );
 }
 
-// Tacho — Budget-View. IconWallet ist für Depots belegt.
+// Tacho — Budget-View.
 export function IconBudget(props) {
   return (
     <svg {...baseProps} {...props}>
@@ -274,17 +274,6 @@ export function IconInbox(props) {
   );
 }
 
-export function IconWallet(props) {
-  return (
-    <svg {...baseProps} {...props}>
-      <rect x="2" y="8" width="20" height="12" rx="2" />
-      <path d="M2 12h20" />
-      <circle cx="17" cy="16" r="1.2" fill="currentColor" stroke="none" />
-      <path d="M6 8V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" />
-    </svg>
-  );
-}
-
 export function IconTransfer(props) {
   return (
     <svg {...baseProps} {...props}>
@@ -378,28 +367,6 @@ export function IconTemplate(props) {
       <path d="M17 21H5a2 2 0 0 1-2-2V7" />
       <line x1="10.5" y1="8" x2="17.5" y2="8" />
       <line x1="10.5" y1="12" x2="15" y2="12" />
-    </svg>
-  );
-}
-
-// Säulen mit aufsteigender Linie — Investments/Depot.
-export function IconInvest(props) {
-  return (
-    <svg {...baseProps} {...props}>
-      <line x1="3" y1="21" x2="21" y2="21" />
-      <rect x="4.5" y="13" width="4" height="8" rx="1" />
-      <rect x="10" y="9" width="4" height="12" rx="1" />
-      <rect x="15.5" y="5" width="4" height="16" rx="1" />
-    </svg>
-  );
-}
-
-// Kreispfeil — Kurse neu abrufen.
-export function IconRefresh(props) {
-  return (
-    <svg {...baseProps} {...props}>
-      <path d="M20 12a8 8 0 1 1-2.34-5.66" />
-      <polyline points="20 4 20 9 15 9" />
     </svg>
   );
 }

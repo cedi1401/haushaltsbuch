@@ -4,11 +4,6 @@ import {
   validateBookSync,
   SETTING_SCHEMA,
   isValidSetting,
-  isValidSymbol,
-  isValidSymbolList,
-  isValidSearchQuery,
-  isValidHistoryOptions,
-  MAX_SYMBOL_BATCH,
 } from '../../../electron/ipcValidation.js';
 
 describe('validateBook', () => {
@@ -108,104 +103,6 @@ describe('isValidSetting', () => {
 
   it('rejects oversized table column selection', () => {
     expect(isValidSetting('table.columns.reserves', 'x'.repeat(4001))).toBe(false);
-  });
-});
-
-describe('isValidSymbol', () => {
-  it.each(['AAPL', 'VWRL.SW', '4GLD.DE', 'GC=F', 'USDCHF=X', '^GSPC', 'BRK-B'])(
-    'accepts %s',
-    (symbol) => {
-      expect(isValidSymbol(symbol)).toBe(true);
-    }
-  );
-
-  it.each([
-    ['empty string', ''],
-    ['slash (path traversal)', '../etc'],
-    ['query injection', 'AAPL&foo=1'],
-    ['whitespace', 'AA PL'],
-    ['too long', 'A'.repeat(21)],
-    ['non-string', 123],
-    ['null', null],
-  ])('rejects %s', (_label, value) => {
-    expect(isValidSymbol(value)).toBe(false);
-  });
-});
-
-describe('isValidSymbolList', () => {
-  it('accepts a list of valid symbols', () => {
-    expect(isValidSymbolList(['AAPL', 'VWRL.SW', 'GC=F', 'USDCHF=X'])).toBe(true);
-  });
-
-  it('accepts a single symbol', () => {
-    expect(isValidSymbolList(['SI=F'])).toBe(true);
-  });
-
-  it('rejects an empty list', () => {
-    expect(isValidSymbolList([])).toBe(false);
-  });
-
-  it('rejects a list above the batch limit', () => {
-    expect(isValidSymbolList(Array(MAX_SYMBOL_BATCH).fill('AAPL'))).toBe(true);
-    expect(isValidSymbolList(Array(MAX_SYMBOL_BATCH + 1).fill('AAPL'))).toBe(false);
-  });
-
-  it('rejects the whole list when one symbol is invalid', () => {
-    expect(isValidSymbolList(['AAPL', 'DROP TABLE'])).toBe(false);
-    expect(isValidSymbolList(['AAPL', ''])).toBe(false);
-    expect(isValidSymbolList(['AAPL', null])).toBe(false);
-  });
-
-  it('rejects non-arrays', () => {
-    expect(isValidSymbolList('AAPL')).toBe(false);
-    expect(isValidSymbolList(null)).toBe(false);
-    expect(isValidSymbolList(undefined)).toBe(false);
-    expect(isValidSymbolList({ 0: 'AAPL', length: 1 })).toBe(false);
-  });
-});
-
-describe('isValidSearchQuery', () => {
-  it('accepts normal text', () => {
-    expect(isValidSearchQuery('vanguard ftse')).toBe(true);
-  });
-
-  it('rejects blank-only input', () => {
-    expect(isValidSearchQuery('   ')).toBe(false);
-  });
-
-  it('rejects overly long input', () => {
-    expect(isValidSearchQuery('x'.repeat(65))).toBe(false);
-  });
-
-  it('rejects non-string', () => {
-    expect(isValidSearchQuery(null)).toBe(false);
-  });
-});
-
-describe('isValidHistoryOptions', () => {
-  it('accepts omitted options', () => {
-    expect(isValidHistoryOptions(undefined)).toBe(true);
-    expect(isValidHistoryOptions(null)).toBe(true);
-  });
-
-  it('accepts whitelisted interval and range', () => {
-    expect(isValidHistoryOptions({ interval: '1mo', range: '1y' })).toBe(true);
-  });
-
-  it('accepts a partial object', () => {
-    expect(isValidHistoryOptions({ range: 'max' })).toBe(true);
-  });
-
-  it('rejects unknown interval', () => {
-    expect(isValidHistoryOptions({ interval: '3s' })).toBe(false);
-  });
-
-  it('rejects unknown range', () => {
-    expect(isValidHistoryOptions({ range: '100y' })).toBe(false);
-  });
-
-  it('rejects non-object', () => {
-    expect(isValidHistoryOptions('1mo')).toBe(false);
   });
 });
 

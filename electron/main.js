@@ -3,8 +3,7 @@ import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDatabase, getDb, closeDatabase } from './database/db.js';
-import { validateBookSync, isValidSetting, isValidSymbol, isValidSymbolList, isValidSearchQuery, isValidHistoryOptions, MAX_SYMBOL_BATCH } from './ipcValidation.js';
-import { getQuote, getQuotes, getHistory, search as searchSymbols } from './services/marketdata/index.js';
+import { validateBookSync, isValidSetting } from './ipcValidation.js';
 
 process.on('uncaughtException', (err) => {
   console.error('[main] uncaughtException:', err);
@@ -145,59 +144,6 @@ function registerIpcHandlers() {
     } catch (err) {
       console.error('[ipc] db:setSetting failed:', err);
       return false;
-    }
-  });
-
-  // --- Marktdaten ---
-  // Fehler werden als { ok: false, error } zurückgegeben statt geworfen,
-  // damit die Meldung in der UI im Klartext sichtbar wird.
-  ipcMain.handle('market:quote', async (_event, symbol, targetCurrency, options) => {
-    if (!isValidSymbol(symbol)) return { ok: false, error: `Ungültiges Symbol: ${String(symbol)}` };
-    try {
-      const data = await getQuote(symbol, targetCurrency, { bypassCache: options?.bypassCache === true });
-      return { ok: true, data };
-    } catch (err) {
-      console.error('[ipc] market:quote failed:', err);
-      return { ok: false, error: err?.message || 'Unbekannter Fehler' };
-    }
-  });
-
-  // Stapelabruf für den Investment-View. Der Service ruft sequentiell mit Pause
-  // ab; einzelne fehlgeschlagene Symbole stehen als Zeile mit ok:false im
-  // Ergebnis, statt den ganzen Abruf scheitern zu lassen.
-  ipcMain.handle('market:quotes', async (_event, symbols, targetCurrency, options) => {
-    if (!isValidSymbolList(symbols)) {
-      return { ok: false, error: `Ungültige Symbolliste (leer, zu lang oder fehlerhaft, max. ${MAX_SYMBOL_BATCH})` };
-    }
-    try {
-      const data = await getQuotes(symbols, targetCurrency, { bypassCache: options?.bypassCache === true });
-      return { ok: true, data };
-    } catch (err) {
-      console.error('[ipc] market:quotes failed:', err);
-      return { ok: false, error: err?.message || 'Unbekannter Fehler' };
-    }
-  });
-
-  ipcMain.handle('market:history', async (_event, symbol, options) => {
-    if (!isValidSymbol(symbol)) return { ok: false, error: `Ungültiges Symbol: ${String(symbol)}` };
-    if (!isValidHistoryOptions(options)) return { ok: false, error: 'Ungültige Verlaufs-Optionen' };
-    try {
-      const data = await getHistory(symbol, options || {});
-      return { ok: true, data };
-    } catch (err) {
-      console.error('[ipc] market:history failed:', err);
-      return { ok: false, error: err?.message || 'Unbekannter Fehler' };
-    }
-  });
-
-  ipcMain.handle('market:search', async (_event, query) => {
-    if (!isValidSearchQuery(query)) return { ok: false, error: 'Ungültige Suchanfrage' };
-    try {
-      const data = await searchSymbols(query);
-      return { ok: true, data };
-    } catch (err) {
-      console.error('[ipc] market:search failed:', err);
-      return { ok: false, error: err?.message || 'Unbekannter Fehler' };
     }
   });
 

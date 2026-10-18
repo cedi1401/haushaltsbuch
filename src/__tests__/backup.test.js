@@ -64,20 +64,12 @@ describe('validateBackupObject', () => {
   });
 });
 
-// Der eigentliche Zweck der Versionsanhebung: ein Backup aus einem Build ohne
-// Investments muss sich weiterhin importieren lassen, ohne Daten zu verlieren.
+// Ein Backup im Ursprungsformat muss sich weiterhin importieren lassen, ohne
+// Daten zu verlieren.
 describe('importing an old version 1 backup', () => {
-  it('fills in an empty investments structure', () => {
+  it('is accepted', () => {
     const old = backupOf({ version: 1, books: [{ id: 'b1', name: 'Altes Buch' }] });
     expect(validateBackupObject(old)).toBe(true);
-
-    const book = normalizeBook(old.books[0]);
-    expect(book.investments).toEqual({
-      depots: [],
-      assets: [],
-      transactions: [],
-      snapshots: [],
-    });
   });
 
   it('keeps the existing book data untouched', () => {

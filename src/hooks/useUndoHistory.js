@@ -41,8 +41,7 @@ function isModalOpen() {
  * @param {string|null} params.activeBookId
  * @param {{current: boolean}} params.isInitialLoad
  * @param {object} params.toast ToastContext-API
- * @returns {{ offer: (message: string) => void, undo: () => void, redo: () => void,
- *   skipNextChange: () => void }}
+ * @returns {{ offer: (message: string) => void, undo: () => void, redo: () => void }}
  */
 export function useUndoHistory({ books, setBooks, activeBookId, isInitialLoad, toast }) {
   const historiesRef = useRef(new Map()); // Buch-ID → { past, future }
@@ -205,14 +204,8 @@ export function useUndoHistory({ books, setBooks, activeBookId, isInitialLoad, t
     }, OFFER_TTL_MS);
   }, [toast]);
 
-  // Für Änderungen, die der Nutzer nicht selbst auslöst (z.B. der Tages-
-  // Snapshot der Investments): Sie sollen kein eigener Schritt sein.
-  const skipNextChange = useCallback(() => {
-    skipNextRef.current = true;
-  }, []);
-
   return useMemo(
-    () => ({ offer, undo, redo, skipNextChange }),
-    [offer, undo, redo, skipNextChange]
+    () => ({ offer, undo, redo }),
+    [offer, undo, redo]
   );
 }

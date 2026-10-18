@@ -26,6 +26,8 @@ export const BACKUP_FORMAT = "haushaltsbuch-backup";
 // 2 = Bücher können `investments` tragen (Depots, Assets, Transaktionen, Snapshots).
 //     Angehoben statt stillschweigend erweitert, damit ein alter Build das Backup
 //     sichtbar ablehnt, statt die Investments beim Rück-Export zu verlieren.
+//     Die Investment-Funktion ist seit 18.10.2026 entfernt; die Version bleibt,
+//     damit ältere Builds neue Backups weiterhin korrekt einordnen.
 export const BACKUP_VERSION = 2;
 
 // Ältere Versionen bleiben lesbar — normalizeBook() ergänzt die fehlenden Felder.

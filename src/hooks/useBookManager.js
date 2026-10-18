@@ -116,11 +116,8 @@ export function useBookManager({ toast, confirm }) {
     setBooks((prev) => prev.map((b) => (b.id === activeBook.id ? patchFn(b) : b)));
   }
 
-  // `{ history: false }` hält die Änderung aus dem Rückgängig-Verlauf heraus —
-  // nur für Schreibvorgänge, die der Nutzer nicht selbst auslöst.
-  function updateBook(updatedBook, { history = true } = {}) {
+  function updateBook(updatedBook) {
     if (!updatedBook) return;
-    if (!history) undoHistory.skipNextChange();
     setBooks((prev) => prev.map((b) => (b.id === updatedBook.id ? updatedBook : b)));
   }
 
