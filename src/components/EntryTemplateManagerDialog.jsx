@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import EditDialog from "./EditDialog.jsx";
 import EntryTemplateFormDialog from "./EntryTemplateFormDialog.jsx";
 import OverflowMenu from "./OverflowMenu.jsx";
@@ -15,6 +15,9 @@ import {
   getTemplateColor,
 } from "../utils/entryTemplateUtils.js";
 import { EMPTY_ARRAY, ENTRY_KIND_LABELS as KIND_LABELS } from "../utils/constants.js";
+
+// Die Liste zeigt höchstens so viele Vorlagen, ab der nächsten scrollt sie.
+const MAX_VISIBLE_ROWS = 10;
 
 export default function EntryTemplateManagerDialog({
   open,
@@ -70,6 +73,22 @@ export default function EntryTemplateManagerDialog({
         (t.note || "").toLocaleLowerCase("de").includes(needle)
     );
   }, [templates, trimmedSearch]);
+
+  // Höhe auf genau MAX_VISIBLE_ROWS Zeilen begrenzen. Die Zeilenhöhe hängt an
+  // Schrift und Pillen, deshalb an der zehnten Zeile gemessen statt geschätzt.
+  const listRef = useRef(null);
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const lastRow = list.children[MAX_VISIBLE_ROWS - 1];
+    if (visibleTemplates.length <= MAX_VISIBLE_ROWS || !lastRow) {
+      list.style.maxHeight = "";
+      return;
+    }
+    const height =
+      lastRow.getBoundingClientRect().bottom - list.getBoundingClientRect().top + list.scrollTop;
+    list.style.maxHeight = `${height}px`;
+  }, [open, visibleTemplates]);
 
   function focusRow(templateId) {
     requestAnimationFrame(() => {
@@ -221,7 +240,7 @@ export default function EntryTemplateManagerDialog({
             </Button>
           </div>
 
-          <div className="hb-cat-list">
+          <div className="hb-cat-list" ref={listRef}>
             {visibleTemplates.length === 0
               ? renderEmptyState()
               : visibleTemplates.map((template) => {
