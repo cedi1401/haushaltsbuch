@@ -1,4 +1,4 @@
-import React, { useId, useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { CHART_COLORS } from "../utils/hbPalette.js";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 import { IconChevron, IconSearch } from "./icons.jsx";
@@ -10,7 +10,7 @@ import { IconChevron, IconSearch } from "./icons.jsx";
  * No dropdown/popup -- renders directly in the form flow.
  *
  * - All parent categories are always visible
- * - Clicking a parent row toggles its subcategory accordion
+ * - Clicking a parent row toggles its subcategory accordion (only one open at a time)
  * - Radio buttons allow selecting exactly ONE item (parent OR sub)
  * - Selecting a subcategory sets both categoryId and subcategoryId
  * - Selecting a parent sets categoryId only (subcategoryId = null)
@@ -50,6 +50,34 @@ export function HierarchicalCategoryPicker({
     return new Set();
   });
 
+  // Wechselt die Auswahl von außen (z.B. per Vorlage) auf eine
+  // Unterkategorie, deren Elternkategorie aufklappen — sonst wäre die
+  // Auswahl unsichtbar. Aus dem Prop-Übergang abgeleitet statt per Effect.
+  const [prevSelection, setPrevSelection] = useState({ categoryId, subcategoryId });
+  if (prevSelection.categoryId !== categoryId || prevSelection.subcategoryId !== subcategoryId) {
+    setPrevSelection({ categoryId, subcategoryId });
+    if (categoryId && subcategoryId && !expanded.has(categoryId)) {
+      setExpanded(new Set([categoryId]));
+    }
+  }
+
+  // Ausgewählte Zeile in den sichtbaren Bereich der Liste scrollen. Nur die
+  // Liste selbst scrollt, nicht der Dialog drumherum.
+  const boxRef = useRef(null);
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box || !categoryId) return;
+    const row = box.querySelector(".hb-hcat-sub-row--selected, .hb-hcat-parent-row--selected");
+    if (!row) return;
+    const boxRect = box.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    if (rowRect.top < boxRect.top) {
+      box.scrollTop -= boxRect.top - rowRect.top;
+    } else if (rowRect.bottom > boxRect.bottom) {
+      box.scrollTop += rowRect.bottom - boxRect.bottom;
+    }
+  }, [categoryId, subcategoryId]);
+
   const [filter, setFilter] = useState("");
 
   // Eindeutiger Radio-Group-Name pro Picker-Instanz, damit zwei gleichzeitig
@@ -82,16 +110,9 @@ export function HierarchicalCategoryPicker({
 
   // ── handlers ─────────────────────────────────────────────────────────
 
+  // Accordion: Aufklappen einer Kategorie klappt alle anderen zu.
   function toggleExpand(catId) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(catId)) {
-        next.delete(catId);
-      } else {
-        next.add(catId);
-      }
-      return next;
-    });
+    setExpanded((prev) => (prev.has(catId) ? new Set() : new Set([catId])));
   }
 
   function handleParentSelect(cat) {
@@ -134,7 +155,7 @@ export function HierarchicalCategoryPicker({
         </div>
       )}
 
-      <div className="hb-hcat-box">
+      <div className="hb-hcat-box" ref={boxRef}>
         {groups.length === 0 && (
           <div className="hb-hcat-empty">Keine Kategorie gefunden.</div>
         )}
