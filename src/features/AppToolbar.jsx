@@ -18,6 +18,8 @@ export default function AppToolbar({
   onRenameBook,
   monthFilter,
   onMonthFilterChange,
+  monthEmptyLabel,
+  monthClearTitle = "Alle Monate anzeigen",
   darkMode,
   onDarkModeToggle,
   showMonthFilter,
@@ -53,14 +55,18 @@ export default function AppToolbar({
                 <div className="hb-divider" />
                 <span className="hb-muted">Monat</span>
                 <div className="hb-month-filter">
-                  <HbMonthPicker value={monthFilter} onChange={onMonthFilterChange} />
+                  <HbMonthPicker
+                    value={monthFilter}
+                    onChange={onMonthFilterChange}
+                    emptyLabel={monthEmptyLabel}
+                  />
                   <button
                     type="button"
                     className="hb-month-filter-clear"
                     onClick={() => onMonthFilterChange("")}
                     disabled={!monthFilter}
                     aria-label="Monatsfilter zurücksetzen"
-                    title="Alle Monate anzeigen"
+                    title={monthClearTitle}
                   >
                     <IconClose />
                   </button>

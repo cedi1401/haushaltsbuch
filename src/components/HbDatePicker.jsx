@@ -223,7 +223,9 @@ export function HbDatePicker({ value, onChange, disabled, style, className, plac
   );
 }
 
-export function HbMonthPicker({ value, onChange, disabled, style, className }) {
+// `emptyLabel` ersetzt den Platzhalter, wenn „kein Monat“ selbst ein Zustand
+// ist (z. B. „Aktueller Monat“) — er steht dann in normaler Schriftfarbe.
+export function HbMonthPicker({ value, onChange, disabled, style, className, emptyLabel }) {
   const [open, setOpen] = useState(false);
   const [dropUp, setDropUp] = useState(false);
   const [viewYear, setViewYear] = useState(0);
@@ -270,7 +272,8 @@ export function HbMonthPicker({ value, onChange, disabled, style, className }) {
 
   const displayText = parsed
     ? `${MONTH_NAMES[parsed.m - 1]} ${parsed.y}`
-    : "Monat wählen";
+    : emptyLabel || "Monat wählen";
+  const isPlaceholder = !parsed && !emptyLabel;
 
   return (
     <div className={`hb-datepicker hb-monthpicker${className ? " " + className : ""}`} style={style}>
@@ -283,7 +286,7 @@ export function HbMonthPicker({ value, onChange, disabled, style, className }) {
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <span className="hb-datepicker-trigger-text" style={!parsed ? { color: "var(--muted)", opacity: 0.7 } : {}}>
+        <span className="hb-datepicker-trigger-text" style={isPlaceholder ? { color: "var(--muted)", opacity: 0.7 } : {}}>
           {displayText}
         </span>
         <span className="hb-datepicker-trigger-icon"><IconCalendar width={16} height={16} /></span>

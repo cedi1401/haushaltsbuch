@@ -39,8 +39,12 @@ export default function HaushaltsbuchApp() {
   // SavingsView). Jeder andere Wechsel verwirft ihn, damit ein späterer Besuch
   // der Rücklagen den Dialog nicht erneut öffnet.
   const [savingsIntent, setSavingsIntent] = useState(null);
+  // Monat des Budget-Views — getrennt vom globalen Monatsfilter und nicht
+  // gespeichert: jeder Besuch beginnt beim laufenden Finanzmonat ("").
+  const [budgetMonth, setBudgetMonth] = useState("");
   const changeView = useCallback((id) => {
     setSavingsIntent(null);
+    if (id === "budget") setBudgetMonth("");
     setView(id);
   }, []);
   const openSavingsPosition = useCallback((intent) => {
@@ -197,6 +201,7 @@ export default function HaushaltsbuchApp() {
     potBalances, expenseByHierarchy, incomeByHierarchy,
     expenseCategories, allTransferCategories, indicateTransferCategories, fixedCostItems,
     monthFilter, setMonthFilter, monthLabel, monthStartDay, baseCurrency,
+    budgetMonth, setBudgetMonth,
     entryActions, updateBook, patchActiveBook,
     selectedPotId, setSelectedPotId,
     costGroupRange, setCostGroupRange,
@@ -204,6 +209,7 @@ export default function HaushaltsbuchApp() {
     savingsIntent, openSavingsPosition,
     openCategoryManager: () => setCategoryManagerOpen(true),
   };
+  const toolbarMonth = currentView.getMonth?.(viewContext) ?? { value: monthFilter, onChange: setMonthFilter };
 
   const currencyContextValue = useMemo(() => ({ fmt, baseCurrency }), [fmt, baseCurrency]);
 
@@ -283,8 +289,10 @@ export default function HaushaltsbuchApp() {
             canDeleteBook={books.length > 1}
             activeBookName={activeBook?.name || ""}
             onRenameBook={applyRenameActiveBook}
-            monthFilter={monthFilter}
-            onMonthFilterChange={setMonthFilter}
+            monthFilter={toolbarMonth.value}
+            onMonthFilterChange={toolbarMonth.onChange}
+            monthEmptyLabel={toolbarMonth.emptyLabel}
+            monthClearTitle={toolbarMonth.clearTitle}
             darkMode={darkMode}
             onDarkModeToggle={() => setDarkMode(!darkMode)}
             showMonthFilter={currentView.usesMonth}

@@ -32,6 +32,9 @@ export const VIEW_GROUPS = [
  * - `usesMonth`: true, wenn die View den Monatsfilter der Toolbar auswertet;
  *   sonst blendet die Toolbar ihn aus. Töpfe gehört dazu, weil ihre
  *   Buchungsliste nach Monat filtert.
+ * - `getMonth(ctx)` (optional): eigener Monat statt des globalen Filters, als
+ *   `{ value, onChange, emptyLabel, clearTitle }`; `emptyLabel` steht im
+ *   Monats-Picker, solange kein Monat gewählt ist.
  * - `getProps(ctx)`: baut die Props aus dem Kontext, den HaushaltsbuchApp
  *   zusammenstellt (Buch, abgeleitete Werte, Aktionen, Navigation).
  */
@@ -76,11 +79,19 @@ export const VIEWS = [
     Icon: IconBudget,
     group: "daily",
     usesMonth: true,
+    // Eigener Monat: Ein Budget gilt pro Monat, ohne Auswahl also der laufende.
+    // Beim Öffnen des Views steht er wieder dort (siehe HaushaltsbuchApp).
+    getMonth: (ctx) => ({
+      value: ctx.budgetMonth,
+      onChange: ctx.setBudgetMonth,
+      emptyLabel: "Aktueller Monat",
+      clearTitle: "Aktuellen Monat anzeigen",
+    }),
     Component: BudgetView,
     getProps: (ctx) => ({
       entries: ctx.entries,
       expenseCategories: ctx.expenseCategories,
-      monthFilter: ctx.monthFilter,
+      monthFilter: ctx.budgetMonth,
       monthStartDay: ctx.monthStartDay,
       onUpdateExpenseCategories: (newCats) =>
         ctx.patchActiveBook((b) => ({ ...b, expenseCategories: newCats })),
