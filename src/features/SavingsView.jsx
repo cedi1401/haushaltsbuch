@@ -3,7 +3,7 @@ import { EMPTY_ARRAY } from "../utils/constants.js";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import DataTable from "../components/DataTable.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
-import { IconSavings, IconPlus, IconEdit } from "../components/icons.jsx";
+import { IconSavings, IconEdit } from "../components/icons.jsx";
 import { todayISO } from "../utils/formatUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { buildCatchUpRates } from "../utils/fixedCostUtils.js";
@@ -37,8 +37,9 @@ import CatchUpRevertDialog from "./savings/CatchUpRevertDialog.jsx";
  * steht die Überleitung: seine Sparziele und was keiner aktiven Sparposition
  * gehört. Damit ergeben die Zeilen eines Topfs immer genau seinen Stand.
  *
- * Rollenteilung zur Fixkosten-View: hier wird angelegt, bewertet und der
- * Zyklus abgeschlossen; dort wird monatlich gebucht. „Bearbeiten" und
+ * Rollenteilung zur Fixkosten-View: hier wird bewertet und der Zyklus
+ * abgeschlossen; dort werden Rückstellungen und freie Rücklagen angelegt und
+ * monatlich gebucht. Neu angelegt werden hier nur Sparziele. „Bearbeiten" und
  * „+ Sparposition" in den Fixkosten springen hierher und öffnen den Dialog
  * (`initialIntent`, siehe `dialogFromIntent`).
  */
@@ -115,8 +116,8 @@ export default function SavingsView({
     dialogKey.current += 1;
     setDialog({ key: dialogKey.current, ...opts });
   }, []);
-  const openCreate = useCallback(
-    (potId, rule) => openDialog({ purpose: null, defaultPotId: potId || pots[0]?.id, defaultRule: rule }),
+  const openCreateGoal = useCallback(
+    () => openDialog({ purpose: null, defaultPotId: pots[0]?.id, defaultRule: "goal" }),
     [openDialog, pots]
   );
   const openEdit = useCallback((row) => openDialog({ purpose: row.purpose }), [openDialog]);
@@ -378,20 +379,9 @@ export default function SavingsView({
           total: fmt(s.balance),
           totalColumnId: "actual",
           countLabel: (n) => (n === 0 ? "keine Rücklagen" : `${n} Sparposition${n === 1 ? "" : "en"}`),
-          aside: (
-            <button
-              type="button"
-              className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
-              onClick={() => openCreate(s.pot.id)}
-              title="Sparposition in diesem Topf anlegen"
-              aria-label={`Sparposition in „${s.pot.name}“ anlegen`}
-            >
-              <IconPlus />
-            </button>
-          ),
         };
       }),
-    [model.sections, fmt, openCreate]
+    [model.sections, fmt]
   );
 
   function renderDetail(row, hiddenColumns) {
@@ -448,12 +438,6 @@ export default function SavingsView({
 
   return (
     <div>
-      {pots.length > 0 && (
-        <div className="hb-view-actions">
-          <Button onClick={() => openCreate()}><IconPlus /> Neue Sparposition</Button>
-        </div>
-      )}
-
       {pots.length === 0 ? (
         <Card>
           <CardContent>
@@ -516,7 +500,7 @@ export default function SavingsView({
             potNameById={potNameById}
             fmt={fmt}
             hasArchive={model.archivedGoals.length > 0}
-            onCreate={() => openCreate(undefined, "goal")}
+            onCreate={openCreateGoal}
             onEdit={openEdit}
             onComplete={completeGoal}
             onCompleteEarly={completeGoalEarly}

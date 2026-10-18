@@ -1395,16 +1395,6 @@ select.hb-input option {
   font-weight: 700;
 }
 
-/* Kopfzeile eines Views ohne Seitentitel (der steht in der Toolbar): nur die
-   Aktionen, rechtsbündig. */
-.hb-view-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
 /* Stat pills (used e.g. in Pots highlights) */
 .hb-stat-pills {
   display: grid;
