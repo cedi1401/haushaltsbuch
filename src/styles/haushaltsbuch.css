@@ -4140,6 +4140,7 @@ select.hb-input option {
    die Kategorieliste rechts als vertiefte --bg-subtle-Ebene sitzt.
    ===================================================== */
 .hb-tpl-picker {
+  position: relative;
   flex-shrink: 0;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border-light);
@@ -4160,7 +4161,7 @@ select.hb-input option {
 
 /*
   Feste Spaltenzahl statt auto-fill: EntryFormDialog kürzt die Kartenliste in
-  JS auf exakt zwei Reihen (cols * 2, letzter Platz für die Ghost-Karte).
+  JS auf exakt zwei Reihen (cols * 2, letzter Platz für den „+N weitere“-Chip).
   Die Spaltenzahl MUSS mit TPL_GRID_COLS in EntryFormDialog.jsx
   übereinstimmen — sonst entstehen Lücken oder eine dritte Reihe.
   Der column-gap folgt dem 4px-Raster und bleibt im selben Rhythmus wie der
@@ -4209,33 +4210,56 @@ select.hb-input option {
   color: var(--accent);
 }
 
-/* „+N weitere": bewusst ohne Fläche/Schatten, damit die Karte als Hinweis
-   und nicht als weitere Vorlage gelesen wird. */
-.hb-tpl-card--ghost {
-  justify-content: center;
-  background: transparent;
-  border-style: dashed;
-  border-color: var(--border);
-  box-shadow: none;
+/* „+N weitere": sieht aus wie eine Vorlage und klappt die übrigen auf.
+   Hebt sich nur über den Chevron und den fehlenden Farbpunkt ab; liegt die
+   gewählte Vorlage unter den eingeklappten, trägt der Chip den Aktiv-Zustand. */
+.hb-tpl-card--more .hb-tpl-card-name {
+  justify-content: space-between;
+}
+
+.hb-tpl-card--more .hb-tpl-card-name svg {
+  flex-shrink: 0;
   color: var(--muted);
+  transition: transform var(--transition-fast);
 }
 
-.hb-tpl-card--ghost:hover:not(:disabled) {
-  background: var(--hover-bg);
-  border-color: var(--accent);
+.hb-tpl-card--more .hb-tpl-card-name svg.is-open {
+  transform: rotate(180deg);
 }
 
-.hb-tpl-card--ghost:hover:not(:disabled) .hb-tpl-card-name-text {
-  color: var(--accent);
+/* Aufgeklappte Vorlagen: schweben wie die Budget-Karten über dem Formular,
+   statt den Dialog höher zu machen. Die Fläche beginnt direkt unter der
+   zweiten Reihe; Innenabstand und negativer Rand entsprechen dem 12px-gap,
+   damit die Karten wie eine dritte Reihe in denselben Spalten stehen. */
+.hb-tpl-more {
+  position: absolute;
+  top: calc(100% - 16px);
+  left: -12px;
+  right: -12px;
+  z-index: 2;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dialog);
+  animation: fadeIn 0.15s ease-out;
 }
 
-.hb-tpl-card--ghost:disabled {
-  cursor: default;
+/* Fokus auf die Vorlagen: das Formular darunter tritt zurück. */
+.hb-entry-form__panes {
+  transition: opacity var(--transition-fast);
 }
 
-.hb-tpl-card--ghost .hb-tpl-card-name-text {
-  color: var(--text-secondary);
-  transition: color var(--transition-fast);
+.hb-entry-form.has-tpl-open > .hb-entry-form__panes {
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-tpl-card--more .hb-tpl-card-name svg,
+  .hb-entry-form__panes { transition: none; }
+  .hb-tpl-more { animation: none; }
 }
 
 .hb-tpl-card-name {

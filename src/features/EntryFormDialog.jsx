@@ -1,10 +1,11 @@
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import { Button } from "../components/ui.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import { EntryKindSelector } from "../components/EntryKindSelector.jsx";
 import PurposeSelect from "../components/PurposeSelect.jsx";
+import { IconChevron } from "../components/icons.jsx";
 import { getTemplateColor } from "../utils/entryTemplateUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { EMPTY_ARRAY, ENTRY_KIND_LABELS } from "../utils/constants.js";
@@ -12,7 +13,7 @@ import { EMPTY_ARRAY, ENTRY_KIND_LABELS } from "../utils/constants.js";
 /*
   Vorlagen-Grid: feste Spaltenzahl statt auto-fill, damit JS und CSS dieselbe
   Anzahl kennen. Nur so lässt sich exakt auf zwei Reihen kürzen — der Rest
-  wandert hinter die „+N weitere"-Ghost-Karte. Der Wert muss mit
+  wandert hinter den „+N weitere"-Chip und klappt von dort auf. Der Wert muss mit
   grid-template-columns von .hb-tpl-card-grid übereinstimmen.
 */
 const TPL_GRID_COLS = 4;
@@ -38,6 +39,9 @@ export default function EntryFormDialog({
   const { kind, date, amount, potId, transferCategoryId, note, categoryId, subcategoryId } = draft;
   const fmt = useFmt();
   const amountInputRef = useRef(null);
+  const pickerRef = useRef(null);
+  const moreToggleRef = useRef(null);
+  const [showMore, setShowMore] = useState(false);
   const purposeOptions = availablePurposes.map((c) => ({ id: c.id, label: c.name }));
 
   // Meistgenutzte Vorlagen zuerst; bei Gleichstand alphabetisch, damit die
@@ -52,14 +56,47 @@ export default function EntryFormDialog({
     [templates]
   );
 
-  // Genau zwei Reihen. Passt nicht alles hinein, belegt die Ghost-Karte den
-  // letzten Platz und führt in den Vorlagen-Manager.
+  // Genau zwei Reihen. Passt nicht alles hinein, belegt der „+N weitere"-Chip
+  // den letzten Platz und klappt die übrigen Vorlagen auf.
   const capacity = TPL_GRID_COLS * TPL_GRID_ROWS;
   const hasOverflow = sortedTemplates.length > capacity;
   const visibleTemplates = hasOverflow
     ? sortedTemplates.slice(0, capacity - 1)
     : sortedTemplates;
-  const hiddenCount = sortedTemplates.length - visibleTemplates.length;
+  const hiddenTemplates = hasOverflow ? sortedTemplates.slice(capacity - 1) : EMPTY_ARRAY;
+  const hiddenCount = hiddenTemplates.length;
+  const hiddenActive = hiddenTemplates.some((tpl) => tpl.id === appliedTemplateId);
+  const isMoreOpen = showMore && hasOverflow;
+
+  // Beim Schließen des Dialogs zuklappen, damit er beim nächsten Öffnen
+  // wieder mit zwei Reihen startet (Zustand beim Rendern anpassen statt per
+  // Effect, damit kein zusätzlicher Render-Durchlauf entsteht).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (!open) setShowMore(false);
+  }
+
+  // Wie bei den Budget-Karten: Klick daneben oder Escape klappt wieder zu.
+  // Escape wird hier abgefangen, sonst schlösse es den ganzen Dialog.
+  useEffect(() => {
+    if (!isMoreOpen) return undefined;
+    function onPointerDown(e) {
+      if (!pickerRef.current?.contains(e.target)) setShowMore(false);
+    }
+    function onKeyDown(e) {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      setShowMore(false);
+      moreToggleRef.current?.focus();
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isMoreOpen]);
 
   const templateCtx = { expenseCategories, incomeCategories };
 
@@ -73,10 +110,37 @@ export default function EntryFormDialog({
 
   function handleApplyTemplate(tpl) {
     onApplyTemplate?.(tpl);
+    setShowMore(false);
     // Ohne festen Betrag ist das Betragsfeld der nächste sinnvolle Schritt.
     if (tpl.amount == null) {
       requestAnimationFrame(() => amountInputRef.current?.focus());
     }
+  }
+
+  function renderTemplateCard(tpl) {
+    return (
+      <button
+        key={tpl.id}
+        type="button"
+        className={`hb-tpl-card${tpl.id === appliedTemplateId ? " hb-tpl-card--active" : ""}`}
+        aria-pressed={tpl.id === appliedTemplateId}
+        aria-label={`${tpl.name} · ${templateSummary(tpl)}`}
+        onClick={() => handleApplyTemplate(tpl)}
+      >
+        <span className="hb-tpl-card-name">
+          <span className="hb-cat-dot" style={{ background: getTemplateColor(tpl, templateCtx) }} />
+          <span className="hb-tpl-card-name-text">{tpl.name}</span>
+        </span>
+        <span className="hb-tpl-card-meta">
+          <span
+            className={`hb-tpl-card-amount${tpl.amount == null ? " hb-tpl-card-amount--open" : ""}`}
+          >
+            {tpl.amount != null ? fmt(tpl.amount) : "Betrag offen"}
+          </span>
+          <span>· {ENTRY_KIND_LABELS[tpl.kind] || "Ausgabe"}</span>
+        </span>
+      </button>
+    );
   }
 
   return (
@@ -95,53 +159,44 @@ export default function EntryFormDialog({
         </Button>
       )}
     >
-      <div className="hb-entry-form">
+      <div className={`hb-entry-form${isMoreOpen ? " has-tpl-open" : ""}`}>
       {sortedTemplates.length > 0 && (
-        <section className="hb-tpl-picker">
+        <section className="hb-tpl-picker" ref={pickerRef}>
           <div className="hb-tpl-picker-head">
             <span className="hb-tpl-picker-title">Vorlagen</span>
             <span className="hb-tpl-picker-hint">Ein Klick füllt das Formular aus</span>
           </div>
           <div className="hb-tpl-card-grid" role="group" aria-label="Buchungsvorlagen">
-            {visibleTemplates.map((tpl) => (
-              <button
-                key={tpl.id}
-                type="button"
-                className={`hb-tpl-card${tpl.id === appliedTemplateId ? " hb-tpl-card--active" : ""}`}
-                aria-pressed={tpl.id === appliedTemplateId}
-                aria-label={`${tpl.name} · ${templateSummary(tpl)}`}
-                onClick={() => handleApplyTemplate(tpl)}
-              >
-                <span className="hb-tpl-card-name">
-                  <span className="hb-cat-dot" style={{ background: getTemplateColor(tpl, templateCtx) }} />
-                  <span className="hb-tpl-card-name-text">{tpl.name}</span>
-                </span>
-                <span className="hb-tpl-card-meta">
-                  <span
-                    className={`hb-tpl-card-amount${tpl.amount == null ? " hb-tpl-card-amount--open" : ""}`}
-                  >
-                    {tpl.amount != null ? fmt(tpl.amount) : "Betrag offen"}
-                  </span>
-                  <span>· {ENTRY_KIND_LABELS[tpl.kind] || "Ausgabe"}</span>
-                </span>
-              </button>
-            ))}
+            {visibleTemplates.map(renderTemplateCard)}
 
             {hasOverflow && (
               <button
                 type="button"
-                className="hb-tpl-card hb-tpl-card--ghost"
-                onClick={onOpenTemplateManager}
-                disabled={!onOpenTemplateManager}
-                aria-label={`${hiddenCount} weitere Vorlagen im Vorlagen-Manager anzeigen`}
+                ref={moreToggleRef}
+                className={`hb-tpl-card hb-tpl-card--more${hiddenActive ? " hb-tpl-card--active" : ""}`}
+                onClick={() => setShowMore((v) => !v)}
+                aria-expanded={isMoreOpen}
+                aria-controls="hb-tpl-more"
+                aria-label={isMoreOpen ? "Weitere Vorlagen ausblenden" : `${hiddenCount} weitere Vorlagen anzeigen`}
               >
                 <span className="hb-tpl-card-name">
                   <span className="hb-tpl-card-name-text">+{hiddenCount} weitere</span>
+                  <IconChevron className={isMoreOpen ? "is-open" : undefined} />
                 </span>
-                <span className="hb-tpl-card-meta">Alle Vorlagen verwalten</span>
+                <span className="hb-tpl-card-meta">
+                  {isMoreOpen ? "Ausblenden" : "Alle Vorlagen anzeigen"}
+                </span>
               </button>
             )}
           </div>
+
+          {isMoreOpen && (
+            <div id="hb-tpl-more" className="hb-tpl-more">
+              <div className="hb-tpl-card-grid" role="group" aria-label="Weitere Buchungsvorlagen">
+                {hiddenTemplates.map(renderTemplateCard)}
+              </div>
+            </div>
+          )}
         </section>
       )}
 
