@@ -83,7 +83,6 @@ export const VIEWS = [
       monthStartDay: ctx.monthStartDay,
       onUpdateExpenseCategories: (newCats) =>
         ctx.patchActiveBook((b) => ({ ...b, expenseCategories: newCats })),
-      onOpenCategoryManager: ctx.openCategoryManager,
     }),
   },
   {

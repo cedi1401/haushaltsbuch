@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Card, CardContent } from "../components/ui.jsx";
+import { Card, CardContent } from "../components/ui.jsx";
 import { IconBudget, IconChevron, IconEdit, IconInfo, IconPlus } from "../components/icons.jsx";
 import { useUndo } from "../contexts/UndoContext.js";
 import { formatPercent } from "../utils/formatUtils.js";
@@ -31,7 +31,6 @@ export default function BudgetView({
   expenseCategories,
   monthStartDay = 1,
   onUpdateExpenseCategories,
-  onOpenCategoryManager,
 }) {
   const fmt = useFmt();
   const undo = useUndo();
@@ -73,10 +72,10 @@ export default function BudgetView({
             <div className="hb-empty-icon"><IconBudget /></div>
             <div className="hb-empty-title">Noch keine Ausgaben-Kategorien</div>
             <div className="hb-empty-text">
-              Budgets hängen an Ausgaben-Kategorien. Lege zuerst eine Kategorie an, danach
-              kannst du ihr hier ein Budget geben.
+              Budgets hängen an Ausgaben-Kategorien. Lege zuerst im Dashboard über
+              „Kategorien bearbeiten“ eine Kategorie an, danach kannst du ihr hier ein
+              Budget geben.
             </div>
-            <Button onClick={onOpenCategoryManager}>Kategorien bearbeiten</Button>
           </div>
         </CardContent>
       </Card>
@@ -108,12 +107,6 @@ export default function BudgetView({
 
   return (
     <>
-      <div className="hb-view-actions">
-        <Button variant="outline" onClick={onOpenCategoryManager}>
-          Kategorien bearbeiten
-        </Button>
-      </div>
-
       <div className="hb-stat-pills">
         <StatPill
           tone=" hb-stat-pill--accent"

@@ -48,7 +48,7 @@ export default function HaushaltsbuchApp() {
     setView("savings");
   }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // Der Kategorien-Dialog wird vom Dashboard und vom Budget-View aus geöffnet.
+  // Der Kategorien-Dialog wird vom Dashboard aus geöffnet.
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
 
   // Frei gewählter Zeitraum des Kostenrechners. Liegt hier, weil CostGroupsView
