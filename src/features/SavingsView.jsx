@@ -25,6 +25,7 @@ import GoalArchive from "./savings/GoalArchive.jsx";
 import SavingsPositionDialog from "./savings/SavingsPositionDialog.jsx";
 import BillPaidDialog from "./savings/BillPaidDialog.jsx";
 import BacklogCatchUpDialog from "./savings/BacklogCatchUpDialog.jsx";
+import CatchUpRevertDialog from "./savings/CatchUpRevertDialog.jsx";
 
 /**
  * Rücklagen-View — wofür liegt das Geld in den Töpfen (F2, Konzept C).
@@ -76,6 +77,7 @@ export default function SavingsView({
   onUpdateBook,
   onAddEntry,
   onAddEntries,
+  onRemoveEntries,
   onNavigateToPots,
   initialIntent = null,
   onNavigate,
@@ -222,17 +224,30 @@ export default function SavingsView({
   // nachzuholen, was nicht auch von Hand gebucht werden könnte. Nur
   // Einzahlungen zählen — eine Entnahme aus „Rechnung bezahlt" verbraucht die
   // Verfügbarkeit nicht.
-  const bookedPurposeIds = useMemo(() => {
-    const set = new Set();
+  //
+  // Die Raten eines Ausgleichs tragen eine gemeinsame `catchUpBatchId`. Damit
+  // lassen sie sich als Ganzes zurücknehmen — etwa wenn der Rechnungsbetrag
+  // beim Anlegen nur geschätzt war. Danach ist der Ausgleich wieder verfügbar,
+  // sofern keine weitere Einzahlung gebucht ist.
+  const { depositsByPurpose, catchUpByPurpose } = useMemo(() => {
+    const deposits = new Map();
+    const catchUp = new Map();
     for (const e of entries || []) {
-      if (e.transferCategoryId && e.kind === "transfer") set.add(e.transferCategoryId);
+      if (!e.transferCategoryId || e.kind !== "transfer") continue;
+      deposits.set(e.transferCategoryId, (deposits.get(e.transferCategoryId) || 0) + 1);
+      if (e.catchUpBatchId) {
+        const list = catchUp.get(e.transferCategoryId) || [];
+        list.push(e);
+        catchUp.set(e.transferCategoryId, list);
+      }
     }
-    return set;
+    return { depositsByPurpose: deposits, catchUpByPurpose: catchUp };
   }, [entries]);
   const canCatchUp = useCallback(
-    (row) => row.isSinkingFund && row.elapsed > 0 && !bookedPurposeIds.has(row.id),
-    [bookedPurposeIds]
+    (row) => row.isSinkingFund && row.elapsed > 0 && !depositsByPurpose.has(row.id),
+    [depositsByPurpose]
   );
+  const canRevertCatchUp = useCallback((row) => catchUpByPurpose.has(row.id), [catchUpByPurpose]);
 
   // Beide Aktionen schreiben genau einmal. `EditDialog` löst `onSave` auch per
   // Strg+Enter aus und `canSave` bleibt bis zum Unmount wahr — eine zweite
@@ -241,6 +256,7 @@ export default function SavingsView({
   const [billTarget, setBillTarget] = useState(null);
   const [billDraft, setBillDraft] = useState(null);
   const [catchUpTarget, setCatchUpTarget] = useState(null);
+  const [revertTarget, setRevertTarget] = useState(null);
 
   const openBillPaid = useCallback((row) => {
     writingRef.current = false;
@@ -257,6 +273,11 @@ export default function SavingsView({
   const openCatchUp = useCallback((row) => {
     writingRef.current = false;
     setCatchUpTarget(row);
+  }, []);
+
+  const openRevertCatchUp = useCallback((row) => {
+    writingRef.current = false;
+    setRevertTarget(row);
   }, []);
 
   const catchUpRates = useMemo(
@@ -283,6 +304,7 @@ export default function SavingsView({
     const item = catchUpTarget?.item;
     setCatchUpTarget(null);
     if (!item || rates.length === 0) return;
+    const catchUpBatchId = generateId("catchup");
     const newEntries = rates.map((r) => ({
       id: generateId("entry"),
       date: r.date,
@@ -293,6 +315,7 @@ export default function SavingsView({
       kind: "transfer",
       potId: item.potId,
       note: item.name,
+      catchUpBatchId,
     }));
     // Eine Batch-Buchung: ein patchActiveBook, ein Commit, ein Save.
     onAddEntries?.(newEntries);
@@ -300,6 +323,20 @@ export default function SavingsView({
       rates.length === 1
         ? `1 Rate für „${item.name}“ gebucht.`
         : `${rates.length} Raten für „${item.name}“ gebucht.`
+    );
+  }
+
+  function confirmRevertCatchUp(list) {
+    if (writingRef.current) return;
+    writingRef.current = true;
+    const name = revertTarget?.purpose?.name ?? "";
+    setRevertTarget(null);
+    if (list.length === 0) return;
+    onRemoveEntries?.(list.map((e) => e.id));
+    undo.offer(
+      list.length === 1
+        ? `1 Ausgleichsrate für „${name}“ gelöscht.`
+        : `${list.length} Ausgleichsraten für „${name}“ gelöscht.`
     );
   }
 
@@ -365,8 +402,10 @@ export default function SavingsView({
         fmt={fmt}
         pot={potById.get(row.purpose?.potId)}
         canCatchUp={canCatchUp(row)}
+        canRevertCatchUp={canRevertCatchUp(row)}
         onBillPaid={openBillPaid}
         onCatchUp={openCatchUp}
+        onRevertCatchUp={openRevertCatchUp}
         onEdit={openEdit}
       />
     );
@@ -379,6 +418,7 @@ export default function SavingsView({
     const canPay = row.status === "due" || row.status === "overdue";
     const menu = [];
     if (canCatchUp(row)) menu.push({ label: "Rückstand ausgleichen", onClick: () => openCatchUp(row) });
+    if (canRevertCatchUp(row)) menu.push({ label: "Ausgleich zurücknehmen", onClick: () => openRevertCatchUp(row) });
     menu.push({ label: "Löschen", danger: true, onClick: () => deletePosition(row.purpose) });
     return (
       <>
@@ -534,6 +574,21 @@ export default function SavingsView({
         target={catchUpTarget?.target ?? null}
         onClose={() => setCatchUpTarget(null)}
         onConfirm={confirmCatchUp}
+      />
+
+      <CatchUpRevertDialog
+        open={Boolean(revertTarget)}
+        name={revertTarget?.purpose?.name}
+        entries={revertTarget ? catchUpByPurpose.get(revertTarget.id) : EMPTY_ARRAY}
+        actual={revertTarget?.actual ?? 0}
+        otherDeposits={
+          revertTarget
+            ? (depositsByPurpose.get(revertTarget.id) || 0) - (catchUpByPurpose.get(revertTarget.id)?.length || 0)
+            : 0
+        }
+        monthStartDay={monthStartDay}
+        onClose={() => setRevertTarget(null)}
+        onConfirm={confirmRevertCatchUp}
       />
     </div>
   );

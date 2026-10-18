@@ -151,6 +151,7 @@ export const VIEWS = [
       onUpdateBook: ctx.updateBook,
       onAddEntry: ctx.entryActions.addTransferEntry,
       onAddEntries: ctx.entryActions.addEntries,
+      onRemoveEntries: ctx.entryActions.removeEntries,
       onNavigateToPots: () => ctx.navigate("pots"),
       initialIntent: ctx.savingsIntent,
       onNavigate: ctx.navigate,

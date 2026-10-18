@@ -10,7 +10,7 @@ import { formatRateCount } from "./reserveFormat.js";
  *
  * Er löst drei Dinge auf einmal, die in einer Tabellenzelle keinen Platz haben:
  * die abgewählten Spalten, die Erklärung des Zyklus (wo der Anker herkommt) und
- * die beiden bedingt verfügbaren Aktionen. Eine Aktionsspalte, in der mal zwei,
+ * die bedingt verfügbaren Aktionen. Eine Aktionsspalte, in der mal zwei,
  * mal ein, mal kein Button steht, wäre unruhig und kostete dauerhaft Breite.
  *
  * `hiddenColumns` liefert `DataTable` — der Bereich zeigt damit genau das, was
@@ -27,8 +27,10 @@ export default function ReserveDetail({
   fmt,
   pot,
   canCatchUp,
+  canRevertCatchUp,
   onBillPaid,
   onCatchUp,
+  onRevertCatchUp,
   onEdit,
 }) {
   const potName = pot?.name ?? "—";
@@ -132,6 +134,11 @@ export default function ReserveDetail({
         {canCatchUp && (
           <Button size="sm" variant="outline" onClick={() => onCatchUp?.(row)}>
             Rückstand ausgleichen
+          </Button>
+        )}
+        {canRevertCatchUp && (
+          <Button size="sm" variant="outline" onClick={() => onRevertCatchUp?.(row)}>
+            Ausgleich zurücknehmen
           </Button>
         )}
         <Button size="sm" variant="outline" onClick={() => onEdit?.(row)}>

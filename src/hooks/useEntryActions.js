@@ -317,6 +317,19 @@ export function useEntryActions({
     patchActiveBook((b) => ({ ...b, entries: [...(b.entries || []), ...newEntries] }));
   }
 
+  // Ohne eigene Rückfrage: der Aufrufer bestätigt (mit eigener Liste) und
+  // bietet das Rückgängig an, so wie bei addEntries.
+  function removeEntries(ids) {
+    if (!activeBook) return;
+    if (!Array.isArray(ids) || ids.length === 0) return;
+    const drop = new Set(ids);
+    if (editingId && drop.has(editingId)) {
+      setEditOpen(false);
+      setEditingId(null);
+    }
+    patchActiveBook((b) => ({ ...b, entries: (b.entries || []).filter((e) => !drop.has(e.id)) }));
+  }
+
   async function removeEntry(id) {
     if (!activeBook) return;
     const target = (activeBook.entries || []).find((e) => e.id === id) || null;
@@ -479,6 +492,6 @@ export function useEntryActions({
     closeEdit, saveEdit, canSaveEdit,
     editPurposes,
     // Shared actions
-    addTransferEntry, addEntries, removeEntry, startEdit,
+    addTransferEntry, addEntries, removeEntries, removeEntry, startEdit,
   };
 }
