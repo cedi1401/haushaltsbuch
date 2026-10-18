@@ -41,7 +41,7 @@ export default function GoalCards({
     <section className="hb-goal-section">
       <div className="hb-row hb-goal-section-head">
         <div className="hb-title-group">
-          <h3 className="hb-card-title">Sparziele</h3>
+          <h2 className="hb-goal-section-title">Sparziele</h2>
           {goals.length > 0 && (
             <span className="hb-info-pill hb-info-pill--title">
               {goals.length} {goals.length === 1 ? "Ziel" : "Ziele"}

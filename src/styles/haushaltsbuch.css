@@ -3677,9 +3677,19 @@ select.hb-input option {
   --meter-tone: var(--green);
 }
 
-/* Kopf des Karten-Abschnitts: gleicher Abstand zur Tabelle wie das Archiv. */
+/* Kopf des Karten-Abschnitts: mehr Luft zur Tabelle als das Archiv (28 px),
+   weil hier ein neuer Abschnitt der Seite beginnt. */
 .hb-goal-section-head {
-  margin: 28px 0 12px;
+  margin: 44px 0 12px;
+}
+/* Eigener Abschnitt der Seite, nicht Kopf einer Karte: größer als die
+   Sparziel-Titel (20 px) darunter, kleiner als der Seitentitel (28 px). */
+.hb-goal-section-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  color: var(--text);
 }
 
 .hb-goal-header {
