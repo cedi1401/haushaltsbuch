@@ -5911,6 +5911,20 @@ select.hb-input option {
   flex-direction: column;
 }
 
+/* Überblick: Top-Kategorien verteilen sich über die volle Höhe des Panes */
+.hb-insight-section--fill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.hb-insight-section--fill .hb-insight-cat-list { flex: 1; }
+
+.hb-insight-section--fill .hb-insight-cat-row {
+  flex: 1;
+  justify-content: center;
+}
+
 .hb-insight-cat-row--placeholder {
   visibility: hidden;
   pointer-events: none;

@@ -16,16 +16,16 @@ function MomDelta({ momDelta, fontSize }) {
 
 const OverviewCard = memo(function OverviewCard({ analytics }) {
   const fmt = useFmt();
-  const { top5, avgDailyExpense, biggestMomChange } = analytics;
+  const { topCategories } = analytics;
 
-  const slots = Array.from({ length: 5 }, (_, i) => top5[i] || null);
+  const slots = Array.from({ length: 6 }, (_, i) => topCategories[i] || null);
 
   return (
     <div className="hb-insights-pane hb-insights-pane--active">
-      <div className="hb-insight-section">
+      <div className="hb-insight-section hb-insight-section--fill">
         <div className="hb-insight-label" style={{ marginBottom: 8 }}>Top Kategorien</div>
         <div className="hb-insight-cat-list">
-          {top5.length === 0 && (
+          {topCategories.length === 0 && (
             <div className="hb-insight-cat-empty-overlay" aria-live="polite">
               <div className="hb-empty-icon"><IconInbox /></div>
               <div className="hb-empty-title">Keine Daten</div>
@@ -58,28 +58,6 @@ const OverviewCard = memo(function OverviewCard({ analytics }) {
               </div>
             )
           )}
-        </div>
-      </div>
-
-      <div className="hb-insight-kpi-grid">
-        <div className="hb-insight-block">
-          <div className="hb-insight-label">Größte Veränderung</div>
-          {biggestMomChange ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap", marginTop: 2 }}>
-              <span className="hb-dot" style={{ background: biggestMomChange.color || "var(--muted)" }} />
-              <span className="hb-insight-kpi" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {biggestMomChange.name}
-              </span>
-              <MomDelta momDelta={biggestMomChange.momDelta} fontSize={20} />
-            </div>
-          ) : (
-            <div className="hb-insight-kpi" style={{ color: "var(--muted)" }}>–</div>
-          )}
-        </div>
-
-        <div className="hb-insight-block" style={{ alignItems: "flex-end" }}>
-          <div className="hb-insight-label">Ø Tagesausgaben</div>
-          <div className="hb-insight-kpi hb-insight-kpi--info">{fmt(Math.round(avgDailyExpense), 0)}</div>
         </div>
       </div>
     </div>

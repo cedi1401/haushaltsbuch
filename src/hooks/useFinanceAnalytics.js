@@ -81,12 +81,7 @@ export function useFinanceAnalytics({
     );
     const expenseTotal = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
 
-    const monthInfo = monthFilter ? getFinancialMonthInfo(monthFilter, monthStartDay) : null;
-    const daysElapsed = monthInfo?.daysElapsed ?? 30;
-
-    const avgDailyExpense = daysElapsed > 0 ? expenseTotal / daysElapsed : 0;
-
-    const top5 = (expenseByHierarchy || []).slice(0, 5).map((cat) => {
+    const topCategories = (expenseByHierarchy || []).slice(0, 6).map((cat) => {
       const prev = prevMonthCatMap.get(cat.id) || 0;
       let momDelta = null;
       if (prev > 0) {
@@ -105,13 +100,8 @@ export function useFinanceAnalytics({
       };
     });
 
-    const biggestMomChange =
-      top5.filter((c) => c.momDelta !== null).sort(
-        (a, b) => Math.abs(b.momDelta.pct) - Math.abs(a.momDelta.pct)
-      )[0] ?? null;
-
-    return { top5, avgDailyExpense, biggestMomChange, daysElapsed };
-  }, [filteredEntries, expenseByHierarchy, monthFilter, monthStartDay, prevMonthCatMap]);
+    return { topCategories };
+  }, [filteredEntries, expenseByHierarchy, prevMonthCatMap]);
 
   const behavior = useMemo(() => {
     const expenses = (filteredEntries || []).filter(
