@@ -6041,21 +6041,50 @@ select.hb-input option {
   .hb-insight-bar-fill { animation: none; width: var(--w, 0%); }
 }
 
-/* KPI grid */
-.hb-insight-kpi-grid {
+/* Kennzahl-Kacheln unter den Charts (Verhalten, Prognose): 2×2-Raster.
+   Dezent hinterlegt statt freistehend, damit die Werte nicht im Leerraum
+   schweben; ohne Schatten, weil sie bereits in einer Card liegen. */
+.hb-insight-tiles {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 10px 16px;
-  padding-top: 20px;
-  margin-top: 16px;
-  border-top: 1px solid var(--border-light);
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
 }
 
-.hb-insight-block {
+.hb-insight-tile {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 4px 0;
+  justify-content: center;
+  gap: 3px;
+  padding: 12px 16px;
+  background: var(--hover-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+}
+
+.hb-insight-tile-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.hb-insight-tile-value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hb-insight-tile-sub {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.3;
 }
 
 /* Typography */
@@ -6066,15 +6095,6 @@ select.hb-input option {
   color: var(--muted);
 }
 
-.hb-insight-kpi {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-  color: var(--text);
-  line-height: 1.2;
-}
-
-.hb-insight-kpi--info { color: var(--blue); }
 
 /* Sparkline / Bar chart tooltip */
 .hb-chart-tooltip {
@@ -6527,49 +6547,7 @@ select.hb-input option {
   flex-direction: column;
 }
 
-/* Untere Hälfte: KPIs als 2×2-Grid */
-.hb-behavior-kpis {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 34px 24px;
-  flex: 1;
-  min-height: 0;
-  align-content: center;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border-light);
-}
-
-.hb-behavior-kpi {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.hb-behavior-kpi-val {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.hb-behavior-kpi-sub {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.3;
-  margin-top: 1px;
-}
-
 /* Forecast Tab Layout */
-.hb-forecast-layout .hb-insight-kpi-grid {
-  padding-top: 16px;
-  margin-top: 5px;
-}
-
 .hb-forecast-chart-wrap {
   flex: 1;
   min-height: 160px;

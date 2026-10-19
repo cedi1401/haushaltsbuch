@@ -18,17 +18,7 @@ import { formatDateDELong, formatPercent } from "../../utils/formatUtils.js";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 import { IconInbox } from "../../components/icons.jsx";
 import HbTooltip from "../../components/HbTooltip.jsx";
-
-function Kpi({ label, value, sub }) {
-  return (
-    <div className="hb-behavior-kpi">
-      <div className="hb-insight-label">{label}</div>
-      <div className="hb-behavior-kpi-val">{value}</div>
-      <div className="hb-behavior-kpi-sub">{sub || " "}</div>
-    </div>
-  );
-}
-
+import InsightTile from "./InsightTile.jsx";
 
 const BehaviorCard = memo(function BehaviorCard({ analytics }) {
   const fmt = useFmt();
@@ -128,7 +118,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
               <span className="hb-insight-label">Letzte 30 Tage</span>
               <span style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                 {hasAreaData && (
-                  <span className="hb-insight-label" style={{ fontSize: 11 }}>
+                  <span className="hb-insight-label">
                    --- Ø {fmt(Math.round(avgAmount), 0)} pro Tag
                   </span>
                 )}
@@ -142,7 +132,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                     }
                   >
                     <span style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 600,
                       color: dailyTrendPct > 0 ? themeColors.red : dailyTrendPct < 0 ? themeColors.green : themeColors.muted,
                     }}>
@@ -208,30 +198,30 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
             </div>
             {hasAreaData && (
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
-                <span className="hb-insight-label" style={{ fontSize: 10 }}>vor 30 Tagen</span>
-                <span className="hb-insight-label" style={{ fontSize: 10 }}>Ausgaben pro Tag</span>
-                <span className="hb-insight-label" style={{ fontSize: 10 }}>heute</span>
+                <span className="hb-insight-label">vor 30 Tagen</span>
+                <span className="hb-insight-label">Ausgaben pro Tag</span>
+                <span className="hb-insight-label">heute</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Unteres 1/3: KPIs auf voller Breite */}
-        <div className="hb-behavior-kpis">
-          <Kpi label="Aktivster Tag" value={mostActiveDay} />
-          <Kpi
+        {/* Unten: Kennzahlen als 2×2-Kacheln */}
+        <div className="hb-insight-tiles">
+          <InsightTile label="Aktivster Tag" value={mostActiveDay} />
+          <InsightTile
             label="Buchungen"
             value={totalBookings}
             sub={prevTotalBookings > 0 ? `${prevTotalBookings} letzter Monat` : null}
           />
-          <Kpi
+          <InsightTile
             label="Ø pro Tag"
             value={avgBookingsPerDay.toFixed(1)}
             sub={prevAvgBookingsPerDay != null
               ? `${prevAvgBookingsPerDay.toFixed(1)} letzter Monat`
               : null}
           />
-          <Kpi
+          <InsightTile
             label="Häufigste"
             value={topCategory || "–"}
             sub={topCategory && topCategoryPct != null ? `${formatPercent(topCategoryPct, { digits: 0, sign: false })} aller Buchungen` : null}

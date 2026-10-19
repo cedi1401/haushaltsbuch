@@ -16,6 +16,7 @@ import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
 import { formatCurrencyCompact, formatPercent, formatSigned } from "../../utils/formatUtils.js";
 import { CHART_STROKE, CHART_DASH, AXIS_FONT_SIZE, axisProps, zeroLineProps, lineCursorProps } from "../../utils/chartStyle.js";
 import { IconInbox } from "../../components/icons.jsx";
+import InsightTile from "./InsightTile.jsx";
 
 const ForecastCard = memo(function ForecastCard({ analytics }) {
   const fmt = useFmt();
@@ -252,47 +253,31 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
         )}
       </div>
 
-      {/* KPI Grid — immer exakt 4 Blöcke */}
-      <div className="hb-insight-kpi-grid">
-        {/* Block 1: Frei-Budget (Startwert des Burn-Downs) */}
-        <div className="hb-insight-block">
-          <div className="hb-insight-label">Frei verfügbar</div>
-          <div className="hb-insight-kpi">{fmt(freiBudget)}</div>
-        </div>
+      {/* Kennzahlen als 2×2-Kacheln — immer exakt 4 */}
+      <div className="hb-insight-tiles">
+        {/* Frei-Budget (Startwert des Burn-Downs) */}
+        <InsightTile label="Frei verfügbar" value={fmt(freiBudget)} />
 
-        {/* Block 2: Ø/Tag (Ist-Tempo) */}
-        <div className="hb-insight-block">
-          <div className="hb-insight-label">Ø pro Tag</div>
-          <div className="hb-insight-kpi">
-            {isFutureMonth ? "–" : fmt(burnRate)}
-          </div>
-        </div>
+        {/* Ø/Tag (Ist-Tempo) */}
+        <InsightTile label="Ø pro Tag" value={isFutureMonth ? "–" : fmt(burnRate)} />
 
-        {/* Block 3: Soll/Tag (Soll-Tempo) oder Sparquote (vergangen) */}
-        <div className="hb-insight-block">
-          <div className="hb-insight-label">
-            {isPastMonth ? "Sparquote" : "Soll pro Tag"}
-          </div>
-          <div className="hb-insight-kpi">
-            {isPastMonth
-              ? (savingsRate != null ? formatPercent(savingsRate, { digits: 0, sign: false }) : "–")
-              : (isFutureMonth ? "–" : fmt(sollPerDay))
-            }
-          </div>
-        </div>
+        {/* Soll/Tag (Soll-Tempo) oder Sparquote (vergangen) */}
+        <InsightTile
+          label={isPastMonth ? "Sparquote" : "Soll pro Tag"}
+          value={isPastMonth
+            ? (savingsRate != null ? formatPercent(savingsRate, { digits: 0, sign: false }) : "–")
+            : (isFutureMonth ? "–" : fmt(sollPerDay))
+          }
+        />
 
-        {/* Block 4: vs. Vormonat (aktuell + vergangen) oder Monatsdauer (Zukunft) */}
-        <div className="hb-insight-block">
-          <div className="hb-insight-label">
-            {isFutureMonth ? "Verbleibende Tage" : "vs. Vormonat"}
-          </div>
-          <div className="hb-insight-kpi">
-            {isFutureMonth
-              ? (daysInMonth ?? "–")
-              : (trendVsPrevMonthPct != null ? formatPercent(trendVsPrevMonthPct, { digits: 0 }) : "–")
-            }
-          </div>
-        </div>
+        {/* vs. Vormonat (aktuell + vergangen) oder Monatsdauer (Zukunft) */}
+        <InsightTile
+          label={isFutureMonth ? "Verbleibende Tage" : "vs. Vormonat"}
+          value={isFutureMonth
+            ? (daysInMonth ?? "–")
+            : (trendVsPrevMonthPct != null ? formatPercent(trendVsPrevMonthPct, { digits: 0 }) : "–")
+          }
+        />
       </div>
     </div>
   );
