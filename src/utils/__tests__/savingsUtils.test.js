@@ -101,6 +101,15 @@ describe('buildSavingsModel', () => {
     expect(kpis.due).toBe(0);
   });
 
+  it('lässt Sparziele beim Handlungsbedarf außen vor', () => {
+    const missed = { ...VELO, deadline: '2026-04-30' };
+    const { kpis, sections } = buildSavingsModel({ ...book, transferCategories: [missed] }, [], opts);
+    expect(sections[1].goalRows[0].status).toBe('missed');
+    expect(kpis.overdue).toBe(0);
+    expect(kpis.behind).toBe(0);
+    expect(kpis.due).toBe(0);
+  });
+
   it('übergeht Zwecke ohne gültigen Topf und kommt ohne Daten aus', () => {
     const lost = { ...NOT, id: 'tc_lost', potId: 'pot_weg' };
     const { sections } = buildSavingsModel({ pots: POTS, transferCategories: [lost] }, [], opts);

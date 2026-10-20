@@ -155,11 +155,15 @@ export function buildSavingsModel(book, entries, opts = {}) {
     for (const row of [...section.rows, ...section.goalRows]) {
       saved += Number(row.actual) || 0;
       rates += Number(row.monthlyRate) || 0;
-      if (row.rule === "goal") goalRates += Number(row.monthlyRate) || 0;
-      // Gruppen wie STATUS_TONE: „missed" (Sparziel verpasst) wiegt wie überfällig.
-      if (row.status === "overdue" || row.status === "missed") overdue += 1;
+      // Sparziele zählen nicht zum Handlungsbedarf: Ihr Status steht auf den
+      // Karten, die KPI bezieht sich nur auf die Tabelle.
+      if (row.rule === "goal") {
+        goalRates += Number(row.monthlyRate) || 0;
+        continue;
+      }
+      if (row.status === "overdue") overdue += 1;
       else if (row.status === "due") due += 1;
-      else if (row.status === "behind" || row.status === "offTrack") behind += 1;
+      else if (row.status === "behind") behind += 1;
     }
   }
 
