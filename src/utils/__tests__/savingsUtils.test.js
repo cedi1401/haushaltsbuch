@@ -90,6 +90,15 @@ describe('buildSavingsModel', () => {
     expect(sections[0].rows[0].status).toBe('due');
     expect(kpis.due).toBe(1);
     expect(kpis.behind).toBe(0);
+    expect(kpis.overdue).toBe(0);
+  });
+
+  it('zählt Überfälligkeit getrennt von Fälligkeit', () => {
+    const overdue = { ...STEUERN, faelligkeit: '2026-04-15' };
+    const { kpis, sections } = buildSavingsModel({ ...book, transferCategories: [overdue] }, [], opts);
+    expect(sections[0].rows[0].status).toBe('overdue');
+    expect(kpis.overdue).toBe(1);
+    expect(kpis.due).toBe(0);
   });
 
   it('übergeht Zwecke ohne gültigen Topf und kommt ohne Daten aus', () => {

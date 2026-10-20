@@ -1444,6 +1444,21 @@ select.hb-input option {
 .hb-stat-pill--teal     { --pill-edge: var(--teal); }
 /* Handlungsbedarf (Rücklagen): Gelb wie die Pille „Rückstand". */
 .hb-stat-pill--warn     { --pill-edge: var(--yellow); }
+
+/* Wert als Statustext (Handlungsbedarf): blau (fällig) und gelb ohne Icon,
+   rot mit dem abgerundeten Warn-Icon der AlertBar. */
+.hb-stat-pill-value.hb-warn { color: var(--yellow); }
+.hb-stat-pill-value.hb-accent { color: var(--accent); }
+.hb-stat-pill-value.hb-bad {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hb-stat-pill-value.hb-bad svg {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+}
 /* Plan-/Soll-Werte (Kostenrechner): Violett wie die Rücklagenlinie im Chart.
    Bewusst nicht Orange — das liegt im hellen Theme zu nah an --red und würde
    neben der Abweichungs-Pill wie ein zweiter Warnzustand wirken, obwohl der

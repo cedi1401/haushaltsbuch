@@ -3,7 +3,7 @@ import { EMPTY_ARRAY } from "../utils/constants.js";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import DataTable from "../components/DataTable.jsx";
 import OverflowMenu from "../components/OverflowMenu.jsx";
-import { IconSavings, IconEdit } from "../components/icons.jsx";
+import { IconSavings, IconEdit, IconWarningRounded } from "../components/icons.jsx";
 import { todayISO } from "../utils/formatUtils.js";
 import { generateId } from "../utils/idUtils.js";
 import { buildCatchUpRates } from "../utils/fixedCostUtils.js";
@@ -433,7 +433,19 @@ export default function SavingsView({
   }
 
   const { kpis } = model;
-  const attention = kpis.behind + kpis.due;
+  // Handlungsbedarf nach Gewicht: überfällig (rot) vor Rückstand (gelb) vor
+  // fällig (blau wie die Status-Pille „Fällig“ in der Tabelle).
+  const positions = (n) => `${n} ${n === 1 ? "Position" : "Positionen"}`;
+  const attention =
+    kpis.overdue > 0 ? { tone: "bad", text: `${positions(kpis.overdue)} überfällig` }
+    : kpis.behind > 0 ? { tone: "warn", text: `${positions(kpis.behind)} im Rückstand` }
+    : kpis.due > 0 ? { tone: "accent", text: `${positions(kpis.due)} fällig` }
+    : { tone: "ok", text: "Alles im Plan" };
+  const attentionParts = [
+    kpis.overdue > 0 && `${kpis.overdue} überfällig`,
+    kpis.behind > 0 && `${kpis.behind} im Rückstand`,
+    kpis.due > 0 && `${kpis.due} fällig`,
+  ].filter(Boolean);
 
   return (
     <div>
@@ -466,15 +478,16 @@ export default function SavingsView({
               <div className="hb-stat-pill-value">{fmt(kpis.rates)}</div>
               <div className="hb-stat-pill-sub">davon {fmt(kpis.goalRates)} für Sparziele</div>
             </div>
-            <div className={"hb-stat-pill " + (attention === 0 ? "hb-stat-pill--ok" : "hb-stat-pill--warn")}>
+            <div className={"hb-stat-pill hb-stat-pill--" + attention.tone}>
               <div className="hb-stat-pill-label">Handlungsbedarf</div>
-              <div className={"hb-stat-pill-value" + (attention === 0 ? " hb-ok" : "")}>
-                {attention === 0 ? "Alles im Plan" : attention}
+              <div className={"hb-stat-pill-value hb-" + attention.tone}>
+                {attention.tone === "bad" && <IconWarningRounded aria-hidden="true" />}
+                <span>{attention.text}</span>
               </div>
               <div className="hb-stat-pill-sub">
-                {attention === 0
+                {attentionParts.length === 0
                   ? "kein Rückstand, nichts fällig"
-                  : `${kpis.behind} im Rückstand · ${kpis.due} fällig`}
+                  : attentionParts.join(" · ")}
               </div>
             </div>
           </div>

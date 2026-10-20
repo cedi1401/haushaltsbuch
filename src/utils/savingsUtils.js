@@ -97,7 +97,7 @@ function buildRow(purpose, entries, opts) {
  *   activeGoals: Array,
  *   archivedGoals: Array,
  *   kpis: { saved: number, potCount: number, rates: number, goalRates: number,
- *           behind: number, due: number }
+ *           overdue: number, behind: number, due: number }
  * }}
  */
 export function buildSavingsModel(book, entries, opts = {}) {
@@ -148,6 +148,7 @@ export function buildSavingsModel(book, entries, opts = {}) {
   let saved = 0;
   let rates = 0;
   let goalRates = 0;
+  let overdue = 0;
   let behind = 0;
   let due = 0;
   for (const section of sections) {
@@ -155,8 +156,10 @@ export function buildSavingsModel(book, entries, opts = {}) {
       saved += Number(row.actual) || 0;
       rates += Number(row.monthlyRate) || 0;
       if (row.rule === "goal") goalRates += Number(row.monthlyRate) || 0;
-      if (row.status === "due" || row.status === "overdue") due += 1;
-      else if (row.status === "behind" || row.status === "offTrack" || row.status === "missed") behind += 1;
+      // Gruppen wie STATUS_TONE: „missed" (Sparziel verpasst) wiegt wie überfällig.
+      if (row.status === "overdue" || row.status === "missed") overdue += 1;
+      else if (row.status === "due") due += 1;
+      else if (row.status === "behind" || row.status === "offTrack") behind += 1;
     }
   }
 
@@ -169,6 +172,7 @@ export function buildSavingsModel(book, entries, opts = {}) {
       potCount: sections.filter((s) => s.rows.length + s.goalRows.length > 0).length,
       rates,
       goalRates,
+      overdue,
       behind,
       due,
     },
