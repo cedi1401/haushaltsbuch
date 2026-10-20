@@ -26,8 +26,10 @@ export default function ReserveDetail({
   fmt,
   canCatchUp,
   canRevertCatchUp,
+  canTopUp,
   onBillPaid,
   onCatchUp,
+  onTopUp,
   onRevertCatchUp,
   onEdit,
 }) {
@@ -108,21 +110,26 @@ export default function ReserveDetail({
           auf Bedienelemente bewusst durch, ohne den Bereich mit zuzuklappen. */}
       <div className="hb-res-detail-actions">
         {canPay && (
-          <Button size="sm" onClick={() => onBillPaid?.(row)}>
+          <Button onClick={() => onBillPaid?.(row)}>
             Rechnung bezahlt
           </Button>
         )}
         {canCatchUp && (
-          <Button size="sm" variant="outline" onClick={() => onCatchUp?.(row)}>
+          <Button variant="outline" onClick={() => onCatchUp?.(row)}>
+            Raten nachbuchen
+          </Button>
+        )}
+        {canTopUp && (
+          <Button variant="outline" onClick={() => onTopUp?.(row)}>
             Rückstand ausgleichen
           </Button>
         )}
         {canRevertCatchUp && (
-          <Button size="sm" variant="outline" onClick={() => onRevertCatchUp?.(row)}>
-            Ausgleich zurücknehmen
+          <Button variant="outline" onClick={() => onRevertCatchUp?.(row)}>
+            Nachbuchung zurücknehmen
           </Button>
         )}
-        <Button size="sm" variant="outline" onClick={() => onEdit?.(row)}>
+        <Button variant="outline" onClick={() => onEdit?.(row)}>
           Bearbeiten
         </Button>
       </div>

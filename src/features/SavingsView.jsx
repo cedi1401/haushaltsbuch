@@ -26,6 +26,7 @@ import SavingsPositionDialog from "./savings/SavingsPositionDialog.jsx";
 import BillPaidDialog from "./savings/BillPaidDialog.jsx";
 import BacklogCatchUpDialog from "./savings/BacklogCatchUpDialog.jsx";
 import CatchUpRevertDialog from "./savings/CatchUpRevertDialog.jsx";
+import BacklogTopUpDialog from "./savings/BacklogTopUpDialog.jsx";
 
 /**
  * Rücklagen-View — wofür liegt das Geld in den Töpfen (F2, Konzept C).
@@ -219,16 +220,19 @@ export default function SavingsView({
     undo.offer(`Sparziel „${goal.name}“ wieder aktiviert.`);
   }
 
-  // ── Rechnung bezahlt / Rückstand ausgleichen ──────────────────────────
-  // „Rückstand ausgleichen" ist eine Einstiegshilfe und genau einmal je
-  // Position verfügbar: sobald eine Einzahlung gebucht ist, gibt es nichts mehr
-  // nachzuholen, was nicht auch von Hand gebucht werden könnte. Nur
-  // Einzahlungen zählen — eine Entnahme aus „Rechnung bezahlt" verbraucht die
-  // Verfügbarkeit nicht.
+  // ── Rechnung bezahlt / Raten nachbuchen / Rückstand ausgleichen ───────
+  // „Raten nachbuchen" ist eine Einstiegshilfe und genau einmal je
+  // Position verfügbar: sobald eine Einzahlung gebucht ist, gibt es keine
+  // Historie mehr nachzuholen. Nur Einzahlungen zählen — eine Entnahme aus
+  // „Rechnung bezahlt" verbraucht die Verfügbarkeit nicht.
   //
-  // Die Raten eines Ausgleichs tragen eine gemeinsame `catchUpBatchId`. Damit
+  // Danach übernimmt „Rückstand ausgleichen": eine einzelne Einzahlung über
+  // den aktuellen Fehlbetrag, verfügbar, solange die Position unter dem Soll
+  // liegt. Die beiden schließen sich aus, es steht immer höchstens eine da.
+  //
+  // Die nachgebuchten Raten tragen eine gemeinsame `catchUpBatchId`. Damit
   // lassen sie sich als Ganzes zurücknehmen — etwa wenn der Rechnungsbetrag
-  // beim Anlegen nur geschätzt war. Danach ist der Ausgleich wieder verfügbar,
+  // beim Anlegen nur geschätzt war. Danach ist das Nachbuchen wieder verfügbar,
   // sofern keine weitere Einzahlung gebucht ist.
   const { depositsByPurpose, catchUpByPurpose } = useMemo(() => {
     const deposits = new Map();
@@ -249,6 +253,13 @@ export default function SavingsView({
     [depositsByPurpose]
   );
   const canRevertCatchUp = useCallback((row) => catchUpByPurpose.has(row.id), [catchUpByPurpose]);
+  // Bewusst unabhängig vom Status: auch eine fällige Position darf vor dem
+  // Bezahlen noch aufgefüllt werden.
+  const canTopUp = useCallback(
+    (row) =>
+      row.isSinkingFund && row.delta !== null && row.delta < -row.tolerance && depositsByPurpose.has(row.id),
+    [depositsByPurpose]
+  );
 
   // Beide Aktionen schreiben genau einmal. `EditDialog` löst `onSave` auch per
   // Strg+Enter aus und `canSave` bleibt bis zum Unmount wahr — eine zweite
@@ -258,6 +269,8 @@ export default function SavingsView({
   const [billDraft, setBillDraft] = useState(null);
   const [catchUpTarget, setCatchUpTarget] = useState(null);
   const [revertTarget, setRevertTarget] = useState(null);
+  const [topUpTarget, setTopUpTarget] = useState(null);
+  const [topUpDraft, setTopUpDraft] = useState(null);
 
   const openBillPaid = useCallback((row) => {
     writingRef.current = false;
@@ -281,6 +294,18 @@ export default function SavingsView({
     setRevertTarget(row);
   }, []);
 
+  const openTopUp = useCallback((row) => {
+    writingRef.current = false;
+    setTopUpTarget(row);
+    // Vorbelegt ist der ganze Fehlbetrag; die Notiz trägt den Namen wie bei
+    // „Rechnung bezahlt", sonst stünde die Buchung in der Liste als „—".
+    setTopUpDraft({
+      date: todayISO(),
+      amount: (Math.round(-row.delta * 100) / 100).toFixed(2),
+      note: String(row.item?.name ?? ""),
+    });
+  }, []);
+
   const catchUpRates = useMemo(
     () =>
       catchUpTarget
@@ -297,6 +322,15 @@ export default function SavingsView({
     // Die ID entsteht außerhalb des State-Updaters (StrictMode ruft doppelt auf).
     onAddEntry?.({ id: generateId("entry"), ...entry });
     undo.offer(`Zahlung für „${item?.name ?? ""}“ gebucht.`);
+  }
+
+  function confirmTopUp(entry) {
+    if (writingRef.current) return;
+    writingRef.current = true;
+    const item = topUpTarget?.item;
+    setTopUpTarget(null);
+    onAddEntry?.({ id: generateId("entry"), ...entry });
+    undo.offer(`Einzahlung für „${item?.name ?? ""}“ gebucht.`);
   }
 
   function confirmCatchUp(rates) {
@@ -336,8 +370,8 @@ export default function SavingsView({
     onRemoveEntries?.(list.map((e) => e.id));
     undo.offer(
       list.length === 1
-        ? `1 Ausgleichsrate für „${name}“ gelöscht.`
-        : `${list.length} Ausgleichsraten für „${name}“ gelöscht.`
+        ? `1 nachgebuchte Rate für „${name}“ gelöscht.`
+        : `${list.length} nachgebuchte Raten für „${name}“ gelöscht.`
     );
   }
 
@@ -392,8 +426,10 @@ export default function SavingsView({
         fmt={fmt}
         canCatchUp={canCatchUp(row)}
         canRevertCatchUp={canRevertCatchUp(row)}
+        canTopUp={canTopUp(row)}
         onBillPaid={openBillPaid}
         onCatchUp={openCatchUp}
+        onTopUp={openTopUp}
         onRevertCatchUp={openRevertCatchUp}
         onEdit={openEdit}
       />
@@ -406,8 +442,9 @@ export default function SavingsView({
     const name = row.purpose?.name ?? "";
     const canPay = row.status === "due" || row.status === "overdue";
     const menu = [];
-    if (canCatchUp(row)) menu.push({ label: "Rückstand ausgleichen", onClick: () => openCatchUp(row) });
-    if (canRevertCatchUp(row)) menu.push({ label: "Ausgleich zurücknehmen", onClick: () => openRevertCatchUp(row) });
+    if (canCatchUp(row)) menu.push({ label: "Raten nachbuchen", onClick: () => openCatchUp(row) });
+    if (canTopUp(row)) menu.push({ label: "Rückstand ausgleichen", onClick: () => openTopUp(row) });
+    if (canRevertCatchUp(row)) menu.push({ label: "Nachbuchung zurücknehmen", onClick: () => openRevertCatchUp(row) });
     menu.push({ label: "Löschen", danger: true, onClick: () => deletePosition(row.purpose) });
     return (
       <>
@@ -570,6 +607,17 @@ export default function SavingsView({
         target={catchUpTarget?.target ?? null}
         onClose={() => setCatchUpTarget(null)}
         onConfirm={confirmCatchUp}
+      />
+
+      <BacklogTopUpDialog
+        open={Boolean(topUpTarget)}
+        item={topUpTarget?.item}
+        potName={potById.get(topUpTarget?.item?.potId)?.name}
+        actual={topUpTarget?.actual ?? 0}
+        draft={topUpDraft}
+        onDraftChange={setTopUpDraft}
+        onClose={() => setTopUpTarget(null)}
+        onConfirm={confirmTopUp}
       />
 
       <CatchUpRevertDialog
