@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { IconSuccess, IconError, IconWarning, IconInfo, IconClose } from "./icons.jsx";
 import { ToastContext } from "./toastContext.js";
 
@@ -57,30 +57,33 @@ function severityIcon(severity) {
 }
 
 function ToastItem({ toast, onDismiss }) {
-  const timerRef = useRef(null);
+  // Der Fortschrittsbalken ist die Uhr: eine CSS-Animation über die volle
+  // Dauer, an deren Ende der Toast schließt. Pausieren heißt die Animation
+  // anhalten, Balken und Ablauf können so nicht auseinanderlaufen.
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const paused = hovered || focused;
+  const timed = toast.duration > 0;
 
-  function startTimer() {
-    if (toast.duration <= 0) return;
-    timerRef.current = setTimeout(() => onDismiss(toast.id), toast.duration);
+  // Nur Tastaturfokus hält den Toast an. Ein Mausklick fokussiert den Knopf
+  // ebenfalls, und dieser Fokus bliebe, bis man woanders hinklickt — der
+  // Toast stünde so lange still.
+  function handleFocus(e) {
+    if (e.target.matches(":focus-visible")) setFocused(true);
   }
 
-  function clearTimer() {
-    if (timerRef.current) clearTimeout(timerRef.current);
+  function handleBlur(e) {
+    if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false);
   }
-
-  useEffect(() => {
-    startTimer();
-    return clearTimer;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
       className={`hb-toast hb-toast-${toast.severity}`}
       role={toast.severity === "error" ? "alert" : "status"}
-      onMouseEnter={clearTimer}
-      onMouseLeave={startTimer}
-      onFocus={clearTimer}
-      onBlur={startTimer}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
     >
       <div className="hb-toast-icon">{severityIcon(toast.severity)}</div>
       <div className="hb-toast-body">
@@ -107,6 +110,14 @@ function ToastItem({ toast, onDismiss }) {
       >
         <IconClose />
       </button>
+      {timed ? (
+        <div
+          className={`hb-toast-progress${paused ? " hb-toast-progress--paused" : ""}`}
+          style={{ animationDuration: `${toast.duration}ms` }}
+          onAnimationEnd={() => onDismiss(toast.id)}
+          aria-hidden="true"
+        />
+      ) : null}
     </div>
   );
 }

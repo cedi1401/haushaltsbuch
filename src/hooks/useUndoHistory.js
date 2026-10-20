@@ -15,7 +15,7 @@ import { createHistory, recordChange, undo as undoStep, redo as redoStep, diffBo
 // im Verlauf.
 
 // Wie lange ein Toast mit „Rückgängig“ stehen bleibt (Hover hält ihn an).
-const ACTION_TOAST_MS = 8000;
+const ACTION_TOAST_MS = 5000;
 // `offer` gilt nur für eine Änderung, die gleich danach kommt. Ohne Frist
 // hinge ein Text, dem keine Änderung folgt, an irgendeiner späteren.
 const OFFER_TTL_MS = 1000;

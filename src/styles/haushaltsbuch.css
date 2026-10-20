@@ -5136,6 +5136,32 @@ select.hb-input option {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   animation: slideUp 0.2s ease-out;
+  /* Für den Fortschrittsbalken: Er liegt am unteren Rand und folgt der Rundung. */
+  position: relative;
+  overflow: hidden;
+}
+
+/* Restlaufzeit. Die Animation ist zugleich der Timer (Toast.jsx schließt bei
+   animationend), daher läuft sie auch bei reduzierter Bewegung. Sie beginnt
+   hinter der Farbkante und läuft von links nach rechts ab. */
+.hb-toast-progress {
+  position: absolute;
+  left: 3px;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--toast-edge);
+  transform-origin: right center;
+  animation-name: hbToastProgress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+.hb-toast-progress--paused { animation-play-state: paused; }
+
+@keyframes hbToastProgress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
 }
 
 .hb-toast-icon {
