@@ -4,17 +4,18 @@ import { formatYearMonth, getFinancialMonth } from "../../utils/financialMonthUt
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 
 /**
- * „Ausgleich zurücknehmen" — löscht die Raten, die „Rückstand ausgleichen"
+ * „Nachbuchung zurücknehmen" — löscht die Raten, die „Raten nachbuchen"
  * gebucht hat, auf einmal. Gedacht für den Fall, dass der Rechnungsbetrag beim
- * Anlegen nur geschätzt war: Betrag korrigieren, Ausgleich zurücknehmen und
+ * Anlegen nur geschätzt war: Betrag korrigieren, Nachbuchung zurücknehmen und
  * neu ausführen, statt jede Rate einzeln im Buchungsmonat zu suchen.
  *
  * Die Raten werden bewusst nicht automatisch an einen geänderten Betrag
  * angepasst — gebuchte Monate schreiben sich nicht still um. Erkannt werden
  * sie an `catchUpBatchId`; was von Hand gebucht wurde, bleibt stehen.
  *
- * `entries` und `otherDeposits` liefert der View; wie beim Ausgleich gilt:
- * dieselbe Liste, die hier steht, wird gelöscht.
+ * `entries` und `otherDeposits` liefert der View; wie beim Nachbuchen gilt:
+ * dieselbe Liste, die hier steht, wird gelöscht. Einzahlungen aus „Rückstand
+ * ausgleichen" tragen keine `catchUpBatchId` und bleiben deshalb stehen.
  */
 export default function CatchUpRevertDialog({
   open,
@@ -38,7 +39,7 @@ export default function CatchUpRevertDialog({
   return (
     <EditDialog
       open={open}
-      title="Ausgleich zurücknehmen"
+      title="Nachbuchung zurücknehmen"
       onClose={onClose}
       onSave={() => onConfirm(list)}
       canSave
@@ -49,7 +50,7 @@ export default function CatchUpRevertDialog({
         <div className="hb-muted hb-muted--sm">{name}</div>
 
         <div>
-          Diese Raten hat „Rückstand ausgleichen“ gebucht. Sie werden gelöscht — von Hand
+          Diese Raten hat „Raten nachbuchen“ gebucht. Sie werden gelöscht — von Hand
           gebuchte Einzahlungen und Entnahmen bleiben stehen.
         </div>
 
@@ -79,8 +80,8 @@ export default function CatchUpRevertDialog({
 
         <div className="hb-muted hb-muted--sm">
           {otherDeposits > 0
-            ? "Für diese Sparposition gibt es weitere Einzahlungen. „Rückstand ausgleichen“ steht deshalb danach nicht wieder zur Verfügung — fehlende Monate buchst du von Hand."
-            : "Danach steht „Rückstand ausgleichen“ wieder zur Verfügung und rechnet mit dem aktuellen Rechnungsbetrag."}
+            ? "Für diese Sparposition gibt es weitere Einzahlungen. „Raten nachbuchen“ steht deshalb danach nicht wieder zur Verfügung — einen Rückstand gleichst du mit „Rückstand ausgleichen“ aus."
+            : "Danach steht „Raten nachbuchen“ wieder zur Verfügung und rechnet mit dem aktuellen Rechnungsbetrag."}
         </div>
       </div>
     </EditDialog>

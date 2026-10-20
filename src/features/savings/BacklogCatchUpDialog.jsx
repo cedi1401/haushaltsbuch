@@ -6,7 +6,7 @@ import { formatYearMonth } from "../../utils/financialMonthUtils.js";
 import { useFmt } from "../../contexts/CurrencyContext.jsx";
 
 /**
- * „Rückstand ausgleichen" — bucht die Monatsraten seit Zyklusbeginn rückwirkend
+ * „Raten nachbuchen" — bucht die Monatsraten seit Zyklusbeginn rückwirkend
  * nach, damit eine mitten im Zyklus angelegte Position nicht dauerhaft als
  * „Rückstand" dasteht.
  *
@@ -42,7 +42,7 @@ export default function BacklogCatchUpDialog({
   return (
     <EditDialog
       open={open}
-      title="Rückstand ausgleichen"
+      title="Raten nachbuchen"
       onClose={onClose}
       onSave={() => {
         if (n === 0) return;
@@ -89,7 +89,7 @@ export default function BacklogCatchUpDialog({
         <div style={{ fontWeight: 600 }}>
           {n === 1 ? "1 Rate" : `${n} Raten`} · Summe {fmt(sum)} · Ist-Stand danach{" "}
           {fmt(newActual)}
-          {target !== null && target !== undefined ? ` von ${fmt(target)} Soll` : ""}
+          {target !== null && target !== undefined ? ` · Soll ${fmt(target)}` : ""}
         </div>
 
         {Number(actual || 0) > 0 && (
@@ -98,7 +98,7 @@ export default function BacklogCatchUpDialog({
             <div className="hb-infobar-content">
               <div className="hb-infobar-message">
                 Für diese Sparposition liegen bereits <strong>{fmt(actual)}</strong> im Topf. Der
-                Ausgleich rechnet das nicht gegen, sondern addiert die Raten dazu — der
+                Nachbuchen rechnet das nicht gegen, sondern addiert die Raten dazu — der
                 Ist-Stand kann danach über dem Soll liegen. Das ist gewollt: die Raten
                 füllen die Historie, damit in der Fixkosten-Trendlinie kein Monat leer bleibt.
               </div>
@@ -108,7 +108,7 @@ export default function BacklogCatchUpDialog({
 
         <div className="hb-muted hb-muted--sm">
           Diese Aktion steht nur einmal zur Verfügung. Sobald eine Monatsrate gebucht ist,
-          verschwindet sie — was danach fehlt, gehört in die normale monatliche Buchung.
+          verschwindet sie — was danach fehlt, gleichst du mit „Rückstand ausgleichen“ aus.
         </div>
       </div>
     </EditDialog>
