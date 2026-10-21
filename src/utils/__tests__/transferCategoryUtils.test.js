@@ -147,6 +147,39 @@ describe('applySavingsFields', () => {
     expect(r).not.toHaveProperty('targetAmount');
     expect(r).not.toHaveProperty('createdAt');
   });
+
+  it('übernimmt die Kategorie einer Rückstellung', () => {
+    const r = applySavingsFields({ ...base, rule: 'free' }, {
+      rule: 'reserve', name: 'Auto', potId: 'pot_a', amount: 1200, turnus: 12, faelligkeit: '2027-03-15',
+      categoryId: 'cat_auto', subcategoryId: 'sub_vers',
+    });
+    expect(r).toMatchObject({ categoryId: 'cat_auto', subcategoryId: 'sub_vers' });
+
+    const ohne = applySavingsFields(r, {
+      rule: 'reserve', name: 'Auto', potId: 'pot_a', amount: 1200, turnus: 12, faelligkeit: '2027-03-15',
+    });
+    expect(ohne).toMatchObject({ categoryId: null, subcategoryId: null });
+  });
+
+  it('verwirft eine Unterkategorie ohne Oberkategorie', () => {
+    const r = applySavingsFields({ ...base, rule: 'free' }, {
+      rule: 'reserve', name: 'Auto', potId: 'pot_a', amount: 1200, turnus: 12, faelligkeit: '2027-03-15',
+      categoryId: null, subcategoryId: 'sub_vers',
+    });
+    expect(r.subcategoryId).toBeNull();
+  });
+
+  it('entfernt die Kategorie beim Wechsel zur Rücklage oder zum Sparziel', () => {
+    const reserve = {
+      ...base, rule: 'reserve', amount: 600, turnus: 6, faelligkeit: '2027-01-01',
+      categoryId: 'cat_auto', subcategoryId: 'sub_vers',
+    };
+    const free = applySavingsFields(reserve, { rule: 'free', name: 'Alt', potId: 'pot_a' });
+    expect(free).not.toHaveProperty('categoryId');
+    expect(free).not.toHaveProperty('subcategoryId');
+    const goal = applySavingsFields(reserve, { rule: 'goal', name: 'Alt', potId: 'pot_a', targetAmount: 500 }, '2026-10-21');
+    expect(goal).not.toHaveProperty('categoryId');
+  });
 });
 
 describe('makeIsSavingsTransfer', () => {

@@ -281,6 +281,21 @@ describe('normalizeSavingsPurposes', () => {
     expect(once[1]).not.toHaveProperty('startMode');
     expect(normalizeSavingsPurposes(once, POTS)).toEqual(once);
   });
+
+  it('normalisiert die Kategorie einer Rückstellung und entfernt sie bei anderen Arten', () => {
+    const reserve = { id: 'a', name: 'A', potId: 'p_res', rule: 'reserve', amount: 1200, turnus: 12, faelligkeit: '2027-01-01' };
+    const list = normalizeSavingsPurposes([
+      { ...reserve, categoryId: 'cat_auto', subcategoryId: 'sub_vers' },
+      { ...reserve, id: 'b', name: 'B' },
+      { ...reserve, id: 'c', name: 'C', categoryId: '', subcategoryId: 'sub_vers' },
+      { id: 'd', name: 'D', potId: 'p_res', rule: 'free', categoryId: 'cat_auto' },
+    ], POTS);
+    expect(list[0]).toMatchObject({ categoryId: 'cat_auto', subcategoryId: 'sub_vers' });
+    expect(list[1]).toMatchObject({ categoryId: null, subcategoryId: null });
+    expect(list[2]).toMatchObject({ categoryId: null, subcategoryId: null });
+    expect(list[3]).not.toHaveProperty('categoryId');
+    expect(normalizeSavingsPurposes(list, POTS)).toEqual(list);
+  });
 });
 
 describe('normalizeBook — Schema 7', () => {

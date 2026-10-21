@@ -303,7 +303,7 @@ export function normalizeSavingsPurposes(list, pots) {
   return (list || []).map((raw) => {
     const {
       rule: rawRule, monthlyRate, amount, turnus, faelligkeit,
-      targetAmount, deadline, createdAt, completedAt, completedAmount,
+      categoryId, subcategoryId, targetAmount, deadline, createdAt, completedAt, completedAmount,
       startMode: _startMode, startDate: _startDate, startAmount: _startAmount,
       ...rest
     } = raw;
@@ -331,7 +331,11 @@ export function normalizeSavingsPurposes(list, pots) {
       const a = Number(amount);
       const t = Number(turnus);
       if (Number.isFinite(a) && a > 0 && Number.isFinite(t) && t > 0 && faelligkeit) {
-        return { ...base, rule, amount: a, turnus: t, faelligkeit };
+        // Kategorie optional (Ausgaben-Donut); leere Werte werden null, eine
+        // Unterkategorie ohne Oberkategorie fällt weg.
+        const cat = typeof categoryId === "string" && categoryId ? categoryId : null;
+        const sub = cat && typeof subcategoryId === "string" && subcategoryId ? subcategoryId : null;
+        return { ...base, rule, amount: a, turnus: t, faelligkeit, categoryId: cat, subcategoryId: sub };
       }
       return { ...base, rule: "free", monthlyRate: Number.isFinite(a) && a > 0 ? a : null };
     }

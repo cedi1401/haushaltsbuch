@@ -7,7 +7,9 @@
 //
 //   rule "free"    — Rücklage: optionale `monthlyRate`
 //   rule "reserve" — Rückstellung: `amount` (Rechnung je Zyklus), `turnus`,
-//                    `faelligkeit`; die Monatsrate wird abgeleitet
+//                    `faelligkeit`; die Monatsrate wird abgeleitet. Optional
+//                    `categoryId`/`subcategoryId` (Ausgabenkategorie): Ihre
+//                    Raten erscheinen dann im Ausgaben-Donut unter ihr.
 //   rule "goal"    — Sparziel: `targetAmount`, `deadline`, optionale
 //                    `monthlyRate`, `createdAt`, `completedAt`, `completedAmount`
 //
@@ -277,7 +279,11 @@ export function purposeToGoal(purpose) {
  * Eine Rückstellung wird dabei zur freien Rücklage.
  */
 export function clearPurposeRate(purpose) {
-  const { amount: _amount, turnus: _turnus, faelligkeit: _faelligkeit, ...rest } = purpose;
+  const {
+    amount: _amount, turnus: _turnus, faelligkeit: _faelligkeit,
+    categoryId: _categoryId, subcategoryId: _subcategoryId,
+    ...rest
+  } = purpose;
   return {
     ...rest,
     rule: purpose.rule === "goal" ? "goal" : "free",
@@ -301,7 +307,7 @@ export function purposeHasEntries(entries, purposeId) {
 // die Normalisierung beim nächsten Laden wieder zur Rückstellung machte.
 const RULE_FIELDS = {
   free: ["monthlyRate"],
-  reserve: ["amount", "turnus", "faelligkeit"],
+  reserve: ["amount", "turnus", "faelligkeit", "categoryId", "subcategoryId"],
   goal: ["targetAmount", "deadline", "monthlyRate", "createdAt", "completedAt", "completedAmount"],
 };
 const ALL_RULE_FIELDS = [...new Set(Object.values(RULE_FIELDS).flat())];
@@ -314,7 +320,8 @@ const ALL_RULE_FIELDS = [...new Set(Object.values(RULE_FIELDS).flat())];
  * Tags und „Im Trend auflisten" werden nur geschrieben, wenn sie mitkommen.
  * @param {{ rule: "free"|"reserve"|"goal", name: string, potId: string,
  *           groupId?: string|null, monthlyRate?: number|null, amount?: number,
- *           turnus?: number, faelligkeit?: string, targetAmount?: number,
+ *           turnus?: number, faelligkeit?: string, categoryId?: string|null,
+ *           subcategoryId?: string|null, targetAmount?: number,
  *           deadline?: string|null, tags?: string[], showInOverview?: boolean }} fields
  * @param {string} [today] - Anlagedatum eines neuen Sparziels
  */
@@ -331,7 +338,14 @@ export function applySavingsFields(purpose, fields, today) {
   if (fields.tags !== undefined) common.tags = fields.tags || [];
   if (fields.showInOverview !== undefined) common.showInOverview = fields.showInOverview === true;
   if (fields.rule === "reserve") {
-    return { ...common, amount: fields.amount, turnus: fields.turnus, faelligkeit: fields.faelligkeit };
+    return {
+      ...common,
+      amount: fields.amount,
+      turnus: fields.turnus,
+      faelligkeit: fields.faelligkeit,
+      categoryId: fields.categoryId || null,
+      subcategoryId: (fields.categoryId && fields.subcategoryId) || null,
+    };
   }
   const rate = Number(fields.monthlyRate) > 0 ? Number(fields.monthlyRate) : null;
   if (fields.rule === "goal") {
