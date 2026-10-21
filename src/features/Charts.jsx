@@ -14,7 +14,6 @@ import {
 } from "recharts";
 import { makeSubcategoryColorShades, CHART_COLORS } from "../utils/hbPalette.js";
 import { pieCenterFontSize } from "../utils/chartStyle.js";
-import { RESERVE_NO_CATEGORY_ID } from "../utils/budgetUtils.js";
 
 const CHART_TAB_OPTIONS = [
   { value: "expense", label: "Ausgaben" },
@@ -60,7 +59,6 @@ export default function Charts({
         id: sub.id,
         name: sub.name,
         value: sub.value,
-        reserveValue: sub.reserveValue || 0,
         entryCount: sub.entryCount,
         color: colors[i] || activeCat.color,
         clickable: false,
@@ -78,7 +76,6 @@ export default function Charts({
       id: cat.id,
       name: cat.name,
       value: cat.value,
-      reserveValue: cat.reserveValue || 0,
       entryCount: cat.entryCount,
       color: cat.color || CHART_COLORS.transfer,
       clickable: (cat.subcategories || []).length > 0,
@@ -109,11 +106,14 @@ export default function Charts({
 
   const isEmpty = hierarchy.length === 0;
 
-  // Der Block „Rückstellungen ohne Kategorie“ besteht nur aus Raten — dort wäre der Hinweis doppelt.
-  const reserveHint = (item) =>
-    withReserves && item?.id !== RESERVE_NO_CATEGORY_ID && item?.reserveValue > 0
-      ? `davon Rückstellungen: ${fmt(item.reserveValue)}`
-      : null;
+  // Hat eine Zeile einen Pfeil, bekommen alle Zeilen (und die Gesamtzeile)
+  // denselben Platz dafür — sonst stehen die Beträge nicht bündig untereinander.
+  const hasChevrons = legendItems.some((item) => item.clickable);
+  const chevronSlot = (clickable) => hasChevrons && (
+    <span className="hb-legend-chevron" aria-hidden="true">
+      {clickable && <IconChevronRight width={14} height={14} />}
+    </span>
+  );
 
   return (
     <Card style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
@@ -185,29 +185,31 @@ export default function Charts({
               {/* Total row */}
               <div className="hb-legend-total-row">
                 <span>{activeCat ? `${activeCat.name} gesamt (${activeCat.entryCount})` : activeTab !== "expense" ? "Einnahmen gesamt" : withReserves ? "Kosten gesamt" : "Ausgaben gesamt"}</span>
-                <span>
-                  {displayMode === "percent"
-                    ? "100 %"
-                    : (activeTab === "expense" ? "−" : "+") + fmt(totalValue)}
-                </span>
+                <div className="hb-legend-right">
+                  <span className="hb-legend-total-value">
+                    {displayMode === "percent"
+                      ? "100 %"
+                      : (activeTab === "expense" ? "−" : "+") + fmt(totalValue)}
+                  </span>
+                  {chevronSlot(false)}
+                </div>
               </div>
 
-              {/* Legend rows — scrollbar erscheint ab dem 11. Eintrag */}
+              {/* Legend rows — Scrollbalken erscheint ab dem 12. Eintrag */}
               <div className="hb-legend-items-scroll">
                 {legendItems.map((item, i) => {
                   const pct = totalValue > 0 ? (item.value / totalValue) * 100 : 0;
                   const valueStr = displayMode === "percent"
                     ? formatPercent(pct, { sign: false })
                     : (activeTab === "expense" ? "−" : "+") + fmt(item.value);
-                  const hint = reserveHint(item);
                   return (
                     <div
                       key={(item.id || item.name) + i}
-                      className={`hb-legend-row${item.clickable ? " hb-legend-row-clickable" : ""}${hint ? " hb-legend-row--top" : ""}`}
+                      className={`hb-legend-row${item.clickable ? " hb-legend-row-clickable" : ""}`}
                       onClick={item.clickable ? () => handleLegendRowClick(item) : undefined}
                       role={item.clickable ? "button" : undefined}
                       tabIndex={item.clickable ? 0 : undefined}
-                      aria-label={item.clickable ? `${item.name}: ${valueStr}${hint ? `, ${hint}` : ""} — Details anzeigen` : undefined}
+                      aria-label={item.clickable ? `${item.name}: ${valueStr} — Details anzeigen` : undefined}
                       onKeyDown={item.clickable ? (e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
@@ -220,25 +222,12 @@ export default function Charts({
                           className="hb-dot"
                           style={{ background: item.color }}
                         />
-                        {hint ? (
-                          <span className="hb-legend-name-wrap">
-                            <span className="hb-legend-name">
-                              {item.name} <span className="hb-legend-count">({item.entryCount})</span>
-                            </span>
-                            <span className="hb-legend-sub">{hint}</span>
-                          </span>
-                        ) : (
-                          <>
-                            <span className="hb-legend-name">{item.name}</span>
-                            <span className="hb-legend-count">({item.entryCount})</span>
-                          </>
-                        )}
+                        <span className="hb-legend-name">{item.name}</span>
+                        <span className="hb-legend-count">({item.entryCount})</span>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div className="hb-legend-right">
                         <span className="hb-legend-value">{valueStr}</span>
-                        {item.clickable && (
-                          <IconChevronRight width={14} height={14} style={{ color: "var(--muted)" }} />
-                        )}
+                        {chevronSlot(item.clickable)}
                       </div>
                     </div>
                   );
@@ -278,21 +267,13 @@ export default function Charts({
                       const valStr = displayMode === "percent"
                         ? formatPercent((p.value / totalValue) * 100, { sign: false })
                         : fmt(p.value);
-                      const hint = reserveHint(p.payload);
-                      const row = (
-                        <>
+                      return (
+                        <div className="hb-chart-tooltip">
                           <span className="hb-chart-tooltip-label">
                             <span className="hb-tooltip-dot" style={{ background: p.fill }} />
                             {p.name}
                           </span>
                           <span>{valStr}</span>
-                        </>
-                      );
-                      if (!hint) return <div className="hb-chart-tooltip">{row}</div>;
-                      return (
-                        <div className="hb-chart-tooltip hb-chart-tooltip--col">
-                          <div className="hb-chart-tooltip-row">{row}</div>
-                          <span className="hb-legend-sub">{hint}</span>
                         </div>
                       );
                     }}
