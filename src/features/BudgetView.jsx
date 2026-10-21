@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent } from "../components/ui.jsx";
 import { IconBudget, IconChevron, IconEdit, IconInfo, IconPlus } from "../components/icons.jsx";
 import { useUndo } from "../contexts/UndoContext.js";
 import { formatPercent } from "../utils/formatUtils.js";
 import { BUDGET_STATUS_COLOR, BUDGET_STATUS_LABEL, buildBudgetRows, setCategoryBudgets } from "../utils/budgetUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
+import { useFloatingSlot } from "../hooks/useFloatingSlot.js";
 import { budgetMoney } from "./budget/budgetFormat.js";
 import BudgetEditDialog from "./budget/BudgetEditDialog.jsx";
 
@@ -143,7 +144,7 @@ export default function BudgetView({
       )}
 
       {hasBudgets && (
-        <div className={`hb-pot-grid hb-budget-grid${openCardId ? " has-open" : ""}`}>
+        <div className="hb-pot-grid hb-budget-grid">
           {budgeted.map((row) => (
             <BudgetCategoryCard
               key={row.id}
@@ -216,44 +217,22 @@ function BudgetCategoryCard({ row, money, onEdit, isOpen, onToggle, onClose }) {
   // die Unterkategorien zeigen ihn nur über die Balkenfarbe.
   const showSubs = isOpen && subs.length > 0;
 
-  // Aufgeklappt löst sich die Karte aus dem Raster (position: absolute) und
-  // legt sich über die Karten darunter. Der Platzhalter behält dafür die
-  // zugeklappte Höhe, damit die Reihe bleibt, wie sie ist.
-  const slotRef = useRef(null);
-  const toggleRef = useRef(null);
-  const [slotHeight, setSlotHeight] = useState(null);
+  // Aufgeklappt löst sich die Karte aus dem Raster und legt sich über die
+  // Karten darunter (useFloatingSlot).
+  const { slotRef, toggleRef, slotHeight, measure } = useFloatingSlot(isOpen, onClose);
 
   function toggle() {
-    if (!isOpen) setSlotHeight(slotRef.current?.offsetHeight ?? null);
+    if (!isOpen) measure();
     onToggle();
   }
-
-  // Klick daneben oder Escape klappt wieder zu.
-  useEffect(() => {
-    if (!isOpen) return undefined;
-    function onPointerDown(e) {
-      if (!slotRef.current?.contains(e.target)) onClose();
-    }
-    function onKeyDown(e) {
-      if (e.key !== "Escape") return;
-      onClose();
-      toggleRef.current?.focus();
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [isOpen, onClose]);
 
   return (
     <div
       ref={slotRef}
-      className={`hb-budget-card-slot${showSubs ? " is-open" : ""}`}
+      className={`hb-float-slot${showSubs ? " is-open" : ""}`}
       style={showSubs && slotHeight ? { height: slotHeight } : undefined}
     >
-      <article className="hb-pot-card hb-budget-card" aria-label={row.name}>
+      <article className="hb-pot-card hb-budget-card hb-float-card" aria-label={row.name}>
         <div className="hb-pot-card-top">
           <div className="hb-pot-card-head">
             <div className="hb-pot-card-name">
@@ -284,7 +263,7 @@ function BudgetCategoryCard({ row, money, onEdit, isOpen, onToggle, onClose }) {
         {subs.length > 0 && (
           <button
             type="button"
-            className="hb-link-btn hb-budget-subs-toggle"
+            className="hb-link-btn hb-expand-toggle"
             ref={toggleRef}
             onClick={toggle}
             aria-expanded={showSubs}

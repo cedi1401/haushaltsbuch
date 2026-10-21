@@ -7063,23 +7063,23 @@ select.hb-input option {
   color: var(--muted);
 }
 
-/* Rasterzelle der Budget-Karte. Aufgeklappt (.is-open) hält sie die
-   zugeklappte Höhe (Inline-Style), und die Karte schwebt darüber und
-   überlappt die Karten darunter — die Reihe wird nicht höher. */
-.hb-budget-card-slot {
+/* Schwebende Karte (useFloatingSlot): Budget-Karten und Dashboard-Töpfe.
+   Rasterzelle .hb-float-slot hält aufgeklappt (.is-open) die zugeklappte
+   Höhe (Inline-Style), und die .hb-float-card schwebt darüber und überlappt
+   den Inhalt darunter — die Reihe wird nicht höher. */
+.hb-float-slot {
   position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  transition: opacity var(--transition-fast);
 }
 
-.hb-budget-card-slot > .hb-budget-card {
+.hb-float-slot > .hb-float-card {
   flex: 1;
   transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
-.hb-budget-card-slot.is-open > .hb-budget-card {
+.hb-float-slot.is-open > .hb-float-card {
   position: absolute;
   inset: 0 0 auto 0;
   min-height: 100%;
@@ -7088,34 +7088,38 @@ select.hb-input option {
   box-shadow: var(--shadow-dialog);
 }
 
-/* Fokus auf die aufgeklappte Karte: die übrigen treten zurück. */
-.hb-budget-grid.has-open > .hb-budget-card-slot:not(.is-open) {
+/* Fokus auf die aufgeklappte Karte: der restliche View tritt zurück.
+   Gedimmt wird auf jeder Ebene nur, was die offene Karte nicht enthält —
+   sonst verblasst sie über ihre Vorfahren mit (Opacity vererbt sich). */
+.hb-page-container:has(.hb-float-slot.is-open) > :not(:has(.hb-float-slot.is-open)),
+.hb-page-container :has(.hb-float-slot.is-open) > :not(:has(.hb-float-slot.is-open), .hb-float-slot.is-open) {
   opacity: 0.5;
+  transition: opacity var(--transition-fast);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hb-budget-card-slot,
-  .hb-budget-card-slot > .hb-budget-card { transition: none; }
+  .hb-page-container :has(.hb-float-slot.is-open) > *,
+  .hb-float-slot > .hb-float-card { transition: none; }
 }
 
-/* Aufklapper der Unterkategorien unter dem Balken. */
-.hb-budget-subs-toggle {
+/* Aufklapper mit drehendem Chevron (Unterkategorien der Budget-Karten). */
+.hb-expand-toggle {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   align-self: flex-start;
 }
 
-.hb-budget-subs-toggle svg {
+.hb-expand-toggle svg {
   transition: transform var(--transition-fast);
 }
 
-.hb-budget-subs-toggle svg.is-open {
+.hb-expand-toggle svg.is-open {
   transform: rotate(180deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hb-budget-subs-toggle svg { transition: none; }
+  .hb-expand-toggle svg { transition: none; }
 }
 
 /* „Ohne Budget": Überschrift direkt auf der Seite, darunter kleine Karten —
