@@ -123,7 +123,7 @@ export default function AllocationChart({
                 <div className="hb-pie-total-value" style={{ fontSize: centerFontSize(centerValue) }}>
                   {centerValue}
                 </div>
-                <div className="hb-pie-total-label">Einnahmen</div>
+                <div className="hb-pie-total-label">Gesamteinnahmen</div>
               </div>
             </div>
 
