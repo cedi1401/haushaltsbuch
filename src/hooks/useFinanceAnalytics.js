@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { getEntryFinancialMonth, getFinancialMonthInfo } from "../utils/financialMonthUtils.js";
 import { formatPercent, toLocalISO } from "../utils/formatUtils.js";
 import { BURNRATE_DELTA_THRESHOLD_PCT } from "../utils/constants.js";
+import { calcCostByHierarchy, calcExpenseByHierarchy } from "../utils/budgetUtils.js";
 
 const DAY_NAMES_MON_FIRST = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 // JS getDay(): 0=So,1=Mo,...,6=Sa → Montag-zuerst-Indizes
@@ -26,20 +27,20 @@ export function useFinanceAnalytics({
   totalExpense,
   totalSavingsTransfers,
   totalReserveTransfers,
+  includeReserves = false,
+  expenseCategories,
+  transferCategories,
 }) {
-  // Vormonat-Ausgaben pro Kategorie (für Overview MoM)
+  // Vormonat je Kategorie (für Overview MoM). Gleiche Zuordnung wie
+  // `expenseByHierarchy` — mit Rückstellungen, wenn der Donut sie zeigt.
   const prevMonthCatMap = useMemo(() => {
     const prevKey = getPrevMonthKey(monthFilter);
     if (!prevKey) return new Map();
-    const map = new Map();
-    for (const e of (entries || [])) {
-      if (e.kind !== "expense" || e.source !== "month") continue;
-      if (getEntryFinancialMonth(e, monthStartDay ?? 1) !== prevKey) continue;
-      const key = e.categoryId || e.category;
-      map.set(key, (map.get(key) || 0) + Number(e.amount || 0));
-    }
-    return map;
-  }, [entries, monthFilter, monthStartDay]);
+    const prev = includeReserves
+      ? calcCostByHierarchy(entries, expenseCategories, transferCategories, prevKey, monthStartDay ?? 1)
+      : calcExpenseByHierarchy(entries, expenseCategories, prevKey, monthStartDay ?? 1);
+    return new Map(prev.map((c) => [c.id, c.value]));
+  }, [entries, monthFilter, monthStartDay, includeReserves, expenseCategories, transferCategories]);
 
   // Vormonat-Buchungen (für Behavior MoM)
   const prevMonthBehavior = useMemo(() => {
@@ -76,10 +77,8 @@ export function useFinanceAnalytics({
   }, [entries]);
 
   const overview = useMemo(() => {
-    const expenses = (filteredEntries || []).filter(
-      (e) => e.kind === "expense" && e.source === "month"
-    );
-    const expenseTotal = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+    // Basis der Anteile: die aktive Hierarchie (ggf. inkl. Rückstellungen).
+    const expenseTotal = (expenseByHierarchy || []).reduce((s, c) => s + c.value, 0);
 
     const topCategories = (expenseByHierarchy || []).slice(0, 6).map((cat) => {
       const prev = prevMonthCatMap.get(cat.id) || 0;
@@ -101,7 +100,7 @@ export function useFinanceAnalytics({
     });
 
     return { topCategories };
-  }, [filteredEntries, expenseByHierarchy, prevMonthCatMap]);
+  }, [expenseByHierarchy, prevMonthCatMap]);
 
   const behavior = useMemo(() => {
     const expenses = (filteredEntries || []).filter(

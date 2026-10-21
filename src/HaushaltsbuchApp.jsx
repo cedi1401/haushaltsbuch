@@ -18,7 +18,12 @@ import CategoryManagerDialog from "./components/CategoryManagerDialog.jsx";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./utils/bookDefaults.js";
 import { sumAmounts } from "./utils/hbUtils.js";
 import { getActiveTransferCategories, getFixedCostItems, makeIsSavingsTransfer } from "./utils/transferCategoryUtils.js";
-import { calcExpenseByHierarchy, calcIncomeByHierarchy } from "./utils/budgetUtils.js";
+import {
+  calcCostByHierarchy,
+  calcExpenseByHierarchy,
+  calcIncomeByHierarchy,
+  hasCategorizedReserves,
+} from "./utils/budgetUtils.js";
 import { EMPTY_ARRAY, MONTHS_LONG, MONTHS_SHORT } from "./utils/constants.js";
 import { CurrencyContext } from "./contexts/CurrencyContext.jsx";
 import { UndoContext } from "./contexts/UndoContext.js";
@@ -76,7 +81,10 @@ export default function HaushaltsbuchApp() {
   } = bookManager;
 
   const appSettings = useAppSettings();
-  const { darkMode, setDarkMode, monthFilter, setMonthFilter, navExpanded, setNavExpanded } = appSettings;
+  const {
+    darkMode, setDarkMode, monthFilter, setMonthFilter, navExpanded, setNavExpanded,
+    includeReserves: includeReservesSetting, setIncludeReserves,
+  } = appSettings;
   const update = useUpdateManager();
 
   const entries = activeBook?.entries || EMPTY_ARRAY;
@@ -149,6 +157,20 @@ export default function HaushaltsbuchApp() {
     () => calcExpenseByHierarchy(filteredEntries, expenseCategories, monthFilter, monthStartDay),
     [filteredEntries, expenseCategories, monthFilter, monthStartDay]
   );
+  // Ausgaben-Donut und Insights „Inkl. Rückstellungen“: Der Umschalter gibt es
+  // erst, wenn eine Rückstellung eine Kategorie hat; bis zur ersten Wahl ist er an.
+  const showReserveToggle = useMemo(
+    () => hasCategorizedReserves(allTransferCategories, expenseCategories),
+    [allTransferCategories, expenseCategories]
+  );
+  const includeReserves = showReserveToggle && (includeReservesSetting ?? true);
+  const costByHierarchy = useMemo(
+    () =>
+      showReserveToggle
+        ? calcCostByHierarchy(filteredEntries, expenseCategories, allTransferCategories, monthFilter, monthStartDay)
+        : EMPTY_ARRAY,
+    [showReserveToggle, filteredEntries, expenseCategories, allTransferCategories, monthFilter, monthStartDay]
+  );
   const incomeByHierarchy = useMemo(
     () => calcIncomeByHierarchy(filteredEntries, incomeCategories, monthFilter, monthStartDay),
     [filteredEntries, incomeCategories, monthFilter, monthStartDay]
@@ -198,7 +220,8 @@ export default function HaushaltsbuchApp() {
     books, activeBook, entries, filteredEntries, entriesSorted,
     totalIncome, totalExpense, totalTransfers,
     totalSavingsTransfers, totalReserveTransfers, balance,
-    potBalances, expenseByHierarchy, incomeByHierarchy,
+    potBalances, expenseByHierarchy, incomeByHierarchy, costByHierarchy,
+    showReserveToggle, includeReserves, setIncludeReserves,
     expenseCategories, allTransferCategories, indicateTransferCategories, fixedCostItems,
     monthFilter, setMonthFilter, monthLabel, monthStartDay, baseCurrency,
     budgetMonth, setBudgetMonth,

@@ -2,6 +2,7 @@
 import { getEntryFinancialMonth, getFinancialMonth, getFinancialMonthInfo } from "./financialMonthUtils.js";
 import { toLocalISO } from "./formatUtils.js";
 import { normalizeCategoryBudgets } from "./bookMigration.js";
+import { CHART_COLORS } from "./hbPalette.js";
 
 // ============================================
 // Budget: Status
@@ -295,38 +296,53 @@ export function setCategoryBudgets(expenseCategories, categoryId, { budget = nul
  * @param {string} month - Format "YYYY-MM" oder "" für alle Monate
  * @param {number} monthStartDay
  * @param {object} opts
- * @param {(e: object) => boolean} opts.entryFilter - true = Eintrag einbeziehen
+ * @param {(e: object) => boolean} [opts.entryFilter] - true = Eintrag einbeziehen
+ * @param {(e: object) => ({ categoryId: string|null, subcategoryId: string|null, isReserve?: boolean }|null)} [opts.resolveEntry]
+ *   - ersetzt `entryFilter`: liefert die Kategorie eines Eintrags (null = nicht
+ *   einbeziehen). `isReserve` zählt den Betrag zusätzlich in `reserveValue`.
  * @param {string} opts.fallbackCategoryId - Ziel-Kategorie für fehlende/ungültige categoryId
+ * @param {Array<{ id: string, name: string, color: string }>} [opts.extraBuckets]
+ *   - eigene Blöcke außerhalb der Kategorien; ihre IDs fallen nicht auf
+ *   `fallbackCategoryId` zurück
  * @param {boolean} [opts.includeBudget] - wenn true, wird `budget` ins Result übernommen
  * @returns {Array}
  */
-function calcByHierarchy(entries, categories, month, monthStartDay, { entryFilter, fallbackCategoryId, fallbackName = "Unkategorisiert", fallbackColor = "#6b6b6b", includeBudget = false }) {
+function calcByHierarchy(entries, categories, month, monthStartDay, { entryFilter, resolveEntry, fallbackCategoryId, fallbackName = "Unkategorisiert", fallbackColor = "#6b6b6b", extraBuckets = [], includeBudget = false }) {
   const topMap = new Map();
   const validCategoryIds = new Set((categories || []).map((c) => c.id));
+  const extraIds = new Set(extraBuckets.map((b) => b.id));
+  const resolve =
+    resolveEntry ||
+    ((e) => (entryFilter(e) ? { categoryId: e.categoryId, subcategoryId: e.subcategoryId } : null));
+
+  const bump = (data, amount, isReserve) => {
+    data.value += amount;
+    data.entryCount += 1;
+    if (isReserve) data.reserveValue += amount;
+  };
 
   for (const e of entries || []) {
-    if (!entryFilter(e)) continue;
+    const resolved = resolve(e);
+    if (!resolved) continue;
     if (month && getEntryFinancialMonth(e, monthStartDay) !== month) continue;
 
-    const rawCatId = e.categoryId || fallbackCategoryId;
-    const catId = validCategoryIds.has(rawCatId) ? rawCatId : fallbackCategoryId;
-    const subId = e.subcategoryId || null;
+    const rawCatId = resolved.categoryId || fallbackCategoryId;
+    const catId = validCategoryIds.has(rawCatId) || extraIds.has(rawCatId) ? rawCatId : fallbackCategoryId;
+    const subId = resolved.subcategoryId || null;
     const amount = Number(e.amount || 0);
+    const isReserve = resolved.isReserve === true;
 
     if (!topMap.has(catId)) {
-      topMap.set(catId, { value: 0, entryCount: 0, subMap: new Map() });
+      topMap.set(catId, { value: 0, entryCount: 0, reserveValue: 0, subMap: new Map() });
     }
     const catData = topMap.get(catId);
-    catData.value += amount;
-    catData.entryCount += 1;
+    bump(catData, amount, isReserve);
 
     if (subId) {
       if (!catData.subMap.has(subId)) {
-        catData.subMap.set(subId, { value: 0, entryCount: 0 });
+        catData.subMap.set(subId, { value: 0, entryCount: 0, reserveValue: 0 });
       }
-      const subData = catData.subMap.get(subId);
-      subData.value += amount;
-      subData.entryCount += 1;
+      bump(catData.subMap.get(subId), amount, isReserve);
     }
   }
 
@@ -344,6 +360,7 @@ function calcByHierarchy(entries, categories, month, monthStartDay, { entryFilte
           id: sub.id,
           name: sub.name,
           value: subData.value,
+          reserveValue: subData.reserveValue,
           entryCount: subData.entryCount,
         });
       }
@@ -352,12 +369,14 @@ function calcByHierarchy(entries, categories, month, monthStartDay, { entryFilte
     const subcatTotal = subcategories.reduce((sum, s) => sum + s.value, 0);
     const uncategorizedValue = catData.value - subcatTotal;
     const uncategorizedCount = catData.entryCount - subcategories.reduce((sum, s) => sum + s.entryCount, 0);
+    const uncategorizedReserve = catData.reserveValue - subcategories.reduce((sum, s) => sum + s.reserveValue, 0);
 
     if (uncategorizedValue > 0.001 && cat.subcategories && cat.subcategories.length > 0) {
       subcategories.unshift({
         id: null,
         name: `${cat.name} (allgemein)`,
         value: uncategorizedValue,
+        reserveValue: uncategorizedReserve > EPS ? uncategorizedReserve : 0,
         entryCount: uncategorizedCount,
       });
     }
@@ -367,6 +386,7 @@ function calcByHierarchy(entries, categories, month, monthStartDay, { entryFilte
       name: cat.name,
       color: cat.color,
       value: catData.value,
+      reserveValue: catData.reserveValue,
       entryCount: catData.entryCount,
       subcategories,
     };
@@ -377,20 +397,24 @@ function calcByHierarchy(entries, categories, month, monthStartDay, { entryFilte
   // Fallback-Bucket (fehlende/ungültige Kategorie) synthetisieren, falls die
   // Fallback-Kategorie nicht (mehr) als echte Kategorie in der Liste existiert
   // (z.B. die ausgemusterte "Unkategorisiert"-Oberkategorie).
-  if (!validCategoryIds.has(fallbackCategoryId)) {
-    const fbData = topMap.get(fallbackCategoryId);
-    if (fbData && fbData.value > 0) {
-      const item = {
-        id: fallbackCategoryId,
-        name: fallbackName,
-        color: fallbackColor,
-        value: fbData.value,
-        entryCount: fbData.entryCount,
-        subcategories: [],
-      };
-      if (includeBudget) item.budget = null;
-      result.push(item);
-    }
+  const synthetic = [
+    ...(validCategoryIds.has(fallbackCategoryId)
+      ? []
+      : [{ id: fallbackCategoryId, name: fallbackName, color: fallbackColor }]),
+    ...extraBuckets,
+  ];
+  for (const bucket of synthetic) {
+    const data = topMap.get(bucket.id);
+    if (!data || data.value <= 0) continue;
+    const item = {
+      ...bucket,
+      value: data.value,
+      reserveValue: data.reserveValue,
+      entryCount: data.entryCount,
+      subcategories: [],
+    };
+    if (includeBudget) item.budget = null;
+    result.push(item);
   }
 
   return result.sort((a, b) => b.value - a.value);
@@ -409,6 +433,64 @@ export function calcExpenseByHierarchy(entries, expenseCategories, month = "", m
     fallbackCategoryId: "cat_unkategorisiert",
     includeBudget: true,
   });
+}
+
+export const RESERVE_NO_CATEGORY_ID = "res_ohne_kategorie";
+
+/**
+ * Kosten je Kategorie: Monatsausgaben plus die Raten der Rückstellungen
+ * (Transfers auf eine Sparposition mit `rule: "reserve"`) unter der Kategorie
+ * der Sparposition. Gezählt wird die gebuchte Rate, nicht die spätere Rechnung
+ * aus dem Topf — die bleibt wie bei calcExpenseByHierarchy draußen, sonst
+ * wäre sie doppelt drin. Rückstellungen ohne gültige Kategorie (auch gelöschte
+ * Sparpositionen und gelöschte Kategorien) landen im eigenen Block
+ * „Rückstellungen ohne Kategorie“. Budgets werden nicht verrechnet.
+ *
+ * Jede Top-Kategorie und Unterkategorie trägt `reserveValue`, den Anteil der
+ * Rückstellungsraten an `value`.
+ *
+ * @param {Array} entries
+ * @param {Array} expenseCategories
+ * @param {Array} transferCategories - volle Liste inkl. gelöschter Sparpositionen
+ * @param {string} month - Format "YYYY-MM" oder "" für alle Monate
+ * @param {number} monthStartDay
+ * @returns {Array}
+ */
+export function calcCostByHierarchy(entries, expenseCategories, transferCategories, month = "", monthStartDay = 1) {
+  const validCategoryIds = new Set((expenseCategories || []).map((c) => c.id));
+  const reserveById = new Map(
+    (transferCategories || []).filter((c) => c?.rule === "reserve").map((c) => [c.id, c])
+  );
+  return calcByHierarchy(entries, expenseCategories, month, monthStartDay, {
+    resolveEntry: (e) => {
+      if (e.kind === "expense" && e.source === "month") {
+        return { categoryId: e.categoryId, subcategoryId: e.subcategoryId };
+      }
+      if (e.kind !== "transfer") return null;
+      const purpose = reserveById.get(e.transferCategoryId);
+      if (!purpose) return null;
+      if (purpose.deleted || !validCategoryIds.has(purpose.categoryId)) {
+        return { categoryId: RESERVE_NO_CATEGORY_ID, subcategoryId: null, isReserve: true };
+      }
+      return { categoryId: purpose.categoryId, subcategoryId: purpose.subcategoryId || null, isReserve: true };
+    },
+    fallbackCategoryId: UNCATEGORIZED_ID,
+    extraBuckets: [
+      { id: RESERVE_NO_CATEGORY_ID, name: "Rückstellungen ohne Kategorie", color: CHART_COLORS.transfer },
+    ],
+  });
+}
+
+/**
+ * Hat mindestens eine aktive Rückstellung eine (noch vorhandene)
+ * Ausgabenkategorie? Nur dann lohnt der Umschalter „Inkl. Rückstellungen“ am
+ * Ausgaben-Donut.
+ */
+export function hasCategorizedReserves(transferCategories, expenseCategories) {
+  const validCategoryIds = new Set((expenseCategories || []).map((c) => c.id));
+  return (transferCategories || []).some(
+    (c) => c && !c.deleted && c.rule === "reserve" && validCategoryIds.has(c.categoryId)
+  );
 }
 
 /**

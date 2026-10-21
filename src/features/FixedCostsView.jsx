@@ -390,12 +390,19 @@ export default function FixedCostsView({
   // bleibt mit ihren Buchungen in den Rücklagen (clearPurposeRate).
   async function removeSavingsRate(item) {
     if (!activeBook) return;
+    const isReserve = isSinkingFund(item);
+    // Rückstellungen zählen nie als Sparen, freie Rücklagen in einem Spar-Topf
+    // schon — der Hinweis nur dann, wenn sich die Sparquote dadurch ändert.
+    const inSavingsPot = pots.some((p) => p.id === item.potId && p.isSavings);
     const ok = await confirm({
       title: "Sparrate entfernen",
       message:
         `Sparrate „${item.name}“ wirklich entfernen?\n\n` +
-        "Die Sparposition bleibt mit ihren Buchungen in den Rücklagen, nur die monatliche Rate entfällt." +
-        (isSinkingFund(item) ? " Die Rückstellung wird dabei zur freien Rücklage." : ""),
+        "Die Position verschwindet aus den Fixkosten, bleibt aber mit ihren Buchungen in den Rücklagen." +
+        (isReserve
+          ? " Als Rückstellung braucht sie Betrag und Turnus. Ohne Rate wird sie dort als freie Rücklage weitergeführt." +
+            (inSavingsPot ? "\n\nDa sie in einem Spar-Topf liegt, zählen ihre Buchungen danach als Sparen." : "")
+          : ""),
       confirmLabel: "Entfernen",
       danger: true,
     });
@@ -511,7 +518,13 @@ export default function FixedCostsView({
     const item = row.item;
     const isTransfer = fixedCostKind(item) === "transfer";
     const menuItems = isTransfer
-      ? [{ label: "Sparrate entfernen", danger: true, onClick: () => removeSavingsRate(item) }]
+      ? [
+          {
+            label: "Duplizieren",
+            onClick: () => onOpenSavingsPosition?.({ duplicateOf: item.id, returnTo: "fixed" }),
+          },
+          { label: "Sparrate entfernen", danger: true, onClick: () => removeSavingsRate(item) },
+        ]
       : [
           { label: "Duplizieren", onClick: () => openDuplicateDialog(item) },
           { label: "Löschen", danger: true, onClick: () => deleteExpense(item) },

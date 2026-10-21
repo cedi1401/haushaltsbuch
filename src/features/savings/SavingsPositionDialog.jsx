@@ -3,6 +3,7 @@ import EditDialog from "../../components/EditDialog.jsx";
 import { AlertBar, Button, RangeTabs } from "../../components/ui.jsx";
 import { HbDatePicker } from "../../components/HbDatePicker.jsx";
 import HbTooltip from "../../components/HbTooltip.jsx";
+import CategoryFlyout from "../../components/CategoryFlyout.jsx";
 import TagInputField from "../../components/TagInputField.jsx";
 import TrendToggle from "../../components/TrendToggle.jsx";
 import { parseAmount } from "../../utils/formatUtils.js";
@@ -65,9 +66,22 @@ function draftFrom(purpose, { defaultPotId, defaultRule, defaultGroupId }) {
     amount: purpose?.rule === "reserve" ? String(purpose.amount ?? "") : "",
     turnus: purpose?.rule === "reserve" ? String(purpose.turnus ?? "12") : "12",
     faelligkeit: purpose?.rule === "reserve" ? purpose.faelligkeit || "" : "",
+    categoryId: purpose?.rule === "reserve" ? purpose.categoryId || null : null,
+    subcategoryId: purpose?.rule === "reserve" ? purpose.subcategoryId || null : null,
     targetAmount: purpose?.rule === "goal" ? String(purpose.targetAmount ?? "") : "",
     deadline: purpose?.rule === "goal" ? purpose.deadline || "" : "",
   };
+}
+
+function makeCopyName(baseName, transferCategories) {
+  const taken = new Set(
+    (transferCategories || []).filter((c) => !c.deleted).map((c) => (c.name || "").trim())
+  );
+  const first = `${baseName} (Kopie)`;
+  if (!taken.has(first)) return first;
+  let n = 2;
+  while (taken.has(`${baseName} (Kopie ${n})`)) n += 1;
+  return `${baseName} (Kopie ${n})`;
 }
 
 // Optionaler Betrag: leer ist gültig (= keine Rate), sonst eine Zahl > 0.
@@ -94,12 +108,14 @@ export default function SavingsPositionDialog({
   open,
   purpose,
   initialDraft,
+  duplicateOf,
   defaultPotId,
   defaultRule,
   defaultGroupId,
   knownTags,
   pots,
   transferCategories,
+  expenseCategories,
   fixedCostGroups,
   entries,
   onClose,
@@ -108,11 +124,17 @@ export default function SavingsPositionDialog({
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
-  const [draft, setDraft] = useState(
-    () => initialDraft || draftFrom(purpose, { defaultPotId, defaultRule, defaultGroupId })
-  );
+  const [draft, setDraft] = useState(() => {
+    if (initialDraft) return initialDraft;
+    // Kopie: alle Werte des Originals, nur mit freiem „(Kopie)“-Namen
+    if (duplicateOf) {
+      return { ...draftFrom(duplicateOf, {}), name: makeCopyName(duplicateOf.name || "", transferCategories) };
+    }
+    return draftFrom(purpose, { defaultPotId, defaultRule, defaultGroupId });
+  });
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const isEdit = Boolean(purpose);
+  const isDuplicate = !isEdit && Boolean(duplicateOf);
 
   const groupOptions = useMemo(
     () =>
@@ -182,6 +204,8 @@ export default function SavingsPositionDialog({
       amount,
       turnus,
       faelligkeit: draft.faelligkeit || null,
+      categoryId: draft.categoryId,
+      subcategoryId: draft.subcategoryId,
       targetAmount: target,
       deadline: draft.deadline || null,
       tags: draft.tags,
@@ -192,11 +216,11 @@ export default function SavingsPositionDialog({
   return (
     <EditDialog
       open={open}
-      title={isEdit ? "Sparposition bearbeiten" : CREATE_TITLE[draft.rule]}
+      title={isEdit ? "Sparposition bearbeiten" : isDuplicate ? "Sparposition duplizieren" : CREATE_TITLE[draft.rule]}
       onClose={onClose}
       onSave={handleSave}
       canSave={canSave}
-      saveLabel={isEdit ? "Speichern" : "Erstellen"}
+      saveLabel={isEdit ? "Speichern" : isDuplicate ? "Duplizieren" : "Erstellen"}
       size="medium"
       // Ohne das klemmt `.hb-modal-body` das Kalender-Popover ab.
       bodyScroll={false}
@@ -381,6 +405,20 @@ export default function SavingsPositionDialog({
             <div className="hb-field-hint">Gliedert die Sparraten in den Fixkosten.</div>
           </div>
         </div>
+
+        {draft.rule === "reserve" && (
+          <div className="hb-field">
+            <div className="hb-label">Kategorie (optional)</div>
+            <CategoryFlyout
+              value={{ categoryId: draft.categoryId, subcategoryId: draft.subcategoryId }}
+              categories={expenseCategories}
+              onChange={({ categoryId, subcategoryId }) => set({ categoryId, subcategoryId })}
+            />
+            <div className="hb-field-hint">
+              Die monatliche Rate erscheint im Ausgaben-Diagramm unter dieser Kategorie.
+            </div>
+          </div>
+        )}
 
         {draft.rule === "reserve" && !draft.faelligkeit && (
           <AlertBar

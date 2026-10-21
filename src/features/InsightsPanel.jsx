@@ -19,6 +19,8 @@ export default function InsightsPanel({
   totalSavingsTransfers,
   totalReserveTransfers,
   expenseCategories,
+  includeReserves = false,
+  transferCategories,
   onNavigateToBudget,
 }) {
   const [activeCard, setActiveCard] = useState("overview");
@@ -32,6 +34,9 @@ export default function InsightsPanel({
     totalExpense,
     totalSavingsTransfers,
     totalReserveTransfers,
+    includeReserves,
+    expenseCategories,
+    transferCategories,
   });
 
   const budget = useMemo(

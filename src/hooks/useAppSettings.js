@@ -10,6 +10,9 @@ export function useAppSettings() {
   // Wunsch „Navigationsleiste ausgeklappt“. Gilt nur bei genug Fensterbreite,
   // darunter startet die Leiste immer eingeklappt (siehe NavPane).
   const [navExpanded, setNavExpanded] = useState(true);
+  // Ausgaben-Donut „Inkl. Rückstellungen“: null = nie gewählt, dann gilt der
+  // Standard (an, sobald eine Rückstellung eine Kategorie hat).
+  const [includeReserves, setIncludeReserves] = useState(null);
 
   // Gate persistence until the initial hydration from storage has finished, so
   // the load-induced setState calls don't immediately write the values back.
@@ -19,14 +22,16 @@ export function useAppSettings() {
   useEffect(() => {
     async function load() {
       try {
-        const [savedMonth, savedDark, savedNav] = await Promise.all([
+        const [savedMonth, savedDark, savedNav, savedReserves] = await Promise.all([
           getSetting("month"),
           getSetting("darkMode"),
           getSetting("navExpanded"),
+          getSetting("includeReserves"),
         ]);
         if (typeof savedMonth === "string") setMonthFilter(savedMonth);
         if (savedDark === "true") setDarkMode(true);
         if (savedNav === "false") setNavExpanded(false);
+        if (savedReserves === "true" || savedReserves === "false") setIncludeReserves(savedReserves === "true");
       } catch (err) {
         log.warn("Einstellungen konnten nicht geladen werden — Standardwerte werden verwendet", err);
       } finally {
@@ -57,9 +62,15 @@ export function useAppSettings() {
     setSetting("navExpanded", String(navExpanded));
   }, [navExpanded]);
 
+  useEffect(() => {
+    if (!hasLoaded.current || includeReserves === null) return;
+    setSetting("includeReserves", String(includeReserves));
+  }, [includeReserves]);
+
   return {
     darkMode, setDarkMode,
     monthFilter, setMonthFilter,
     navExpanded, setNavExpanded,
+    includeReserves, setIncludeReserves,
   };
 }

@@ -50,11 +50,18 @@ import BacklogTopUpDialog from "./savings/BacklogTopUpDialog.jsx";
  * `{ purposeId }` bearbeitet eine Sparposition, sonst wird eine neue angelegt
  * (optional in `potId` und `groupId`). Mit `returnTo` geht es nach dem
  * Schließen dorthin zurück; `onReturn` erfährt dabei die gespeicherte
- * Sparposition (`{ id, potId }`, bei Abbrechen `null`). Ein unbekannter Zweck
- * (inzwischen gelöscht) öffnet nichts.
+ * Sparposition (`{ id, potId }`, bei Abbrechen `null`). `{ duplicateOf }`
+ * legt eine Kopie an. Ein unbekannter Zweck (inzwischen gelöscht) öffnet
+ * nichts.
  */
 function dialogFromIntent(intent, transferCategories, pots) {
   if (!intent) return null;
+  if (intent.duplicateOf) {
+    const source = findTransferCategory(transferCategories, intent.duplicateOf);
+    return source && !source.deleted
+      ? { key: 1, purpose: null, duplicateOf: source, returnTo: intent.returnTo, onReturn: intent.onReturn }
+      : null;
+  }
   if (intent.purposeId) {
     const purpose = findTransferCategory(transferCategories, intent.purposeId);
     return purpose && !purpose.deleted
@@ -159,9 +166,17 @@ export default function SavingsView({
       // seinen Buchungen wieder auf (addTransferCategory).
       const { list, category } = addTransferCategory(transferCategories, fields.name, fields.potId);
       savedId = category.id;
-      saveTransferCategories(
-        list.map((c) => (c.id === category.id ? applySavingsFields(c, fields, todayISO()) : c))
-      );
+      let next = list.map((c) => (c.id === category.id ? applySavingsFields(c, fields, todayISO()) : c));
+      // Kopien direkt hinter dem Original einfügen (wie bei den Fixkosten)
+      const sourceId = dialog?.duplicateOf?.id;
+      if (sourceId && !transferCategories.some((c) => c.id === category.id)) {
+        const copy = next.find((c) => c.id === category.id);
+        next = next.filter((c) => c.id !== category.id);
+        const idx = next.findIndex((c) => c.id === sourceId);
+        if (idx !== -1) next.splice(idx + 1, 0, copy);
+        else next.push(copy);
+      }
+      saveTransferCategories(next);
       undo.offer(`${RULE_LABEL[fields.rule]} „${fields.name}“ angelegt.`);
     }
     closeDialog({ id: savedId, potId: fields.potId });
@@ -572,12 +587,14 @@ export default function SavingsView({
           open
           purpose={dialog.purpose}
           initialDraft={dialog.initialDraft}
+          duplicateOf={dialog.duplicateOf}
           defaultPotId={dialog.defaultPotId}
           defaultRule={dialog.defaultRule}
           defaultGroupId={dialog.defaultGroupId}
           knownTags={knownTags}
           pots={pots}
           transferCategories={transferCategories}
+          expenseCategories={activeBook?.expenseCategories || EMPTY_ARRAY}
           fixedCostGroups={fixedCostGroups}
           entries={entries}
           onClose={() => closeDialog()}

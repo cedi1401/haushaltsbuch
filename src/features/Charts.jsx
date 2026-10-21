@@ -14,11 +14,17 @@ import {
 } from "recharts";
 import { makeSubcategoryColorShades, CHART_COLORS } from "../utils/hbPalette.js";
 import { pieCenterFontSize } from "../utils/chartStyle.js";
+import { RESERVE_NO_CATEGORY_ID } from "../utils/budgetUtils.js";
 
 const CHART_TAB_OPTIONS = [
   { value: "expense", label: "Ausgaben" },
   { value: "income", label: "Einnahmen" },
   { value: "allocation", label: "Aufteilung" },
+];
+
+const RESERVE_OPTIONS = [
+  { value: "plain", label: "Nur Ausgaben" },
+  { value: "reserves", label: "Inkl. Rückstellungen" },
 ];
 
 export default function Charts({
@@ -29,6 +35,9 @@ export default function Charts({
   totalReserveTransfers,
   totalSavingsTransfers,
   balance,
+  showReserveToggle = false,
+  includeReserves = false,
+  onIncludeReservesChange,
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
@@ -40,12 +49,14 @@ export default function Charts({
   // Determine which hierarchy array is active
   const hierarchy = activeTab === "expense" ? (expenseByHierarchy || EMPTY_ARRAY) : (incomeByHierarchy || EMPTY_ARRAY);
 
-  // Find the active parent category when in drill-down mode
-  const activeCat = drilldownId ? hierarchy.find((c) => c.id === drilldownId) : null;
+  // Find the active parent category when in drill-down mode. Fehlt sie nach
+  // dem Umschalten „Inkl. Rückstellungen“, gilt wieder die Übersicht.
+  const activeCat = drilldownId ? hierarchy.find((c) => c.id === drilldownId) || null : null;
+  const withReserves = activeTab === "expense" && includeReserves;
 
   // Build pie data and legend data based on mode
   const { pieData, legendItems, totalValue, centerLabel } = useMemo(() => {
-    if (drilldownId && activeCat) {
+    if (activeCat) {
       // Drill-down: show subcategories of the selected parent
       const subs = activeCat.subcategories || [];
       const colors = makeSubcategoryColorShades(activeCat.color, subs.length || 1);
@@ -53,6 +64,7 @@ export default function Charts({
         id: sub.id,
         name: sub.name,
         value: sub.value,
+        reserveValue: sub.reserveValue || 0,
         entryCount: sub.entryCount,
         color: colors[i] || activeCat.color,
         clickable: false,
@@ -70,19 +82,20 @@ export default function Charts({
       id: cat.id,
       name: cat.name,
       value: cat.value,
+      reserveValue: cat.reserveValue || 0,
       entryCount: cat.entryCount,
       color: cat.color || CHART_COLORS.transfer,
       clickable: (cat.subcategories || []).length > 0,
     }));
     const total = items.reduce((sum, d) => sum + d.value, 0);
-    const label = activeTab === "expense" ? "Gesamtausgaben" : "Gesamteinnahmen";
+    const label = activeTab !== "expense" ? "Gesamteinnahmen" : withReserves ? "Kosten gesamt" : "Gesamtausgaben";
     return {
       pieData: items,
       legendItems: items,
       totalValue: total,
       centerLabel: label,
     };
-  }, [drilldownId, activeCat, hierarchy, activeTab]);
+  }, [activeCat, hierarchy, activeTab, withReserves]);
 
   const allocationData = useMemo(() => {
     const income = totalIncome ?? 0;
@@ -115,6 +128,23 @@ export default function Charts({
   }
 
   const isEmpty = hierarchy.length === 0;
+
+  // Gehört zu den Daten von Legende und Donut, nicht zur Ansichtswahl im Kopf.
+  const reserveToggle = activeTab === "expense" && showReserveToggle && (
+    <div className="hb-legend-filter">
+      <RangeTabs
+        options={RESERVE_OPTIONS}
+        value={includeReserves ? "reserves" : "plain"}
+        onChange={(v) => onIncludeReservesChange?.(v === "reserves")}
+        ariaLabel="Rückstellungen im Ausgaben-Diagramm"
+      />
+    </div>
+  );
+  // Der Block „Rückstellungen ohne Kategorie“ besteht nur aus Raten — dort wäre der Hinweis doppelt.
+  const reserveHint = (item) =>
+    withReserves && item?.id !== RESERVE_NO_CATEGORY_ID && item?.reserveValue > 0
+      ? `davon Rückstellungen: ${fmt(item.reserveValue)}`
+      : null;
 
   return (
     <Card style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
@@ -237,6 +267,7 @@ export default function Charts({
         /* Empty state for expense/income */
         isEmpty ? (
           <div className="hb-empty hb-empty--sm">
+            {reserveToggle}
             <div className="hb-empty-icon"><IconInbox /></div>
             <div className="hb-empty-title">Keine Buchungen</div>
             <div className="hb-empty-text">Für diesen Monat wurden keine Buchungen erfasst.</div>
@@ -247,8 +278,10 @@ export default function Charts({
             {/* Left: Legend */}
             <div className="hb-chart-legend">
 
+              {reserveToggle}
+
               {/* Back button when in drill-down */}
-              {drilldownId && (
+              {activeCat && (
                 <Button
                   variant="outline"
                   onClick={handleBack}
@@ -259,7 +292,7 @@ export default function Charts({
               )}
 
               {/* Section title — only shown in drilldown */}
-              {drilldownId && activeCat && (
+              {activeCat && (
                 <div className="hb-legend-section-title">
                   {`Kategorien in ${activeCat.name}`}
                 </div>
@@ -267,7 +300,7 @@ export default function Charts({
 
               {/* Total row */}
               <div className="hb-legend-total-row">
-                <span>{drilldownId && activeCat ? `${activeCat.name} gesamt (${activeCat.entryCount})` : activeTab === "expense" ? "Ausgaben gesamt" : "Einnahmen gesamt"}</span>
+                <span>{activeCat ? `${activeCat.name} gesamt (${activeCat.entryCount})` : activeTab !== "expense" ? "Einnahmen gesamt" : withReserves ? "Kosten gesamt" : "Ausgaben gesamt"}</span>
                 <span>
                   {displayMode === "percent"
                     ? "100 %"
@@ -282,14 +315,15 @@ export default function Charts({
                   const valueStr = displayMode === "percent"
                     ? formatPercent(pct, { sign: false })
                     : (activeTab === "expense" ? "−" : "+") + fmt(item.value);
+                  const hint = reserveHint(item);
                   return (
                     <div
                       key={(item.id || item.name) + i}
-                      className={`hb-legend-row${item.clickable ? " hb-legend-row-clickable" : ""}`}
+                      className={`hb-legend-row${item.clickable ? " hb-legend-row-clickable" : ""}${hint ? " hb-legend-row--top" : ""}`}
                       onClick={item.clickable ? () => handleLegendRowClick(item) : undefined}
                       role={item.clickable ? "button" : undefined}
                       tabIndex={item.clickable ? 0 : undefined}
-                      aria-label={item.clickable ? `${item.name}: ${valueStr} — Details anzeigen` : undefined}
+                      aria-label={item.clickable ? `${item.name}: ${valueStr}${hint ? `, ${hint}` : ""} — Details anzeigen` : undefined}
                       onKeyDown={item.clickable ? (e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
@@ -302,8 +336,19 @@ export default function Charts({
                           className="hb-dot"
                           style={{ background: item.color }}
                         />
-                        <span className="hb-legend-name">{item.name}</span>
-                        <span className="hb-legend-count">({item.entryCount})</span>
+                        {hint ? (
+                          <span className="hb-legend-name-wrap">
+                            <span className="hb-legend-name">
+                              {item.name} <span className="hb-legend-count">({item.entryCount})</span>
+                            </span>
+                            <span className="hb-legend-sub">{hint}</span>
+                          </span>
+                        ) : (
+                          <>
+                            <span className="hb-legend-name">{item.name}</span>
+                            <span className="hb-legend-count">({item.entryCount})</span>
+                          </>
+                        )}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span className="hb-legend-value">{valueStr}</span>
@@ -349,13 +394,21 @@ export default function Charts({
                       const valStr = displayMode === "percent"
                         ? formatPercent((p.value / totalValue) * 100, { sign: false })
                         : fmt(p.value);
-                      return (
-                        <div className="hb-chart-tooltip">
+                      const hint = reserveHint(p.payload);
+                      const row = (
+                        <>
                           <span className="hb-chart-tooltip-label">
                             <span className="hb-tooltip-dot" style={{ background: p.fill }} />
                             {p.name}
                           </span>
                           <span>{valStr}</span>
+                        </>
+                      );
+                      if (!hint) return <div className="hb-chart-tooltip">{row}</div>;
+                      return (
+                        <div className="hb-chart-tooltip hb-chart-tooltip--col">
+                          <div className="hb-chart-tooltip-row">{row}</div>
+                          <span className="hb-legend-sub">{hint}</span>
                         </div>
                       );
                     }}

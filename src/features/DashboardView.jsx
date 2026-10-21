@@ -39,6 +39,10 @@ export default function DashboardView({
   potBalances,
   expenseByHierarchy,
   incomeByHierarchy,
+  costByHierarchy,
+  showReserveToggle = false,
+  includeReserves = false,
+  onIncludeReservesChange,
   monthFilter,
   onMonthFilterChange,
   monthLabel,
@@ -59,6 +63,8 @@ export default function DashboardView({
   const [bankImportOpen, setBankImportOpen] = useState(false);
 
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
+  // Donut und Insights folgen derselben Stellung „Inkl. Rückstellungen“.
+  const activeExpenseHierarchy = includeReserves ? costByHierarchy : expenseByHierarchy;
   const incomeCategories = activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES;
   const entryTemplates = activeBook?.entryTemplates || EMPTY_ARRAY;
 
@@ -409,8 +415,11 @@ export default function DashboardView({
 
       <div className="hb-analysis-grid">
         <Charts
-          expenseByHierarchy={expenseByHierarchy}
+          expenseByHierarchy={activeExpenseHierarchy}
           incomeByHierarchy={incomeByHierarchy}
+          showReserveToggle={showReserveToggle}
+          includeReserves={includeReserves}
+          onIncludeReservesChange={onIncludeReservesChange}
           totalIncome={totalIncome}
           totalExpense={totalExpense}
           totalReserveTransfers={totalReserveTransfers ?? 0}
@@ -418,7 +427,9 @@ export default function DashboardView({
           balance={balance}
         />
         <InsightsPanel
-          expenseByHierarchy={expenseByHierarchy}
+          expenseByHierarchy={activeExpenseHierarchy}
+          includeReserves={includeReserves}
+          transferCategories={activeBook?.transferCategories}
           filteredEntries={filteredEntries}
           monthFilter={monthFilter}
           entries={activeBook?.entries || []}
