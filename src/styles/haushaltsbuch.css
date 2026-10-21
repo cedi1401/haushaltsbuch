@@ -5572,11 +5572,31 @@ select.hb-input option {
 }
 
 /* =====================================================
-   ANALYSIS GRID (Charts + InsightsPanel, 55/45 split)
+   CHART ROW (Ausgaben/Einnahmen-Donut + Aufteilung, 71/29 split)
+   Eigenes Raster statt gemeinsamer Spalten mit dem Analysis Grid: Die
+   Spaltenkanten der beiden Zeilen liegen bewusst versetzt (ca. 280 px).
+   ===================================================== */
+.hb-chart-row {
+  display: grid;
+  grid-template-columns: 71fr 29fr;
+  grid-template-rows: 560px;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+
+.hb-chart-row > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* =====================================================
+   ANALYSIS GRID (InsightsPanel + Topf-Stände, 45/55 split)
+   Die Insights-Card ist genau auf 45fr × 500 px abgestimmt — nicht ändern.
    ===================================================== */
 .hb-analysis-grid {
   display: grid;
-  grid-template-columns: 55fr 45fr;
+  grid-template-columns: 45fr 55fr;
   grid-template-rows: 500px;
   gap: 16px;
   margin-bottom: 16px;
@@ -5598,6 +5618,11 @@ select.hb-input option {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+}
+
+/* Dashboard: Töpfe neben den Insights, zwei Kacheln pro Reihe. */
+.hb-pot-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .hb-pot-card {
@@ -5795,24 +5820,47 @@ select.hb-input option {
   flex: 1;
   justify-content: center;
   align-items: center;
-  gap: 32px;
+  gap: 72px;
   flex-wrap: wrap;
   min-height: 0;
 }
 
-/* Legende wächst mit der verfügbaren Card-Breite (Basis 385px, gedeckelt bei
-   480px), damit auf breiten Displays der freie Raum links/rechts genutzt wird. */
+/* Legende wächst mit der verfügbaren Card-Breite (Basis 480px, gedeckelt bei
+   560px), damit auf breiten Displays der freie Raum links/rechts genutzt wird. */
 .hb-chart-legend {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1 1 385px;
+  flex: 1 1 480px;
   min-width: 300px;
-  max-width: 480px;
-  max-height: 340px;
+  max-width: 560px;
+  max-height: 400px;
   align-self: center;
   min-height: 0;
   overflow: hidden;
+}
+
+/* Aufteilungs-Card: zu schmal für Legende neben dem Donut, darum
+   Donut oben und Legende darunter. */
+.hb-chart-body--stack {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 16px;
+}
+
+.hb-chart-body--stack .hb-chart-pie-wrap {
+  min-width: 0;
+  width: 240px;
+}
+
+/* So breit wie der „Überbucht“-Hinweis (Symbol + Text). Ohne Hinweis hält ein
+   unsichtbarer Platzhalter dieselbe Breite, damit die Legende nicht springt. */
+.hb-chart-body--stack .hb-chart-legend {
+  flex: none;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  max-height: none;
 }
 
 .hb-legend-section-title {
@@ -5867,14 +5915,6 @@ select.hb-input option {
 
 .hb-legend-name { white-space: normal; word-break: break-word; }
 
-/* Umschalter „Nur Ausgaben / Inkl. Rückstellungen“ über der Gesamtzeile.
-   Außerhalb des Scrollbereichs, damit er nicht mit den Zeilen wegscrollt. */
-.hb-legend-filter {
-  display: flex;
-  margin: 0 0 8px;
-  flex-shrink: 0;
-}
-
 /* Zeile mit „davon Rückstellungen“: Betrag bleibt auf Höhe des Namens. */
 .hb-chart-legend .hb-legend-row--top,
 .hb-chart-legend .hb-legend-row--top .hb-legend-left { align-items: flex-start; }
@@ -5910,7 +5950,7 @@ select.hb-input option {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-width: 340px;
+  min-width: 400px;
   flex-shrink: 0;
 }
 
@@ -6865,6 +6905,24 @@ select.hb-input option {
 .hb-allocation-alert {
   flex-shrink: 0;
   margin-top: 8px;
+  justify-content: center;
+}
+
+/* Symbol und Text als Gruppe mittig statt Text über die ganze Breite. */
+.hb-allocation-alert .hb-infobar-content {
+  flex: 0 1 auto;
+}
+
+/* Platzhalter ohne Höhe: gibt nur die Breite des Hinweises vor. */
+.hb-allocation-alert--sizer {
+  visibility: hidden;
+  height: 0;
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-top-width: 0;
+  border-bottom-width: 0;
+  overflow: hidden;
 }
 
 /* Status-Pill */

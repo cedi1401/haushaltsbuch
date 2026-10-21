@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 import { formatPercent } from "../utils/formatUtils.js";
-import { AlertBar, Card, CardContent, Button, RangeTabs } from "../components/ui.jsx";
+import { Card, CardContent, Button, RangeTabs } from "../components/ui.jsx";
 import { IconChevronRight, IconInbox } from "../components/icons.jsx";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
@@ -19,7 +19,6 @@ import { RESERVE_NO_CATEGORY_ID } from "../utils/budgetUtils.js";
 const CHART_TAB_OPTIONS = [
   { value: "expense", label: "Ausgaben" },
   { value: "income", label: "Einnahmen" },
-  { value: "allocation", label: "Aufteilung" },
 ];
 
 const RESERVE_OPTIONS = [
@@ -27,14 +26,11 @@ const RESERVE_OPTIONS = [
   { value: "reserves", label: "Inkl. Rückstellungen" },
 ];
 
+// Ausgaben-/Einnahmen-Donut. Die Aufteilung der Einnahmen hat eine eigene
+// Card (AllocationChart.jsx).
 export default function Charts({
   expenseByHierarchy,
   incomeByHierarchy,
-  totalIncome,
-  totalExpense,
-  totalReserveTransfers,
-  totalSavingsTransfers,
-  balance,
   showReserveToggle = false,
   includeReserves = false,
   onIncludeReservesChange,
@@ -42,7 +38,7 @@ export default function Charts({
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const themeColors = useThemeColors();
-  const [activeTab, setActiveTab] = useState("expense"); // "expense" | "income" | "allocation"
+  const [activeTab, setActiveTab] = useState("expense"); // "expense" | "income"
   const [drilldownId, setDrilldownId] = useState(null);  // null = overview, else categoryId
   const [displayMode, setDisplayMode] = useState("chf"); // "chf" | "percent"
 
@@ -97,22 +93,6 @@ export default function Charts({
     };
   }, [activeCat, hierarchy, activeTab, withReserves]);
 
-  const allocationData = useMemo(() => {
-    const income = totalIncome ?? 0;
-    const items = [];
-    if ((totalExpense ?? 0) > 0)
-      items.push({ name: "Ausgaben", value: totalExpense, color: themeColors.red });
-    if ((totalReserveTransfers ?? 0) > 0)
-      items.push({ name: "Rücklagen", value: totalReserveTransfers, color: themeColors.blue });
-    if ((totalSavingsTransfers ?? 0) > 0)
-      items.push({ name: "Sparen", value: totalSavingsTransfers, color: themeColors.teal });
-    const freiAmt = balance ?? 0;
-    if (freiAmt > 0)
-      items.push({ name: "Frei", value: freiAmt, color: themeColors.green });
-    items.sort((a, b) => b.value - a.value);
-    return { items, totalValue: income, isOverbudget: freiAmt < 0 };
-  }, [totalIncome, totalExpense, totalReserveTransfers, totalSavingsTransfers, balance, themeColors]);
-
   function handleTabChange(tab) {
     setActiveTab(tab);
     setDrilldownId(null); // reset drill-down on tab switch
@@ -129,17 +109,6 @@ export default function Charts({
 
   const isEmpty = hierarchy.length === 0;
 
-  // Gehört zu den Daten von Legende und Donut, nicht zur Ansichtswahl im Kopf.
-  const reserveToggle = activeTab === "expense" && showReserveToggle && (
-    <div className="hb-legend-filter">
-      <RangeTabs
-        options={RESERVE_OPTIONS}
-        value={includeReserves ? "reserves" : "plain"}
-        onChange={(v) => onIncludeReservesChange?.(v === "reserves")}
-        ariaLabel="Rückstellungen im Ausgaben-Diagramm"
-      />
-    </div>
-  );
   // Der Block „Rückstellungen ohne Kategorie“ besteht nur aus Raten — dort wäre der Hinweis doppelt.
   const reserveHint = (item) =>
     withReserves && item?.id !== RESERVE_NO_CATEGORY_ID && item?.reserveValue > 0
@@ -159,6 +128,18 @@ export default function Charts({
             ariaLabel="Auswertung wählen"
           />
 
+          {/* Filtert die Daten von Legende und Donut — mit etwas mehr Abstand,
+              damit die beiden Umschalter nicht wie einer mit vier Optionen wirken. */}
+          {activeTab === "expense" && showReserveToggle && (
+            <RangeTabs
+              options={RESERVE_OPTIONS}
+              value={includeReserves ? "reserves" : "plain"}
+              onChange={(v) => onIncludeReservesChange?.(v === "reserves")}
+              ariaLabel="Rückstellungen im Ausgaben-Diagramm"
+              style={{ marginLeft: 8 }}
+            />
+          )}
+
           <RangeTabs
             options={[
               { value: "chf", label: baseCurrency },
@@ -171,103 +152,8 @@ export default function Charts({
           />
         </div>
 
-        {/* Allocation tab */}
-        {activeTab === "allocation" ? (
-          allocationData.totalValue <= 0 ? (
-            <div className="hb-empty hb-empty--sm">
-              <div className="hb-empty-icon"><IconInbox /></div>
-              <div className="hb-empty-title">Keine Buchungen</div>
-              <div className="hb-empty-text">Für diesen Monat wurden keine Buchungen erfasst.</div>
-            </div>
-          ) : (
-            <div className="hb-chart-body">
-              <div className="hb-chart-legend">
-                <div className="hb-legend-total-row">
-                  <span>Mittelverwendung</span>
-                </div>
-                <div className="hb-legend-items-scroll">
-                  {allocationData.items.map((item) => {
-                    const pct = allocationData.totalValue > 0
-                      ? (item.value / allocationData.totalValue) * 100
-                      : 0;
-                    const valueStr = displayMode === "percent" ? formatPercent(pct, { sign: false }) : fmt(item.value);
-                    return (
-                      <div key={item.name} className="hb-legend-row">
-                        <div className="hb-legend-left">
-                          <span className="hb-dot" style={{ background: item.color }} />
-                          <span className="hb-legend-name">{item.name}</span>
-                        </div>
-                        <span className="hb-legend-value">{valueStr}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* Gleiche rote Warnbox wie bei überschrittenen Budgets in den
-                    Insights, hier aber einzeilig und ohne Klickziel. */}
-                {allocationData.isOverbudget && (
-                  <AlertBar
-                    compact
-                    className="hb-allocation-alert"
-                    title="Überbucht"
-                    message="Ausgaben übersteigen Einnahmen"
-                  />
-                )}
-              </div>
-              <div className="hb-chart-pie-wrap">
-                <ResponsiveContainer width="100%" height={340}>
-                  <PieChart>
-                    <Pie
-                      data={allocationData.items}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={87}
-                      outerRadius={153}
-                      paddingAngle={0}
-                      cornerRadius={4}
-                      stroke={themeColors.card}
-                      strokeWidth={3}
-                      strokeLinejoin="round"
-                      startAngle={90}
-                      endAngle={-270}
-                      animationBegin={0}
-                      animationDuration={1350}
-                    >
-                      {allocationData.items.map((d, i) => (
-                        <Cell key={d.name + i} fill={d.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      wrapperStyle={{ zIndex: 10 }}
-                      content={({ active, payload }) => {
-                        if (!active || !payload?.length) return null;
-                        const p = payload[0];
-                        const valStr = displayMode === "percent"
-                          ? formatPercent((p.value / allocationData.totalValue) * 100, { sign: false })
-                          : fmt(p.value);
-                        return (
-                          <div className="hb-chart-tooltip">
-                            <span className="hb-chart-tooltip-label">
-                              <span className="hb-tooltip-dot" style={{ background: p.fill }} />
-                              {p.name}
-                            </span>
-                            <span>{valStr}</span>
-                          </div>
-                        );
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="hb-pie-center-overlay" style={{ pointerEvents: "none" }}>
-                  <div style={{ fontSize: 15, color: "var(--text)", fontWeight: 600, letterSpacing: "0.01em" }}>Aufteilung</div>
-                </div>
-              </div>
-            </div>
-          )
-        ) : (
-        /* Empty state for expense/income */
-        isEmpty ? (
+        {isEmpty ? (
           <div className="hb-empty hb-empty--sm">
-            {reserveToggle}
             <div className="hb-empty-icon"><IconInbox /></div>
             <div className="hb-empty-title">Keine Buchungen</div>
             <div className="hb-empty-text">Für diesen Monat wurden keine Buchungen erfasst.</div>
@@ -277,8 +163,6 @@ export default function Charts({
 
             {/* Left: Legend */}
             <div className="hb-chart-legend">
-
-              {reserveToggle}
 
               {/* Back button when in drill-down */}
               {activeCat && (
@@ -364,14 +248,14 @@ export default function Charts({
 
             {/* Right: Donut Pie Chart with center overlay */}
             <div className="hb-chart-pie-wrap">
-              <ResponsiveContainer width="100%" height={340}>
+              <ResponsiveContainer width="100%" height={400}>
                 <PieChart>
                   <Pie
                     data={pieData}
                     dataKey="value"
                     nameKey="name"
-                    innerRadius={87}
-                    outerRadius={153}
+                    innerRadius={102}
+                    outerRadius={180}
                     paddingAngle={0}
                     cornerRadius={4}
                     stroke={themeColors.card}
@@ -433,7 +317,7 @@ export default function Charts({
             </div>
 
           </div>
-        ))}
+        )}
 
       </CardContent>
     </Card>
