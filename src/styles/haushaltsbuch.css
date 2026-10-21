@@ -5608,6 +5608,12 @@ select.hb-input option {
   min-height: 0;
 }
 
+/* Topf-Stände: aufgeklappt schwebt die Karte über die Buchungen darunter —
+   darf darum nicht abgeschnitten werden. */
+.hb-analysis-grid > .hb-float-slot {
+  overflow: visible;
+}
+
 /* =====================================================
    POT TILES (Flex-Zeile, bis 5 nebeneinander)
    ===================================================== */
@@ -5623,6 +5629,16 @@ select.hb-input option {
 /* Dashboard: Töpfe neben den Insights, zwei Kacheln pro Reihe. */
 .hb-pot-grid--2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* „Weitere anzeigen“ unter den Töpfen, an der Unterkante der Card —
+   5 px ins untere Card-Padding gerückt. */
+.hb-pots-more {
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+  margin-bottom: -5px;
+  padding-top: 8px;
 }
 
 .hb-pot-card {

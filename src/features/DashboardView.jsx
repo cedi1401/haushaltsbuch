@@ -3,6 +3,7 @@ import { Button, Card, CardContent } from "../components/ui.jsx";
 import EntryTemplateManagerDialog from "../components/EntryTemplateManagerDialog.jsx";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
+import { useFloatingSlot } from "../hooks/useFloatingSlot.js";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../utils/bookDefaults.js";
 import { IconPots } from "../components/icons.jsx";
 import HbSparklineHover from "../components/HbSparklineHover.jsx";
@@ -61,6 +62,7 @@ export default function DashboardView({
 }) {
   const fmt = useFmt();
   const themeColors = useThemeColors();
+  const [potsOpen, setPotsOpen] = useState(false);
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
   const [sweepOpen, setSweepOpen] = useState(false);
   const [bankImportOpen, setBankImportOpen] = useState(false);
@@ -151,6 +153,23 @@ export default function DashboardView({
     });
     return arr;
   }, [potBalances, lastTxByPot]);
+
+  // „Weitere anzeigen“ wie bei den Budget-Karten: Die Karte legt sich über die
+  // Buchungen darunter, der restliche View tritt zurück.
+  const hasMorePots = sortedPots.length > POTS_VISIBLE;
+  const showAllPots = potsOpen && hasMorePots;
+  const closePots = useCallback(() => setPotsOpen(false), []);
+  const {
+    slotRef: potsSlotRef,
+    toggleRef: potsToggleRef,
+    slotHeight: potsSlotHeight,
+    measure: measurePotsSlot,
+  } = useFloatingSlot(showAllPots, closePots);
+
+  function togglePots() {
+    if (!showAllPots) measurePotsSlot();
+    setPotsOpen((v) => !v);
+  }
 
   // Übrigen Frei-Betrag als Sparen-Transfer auf den letzten Tag des Finanzmonats
   // verbuchen. Ohne eigenen Spar-Topf wird ein „Überschuss"-Topf (isSavings) angelegt.
@@ -388,58 +407,80 @@ export default function DashboardView({
           onSweepSurplus={handleSweepSurplus}
           onNavigateToBudget={onNavigateToBudget}
         />
-        <Card style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-          <CardContent style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-            <div className="hb-card-head">
-              <h3 className="hb-card-title">Topf-Stände</h3>
-            </div>
-            {potBalances.length === 0 ? (
-              <div className="hb-empty hb-empty--sm">
-                <div className="hb-empty-icon"><IconPots /></div>
-                <div className="hb-empty-title">Noch keine Töpfe</div>
-                <div className="hb-empty-text">Lege Töpfe an, um Geld für bestimmte Zwecke zurückzulegen.</div>
+        <div
+          ref={potsSlotRef}
+          className={`hb-float-slot${showAllPots ? " is-open" : ""}`}
+          style={showAllPots && potsSlotHeight ? { height: potsSlotHeight } : undefined}
+        >
+          <Card className="hb-float-card" style={{ display: "flex", flexDirection: "column" }}>
+            <CardContent style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+              <div className="hb-card-head">
+                <h3 className="hb-card-title">Topf-Stände</h3>
               </div>
-            ) : (
-              <div className="hb-pot-grid hb-pot-grid--2">
-                {sortedPots.slice(0, POTS_VISIBLE).map((pot) => {
-                  const txn = lastTxByPot.get(pot.id);
-                  const isIn = txn?.kind === "transfer";
-                  return (
-                    <div key={pot.id} className="hb-pot-card">
-                      <div className="hb-pot-card-top">
-                        <div className="hb-pot-card-head">
-                          <div className="hb-pot-card-name">{pot.name}</div>
-                          <div className="hb-pot-card-amount">
-                            {fmt(pot.balance)}
+              {potBalances.length === 0 ? (
+                <div className="hb-empty hb-empty--sm">
+                  <div className="hb-empty-icon"><IconPots /></div>
+                  <div className="hb-empty-title">Noch keine Töpfe</div>
+                  <div className="hb-empty-text">Lege Töpfe an, um Geld für bestimmte Zwecke zurückzulegen.</div>
+                </div>
+              ) : (
+                <>
+                  <div className="hb-pot-grid hb-pot-grid--2">
+                    {(showAllPots ? sortedPots : sortedPots.slice(0, POTS_VISIBLE)).map((pot) => {
+                      const txn = lastTxByPot.get(pot.id);
+                      const isIn = txn?.kind === "transfer";
+                      return (
+                        <div key={pot.id} className="hb-pot-card">
+                          <div className="hb-pot-card-top">
+                            <div className="hb-pot-card-head">
+                              <div className="hb-pot-card-name">{pot.name}</div>
+                              <div className="hb-pot-card-amount">
+                                {fmt(pot.balance)}
+                              </div>
+                            </div>
+                            {pot.isSavings && <span className="hb-pot-savings-tag">Sparen</span>}
                           </div>
-                        </div>
-                        {pot.isSavings && <span className="hb-pot-savings-tag">Sparen</span>}
-                      </div>
 
-                      {txn ? (
-                        <div className="hb-pot-card-foot">
-                          <span className="hb-pot-card-foot-label">
-                            {isIn ? "Letzte Einzahlung" : "Letzte Auszahlung"}
-                          </span>
-                          <span className="hb-pot-card-foot-value">
-                            <span className={isIn ? "hb-pot-foot-in" : "hb-pot-foot-out"}>
-                              {isIn ? "+" : "−"}{fmt(txn.amount)}
-                            </span>
-                            <span className="hb-pot-card-foot-date"> · {fmtTileDate(txn.date)}</span>
-                          </span>
+                          {txn ? (
+                            <div className="hb-pot-card-foot">
+                              <span className="hb-pot-card-foot-label">
+                                {isIn ? "Letzte Einzahlung" : "Letzte Auszahlung"}
+                              </span>
+                              <span className="hb-pot-card-foot-value">
+                                <span className={isIn ? "hb-pot-foot-in" : "hb-pot-foot-out"}>
+                                  {isIn ? "+" : "−"}{fmt(txn.amount)}
+                                </span>
+                                <span className="hb-pot-card-foot-date"> · {fmtTileDate(txn.date)}</span>
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="hb-pot-card-foot hb-pot-card-foot--empty">
+                              <span>Noch keine Bewegung</span>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="hb-pot-card-foot hb-pot-card-foot--empty">
-                          <span>Noch keine Bewegung</span>
-                        </div>
-                      )}
+                      );
+                    })}
+                  </div>
+                  {/* Kleine Größe: Unter der dritten Kachelreihe bleiben nur gut
+                      35 px, der normale Button würde die Card sprengen. */}
+                  {hasMorePots && (
+                    <div className="hb-pots-more">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        ref={potsToggleRef}
+                        onClick={togglePots}
+                      >
+                        {showAllPots ? "Weniger anzeigen" : `Weitere ${sortedPots.length - POTS_VISIBLE} anzeigen`}
+                      </Button>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <EntriesTable
