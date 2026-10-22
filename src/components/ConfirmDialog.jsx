@@ -16,6 +16,7 @@ export function ConfirmProvider({ children }) {
     confirmLabel: "Bestätigen",
     cancelLabel: "Abbrechen",
     danger: false,
+    confirmText: "",
     resolver: null,
   });
 
@@ -28,6 +29,7 @@ export function ConfirmProvider({ children }) {
         confirmLabel: opts.confirmLabel || "Bestätigen",
         cancelLabel: opts.cancelLabel || "Abbrechen",
         danger: opts.danger || false,
+        confirmText: opts.confirmText || "",
         resolver: resolve,
       });
     });
@@ -48,6 +50,7 @@ export function ConfirmProvider({ children }) {
           confirmLabel={state.confirmLabel}
           cancelLabel={state.cancelLabel}
           danger={state.danger}
+          confirmText={state.confirmText}
           onConfirm={() => handleClose(true)}
           onCancel={() => handleClose(false)}
         />
@@ -56,10 +59,15 @@ export function ConfirmProvider({ children }) {
   );
 }
 
-function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, onConfirm, onCancel }) {
+// `confirmText`: Sicherheitsabfrage – der Bestätigen-Button bleibt gesperrt,
+// bis dieser Text exakt (Groß-/Kleinschreibung beachtet) eingetippt wurde.
+function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, confirmText, onConfirm, onCancel }) {
   const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
   const confirmBtnRef = useRef(null);
+  const inputRef = useRef(null);
   const panelRef = useRef(null);
+  const [typed, setTyped] = useState("");
+  const canConfirm = !confirmText || typed.trim() === confirmText;
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -68,7 +76,7 @@ function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, onCon
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => confirmBtnRef.current?.focus(), 50);
+    const timer = setTimeout(() => (inputRef.current || confirmBtnRef.current)?.focus(), 50);
     return () => clearTimeout(timer);
   }, []);
 
@@ -125,6 +133,24 @@ function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, onCon
           <div style={{ whiteSpace: "pre-wrap", fontSize: 14, color: "var(--text)", lineHeight: 1.5 }}>
             {message}
           </div>
+          {confirmText && (
+            <div className="hb-field" style={{ marginTop: 16 }}>
+              <label className="hb-label" htmlFor="confirm-dialog-input">
+                Zur Bestätigung „{confirmText}“ eingeben
+              </label>
+              <input
+                ref={inputRef}
+                id="confirm-dialog-input"
+                className="hb-input hb-full"
+                type="text"
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && canConfirm) onConfirm(); }}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+          )}
         </div>
         <div className="hb-modal-foot">
           <Button variant="outline" onClick={onCancel}>{cancelLabel}</Button>
@@ -133,6 +159,7 @@ function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, onCon
             type="button"
             className={`hb-btn${danger ? " hb-btn-danger" : ""}`}
             onClick={onConfirm}
+            disabled={!canConfirm}
           >
             {confirmLabel}
           </button>

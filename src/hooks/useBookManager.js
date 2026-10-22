@@ -146,6 +146,7 @@ export function useBookManager({ toast, confirm }) {
       message: `Haushaltsbuch „${activeBook.name}" wirklich löschen?\n\nAlle darin enthaltenen Einträge gehen verloren.`,
       confirmLabel: "Löschen",
       danger: true,
+      confirmText: activeBook.name,
     });
     if (!ok) return false;
     const remaining = books.filter((b) => b.id !== activeBook.id);
