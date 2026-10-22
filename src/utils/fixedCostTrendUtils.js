@@ -57,7 +57,7 @@ function buildMonthItemMap(entries, itemById, monthStartDay) {
  * Gibt pro Monat die gebuchte Fixkostenbelastung und ihren Anteil zurück.
  *
  * Die Bezugsgröße des Anteils ist die **Gesamtbelastung** des Monats, nicht
- * mehr allein die Ausgaben: `basis = m.expense + sinkingTotal`. Vorher stand im
+ * mehr allein die Ausgaben: `basis = m.expense + m.savingsExpense + sinkingTotal`. Vorher stand im
  * Zähler die Rückstellung, im Nenner aber nur die Ausgaben — der Anteil war
  * systematisch überhöht und konnte 100 % überschreiten. Eine Rückstellung ist ein
  * Transfer, keine Ausgabe; sie muss in beiden Seiten des Bruchs stehen.
@@ -65,6 +65,11 @@ function buildMonthItemMap(entries, itemById, monthStartDay) {
  * Die spätere Rechnungszahlung erzeugt dabei keine Doppelzählung: Sie wird als
  * Entnahme aus dem Topf gebucht (`kind: "expense", source: "pot"`) und fällt
  * damit aus Zähler wie Nenner heraus.
+ *
+ * `m.savingsExpense` (Ausgaben in „Sparen und Anlegen“) zählt in der
+ * Monatsreihe unter Sparen, nicht unter `m.expense`. Ein Sparplan als
+ * Fixkosten-Position steht aber im Zähler — deshalb gehört er auch in die
+ * Basis, sonst wäre der Anteil wieder überhöht.
  *
  * @returns {Array<{month: string, label: string, fixedTotal: number,
  *   expenseFixedTotal: number, sinkingTotal: number, basis: number,
@@ -86,7 +91,7 @@ export function buildFixedCostMonthlyData(entries, recurringExpenses, monthlyAgg
     }
     // fixedTotal behält seinen Namen: Chart-Linie und Sparkline lesen ihn.
     const fixedTotal = expenseFixedTotal + sinkingTotal;
-    const basis = (m.expense || 0) + sinkingTotal;
+    const basis = (m.expense || 0) + (m.savingsExpense || 0) + sinkingTotal;
     const share = basis > 0 ? (fixedTotal / basis) * 100 : null;
     return {
       month: m.month,

@@ -107,6 +107,20 @@ describe('buildFixedCostMonthlyData — Anteil an der Gesamtbelastung', () => {
     expect(r.share).toBe(100);
   });
 
+  it('nimmt einen Sparplan (Spar-Ausgabe) in den Nenner auf, obwohl er nicht in m.expense steht', () => {
+    // Spar-Ausgaben zählen in der Monatsreihe unter Sparen (m.savingsExpense).
+    const etf = { id: 'r-etf', name: 'ETF-Sparplan', kind: 'expense', amount: 500, categoryId: 'cat_sparen' };
+    const r = buildFixedCostMonthlyData(
+      [booked('r-etf', 500, { kind: 'expense', source: 'month' })],
+      [...items, etf],
+      [{ month: '2026-08', label: 'Aug 26', expense: 0, savingsExpense: 500 }],
+      1
+    )[0];
+    expect(r.expenseFixedTotal).toBe(500);
+    expect(r.basis).toBe(500);
+    expect(r.share).toBe(100);
+  });
+
   it('liefert share === null, wenn im Monat gar nichts anfällt', () => {
     const r = buildFixedCostMonthlyData([], items, [{ month: '2026-08', label: 'Aug 26', expense: 0 }], 1)[0];
     expect(r.share).toBeNull();
