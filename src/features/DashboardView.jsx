@@ -11,7 +11,7 @@ import HbSparklineHover from "../components/HbSparklineHover.jsx";
 import { generateId } from "../utils/idUtils.js";
 import { getFinancialMonthRange } from "../utils/financialMonthUtils.js";
 import { calcMonthlyTotals } from "../utils/dashboardTrend.js";
-import { makeIsSavingsTransfer } from "../utils/transferCategoryUtils.js";
+import { makeIsSavingsEntry } from "../utils/transferCategoryUtils.js";
 import { MONTHS_SHORT, EMPTY_ARRAY } from "../utils/constants.js";
 import SurplusSweepDialog, { SWEEP_FALLBACK_POT } from "./insights/SurplusSweepDialog.jsx";
 
@@ -40,7 +40,7 @@ export default function DashboardView({
   totalIncome,
   totalExpense,
   totalTransfers,
-  totalSavingsTransfers,
+  totalSavings,
   totalReserveTransfers,
   balance,
   potBalances,
@@ -87,13 +87,13 @@ export default function DashboardView({
   // ── Stat-Tile-Trend: Vormonatsdelta je Kennzahl ───────────────────────────
   // Monats-Zeitreihe aus allen Buchungen (nicht monatsgefiltert), damit die
   // Pills ein Delta gegenüber dem Vormonat zeigen können.
-  const isSavingsTransfer = useMemo(
-    () => makeIsSavingsTransfer(activeBook?.pots, activeBook?.transferCategories),
-    [activeBook?.pots, activeBook?.transferCategories]
+  const isSavingsEntry = useMemo(
+    () => makeIsSavingsEntry(activeBook?.pots, activeBook?.transferCategories, expenseCategories),
+    [activeBook?.pots, activeBook?.transferCategories, expenseCategories]
   );
   const monthlySeries = useMemo(
-    () => calcMonthlyTotals(activeBook?.entries || [], isSavingsTransfer, monthStartDay),
-    [activeBook?.entries, isSavingsTransfer, monthStartDay]
+    () => calcMonthlyTotals(activeBook?.entries || [], isSavingsEntry, monthStartDay),
+    [activeBook?.entries, isSavingsEntry, monthStartDay]
   );
   // Delta = ausgewählter Monat ggü. vorherigem Monat der Reihe. Ohne Monatsfilter
   // zeigt der Wert eine Gesamtsumme → dann kein Delta.
@@ -119,9 +119,9 @@ export default function DashboardView({
     { key: "income", label: "Einnahmen", tone: "ok", valueClass: "hb-ok", prefix: "+", value: totalIncome, higherIsGood: true },
     { key: "expense", label: "Ausgaben", tone: "bad", valueClass: "hb-bad", prefix: "−", value: totalExpense, higherIsGood: false },
     { key: "reserve", label: "Rücklagen", tone: "transfer", valueClass: "hb-transfer", prefix: "", value: totalReserveTransfers ?? totalTransfers, higherIsGood: true },
-    { key: "savings", label: "Gespart", tone: "teal", valueClass: "hb-teal", prefix: "", value: totalSavingsTransfers ?? 0, higherIsGood: true },
+    { key: "savings", label: "Gespart", tone: "teal", valueClass: "hb-teal", prefix: "", value: totalSavings ?? 0, higherIsGood: true },
     { key: "free", label: "Frei", tone: balance >= 0 ? "ok" : "bad", valueClass: balance >= 0 ? "hb-ok" : "hb-bad", prefix: "", value: balance, higherIsGood: true },
-  ], [totalIncome, totalExpense, totalReserveTransfers, totalTransfers, totalSavingsTransfers, balance]);
+  ], [totalIncome, totalExpense, totalReserveTransfers, totalTransfers, totalSavings, balance]);
 
   // Letzte Topf-Bewegung je Topf (Einzahlung = transfer, Auszahlung = withdrawal).
   // Über ALLE Einträge des Buchs, nicht nur die monatsgefilterten – die letzte
@@ -401,7 +401,7 @@ export default function DashboardView({
           totalIncome={totalIncome}
           totalExpense={totalExpense}
           totalReserveTransfers={totalReserveTransfers ?? 0}
-          totalSavingsTransfers={totalSavingsTransfers ?? 0}
+          totalSavings={totalSavings ?? 0}
           balance={balance}
         />
       </div>
@@ -417,7 +417,7 @@ export default function DashboardView({
           monthStartDay={monthStartDay}
           totalIncome={totalIncome}
           totalExpense={totalExpense}
-          totalSavingsTransfers={totalSavingsTransfers ?? 0}
+          totalSavings={totalSavings ?? 0}
           totalReserveTransfers={totalReserveTransfers ?? 0}
           expenseCategories={expenseCategories}
           savingsPots={savingsPots}

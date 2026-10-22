@@ -53,7 +53,7 @@ export const VIEWS = [
       totalIncome: ctx.totalIncome,
       totalExpense: ctx.totalExpense,
       totalTransfers: ctx.totalTransfers,
-      totalSavingsTransfers: ctx.totalSavingsTransfers,
+      totalSavings: ctx.totalSavings,
       totalReserveTransfers: ctx.totalReserveTransfers,
       balance: ctx.balance,
       potBalances: ctx.potBalances,

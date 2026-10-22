@@ -17,7 +17,7 @@ import CategoryManagerDialog from "./components/CategoryManagerDialog.jsx";
 
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./utils/bookDefaults.js";
 import { sumAmounts } from "./utils/hbUtils.js";
-import { getActiveTransferCategories, getFixedCostItems, makeIsSavingsTransfer } from "./utils/transferCategoryUtils.js";
+import { getActiveTransferCategories, getFixedCostItems, makeIsSavingsEntry, makeIsSavingsTransfer, makeIsSpendingExpense } from "./utils/transferCategoryUtils.js";
 import {
   calcCostByHierarchy,
   calcExpenseByHierarchy,
@@ -128,30 +128,41 @@ export default function HaushaltsbuchApp() {
     () => sumAmounts(filteredEntries, (e) => e.kind === "income"),
     [filteredEntries]
   );
+  const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
+  // Ausgaben in „Sparen und Anlegen“ zählen als Sparen, nicht als Ausgabe —
+  // jeder Betrag landet genau einmal in Ausgaben, Rücklagen oder Gespart.
+  const isSpendingExpense = useMemo(
+    () => makeIsSpendingExpense(expenseCategories),
+    [expenseCategories]
+  );
+  const isSavingsTransfer = useMemo(
+    () => makeIsSavingsTransfer(activeBook?.pots, allTransferCategories),
+    [activeBook?.pots, allTransferCategories]
+  );
+  const isSavingsEntry = useMemo(
+    () => makeIsSavingsEntry(activeBook?.pots, allTransferCategories, expenseCategories),
+    [activeBook?.pots, allTransferCategories, expenseCategories]
+  );
+
   const totalExpense = useMemo(
-    () => sumAmounts(filteredEntries, (e) => e.kind === "expense" && e.source === "month"),
-    [filteredEntries]
+    () => sumAmounts(filteredEntries, isSpendingExpense),
+    [filteredEntries, isSpendingExpense]
   );
   const totalTransfers = useMemo(
     () => sumAmounts(filteredEntries, (e) => e.kind === "transfer"),
     [filteredEntries]
   );
-  const balance = totalIncome - totalExpense - totalTransfers;
-
-  const isSavingsTransfer = useMemo(
-    () => makeIsSavingsTransfer(activeBook?.pots, allTransferCategories),
-    [activeBook?.pots, allTransferCategories]
-  );
-  const totalSavingsTransfers = useMemo(
-    () => sumAmounts(filteredEntries, isSavingsTransfer),
-    [filteredEntries, isSavingsTransfer]
+  // Gespart = Spar-Transfers + Spar-Ausgaben (siehe makeIsSavingsEntry).
+  const totalSavings = useMemo(
+    () => sumAmounts(filteredEntries, isSavingsEntry),
+    [filteredEntries, isSavingsEntry]
   );
   const totalReserveTransfers = useMemo(
     () => sumAmounts(filteredEntries, (e) => e.kind === "transfer" && !isSavingsTransfer(e)),
     [filteredEntries, isSavingsTransfer]
   );
+  const balance = totalIncome - totalExpense - totalReserveTransfers - totalSavings;
 
-  const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
   const incomeCategories = activeBook?.incomeCategories || DEFAULT_INCOME_CATEGORIES;
   const expenseByHierarchy = useMemo(
     () => calcExpenseByHierarchy(filteredEntries, expenseCategories, monthFilter, monthStartDay),
@@ -219,7 +230,7 @@ export default function HaushaltsbuchApp() {
   const viewContext = {
     books, activeBook, entries, filteredEntries, entriesSorted,
     totalIncome, totalExpense, totalTransfers,
-    totalSavingsTransfers, totalReserveTransfers, balance,
+    totalSavings, totalReserveTransfers, balance,
     potBalances, expenseByHierarchy, incomeByHierarchy, costByHierarchy,
     showReserveToggle, includeReserves, setIncludeReserves,
     expenseCategories, allTransferCategories, indicateTransferCategories, fixedCostItems,

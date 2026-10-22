@@ -25,7 +25,7 @@ export function useFinanceAnalytics({
   monthStartDay,
   totalIncome,
   totalExpense,
-  totalSavingsTransfers,
+  totalSavings,
   totalReserveTransfers,
   includeReserves = false,
   expenseCategories,
@@ -186,7 +186,7 @@ export function useFinanceAnalytics({
 
     const expense = totalExpense ?? 0;
     const income = totalIncome ?? 0;
-    const totalTransfers = (totalReserveTransfers ?? 0) + (totalSavingsTransfers ?? 0);
+    const totalTransfers = (totalReserveTransfers ?? 0) + (totalSavings ?? 0);
     const burnRate = daysElapsed > 0 ? expense / daysElapsed : 0;
     const projectedTotal = isCurrentMonth ? expense + burnRate * daysRemaining : expense;
     const projectedBalance = income - projectedTotal - totalTransfers;
@@ -272,7 +272,7 @@ export function useFinanceAnalytics({
     // Sparquote: Realisiert = Transfers auf Spar-Töpfe / Einnahmen (nur vergangene Monate)
     const savingsRate =
       !isCurrentMonth && !isFutureMonth && income > 0
-        ? Math.round(((totalSavingsTransfers ?? 0) / income) * 100)
+        ? Math.round(((totalSavings ?? 0) / income) * 100)
         : null;
 
     // Vormonat-Vergleich in % (nur wenn Vormonatsdaten vorhanden und kein Zukunftsmonat)
@@ -300,7 +300,7 @@ export function useFinanceAnalytics({
       savingsRate,
       trendVsPrevMonthPct,
     };
-  }, [filteredEntries, entries, monthFilter, monthStartDay, totalIncome, totalExpense, totalReserveTransfers, totalSavingsTransfers]);
+  }, [filteredEntries, entries, monthFilter, monthStartDay, totalIncome, totalExpense, totalReserveTransfers, totalSavings]);
 
   return { overview, behavior, forecast };
 }

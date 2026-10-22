@@ -23,7 +23,7 @@ export default function AllocationChart({
   totalIncome,
   totalExpense,
   totalReserveTransfers,
-  totalSavingsTransfers,
+  totalSavings,
   balance,
 }) {
   const fmt = useFmt();
@@ -38,14 +38,14 @@ export default function AllocationChart({
       items.push({ name: "Ausgaben", value: totalExpense, color: themeColors.red });
     if ((totalReserveTransfers ?? 0) > 0)
       items.push({ name: "Rücklagen", value: totalReserveTransfers, color: themeColors.blue });
-    if ((totalSavingsTransfers ?? 0) > 0)
-      items.push({ name: "Sparen", value: totalSavingsTransfers, color: themeColors.teal });
+    if ((totalSavings ?? 0) > 0)
+      items.push({ name: "Sparen", value: totalSavings, color: themeColors.teal });
     const freiAmt = balance ?? 0;
     if (freiAmt > 0)
       items.push({ name: "Frei", value: freiAmt, color: themeColors.green });
     items.sort((a, b) => b.value - a.value);
     return { items, totalValue: income, isOverbudget: freiAmt < 0 };
-  }, [totalIncome, totalExpense, totalReserveTransfers, totalSavingsTransfers, balance, themeColors]);
+  }, [totalIncome, totalExpense, totalReserveTransfers, totalSavings, balance, themeColors]);
 
   const centerValue = displayMode === "percent" ? "100 %" : fmt(allocationData.totalValue);
 
