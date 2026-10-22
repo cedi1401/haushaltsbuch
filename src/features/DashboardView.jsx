@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { Button, Card, CardContent } from "../components/ui.jsx";
 import EntryTemplateManagerDialog from "../components/EntryTemplateManagerDialog.jsx";
+import EditDialog from "../components/EditDialog.jsx";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import { useThemeColors } from "../hooks/themeColors.js";
 import { useFloatingSlot } from "../hooks/useFloatingSlot.js";
@@ -16,6 +17,7 @@ import SurplusSweepDialog, { SWEEP_FALLBACK_POT } from "./insights/SurplusSweepD
 
 import EntryFormDialog from "./EntryFormDialog.jsx";
 import BankImportDialog from "./BankImportDialog.jsx";
+import PotsManager, { POTS_MANAGER_TITLE } from "./PotsManager.jsx";
 import Charts from "./Charts.jsx";
 import AllocationChart from "./AllocationChart.jsx";
 import InsightsPanel from "./InsightsPanel.jsx";
@@ -59,6 +61,7 @@ export default function DashboardView({
   onOpenCategoryManager,
   onOpenSavingsPosition,
   onNavigateToBudget,
+  onUpdateBook,
 }) {
   const fmt = useFmt();
   const themeColors = useThemeColors();
@@ -66,6 +69,7 @@ export default function DashboardView({
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
   const [sweepOpen, setSweepOpen] = useState(false);
   const [bankImportOpen, setBankImportOpen] = useState(false);
+  const [potsManagerOpen, setPotsManagerOpen] = useState(false);
 
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
   // Donut und Insights folgen derselben Stellung „Inkl. Rückstellungen“.
@@ -261,6 +265,19 @@ export default function DashboardView({
           onClose={() => setBankImportOpen(false)}
         />
       )}
+
+      {/* Aus den Topf-Platzhaltern: derselbe Dialog wie in den Töpfen, aber
+          ohne die Ansicht zu wechseln. */}
+      <EditDialog
+        open={potsManagerOpen}
+        title={POTS_MANAGER_TITLE}
+        onClose={() => setPotsManagerOpen(false)}
+        onSave={() => setPotsManagerOpen(false)}
+        canSave={true}
+        saveLabel="Schließen"
+      >
+        <PotsManager activeBook={activeBook} onUpdateBook={onUpdateBook} />
+      </EditDialog>
 
       {sweepOpen && (
         <SurplusSweepDialog
@@ -461,6 +478,18 @@ export default function DashboardView({
                         </div>
                       );
                     })}
+                    {/* Freie Plätze der drei Reihen als Platzhalter, damit die
+                        Card bei wenigen Töpfen nicht halb leer wirkt. */}
+                    {Array.from({ length: Math.max(0, POTS_VISIBLE - sortedPots.length) }, (_, i) => (
+                      <button
+                        key={`placeholder-${i}`}
+                        type="button"
+                        className="hb-pot-card hb-pot-placeholder"
+                        onClick={() => setPotsManagerOpen(true)}
+                      >
+                        <span>Topf anlegen</span>
+                      </button>
+                    ))}
                   </div>
                   {/* Kleine Größe: Unter der dritten Kachelreihe bleiben nur gut
                       35 px, der normale Button würde die Card sprengen. */}

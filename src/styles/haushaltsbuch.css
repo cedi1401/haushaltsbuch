@@ -5626,9 +5626,11 @@ select.hb-input option {
   gap: 12px;
 }
 
-/* Dashboard: Töpfe neben den Insights, zwei Kacheln pro Reihe. */
+/* Dashboard: Töpfe neben den Insights, zwei Kacheln pro Reihe. Gleich hohe
+   Reihen, damit reine Platzhalter-Reihen so hoch sind wie die mit Töpfen. */
 .hb-pot-grid--2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
 }
 
 /* „Weitere anzeigen“ unter den Töpfen, an der Unterkante der Card —
@@ -5739,6 +5741,48 @@ select.hb-input option {
 .hb-pot-card-foot--empty span {
   font-size: 12px;
   color: var(--muted);
+}
+
+/* --- Platzhalter „Topf anlegen“ für freie Plätze im Dashboard ---
+   Gleiche Fläche wie eine Topf-Kachel, darin ein feiner Innenrahmen mit
+   Abstand zum Rand. Klick öffnet den „Töpfe verwalten“-Dialog. */
+.hb-pot-placeholder {
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  /* Reihe ohne echten Topf hätte sonst keine Höhe: Kopf + Fuß einer
+     Topf-Kachel (siehe .hb-pot-card-top/-foot). */
+  min-height: 112px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.hb-pot-placeholder::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  pointer-events: none;
+  transition: border-color var(--transition-fast);
+}
+
+.hb-pot-placeholder span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.2px;
+  transition: color var(--transition-fast);
+}
+
+.hb-pot-placeholder:hover {
+  border-color: var(--reveal-border);
+}
+.hb-pot-placeholder:hover::before {
+  border-color: var(--accent);
+}
+.hb-pot-placeholder:hover span {
+  color: var(--accent);
 }
 
 /* =====================================================
