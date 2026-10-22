@@ -577,6 +577,32 @@ describe('normalizeBook', () => {
       expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     });
   });
+
+  describe('countsAsSavings', () => {
+    const flagged = (book) =>
+      book.expenseCategories.filter((c) => c.countsAsSavings).map((c) => c.id);
+
+    it('marks only "Sparen und Anlegen" in a new book', () => {
+      expect(flagged(normalizeBook(makeDefaultBook()))).toEqual(['cat_sparen']);
+    });
+
+    it('adds the flag to existing books that lack it', () => {
+      const book = makeDefaultBook();
+      book.expenseCategories = book.expenseCategories.map(({ countsAsSavings: _drop, ...c }) => c);
+      expect(flagged(normalizeBook(book))).toEqual(['cat_sparen']);
+    });
+
+    it('resets the flag on default categories but keeps it on custom ones', () => {
+      const book = makeDefaultBook();
+      book.expenseCategories = [
+        ...book.expenseCategories.map((c) =>
+          c.id === 'cat_wohnen' ? { ...c, countsAsSavings: true } : c
+        ),
+        { id: 'cat_custom', name: 'Eigene', isDefault: false, countsAsSavings: true, subcategories: [] },
+      ];
+      expect(flagged(normalizeBook(book)).sort()).toEqual(['cat_custom', 'cat_sparen']);
+    });
+  });
 });
 
 // ─── normalizeBooks ───────────────────────────────────────────────────────

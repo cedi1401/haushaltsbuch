@@ -172,16 +172,19 @@ function buildMigratedExpenseCategories(oldCategories) {
 }
 
 /**
- * Überschreibt die Farbe von isDefault-Kategorien mit dem aktuellen Default-Wert.
- * Notwendig damit Farbänderungen an Default-Kategorien in bestehenden Büchern ankommen.
+ * Überschreibt Farbe und `countsAsSavings` von isDefault-Kategorien mit dem
+ * aktuellen Default-Wert. Notwendig damit Änderungen an Default-Kategorien in
+ * bestehenden Büchern ankommen. Eigene Kategorien bleiben unangetastet.
  */
-function syncDefaultCategoryColors(existingCategories, defaultCategories) {
-  const colorById = new Map(defaultCategories.map((c) => [c.id, c.color]));
+function syncDefaultCategoryProps(existingCategories, defaultCategories) {
+  const defaultById = new Map(defaultCategories.map((c) => [c.id, c]));
   return (existingCategories || []).map((cat) => {
-    if (cat.isDefault && colorById.has(cat.id)) {
-      return { ...cat, color: colorById.get(cat.id) };
-    }
-    return cat;
+    const def = cat.isDefault ? defaultById.get(cat.id) : null;
+    if (!def) return cat;
+    const synced = { ...cat, color: def.color };
+    if (def.countsAsSavings) synced.countsAsSavings = true;
+    else delete synced.countsAsSavings;
+    return synced;
   });
 }
 
@@ -474,8 +477,8 @@ export function normalizeBook(book) {
       normalized.expenseCategories,
       DEFAULT_EXPENSE_CATEGORIES
     );
-    // Farben von Default-Kategorien immer auf den aktuellen Stand bringen
-    normalized.expenseCategories = syncDefaultCategoryColors(
+    // Farben und Spar-Flag von Default-Kategorien immer auf den aktuellen Stand bringen
+    normalized.expenseCategories = syncDefaultCategoryProps(
       normalized.expenseCategories,
       DEFAULT_EXPENSE_CATEGORIES
     );
@@ -500,7 +503,7 @@ export function normalizeBook(book) {
         normalized.incomeCategories,
         DEFAULT_INCOME_CATEGORIES
       );
-      normalized.incomeCategories = syncDefaultCategoryColors(
+      normalized.incomeCategories = syncDefaultCategoryProps(
         normalized.incomeCategories,
         DEFAULT_INCOME_CATEGORIES
       );

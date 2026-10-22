@@ -213,6 +213,41 @@ export function makeIsSavingsTransfer(pots, transferCategories) {
     e?.kind === "transfer" && savingsPotIds.has(e.potId) && !reserveIds.has(e.transferCategoryId);
 }
 
+/**
+ * Prädikat „Monatsausgabe, die als Sparen zählt“: Ausgaben in einer
+ * Kategorie mit `countsAsSavings` (Standard: „Sparen und Anlegen“, inkl.
+ * aller Unterkategorien). Für Geld, das das Konto verlässt, ohne verbraucht zu
+ * sein — etwa ein ETF-Sparplan ans Depot, für das es keinen Topf gibt.
+ * Topf-Ausgaben zählen nie: Ihr Geld hat den Monat schon beim Transfer
+ * verlassen.
+ */
+export function makeIsSavingsExpense(expenseCategories) {
+  const savingsCatIds = new Set(
+    (expenseCategories || []).filter((c) => c?.countsAsSavings).map((c) => c.id)
+  );
+  return (e) =>
+    e?.kind === "expense" && e.source === "month" && savingsCatIds.has(e.categoryId);
+}
+
+/**
+ * Prädikat „zählt als Sparen“ für alle Buchungen: Spar-Transfers und
+ * Spar-Ausgaben. Grundlage für „Gespart“, die Sparquote und alle Sparreihen.
+ */
+export function makeIsSavingsEntry(pots, transferCategories, expenseCategories) {
+  const isSavingsTransfer = makeIsSavingsTransfer(pots, transferCategories);
+  const isSavingsExpense = makeIsSavingsExpense(expenseCategories);
+  return (e) => isSavingsTransfer(e) || isSavingsExpense(e);
+}
+
+/**
+ * Prädikat „Monatsausgabe, die Konsum ist“ — das Gegenstück zu
+ * makeIsSavingsExpense. Grundlage für „Ausgaben“, Burn-Rate und Prognose.
+ */
+export function makeIsSpendingExpense(expenseCategories) {
+  const isSavingsExpense = makeIsSavingsExpense(expenseCategories);
+  return (e) => e?.kind === "expense" && e.source === "month" && !isSavingsExpense(e);
+}
+
 /** Aktive Zwecke mit Rate, in Listenreihenfolge. */
 export function getRatedPurposes(list) {
   return getActiveTransferCategories(list).filter(hasPurposeRate);

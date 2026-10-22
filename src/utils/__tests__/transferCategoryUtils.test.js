@@ -9,6 +9,9 @@ import {
   getTransferCategoryName,
   getTransferCategoryOptions,
   makeIsSavingsTransfer,
+  makeIsSavingsExpense,
+  makeIsSavingsEntry,
+  makeIsSpendingExpense,
   validTransferCategoryId,
   purposeForPot,
 } from '../transferCategoryUtils.js';
@@ -210,5 +213,46 @@ describe('makeIsSavingsTransfer', () => {
   it('ignores purposes in non-savings pots and non-transfer entries', () => {
     expect(isSavings(t('bar', 'tcat_kasse'))).toBe(false);
     expect(isSavings({ kind: 'withdrawal', potId: 'spar' })).toBe(false);
+  });
+});
+
+describe('savings expenses', () => {
+  const categories = [
+    { id: 'cat_sparen', countsAsSavings: true, subcategories: [{ id: 'sub_etf' }, { id: 'sub_eigen' }] },
+    { id: 'cat_wohnen', subcategories: [] },
+  ];
+  const pots = [{ id: 'spar', isSavings: true }];
+  const purposes = [{ id: 'tcat_steuern', potId: 'spar', rule: 'reserve' }];
+  const x = (categoryId, subcategoryId = null, source = 'month') =>
+    ({ kind: 'expense', source, categoryId, subcategoryId });
+
+  it('counts month expenses in a savings category, incl. any subcategory', () => {
+    const isSavingsExpense = makeIsSavingsExpense(categories);
+    expect(isSavingsExpense(x('cat_sparen'))).toBe(true);
+    expect(isSavingsExpense(x('cat_sparen', 'sub_etf'))).toBe(true);
+    expect(isSavingsExpense(x('cat_sparen', 'sub_eigen'))).toBe(true);
+    expect(isSavingsExpense(x('cat_wohnen'))).toBe(false);
+  });
+
+  it('never counts pot expenses or unknown categories', () => {
+    const isSavingsExpense = makeIsSavingsExpense(categories);
+    expect(isSavingsExpense(x('cat_sparen', 'sub_etf', 'pot'))).toBe(false);
+    expect(isSavingsExpense(x('cat_geloescht'))).toBe(false);
+    expect(isSavingsExpense({ kind: 'income', categoryId: 'cat_sparen' })).toBe(false);
+  });
+
+  it('splits month expenses into spending and savings without overlap', () => {
+    const isSpending = makeIsSpendingExpense(categories);
+    expect(isSpending(x('cat_wohnen'))).toBe(true);
+    expect(isSpending(x('cat_sparen', 'sub_etf'))).toBe(false);
+    expect(isSpending(x('cat_wohnen', null, 'pot'))).toBe(false);
+  });
+
+  it('combines savings transfers and savings expenses', () => {
+    const isSavings = makeIsSavingsEntry(pots, purposes, categories);
+    expect(isSavings({ kind: 'transfer', potId: 'spar', transferCategoryId: null })).toBe(true);
+    expect(isSavings({ kind: 'transfer', potId: 'spar', transferCategoryId: 'tcat_steuern' })).toBe(false);
+    expect(isSavings(x('cat_sparen', 'sub_etf'))).toBe(true);
+    expect(isSavings(x('cat_wohnen'))).toBe(false);
   });
 });

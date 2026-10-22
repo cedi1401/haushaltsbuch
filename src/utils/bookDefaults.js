@@ -69,6 +69,9 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
     type: "expense",
     isDefault: true,
     budget: null,
+    // Buchungen hier zählen als Sparen, nicht als Ausgabe (Depot ohne Topf),
+    // siehe makeIsSavingsExpense. Wird beim Laden synchronisiert.
+    countsAsSavings: true,
     subcategories: [
       { id: "sub_wertpapieranlage", name: "Wertpapieranlage", parentId: "cat_sparen", isDefault: true },
       { id: "sub_wertgegenstaende", name: "Wertgegenstände", parentId: "cat_sparen", isDefault: true },
