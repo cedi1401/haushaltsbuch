@@ -35,7 +35,7 @@ export default function ManageBookDialog({ open, bookName, canDelete, onClose, o
       title="Buch verwalten"
       onClose={onClose}
       onSave={handleSave}
-      canSave={trimmed.length > 0}
+      canSave={trimmed.length > 0 && trimmed !== bookName}
       footerStart={
         <Button
           variant="outline"
