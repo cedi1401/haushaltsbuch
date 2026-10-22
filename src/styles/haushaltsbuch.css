@@ -4973,6 +4973,14 @@ select.hb-input option {
   word-break: break-word;
 }
 
+/* Fragezeichen direkt hinter dem Namen, nicht am rechten Zeilenende */
+.hb-cat-name-help {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 6px;
+  cursor: default;
+}
+
 .hb-cat-edit-btn {
   border: none;
   background: transparent;

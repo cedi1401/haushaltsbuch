@@ -458,7 +458,26 @@ export default function CategoryManagerDialog({
             }}
           >
             <span className="hb-cat-dot" style={{ background: cat.color || CHART_COLORS.transfer }} />
-            <span className="hb-cat-name">{cat.name}</span>
+            <span className="hb-cat-name">
+              {cat.name}
+              {/* Hinweis direkt am Namen. Der Wrapper fängt Klick sowie Enter
+                  und Leertaste ab, sonst klappt das Fragezeichen das Accordion
+                  mit um. Escape muss durch, damit der Dialog schließt. */}
+              {cat.countsAsSavings && (
+                <span
+                  className="hb-cat-name-help"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") e.stopPropagation();
+                  }}
+                >
+                  <HbTooltip
+                    size={16}
+                    text="Buchungen in dieser Kategorie erscheinen im Ausgaben-Diagramm, zählen aber als Sparen und fließen in die Sparquote ein — nicht in die Ausgaben."
+                  />
+                </span>
+              )}
+            </span>
 
             {/* Budget-Chip: reine Anzeige, gepflegt wird im Budget-View */}
             {isExpense && cat.budget != null && (
