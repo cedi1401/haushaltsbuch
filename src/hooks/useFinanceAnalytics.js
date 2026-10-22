@@ -3,6 +3,7 @@ import { getEntryFinancialMonth, getFinancialMonthInfo } from "../utils/financia
 import { formatPercent, toLocalISO } from "../utils/formatUtils.js";
 import { BURNRATE_DELTA_THRESHOLD_PCT } from "../utils/constants.js";
 import { calcCostByHierarchy, calcExpenseByHierarchy } from "../utils/budgetUtils.js";
+import { makeIsSpendingExpense } from "../utils/transferCategoryUtils.js";
 
 const DAY_NAMES_MON_FIRST = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 // JS getDay(): 0=So,1=Mo,...,6=Sa → Montag-zuerst-Indizes
@@ -31,6 +32,13 @@ export function useFinanceAnalytics({
   expenseCategories,
   transferCategories,
 }) {
+  // Prognose und Verhalten messen Konsum: Spar-Ausgaben („Sparen und Anlegen“)
+  // zählen unter „Gespart“ und mindern das Frei-Budget über `totalSavings`.
+  const isSpendingExpense = useMemo(
+    () => makeIsSpendingExpense(expenseCategories),
+    [expenseCategories]
+  );
+
   // Vormonat je Kategorie (für Overview MoM). Gleiche Zuordnung wie
   // `expenseByHierarchy` — mit Rückstellungen, wenn der Donut sie zeigt.
   const prevMonthCatMap = useMemo(() => {
@@ -47,10 +55,7 @@ export function useFinanceAnalytics({
     const prevKey = getPrevMonthKey(monthFilter);
     if (!prevKey) return { avgBookingsPerDay: null, totalBookings: 0 };
     const prevExpenses = (entries || []).filter(
-      (e) =>
-        e.kind === "expense" &&
-        e.source === "month" &&
-        getEntryFinancialMonth(e, monthStartDay ?? 1) === prevKey
+      (e) => isSpendingExpense(e) && getEntryFinancialMonth(e, monthStartDay ?? 1) === prevKey
     );
     const prevActiveDays = new Set(prevExpenses.map((e) => e.date).filter(Boolean));
     return {
@@ -58,14 +63,14 @@ export function useFinanceAnalytics({
         prevActiveDays.size > 0 ? prevExpenses.length / prevActiveDays.size : null,
       totalBookings: prevExpenses.length,
     };
-  }, [entries, monthFilter, monthStartDay]);
+  }, [entries, monthFilter, monthStartDay, isSpendingExpense]);
 
   // 30-Tage-Sparkline (letzte 30 Kalendertage aus entries)
   const thirtyDayData = useMemo(() => {
     const today = new Date();
     const dailyMap = new Map();
     for (const e of (entries || [])) {
-      if (e.kind !== "expense" || e.source !== "month" || !e.date) continue;
+      if (!isSpendingExpense(e) || !e.date) continue;
       dailyMap.set(e.date, (dailyMap.get(e.date) || 0) + Number(e.amount || 0));
     }
     return Array.from({ length: 30 }, (_, i) => {
@@ -74,7 +79,7 @@ export function useFinanceAnalytics({
       const key = toLocalISO(d);
       return { date: key, amount: dailyMap.get(key) || 0 };
     });
-  }, [entries]);
+  }, [entries, isSpendingExpense]);
 
   const overview = useMemo(() => {
     // Basis der Anteile: die aktive Hierarchie (ggf. inkl. Rückstellungen).
@@ -103,9 +108,7 @@ export function useFinanceAnalytics({
   }, [expenseByHierarchy, prevMonthCatMap]);
 
   const behavior = useMemo(() => {
-    const expenses = (filteredEntries || []).filter(
-      (e) => e.kind === "expense" && e.source === "month"
-    );
+    const expenses = (filteredEntries || []).filter(isSpendingExpense);
 
     // Montag-zuerst: Buckets [Mo,Di,Mi,Do,Fr,Sa,So]
     const dayTotals = new Array(7).fill(0);
@@ -155,7 +158,7 @@ export function useFinanceAnalytics({
       thirtyDayData,
       dailyTrendPct,
     };
-  }, [filteredEntries, prevMonthBehavior, thirtyDayData]);
+  }, [filteredEntries, prevMonthBehavior, thirtyDayData, isSpendingExpense]);
 
   const forecast = useMemo(() => {
     const noData = {
@@ -206,7 +209,7 @@ export function useFinanceAnalytics({
     const financialMonthStart = new Date(startDate + "T00:00:00");
     const dailyMap = new Map();
     for (const e of (filteredEntries || [])) {
-      if (e.kind !== "expense" || e.source !== "month" || !e.date) continue;
+      if (!isSpendingExpense(e) || !e.date) continue;
       const entryDate = new Date(e.date + "T00:00:00");
       const dayIndex = Math.round((entryDate - financialMonthStart) / msPerDay) + 1;
       if (dayIndex < 1 || dayIndex > daysInMonth) continue;
@@ -239,12 +242,7 @@ export function useFinanceAnalytics({
     const daysInPrevMonth = prevMonthInfo?.daysInMonth ?? 30;
 
     const prevMonthExpense = (entries || [])
-      .filter(
-        (e) =>
-          e.kind === "expense" &&
-          e.source === "month" &&
-          getEntryFinancialMonth(e, monthStartDay ?? 1) === prevKey
-      )
+      .filter((e) => isSpendingExpense(e) && getEntryFinancialMonth(e, monthStartDay ?? 1) === prevKey)
       .reduce((s, e) => s + Number(e.amount || 0), 0);
 
     const trendVsPrevMonth =
@@ -269,7 +267,7 @@ export function useFinanceAnalytics({
       }
     }
 
-    // Sparquote: Realisiert = Transfers auf Spar-Töpfe / Einnahmen (nur vergangene Monate)
+    // Sparquote: Realisiert = Gespart (Spar-Transfers + Spar-Ausgaben) / Einnahmen (nur vergangene Monate)
     const savingsRate =
       !isCurrentMonth && !isFutureMonth && income > 0
         ? Math.round(((totalSavings ?? 0) / income) * 100)
@@ -300,7 +298,7 @@ export function useFinanceAnalytics({
       savingsRate,
       trendVsPrevMonthPct,
     };
-  }, [filteredEntries, entries, monthFilter, monthStartDay, totalIncome, totalExpense, totalReserveTransfers, totalSavings]);
+  }, [filteredEntries, entries, monthFilter, monthStartDay, totalIncome, totalExpense, totalReserveTransfers, totalSavings, isSpendingExpense]);
 
   return { overview, behavior, forecast };
 }
