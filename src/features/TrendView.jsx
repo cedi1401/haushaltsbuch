@@ -334,7 +334,7 @@ export default function TrendView({ entries = [], recurringExpenses = [], expens
             <HbTooltip
               size={16}
               className="hb-stat-pill-help"
-              text="Einzahlungen in Spar-Töpfe geteilt durch die Einnahmen, über alle erfassten Monate."
+              text="Einzahlungen in Spar-Töpfe sowie Ausgaben in „Sparen und Anlegen“, geteilt durch die Einnahmen, über alle erfassten Monate."
             />
             <span className={`hb-stat-pill-value ${savingsRate >= 0 ? "hb-purple" : "hb-bad"}`}>{formatPercent(savingsRate, { sign: false })}</span>
             <div className="hb-meter hb-meter--sm hb-meter--animated hb-stat-pill-gauge-track">
