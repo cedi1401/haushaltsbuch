@@ -63,25 +63,27 @@
      der Zeile). Rein unterscheidend, ohne Semantik — die Zuweisung ist zyklisch
      nach Position der Gruppe (siehe GROUP_ACCENT_PALETTE in hbPalette.js).
      Konstruktion:
-     - Hue-Band 190°–290° ausgespart: dort liegt TRANSFER_PALETTE (Zweck-Farben
-       der Topf-Zusammensetzung). Einzige Ausnahme ist --group-accent-3 (H288),
-       das seit der Verlängerung des Bands auf 290° hineinragt — bewusst in Kauf
-       genommen: Gruppen- und Zweck-Farben treffen sich in keiner Ansicht
-       (GROUP_ACCENT_PALETTE nur in FixedCostsView/ReservesView, TRANSFER_PALETTE
-       nur in PotsView)
+     - höchstens ein Rosa-/Pinkton (Beere); Violett H288 und Magenta H318 wurden
+       am 23.10.2026 auf Wunsch durch Indigo und Schiefer ersetzt
+     - Indigo (H239) und Schiefer (H214, stark entsättigt) liegen im Hue-Band
+       190°–290° der TRANSFER_PALETTE (Zweck-Farben der Topf-Zusammensetzung) —
+       bewusst in Kauf genommen: Gruppen- und Zweck-Farben treffen sich in keiner
+       Ansicht (GROUP_ACCENT_PALETTE nur in FixedCostsView/ReservesView,
+       TRANSFER_PALETTE nur in PotsView). Außerhalb des Bands bliebe neben den
+       vorhandenen Tönen nur weiteres Rosa/Pink übrig
      - Reihenfolge gegen Nachbarschaft optimiert statt entlang des Farbkreises:
-       aufeinanderfolgende Indizes liegen ≥ 58° auseinander, damit zwei
-       untereinanderliegende Bänder nie ähnlich aussehen
+       aufeinanderfolgende Indizes (auch 8 → 1) liegen ≥ 100° auseinander, damit
+       zwei untereinanderliegende Bänder nie ähnlich aussehen
      - Helligkeit im Zickzack wie in TRANSFER_PALETTE
      - alle Töne ≥ 3.4:1 gegen --card und --bg-subtle (WCAG 1.4.11, Nicht-Text) */
-  --group-accent-1: #a12b52;  /* Beere       H340 */
-  --group-accent-2: #5b8217;  /* Olivgrün    H82  */
-  --group-accent-3: #913aa6;  /* Violett     H288 */
-  --group-accent-4: #bf5122;  /* Terrakotta  H18  */
-  --group-accent-5: #0b846c;  /* Petrolgrün  H168 */
-  --group-accent-6: #a92d84;  /* Magenta     H318 */
-  --group-accent-7: #15843e;  /* Smaragd     H142 */
-  --group-accent-8: #a0740d;  /* Ocker       H42  */
+  --group-accent-1: #bf5122;  /* Terrakotta  H18  */
+  --group-accent-2: #0b846c;  /* Petrolgrün  H168 */
+  --group-accent-3: #a0740d;  /* Ocker       H42  */
+  --group-accent-4: #4a4cc0;  /* Indigo      H239 */
+  --group-accent-5: #15843e;  /* Smaragd     H142 */
+  --group-accent-6: #a12b52;  /* Beere       H340 */
+  --group-accent-7: #5b8217;  /* Olivgrün    H82  */
+  --group-accent-8: #56677d;  /* Schiefer    H214 */
 
   /* Interactive states */
   --input-bg: #ffffff;
@@ -201,14 +203,14 @@
      Dunkelmodus tut (--green, --red, --accent). Die dezent blaugrauen Flächen
      (--bg, --card) bleiben davon unberührt; ein entsättigter Akzent verschwände
      auf ihnen. */
-  --group-accent-1: #e07b9d;
-  --group-accent-2: #a6d651;
-  --group-accent-3: #d28be4;
-  --group-accent-4: #e78f6a;
-  --group-accent-5: #49d4b9;
-  --group-accent-6: #e887cb;
-  --group-accent-7: #5cd689;
-  --group-accent-8: #ecbd51;
+  --group-accent-1: #e78f6a;
+  --group-accent-2: #49d4b9;
+  --group-accent-3: #ecbd51;
+  --group-accent-4: #9c9ef2;
+  --group-accent-5: #5cd689;
+  --group-accent-6: #e07b9d;
+  --group-accent-7: #a6d651;
+  --group-accent-8: #a5b3c6;
 
   /* Interactive states */
   --input-bg: #151924;
