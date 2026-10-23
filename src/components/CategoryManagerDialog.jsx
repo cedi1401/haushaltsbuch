@@ -1,24 +1,22 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import EditDialog from "./EditDialog.jsx";
 import CategoryCreateDialog from "./CategoryCreateDialog.jsx";
 import CategoryEditDialog from "./CategoryEditDialog.jsx";
-import { IconEdit, IconPlus, IconDelete, IconTransfer, IconSearch, IconCheck, IconChevron, IconClose } from "./icons.jsx";
+import SavingsPositionFormDialog from "./SavingsPositionFormDialog.jsx";
+import OverflowMenu from "./OverflowMenu.jsx";
+import { IconEdit, IconPlus, IconTransfer, IconSearch, IconChevron } from "./icons.jsx";
 import HbTooltip from "./HbTooltip.jsx";
 import { CHART_COLORS, DEFAULT_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { Button } from "./ui.jsx";
-import { useToast } from "./toastContext.js";
 import { useUndo } from "../contexts/UndoContext.js";
 import { useConfirm } from "./ConfirmDialog.jsx";
 import { generateId } from "../utils/idUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import {
-  MAX_TRANSFER_NAME_LENGTH,
   getActiveTransferCategories,
-  findTransferCategoryByName,
   addTransferCategory as addTransferCategoryToList,
   renameTransferCategory,
   deleteTransferCategory as deleteTransferCategoryFromList,
-  isReservedPurposeName,
   NO_PURPOSE_LABEL,
 } from "../utils/transferCategoryUtils.js";
 
@@ -64,25 +62,21 @@ export default function CategoryManagerDialog({
   onUpdateTransferCategories,
 }) {
   const fmt = useFmt();
-  const toast = useToast();
   const undo = useUndo();
   const { confirm } = useConfirm();
-  const [newTransferName, setNewTransferName] = useState("");
-  // Ein Zweck gehört genau einem Topf (Schema 7) — er wird beim Anlegen gewählt.
-  const [newTransferPotId, setNewTransferPotId] = useState("");
-  const newPotId = pots.some((p) => p.id === newTransferPotId) ? newTransferPotId : pots[0]?.id || "";
-  const potNameById = useMemo(() => new Map(pots.map((p) => [p.id, p.name])), [pots]);
   // `transferCategories` ist die volle Liste inkl. gelöschter Zwecke (die
   // bleiben für bestehende Buchungen erhalten); angezeigt werden nur die aktiven.
   const activeTransfers = useMemo(
     () => getActiveTransferCategories(transferCategories),
     [transferCategories]
   );
-  // Inline-Umbenennung: id des Zwecks in Bearbeitung
-  const [editingTransfer, setEditingTransfer] = useState(null);
-  const [transferDraft, setTransferDraft] = useState("");
-  const transferInputRef = useRef(null);
+  // Sparpositionen: eigene Suche, Sub-Dialog zum Anlegen/Bearbeiten
+  const [transferSearch, setTransferSearch] = useState("");
+  const [transferFormOpen, setTransferFormOpen] = useState(false);
+  const [transferEditTarget, setTransferEditTarget] = useState(null);
+  // Fokus-Rückgabe nach Sub-Dialog und nach dem Löschen
   const transferEditBtnRefs = useRef({});
+  const transferCreateBtnRef = useRef(null);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("categories"); // "categories" | "transfer"
   const [filter, setFilter] = useState("all"); // "all" | "custom"
@@ -98,14 +92,6 @@ export default function CategoryManagerDialog({
   const [editTarget, setEditTarget] = useState(null);
   // editTarget: { category, isSubcategory, parentCategory? }
 
-  useEffect(() => {
-    if (!editingTransfer) return;
-    const el = transferInputRef.current;
-    if (!el) return;
-    el.focus();
-    el.select();
-  }, [editingTransfer]);
-
   // Reset beim Schließen — abgeleitet aus dem open-Übergang statt via Effekt
   // (vermeidet set-state-in-effect und den zusätzlichen Render-Durchlauf).
   const [prevOpen, setPrevOpen] = useState(open);
@@ -120,101 +106,54 @@ export default function CategoryManagerDialog({
       setCreateOpen(false);
       setEditOpen(false);
       setEditTarget(null);
-      setNewTransferName("");
-      setEditingTransfer(null);
-      setTransferDraft("");
+      setTransferSearch("");
+      setTransferFormOpen(false);
+      setTransferEditTarget(null);
     }
   }
 
   // -------------------------------------------------------
   // Sparpositionen (Transfer-Zwecke) CRUD
   // -------------------------------------------------------
-  // excludeId: der eigene Zweck beim Umbenennen, damit die Zeile nicht mit
-  // sich selbst kollidiert. Gelöschte Zwecke zählen nicht als Duplikat.
-  function validateTransferName(name, excludeId) {
-    const trimmed = name.trim();
-    if (!trimmed) return "Name darf nicht leer sein.";
-    if (trimmed.length > MAX_TRANSFER_NAME_LENGTH)
-      return `Name ist zu lang (max. ${MAX_TRANSFER_NAME_LENGTH} Zeichen).`;
-    if (isReservedPurposeName(trimmed))
-      return `„${NO_PURPOSE_LABEL}“ ist für Geld ohne Sparposition reserviert.`;
-    if (findTransferCategoryByName(transferCategories, trimmed, { excludeId }))
-      return "Diese Sparposition existiert bereits.";
-    return null;
+  function focusTransferRow(id) {
+    requestAnimationFrame(() => {
+      const el = id ? transferEditBtnRefs.current[id] : null;
+      (el || transferCreateBtnRef.current)?.focus();
+    });
   }
 
-  function addTransferCategory() {
-    const error = validateTransferName(newTransferName, null);
-    if (error) {
-      if (newTransferName.trim()) toast.warning(error);
-      return;
+  function openTransferCreate() {
+    setTransferEditTarget(null);
+    setTransferFormOpen(true);
+  }
+
+  function openTransferEdit(cat) {
+    setTransferEditTarget(cat);
+    setTransferFormOpen(true);
+  }
+
+  function closeTransferForm() {
+    const targetId = transferEditTarget?.id || null;
+    setTransferFormOpen(false);
+    setTransferEditTarget(null);
+    focusTransferRow(targetId);
+  }
+
+  function handleSaveTransfer({ name, potId }) {
+    const target = transferEditTarget;
+    if (target) {
+      // Referenzen laufen über die ID — es reicht, den Namen in der Liste zu ändern.
+      if (name !== target.name) {
+        onUpdateTransferCategories?.(renameTransferCategory(transferCategories, target.id, name));
+        undo.offer(`Sparposition „${target.name}“ in „${name}“ umbenannt.`);
+      }
+    } else {
+      // Ein gleichnamiger gelöschter Zweck im selben Topf wird reaktiviert, samt
+      // seiner Buchungen.
+      onUpdateTransferCategories?.(addTransferCategoryToList(transferCategories, name, potId).list);
+      undo.offer(`Sparposition „${name}“ erstellt.`);
     }
-    if (!newPotId) {
-      toast.warning("Lege zuerst einen Topf an.");
-      return;
-    }
-    const trimmed = newTransferName.trim();
-    // Ein gleichnamiger gelöschter Zweck im selben Topf wird reaktiviert, samt
-    // seiner Buchungen.
-    onUpdateTransferCategories?.(addTransferCategoryToList(transferCategories, trimmed, newPotId).list);
-    setNewTransferName("");
-    undo.offer(`Sparposition „${trimmed}“ erstellt.`);
-  }
-
-  function startTransferEdit(cat) {
-    setEditingTransfer(cat.id);
-    setTransferDraft(cat.name);
-  }
-
-  function cancelTransferEdit() {
-    const id = editingTransfer;
-    setEditingTransfer(null);
-    setTransferDraft("");
-    // Erst nach dem Re-Render existiert der Stift-Button wieder.
-    if (id) requestAnimationFrame(() => transferEditBtnRefs.current[id]?.focus());
-  }
-
-  function commitTransferEdit() {
-    const id = editingTransfer;
-    const oldName = transferCategories.find((c) => c.id === id)?.name;
-    if (!id || oldName === undefined) return;
-    const trimmed = transferDraft.trim();
-    if (trimmed === oldName) {
-      cancelTransferEdit();
-      return;
-    }
-    if (validateTransferName(transferDraft, id)) return;
-
-    // Referenzen laufen über die ID — es reicht, den Namen in der Liste zu ändern.
-    onUpdateTransferCategories?.(renameTransferCategory(transferCategories, id, trimmed));
-    setEditingTransfer(null);
-    setTransferDraft("");
-    requestAnimationFrame(() => transferEditBtnRefs.current[id]?.focus());
-    undo.offer(`Sparposition „${oldName}“ in „${trimmed}“ umbenannt.`);
-  }
-
-  // Wegklicken speichert, solange die Eingabe gültig ist — sonst wird verworfen,
-  // damit der Fokus nicht in einem ungültigen Feld gefangen bleibt.
-  function handleTransferEditBlur() {
-    if (!editingTransfer) return;
-    if (validateTransferName(transferDraft, editingTransfer)) {
-      cancelTransferEdit();
-      return;
-    }
-    commitTransferEdit();
-  }
-
-  function handleTransferEditKeyDown(e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      commitTransferEdit();
-    } else if (e.key === "Escape") {
-      // Ohne stopPropagation würde der globale Handler in EditDialog den
-      // kompletten Dialog schließen statt nur das Bearbeiten abzubrechen.
-      e.stopPropagation();
-      e.preventDefault();
-      cancelTransferEdit();
-    }
+    closeTransferForm();
   }
 
   async function deleteTransferCategory(cat) {
@@ -234,13 +173,30 @@ export default function CategoryManagerDialog({
       danger: true,
     });
     if (!ok) return;
-    if (editingTransfer === cat.id) {
-      setEditingTransfer(null);
-      setTransferDraft("");
-    }
+    // Fokus auf die Folgezeile, sonst auf „Neue Sparposition"
+    const idx = activeTransfers.findIndex((c) => c.id === cat.id);
+    const nextId = activeTransfers[idx + 1]?.id || activeTransfers[idx - 1]?.id || null;
     onUpdateTransferCategories?.(deleteTransferCategoryFromList(transferCategories, cat.id));
     undo.offer("Sparposition gelöscht.");
+    focusTransferRow(nextId);
   }
+
+  // Nach Topf gruppiert, in der Reihenfolge der Töpfe — wie Einnahmen/Ausgaben
+  // im Kategorien-Tab. Zwecke ohne bekannten Topf landen in einer eigenen Gruppe.
+  const trimmedTransferSearch = transferSearch.trim();
+  const transferGroups = useMemo(() => {
+    const needle = trimmedTransferSearch.toLocaleLowerCase("de");
+    const visible = needle
+      ? activeTransfers.filter((c) => c.name.toLocaleLowerCase("de").includes(needle))
+      : activeTransfers;
+    const groups = pots
+      .map((pot) => ({ id: pot.id, label: pot.name, items: visible.filter((c) => c.potId === pot.id) }))
+      .filter((g) => g.items.length > 0);
+    const potIds = new Set(pots.map((p) => p.id));
+    const orphans = visible.filter((c) => !potIds.has(c.potId));
+    if (orphans.length > 0) groups.push({ id: "__none__", label: "Ohne Topf", items: orphans });
+    return groups;
+  }, [activeTransfers, pots, trimmedTransferSearch]);
 
   // -------------------------------------------------------
   // Gefilterte Kategorien
@@ -713,162 +669,110 @@ export default function CategoryManagerDialog({
               </div>
             </>
           ) : (
-            /* Tab: Sparpositionen */
-            <div className="hb-cat-transfer-panel">
-              {/* Hinzufügen-Input oben */}
-              <div className="hb-cat-transfer-add">
-                <input
-                  className="hb-input"
-                  type="text"
-                  value={newTransferName}
-                  onChange={(e) => setNewTransferName(e.target.value)}
-                  placeholder="Neue Sparposition …"
-                  style={{ flex: 1 }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addTransferCategory();
-                    }
-                  }}
-                />
-                <select
-                  className="hb-input"
-                  style={{ width: "auto", maxWidth: 180 }}
-                  aria-label="Topf der neuen Sparposition"
-                  value={newPotId}
-                  onChange={(e) => setNewTransferPotId(e.target.value)}
-                >
-                  {pots.length === 0 && <option value="">Kein Topf vorhanden</option>}
-                  {pots.map((pot) => (
-                    <option key={pot.id} value={pot.id}>{pot.name}</option>
-                  ))}
-                </select>
-                <Button
-                  size="sm"
-                  onClick={addTransferCategory}
-                  disabled={!newTransferName.trim() || !newPotId}
-                >
-                  <IconPlus /> Hinzufügen
+            /* Tab: Sparpositionen — Aufbau wie der Kategorien-Tab */
+            <>
+              <div className="hb-cat-manager-header">
+                <div className="hb-search-field">
+                  <span className="hb-search-icon"><IconSearch width={16} height={16} /></span>
+                  <input
+                    className="hb-input"
+                    type="text"
+                    placeholder="Sparposition suchen..."
+                    value={transferSearch}
+                    onChange={(e) => setTransferSearch(e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+                <Button size="sm" ref={transferCreateBtnRef} onClick={openTransferCreate}>
+                  + Neue Sparposition
                 </Button>
               </div>
 
-              {/* Liste der Sparpositionen */}
               <div className="hb-cat-list">
-                {activeTransfers.length === 0 ? (
-                  <div className="hb-empty hb-empty--sm">
-                    <div className="hb-empty-icon"><IconTransfer /></div>
-                    <div className="hb-empty-title">Noch keine Sparpositionen</div>
-                    <div className="hb-empty-text">
-                      Lege eine Sparposition an, um Geld in einem Topf einem Zweck zuzuordnen.
-                      Raten, Ziele und Fälligkeiten legst du in den Rücklagen fest.
-                    </div>
-                  </div>
-                ) : (
-                  activeTransfers.map((cat) => {
-                    const isEditing = editingTransfer === cat.id;
-                    const error = isEditing
-                      ? validateTransferName(transferDraft, cat.id)
-                      : null;
-
-                    return (
-                      <div
-                        key={cat.id}
-                        className={`hb-cat-transfer-item${isEditing ? " hb-cat-transfer-item--editing" : ""}`}
-                      >
-                        {isEditing ? (
-                          <div className="hb-cat-transfer-edit">
-                            <input
-                              ref={transferInputRef}
-                              className={`hb-input hb-cat-transfer-input${error ? " hb-input--invalid" : ""}`}
-                              type="text"
-                              value={transferDraft}
-                              maxLength={MAX_TRANSFER_NAME_LENGTH}
-                              aria-label={`Name von „${cat.name}“`}
-                              aria-invalid={error ? "true" : undefined}
-                              aria-describedby={error ? `transfer-error-${cat.id}` : undefined}
-                              onChange={(e) => setTransferDraft(e.target.value)}
-                              onKeyDown={handleTransferEditKeyDown}
-                              onBlur={handleTransferEditBlur}
-                            />
-                            {error && (
-                              <span id={`transfer-error-${cat.id}`} className="hb-field-error">
-                                {error}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span
-                            className="hb-cat-name"
-                            onDoubleClick={() => startTransferEdit(cat)}
-                            title={cat.name}
-                          >
-                            {cat.name}
-                            {potNameById.has(cat.potId) && (
-                              <span className="hb-muted hb-muted--sm" style={{ fontWeight: 500 }}>
-                                {" "}· {potNameById.get(cat.potId)}
-                              </span>
-                            )}
-                          </span>
-                        )}
-
-                        {isEditing ? (
-                          <>
-                            <button
-                              type="button"
-                              className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
-                              aria-label="Namen speichern"
-                              title="Speichern"
-                              disabled={!!error}
-                              onMouseDown={(e) => e.preventDefault()}
-                              onClick={commitTransferEdit}
-                            >
-                              <IconCheck />
-                            </button>
-                            <button
-                              type="button"
-                              className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
-                              aria-label="Bearbeiten abbrechen"
-                              title="Abbrechen"
-                              onMouseDown={(e) => e.preventDefault()}
-                              onClick={cancelTransferEdit}
-                            >
-                              <IconClose />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              ref={(el) => {
-                                transferEditBtnRefs.current[cat.id] = el;
-                              }}
-                              className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
-                              onClick={() => startTransferEdit(cat)}
-                              aria-label={`„${cat.name}“ umbenennen`}
-                              title="Umbenennen"
-                            >
-                              <IconEdit />
-                            </button>
-                            <button
-                              type="button"
-                              className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
-                              onClick={() => deleteTransferCategory(cat)}
-                              aria-label={`„${cat.name}“ löschen`}
-                              title="Löschen"
-                            >
-                              <IconDelete />
-                            </button>
-                          </>
-                        )}
+                {transferGroups.length === 0 &&
+                  (trimmedTransferSearch ? (
+                    <div className="hb-empty hb-empty--sm">
+                      <div className="hb-empty-icon"><IconSearch /></div>
+                      <div className="hb-empty-title">Keine Sparpositionen gefunden</div>
+                      <div className="hb-empty-text">
+                        Für „{trimmedTransferSearch}“ gibt es keine Sparposition.
                       </div>
-                    );
-                  })
-                )}
+                      <button
+                        type="button"
+                        className="hb-btn-ghost hb-btn-sm"
+                        style={{ marginTop: 10 }}
+                        onClick={() => setTransferSearch("")}
+                      >
+                        Suche zurücksetzen
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="hb-empty hb-empty--sm">
+                      <div className="hb-empty-icon"><IconTransfer /></div>
+                      <div className="hb-empty-title">Noch keine Sparpositionen</div>
+                      <div className="hb-empty-text">
+                        Lege eine Sparposition an, um Geld in einem Topf einem Zweck zuzuordnen.
+                        Raten, Ziele und Fälligkeiten legst du in den Rücklagen fest.
+                      </div>
+                    </div>
+                  ))}
+
+                {transferGroups.map((group, i) => (
+                  <React.Fragment key={group.id}>
+                    <div className="hb-label" style={{ padding: i > 0 ? "12px 0 4px" : "6px 0 4px" }}>
+                      {group.label}
+                    </div>
+                    {group.items.map((cat) => (
+                      <div key={cat.id} className="hb-tpl-row">
+                        <div className="hb-tpl-main">
+                          <div className="hb-tpl-name">
+                            <span title={cat.name}>{cat.name}</span>
+                          </div>
+                        </div>
+                        <div className="hb-tpl-actions">
+                          <button
+                            type="button"
+                            ref={(el) => {
+                              transferEditBtnRefs.current[cat.id] = el;
+                            }}
+                            className="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+                            aria-label={`„${cat.name}“ bearbeiten`}
+                            title="Bearbeiten"
+                            onClick={() => openTransferEdit(cat)}
+                          >
+                            <IconEdit />
+                          </button>
+                          <OverflowMenu
+                            buttonClassName="hb-icon-btn hb-icon-btn--sm hb-icon-btn--subtle"
+                            label={`Weitere Aktionen für „${cat.name}“`}
+                            items={[
+                              {
+                                label: "Löschen",
+                                danger: true,
+                                onClick: () => deleteTransferCategory(cat),
+                              },
+                            ]}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </React.Fragment>
+                ))}
               </div>
-            </div>
+            </>
           )}
         </div>
       </EditDialog>
+
+      {/* Sub-Dialog: Sparposition anlegen/bearbeiten */}
+      <SavingsPositionFormDialog
+        open={transferFormOpen}
+        position={transferEditTarget}
+        transferCategories={transferCategories}
+        pots={pots}
+        onClose={closeTransferForm}
+        onSave={handleSaveTransfer}
+      />
 
       {/* Sub-Dialog: Neue Kategorie */}
       <CategoryCreateDialog
