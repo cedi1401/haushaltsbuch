@@ -4,7 +4,7 @@ import { MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 import EditDialog from "../components/EditDialog.jsx";
 import { ChartTooltip, ChartTooltipRow, ChartTooltipDivider } from "../components/ChartTooltip.jsx";
 import { ChartLegend } from "../components/ChartLegend.jsx";
-import PotsManager, { POTS_MANAGER_TITLE } from "./PotsManager.jsx";
+import PotsManagerDialog from "./PotsManagerDialog.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
 import {
   ResponsiveContainer,
@@ -355,16 +355,12 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
             </div>
           </CardContent>
         </Card>
-        <EditDialog
+        <PotsManagerDialog
           open={managePotsOpen}
-          title={POTS_MANAGER_TITLE}
           onClose={() => setManagePotsOpen(false)}
-          onSave={() => setManagePotsOpen(false)}
-          canSave={true}
-          saveLabel="Schließen"
-        >
-          <PotsManager activeBook={activeBook} onUpdateBook={onUpdateBook} />
-        </EditDialog>
+          activeBook={activeBook}
+          onUpdateBook={onUpdateBook}
+        />
       </>
     );
   }
@@ -883,16 +879,12 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
         </CardContent>
       </Card>
 
-      <EditDialog
+      <PotsManagerDialog
         open={managePotsOpen}
-        title={POTS_MANAGER_TITLE}
         onClose={() => setManagePotsOpen(false)}
-        onSave={() => setManagePotsOpen(false)}
-        canSave={true}
-        saveLabel="Schließen"
-      >
-        <PotsManager activeBook={activeBook} onUpdateBook={onUpdateBook} />
-      </EditDialog>
+        activeBook={activeBook}
+        onUpdateBook={onUpdateBook}
+      />
 
       <EditDialog
         open={addEntryOpen}

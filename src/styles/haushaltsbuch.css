@@ -4487,7 +4487,7 @@ select.hb-input option {
   color: var(--muted);
 }
 
-/* Vorlagen-Manager — Zeilen analog .hb-potmgr-row */
+/* Vorlagen-Manager — Zeilen auch im Töpfe-Manager genutzt */
 .hb-tpl-manager {
   display: flex;
   flex-direction: column;
@@ -7942,104 +7942,17 @@ select.hb-input option {
 
 /* =====================================================
    TÖPFE VERWALTEN (Dialog)
-   Zeilenliste mit Bearbeiten-in-place statt Dauer-Formular.
+   Zeilen und Pillen kommen vom Vorlagen-Manager (.hb-tpl-*).
    ===================================================== */
-.hb-potmgr-list {
-  display: flex;
-  flex-direction: column;
-}
-
+/* Ohne Buchungen fehlt die zweite Zeile — der Name steht dann mittig, die
+   Zeile bleibt aber so hoch wie eine mit Buchungszähler (6 + 30 + 22 + 6 + 1 px Trenner). */
 .hb-potmgr-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  transition: background var(--transition-fast);
+  min-height: 65px;
 }
 
-.hb-potmgr-list .hb-potmgr-row:last-child {
-  border-bottom: none;
-}
-
-.hb-potmgr-row:hover {
-  background: var(--hover-bg);
-}
-
-.hb-potmgr-row--editing {
-  background: var(--accent-soft);
-}
-
-.hb-potmgr-main {
-  min-width: 0;
-}
-
-/* Name und Eingabefeld sind exakt gleich hoch, damit der Wechsel in den
-   Bearbeiten-Modus die Zeilenhöhe nicht springen lässt. */
-.hb-potmgr-name {
-  height: 30px;
-  line-height: 30px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hb-potmgr-input.hb-input {
-  height: 30px;
-  width: 100%;
-  max-width: 320px;
-  min-width: 0;
-  padding: 0 8px;
-}
-
-.hb-potmgr-meta {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-height: 16px;
-  line-height: 16px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.hb-potmgr-meta > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hb-potmgr-error {
-  color: var(--red);
-}
-
-.hb-potmgr-counter {
-  margin-left: auto;
-  flex: none;
-}
-
-/* Der Schalter bleibt immer an seinem Platz, tritt bei nicht markierten
-   Töpfen aber zurück und wird erst beim Überfahren der Zeile voll sichtbar. */
-.hb-potmgr-row .hb-switch[aria-checked="false"]:not(:disabled) {
-  opacity: 0.4;
-}
-
-.hb-potmgr-row:hover .hb-switch:not(:disabled),
-.hb-potmgr-row:focus-within .hb-switch:not(:disabled) {
-  opacity: 1;
-}
-
-.hb-potmgr-footer {
-  margin-top: 12px;
-}
-
-/* Die Zeile zum Anlegen steht allein und braucht keinen Trenner. */
-.hb-potmgr-footer .hb-potmgr-row {
-  border-bottom: none;
+/* Spar-Markierung wie in der Topf-Stände-Card, mit Abstand zum Stift */
+.hb-potmgr-actions .hb-pot-savings-tag {
+  margin-right: 8px;
 }
 
 /* ─── Gedrückt-Zustand (:active) ─────────────────────────────────────────────

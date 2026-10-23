@@ -17,7 +17,7 @@ import SurplusSweepDialog, { SWEEP_FALLBACK_POT } from "./insights/SurplusSweepD
 
 import EntryFormDialog from "./EntryFormDialog.jsx";
 import BankImportDialog from "./BankImportDialog.jsx";
-import PotsManager, { POTS_MANAGER_TITLE } from "./PotsManager.jsx";
+import PotsManagerDialog from "./PotsManagerDialog.jsx";
 import Charts from "./Charts.jsx";
 import AllocationChart from "./AllocationChart.jsx";
 import InsightsPanel from "./InsightsPanel.jsx";
@@ -269,16 +269,12 @@ export default function DashboardView({
 
       {/* Aus den Topf-Platzhaltern: derselbe Dialog wie in den Töpfen, aber
           ohne die Ansicht zu wechseln. */}
-      <EditDialog
+      <PotsManagerDialog
         open={potsManagerOpen}
-        title={POTS_MANAGER_TITLE}
         onClose={() => setPotsManagerOpen(false)}
-        onSave={() => setPotsManagerOpen(false)}
-        canSave={true}
-        saveLabel="Schließen"
-      >
-        <PotsManager activeBook={activeBook} onUpdateBook={onUpdateBook} />
-      </EditDialog>
+        activeBook={activeBook}
+        onUpdateBook={onUpdateBook}
+      />
 
       {sweepOpen && (
         <SurplusSweepDialog
