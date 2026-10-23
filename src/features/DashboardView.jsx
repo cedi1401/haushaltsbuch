@@ -239,14 +239,15 @@ export default function DashboardView({
     <>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         <Button onClick={() => entryActions.setAddEntryOpen(true)}>Buchung hinzufügen</Button>
-        <Button variant="outline" onClick={() => setBankImportOpen(true)}>
-          Kontoauszug importieren
-        </Button>
         <Button variant="outline" onClick={onOpenCategoryManager}>
           Kategorien bearbeiten
         </Button>
         <Button variant="outline" onClick={() => setTemplateManagerOpen(true)}>
           Vorlagen bearbeiten
+        </Button>
+        {/* marginLeft verdoppelt zusammen mit dem gap den Abstand zum Nachbarn */}
+        <Button variant="outline" style={{ marginLeft: 8 }} onClick={() => setBankImportOpen(true)}>
+          Kontoauszug importieren
         </Button>
         {canSweepSurplus && (
           <Button style={{ marginLeft: "auto" }} onClick={() => setSweepOpen(true)}>
