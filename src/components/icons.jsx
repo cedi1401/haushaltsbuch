@@ -227,6 +227,17 @@ export function IconWarningRounded(props) {
   );
 }
 
+/** Kreis mit Ausrufezeichen — kompakter Hinweis neben Text (Insights-Tabs). */
+export function IconAlertCircle(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <line x1="12" y1="7.5" x2="12" y2="13" />
+      <line x1="12" y1="16.5" x2="12" y2="17" />
+    </svg>
+  );
+}
+
 export function IconSuccess(props) {
   return (
     <svg {...baseProps} {...props}>

@@ -7,6 +7,7 @@ import OverviewCard from "./insights/OverviewCard.jsx";
 import BehaviorCard from "./insights/BehaviorCard.jsx";
 import ForecastCard from "./insights/ForecastCard.jsx";
 import BudgetCard from "./insights/BudgetCard.jsx";
+import { budgetAlert, forecastAlert } from "./insights/insightAlerts.js";
 
 export default function InsightsPanel({
   expenseByHierarchy,
@@ -44,10 +45,18 @@ export default function InsightsPanel({
     [entries, expenseCategories, monthFilter, monthStartDay]
   );
 
+  const tabAlerts = useMemo(
+    () => ({
+      budget: budgetAlert(budget.budgeted),
+      forecast: forecastAlert(analytics.forecast),
+    }),
+    [budget.budgeted, analytics.forecast]
+  );
+
   return (
     <Card style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
       <CardContent style={{ display: "flex", flexDirection: "column", padding: "16px 20px 24px", flex: 1 }}>
-        <InsightTabs activeCard={activeCard} onTabChange={setActiveCard} />
+        <InsightTabs activeCard={activeCard} onTabChange={setActiveCard} alerts={tabAlerts} />
         <div className="hb-insights-body">
           {activeCard === "overview" && (
             <OverviewCard analytics={analytics.overview} />
