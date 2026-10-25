@@ -103,6 +103,7 @@ export default function EntriesTable({
             </span>
             {monthLabel
               ? monthLabel.split(" · ").map((part, i) => (
+                  // react-doctor-disable-next-line react-doctor/no-array-index-as-key -- Teile eines festen Monatslabels
                   <span key={i} className="hb-info-pill">{part}</span>
                 ))
               : null}

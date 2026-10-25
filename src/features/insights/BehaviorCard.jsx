@@ -97,6 +97,7 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                   />
                   <Bar dataKey="count" radius={BAR_TOP_RADIUS}>
                     {dailySpendData.map((entry, i) => (
+                      // react-doctor-disable-next-line react-doctor/no-array-index-as-key -- eine Recharts-Cell pro Wochentag, feste Länge
                       <Cell
                         key={i}
                         fill={themeColors.accent}

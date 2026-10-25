@@ -102,6 +102,7 @@ describe('backup round trip with bank-imported entries', () => {
       bankRef,
     };
     const exported = backupOf({ books: [normalizeBook({ id: 'b1', name: 'Haushalt', entries: [entry] })] });
+    // react-doctor-disable-next-line react-doctor/no-json-parse-stringify-clone -- prüft absichtlich den JSON-Hin-und-Rückweg der Sicherung
     const restored = JSON.parse(JSON.stringify(exported));
 
     expect(validateBackupObject(restored)).toBe(true);

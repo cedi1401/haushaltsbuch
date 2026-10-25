@@ -483,6 +483,7 @@ export default function DashboardView({
                     {/* Freie Plätze der drei Reihen als Platzhalter, damit die
                         Card bei wenigen Töpfen nicht halb leer wirkt. */}
                     {Array.from({ length: Math.max(0, POTS_VISIBLE - sortedPots.length) }, (_, i) => (
+                      // react-doctor-disable-next-line react-doctor/no-array-index-as-key -- Platzhalter-Karten ohne eigene Identität
                       <button
                         key={`placeholder-${i}`}
                         type="button"

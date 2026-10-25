@@ -166,6 +166,7 @@ export function useEntryActions({
         fallbackPotId: d.potId,
       });
       if (!("amount" in patch) && prevTemplateAmount !== null && d.amount === prevTemplateAmount) {
+        // react-doctor-disable-next-line react-doctor/no-side-effect-in-state-updater-function -- patch ist ein frisches Objekt aus diesem Updater, mehrfaches Ausführen ergibt dasselbe
         patch.amount = "";
       }
 

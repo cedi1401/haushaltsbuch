@@ -90,6 +90,7 @@ export default function NavPane({ view, onChangeView, expanded, onExpandedChange
   return (
     <>
       {isOverlay && (
+        // react-doctor-disable-next-line react-doctor/no-static-element-interactions -- Backdrop schließt per Maus, Escape und Menü-Button decken die Tastatur ab
         <div className="hb-nav-pane-backdrop" onMouseDown={() => setOverlayOpen(false)} />
       )}
       <nav className={cls} aria-label="Hauptnavigation">

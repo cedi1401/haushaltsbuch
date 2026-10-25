@@ -316,6 +316,7 @@ export function HbMonthPicker({ value, onChange, disabled, style, className, emp
               const isSel = parsed && parsed.y === viewYear && parsed.m === month;
               const isNow = todayY === viewYear && todayM === month;
               return (
+                // react-doctor-disable-next-line react-doctor/no-array-index-as-key -- Key ist die Monatsnummer, also stabil
                 <button
                   key={month}
                   type="button"

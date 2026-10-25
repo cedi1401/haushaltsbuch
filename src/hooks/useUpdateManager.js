@@ -85,6 +85,7 @@ export function useUpdateManager() {
     } catch (err) {
       log.error("Update-Download fehlgeschlagen", err);
       toast.error("Download fehlgeschlagen. Bitte später erneut versuchen.");
+      // react-doctor-disable-next-line react-doctor/no-loading-flag-reset-outside-finally -- im Erfolgsfall setzt onUpdateDownloaded das Flag zurück, ein finally wäre falsch
       setDownloading(false);
     }
   }, [toast]);

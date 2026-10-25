@@ -216,6 +216,7 @@ function parseEntry(ntry, accountCurrency, warnings) {
 function balance(stmt, codes) {
   for (const bal of childrenNamed(stmt, "Bal")) {
     const code = text(path(bal, "Tp", "CdOrPrtry", "Cd"));
+    // react-doctor-disable-next-line react-doctor/js-set-map-lookups -- codes hat nur zwei bis drei Einträge
     if (!codes.includes(code)) continue;
     const amount = parseAmount(child(bal, "Amt"));
     if (amount == null) continue;

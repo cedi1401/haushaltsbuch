@@ -329,6 +329,7 @@ export default function DataTable({
                 const isOpen = expanded.has(row.id);
                 return (
                   <React.Fragment key={row.id}>
+                    {/* react-doctor-disable-next-line react-doctor/click-events-have-key-events -- Zeilenklick ist Maus-Komfort, per Tastatur klappt der Chevron-Button mit aria-expanded */}
                     <tr
                       className={"hb-dt-row" + (isOpen ? " hb-dt-row--open" : "")}
                       onClick={renderDetail ? (e) => handleRowClick(e, row.id) : undefined}
@@ -540,6 +541,7 @@ function Cell({ col, row, actions, lingering, onActionsClick, quiet = false }) {
       {actions && (
         // Klicks auf die Buttons bubbeln hierher — auch die aus dem inline
         // gerenderten Kebab-Menü — und starten die kurze Nachlaufzeit.
+        // react-doctor-disable-next-line react-doctor/click-events-have-key-events, react-doctor/no-static-element-interactions -- nur Event-Delegation der Buttons
         <div
           className={"hb-dt-row-actions" + (lingering ? " hb-dt-row-actions--linger" : "")}
           onClick={onActionsClick}
