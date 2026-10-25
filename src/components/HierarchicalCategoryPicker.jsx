@@ -118,8 +118,9 @@ export function HierarchicalCategoryPicker({
   // Unterkategorie) es noch gibt.
   const recentItems = useMemo(() => {
     const items = [];
+    const byId = new Map(allCategories.map((c) => [c.id, c]));
     for (const r of recent) {
-      const cat = allCategories.find((c) => c.id === r.categoryId);
+      const cat = byId.get(r.categoryId);
       if (!cat) continue;
       const sub = r.subcategoryId ? (cat.subcategories || []).find((s) => s.id === r.subcategoryId) : null;
       if (r.subcategoryId && !sub) continue;

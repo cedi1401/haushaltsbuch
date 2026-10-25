@@ -37,7 +37,7 @@ import {
 import { useFixedCostTrend } from "../hooks/useFixedCostTrend.js";
 import { IncomeBarShape, OutflowBarShape } from "../utils/chartShapes.jsx";
 import FixedCostTrendSection from "./FixedCostTrendSection.jsx";
-import { MONTHS_SHORT, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
+import { EMPTY_ARRAY, MONTHS_SHORT, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 import { makeIsSavingsEntry } from "../utils/transferCategoryUtils.js";
 
 const monthLabel = formatYearMonth;
@@ -89,7 +89,7 @@ function YoYTooltip({ active, payload, label, fmt, avgColor }) {
   );
 }
 
-export default function TrendView({ entries = [], recurringExpenses = [], expenseCategories = [], monthStartDay = 1, pots = [], transferCategories = [] }) {
+export default function TrendView({ entries = EMPTY_ARRAY, recurringExpenses = EMPTY_ARRAY, expenseCategories = EMPTY_ARRAY, monthStartDay = 1, pots = EMPTY_ARRAY, transferCategories = EMPTY_ARRAY }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const fmtTick = (v) => formatCurrencyCompact(v, baseCurrency);

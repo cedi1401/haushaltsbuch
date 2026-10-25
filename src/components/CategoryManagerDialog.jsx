@@ -10,6 +10,7 @@ import { CHART_COLORS, DEFAULT_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { Button } from "./ui.jsx";
 import { useUndo } from "../contexts/UndoContext.js";
 import { useConfirm } from "./ConfirmDialog.jsx";
+import { EMPTY_ARRAY } from "../utils/constants.js";
 import { generateId } from "../utils/idUtils.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import {
@@ -55,8 +56,8 @@ export default function CategoryManagerDialog({
   onClose,
   expenseCategories,
   incomeCategories,
-  transferCategories = [],
-  pots = [],
+  transferCategories = EMPTY_ARRAY,
+  pots = EMPTY_ARRAY,
   onUpdateExpenseCategories,
   onUpdateIncomeCategories,
   onUpdateTransferCategories,

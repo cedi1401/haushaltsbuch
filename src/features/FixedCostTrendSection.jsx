@@ -22,7 +22,7 @@ import { CHART_STROKE, CHART_HEIGHT, AMOUNT_AXIS_WIDTH, axisProps, monthAxisProp
 import { FALLBACK_CATEGORY_COLOR } from "../utils/hbPalette.js";
 import { monthlyRate, annualAmount, isSinkingFund } from "../utils/fixedCostUtils.js";
 import { useFmt, useBaseCurrency } from "../contexts/CurrencyContext.jsx";
-import { MONTH_RANGE_OPTIONS } from "../utils/constants.js";
+import { EMPTY_ARRAY, MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 
 // Der zentrale Erklärtext der Kostenregel. Der letzte Satz löst auf, warum
 // in der Übersichtsliste Zeilen stehen, die in keiner Summe auftauchen (D6).
@@ -107,8 +107,8 @@ const FixedCostTrendSection = memo(function FixedCostTrendSection({
   kpis,
   recurringExpenses,
   expenseCategories,
-  pots = [],
-  transferCategories = [],
+  pots = EMPTY_ARRAY,
+  transferCategories = EMPTY_ARRAY,
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();

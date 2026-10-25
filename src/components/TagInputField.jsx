@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { IconClose, IconPlus, IconTag } from "./icons.jsx";
+import { EMPTY_ARRAY } from "../utils/constants.js";
 
 const MAX_TAG_LENGTH = 30;
 const MAX_SUGGESTIONS = 8;
@@ -11,7 +12,7 @@ const MAX_SUGGESTIONS = 8;
  *
  * @param {{ tags: string[], onChange: (tags: string[]) => void, knownTags?: string[] }} props
  */
-export default function TagInputField({ tags, onChange, knownTags = [] }) {
+export default function TagInputField({ tags, onChange, knownTags = EMPTY_ARRAY }) {
   const [input, setInput] = useState("");
 
   const suggestions = useMemo(() => {

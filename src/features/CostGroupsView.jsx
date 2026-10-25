@@ -339,8 +339,9 @@ export default function CostGroupsView({
     });
     // Kategorien mit Auswahl direkt aufklappen
     const toExpand = new Set();
+    const selectedSubIds = new Set(group.subcategoryIds || []);
     for (const cat of expenseCategories) {
-      const hasSelectedSub = (cat.subcategories || []).some((s) => (group.subcategoryIds || []).includes(s.id));
+      const hasSelectedSub = (cat.subcategories || []).some((s) => selectedSubIds.has(s.id));
       if (hasSelectedSub) toExpand.add(cat.id);
     }
     setExpanded(toExpand);
@@ -383,6 +384,10 @@ export default function CostGroupsView({
   const canSave = useMemo(() => {
     return draft.name.trim().length > 0 && (draft.categoryIds.length > 0 || draft.subcategoryIds.length > 0);
   }, [draft]);
+
+  // Auswahl als Set für die Checkbox-Liste im Dialog (ein Lookup pro Zeile).
+  const draftCategoryIds = useMemo(() => new Set(draft.categoryIds), [draft.categoryIds]);
+  const draftSubcategoryIds = useMemo(() => new Set(draft.subcategoryIds), [draft.subcategoryIds]);
 
   function saveGroup() {
     if (!activeBook || !canSave) return;
@@ -1139,7 +1144,7 @@ export default function CostGroupsView({
               {expenseCategories.map((cat) => {
                 const hasSubs = (cat.subcategories || []).length > 0;
                 const isExpanded = expanded.has(cat.id);
-                const catChecked = draft.categoryIds.includes(cat.id);
+                const catChecked = draftCategoryIds.has(cat.id);
                 return (
                   <div key={cat.id} className="hb-hcat-group">
                     <div className={"hb-hcat-parent-row" + (catChecked ? " hb-hcat-parent-row--selected" : "")}>
@@ -1168,7 +1173,7 @@ export default function CostGroupsView({
                     {hasSubs && isExpanded && (
                       <div className="hb-hcat-sub-list">
                         {cat.subcategories.map((sub) => {
-                          const subChecked = draft.subcategoryIds.includes(sub.id);
+                          const subChecked = draftSubcategoryIds.has(sub.id);
                           return (
                             <label key={sub.id} className={"hb-hcat-sub-row" + (subChecked ? " hb-hcat-sub-row--selected" : "")}>
                               <input

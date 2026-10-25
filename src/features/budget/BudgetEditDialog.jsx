@@ -34,7 +34,7 @@ export default function BudgetEditDialog({ category, onSave, onRemove, onClose }
 
   const subs = category.subcategories || [];
 
-  const [amount, setAmount] = useState(toDraft(category));
+  const [amount, setAmount] = useState(() => toDraft(category));
   const [subAmounts, setSubAmounts] = useState(() =>
     Object.fromEntries(subs.map((sub) => [sub.id, toDraft(sub)]))
   );

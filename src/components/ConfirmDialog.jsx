@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "./ui.jsx";
 import { IconClose } from "./icons.jsx";
 
@@ -34,6 +34,7 @@ export function ConfirmProvider({ children }) {
       });
     });
   }, []);
+  const contextValue = useMemo(() => ({ confirm }), [confirm]);
 
   function handleClose(result) {
     state.resolver?.(result);
@@ -41,7 +42,7 @@ export function ConfirmProvider({ children }) {
   }
 
   return (
-    <ConfirmContext.Provider value={{ confirm }}>
+    <ConfirmContext.Provider value={contextValue}>
       {children}
       {state.open && (
         <ConfirmModal
