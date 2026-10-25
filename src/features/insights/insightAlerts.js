@@ -32,3 +32,13 @@ export function forecastAlert(forecast) {
   if (!forecast?.hasMonth) return null;
   return forecastHeroState(forecast) === "over" ? "error" : null;
 }
+
+/**
+ * Rücklagen: rot bei einer überfälligen Rückstellung, gelb bei Rückstand.
+ * „Fällig" bleibt ohne Symbol — am Zyklusende ist die Rechnung der Normalfall.
+ */
+export function reservesAlert(kpis) {
+  if (kpis?.overdue > 0) return "error";
+  if (kpis?.behind > 0) return "warning";
+  return null;
+}

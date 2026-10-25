@@ -4,6 +4,7 @@ import { IconAlertCircle } from "../../components/icons.jsx";
 const TABS = [
   { id: "overview", label: "Überblick" },
   { id: "budget",   label: "Budget" },
+  { id: "reserves", label: "Rücklagen" },
   { id: "behavior", label: "Verhalten" },
   { id: "forecast", label: "Prognose" },
 ];

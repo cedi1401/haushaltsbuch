@@ -82,6 +82,8 @@ export const VIEWS = [
       onOpenCategoryManager: ctx.openCategoryManager,
       onOpenSavingsPosition: ctx.openSavingsPosition,
       onNavigateToBudget: () => ctx.navigate("budget"),
+      onNavigateToSavings: () => ctx.navigate("savings"),
+      onNavigateToFixed: () => ctx.navigate("fixed"),
     }),
   },
   {

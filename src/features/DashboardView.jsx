@@ -61,6 +61,8 @@ export default function DashboardView({
   onOpenCategoryManager,
   onOpenSavingsPosition,
   onNavigateToBudget,
+  onNavigateToSavings,
+  onNavigateToFixed,
   onUpdateBook,
 }) {
   const fmt = useFmt();
@@ -420,6 +422,9 @@ export default function DashboardView({
           savingsPots={savingsPots}
           onSweepSurplus={handleSweepSurplus}
           onNavigateToBudget={onNavigateToBudget}
+          onNavigateToSavings={onNavigateToSavings}
+          onNavigateToFixed={onNavigateToFixed}
+          activeBook={activeBook}
         />
         <div
           ref={potsSlotRef}

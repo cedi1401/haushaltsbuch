@@ -7023,6 +7023,92 @@ select.hb-input option {
   padding: 3px 10px;
 }
 
+/* =====================================================
+   RÜCKLAGEN-CARD (Insights-Tab) — nutzt Kopf, Raster und Fuß der
+   Budget-Card; eigen sind nur Ring und Zähler.
+   ===================================================== */
+
+.hb-reserve-ring {
+  position: relative;
+  width: 100%;
+  max-width: 220px;
+  justify-self: center;
+}
+
+.hb-budget-insight .hb-res-pill {
+  font-size: var(--type-body-sm-size);
+  padding: 3px 10px;
+}
+
+/* Vier Zeilen nach Dringlichkeit: Statusname links, große Zahl rechts in der
+   Statusfarbe. Leere Stufen bleiben stehen, aber gedimmt. Zwei Töne je Stufe:
+   der Punkt nimmt den Rohton wie das Ringsegment, die Zahl den Textton mit
+   genug Kontrast (--yellow-text, --accent-active). */
+.hb-reserve-counts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hb-reserve-count {
+  --hb-reserve-tone: var(--muted);
+  --hb-reserve-dot: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.hb-reserve-count:last-child {
+  border-bottom: none;
+}
+
+.hb-reserve-count--overdue { --hb-reserve-tone: var(--red);           --hb-reserve-dot: var(--red); }
+.hb-reserve-count--behind  { --hb-reserve-tone: var(--yellow-text);   --hb-reserve-dot: var(--yellow); }
+.hb-reserve-count--due     { --hb-reserve-tone: var(--accent-active); --hb-reserve-dot: var(--accent); }
+.hb-reserve-count--onTrack { --hb-reserve-tone: var(--green);         --hb-reserve-dot: var(--green); }
+
+:root.dark .hb-reserve-count--due { --hb-reserve-tone: var(--accent); }
+
+.hb-reserve-count-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--type-body-size);
+  color: var(--text-secondary);
+}
+
+.hb-reserve-count-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--hb-reserve-dot);
+  flex-shrink: 0;
+}
+
+.hb-reserve-count-value {
+  font-size: var(--type-number-md-size);
+  font-weight: var(--type-number-md-weight);
+  line-height: 1.2;
+  color: var(--hb-reserve-tone);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ohne opacity: --muted allein hält den Kontrast, die Dämpfung kommt
+   schon daher, dass die Statusfarbe fehlt. */
+.hb-reserve-count.is-zero .hb-reserve-count-value {
+  color: var(--muted);
+}
+
+.hb-reserve-count.is-zero .hb-reserve-count-dot {
+  background: var(--border);
+}
+
 /* Überbucht-Hinweis unter der Aufteilungs-Legende (AlertBar compact). Steht
    in .hb-chart-legend und hat damit dieselbe Breite wie die Tabelle darüber. */
 .hb-allocation-alert {

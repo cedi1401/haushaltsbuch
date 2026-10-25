@@ -2,12 +2,14 @@ import React, { useState, useMemo } from "react";
 import { Card, CardContent } from "../components/ui.jsx";
 import { useFinanceAnalytics } from "../hooks/useFinanceAnalytics.js";
 import { buildBudgetRows } from "../utils/budgetUtils.js";
+import { buildSavingsModel } from "../utils/savingsUtils.js";
 import InsightTabs from "./insights/InsightTabs.jsx";
 import OverviewCard from "./insights/OverviewCard.jsx";
 import BehaviorCard from "./insights/BehaviorCard.jsx";
 import ForecastCard from "./insights/ForecastCard.jsx";
 import BudgetCard from "./insights/BudgetCard.jsx";
-import { budgetAlert, forecastAlert } from "./insights/insightAlerts.js";
+import ReservesCard from "./insights/ReservesCard.jsx";
+import { budgetAlert, forecastAlert, reservesAlert } from "./insights/insightAlerts.js";
 
 export default function InsightsPanel({
   expenseByHierarchy,
@@ -19,10 +21,13 @@ export default function InsightsPanel({
   totalExpense,
   totalSavings,
   totalReserveTransfers,
+  activeBook,
   expenseCategories,
   includeReserves = false,
   transferCategories,
   onNavigateToBudget,
+  onNavigateToSavings,
+  onNavigateToFixed,
 }) {
   const [activeCard, setActiveCard] = useState("overview");
   const analytics = useFinanceAnalytics({
@@ -45,12 +50,22 @@ export default function InsightsPanel({
     [entries, expenseCategories, monthFilter, monthStartDay]
   );
 
+  // Rückstellungen nach heutigem Stand, unabhängig vom Monatsfilter.
+  const reserves = useMemo(() => {
+    const model = buildSavingsModel(activeBook, entries, { monthStartDay });
+    const rows = model.sections
+      .flatMap((s) => s.rows)
+      .filter((r) => r.rule === "reserve" && r.isSinkingFund);
+    return { rows, kpis: model.kpis };
+  }, [activeBook, entries, monthStartDay]);
+
   const tabAlerts = useMemo(
     () => ({
       budget: budgetAlert(budget.budgeted),
+      reserves: reservesAlert(reserves.kpis),
       forecast: forecastAlert(analytics.forecast),
     }),
-    [budget.budgeted, analytics.forecast]
+    [budget.budgeted, reserves.kpis, analytics.forecast]
   );
 
   return (
@@ -67,6 +82,14 @@ export default function InsightsPanel({
               totals={budget.totals}
               isFallbackMonth={!monthFilter}
               onNavigateToBudget={onNavigateToBudget}
+            />
+          )}
+          {activeCard === "reserves" && (
+            <ReservesCard
+              rows={reserves.rows}
+              counts={reserves.kpis}
+              onNavigateToSavings={onNavigateToSavings}
+              onNavigateToFixed={onNavigateToFixed}
             />
           )}
           {activeCard === "behavior" && (
