@@ -6,7 +6,8 @@ import { getEntryCategoryName } from "../utils/hbUtils.js";
 import { searchEntries, searchHighlightPattern } from "../utils/entrySearch.js";
 import { useFmt } from "../contexts/CurrencyContext.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
-import EntrySearchField, { SearchHighlight } from "../components/EntrySearchField.jsx";
+import EntrySearchField from "../components/EntrySearchField.jsx";
+import SearchHighlight from "../components/SearchHighlight.jsx";
 
 const CHUNK_SIZE = 100;
 

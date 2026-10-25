@@ -40,7 +40,8 @@ import {
   IconChevron,
   IconSearch,
 } from "../components/icons.jsx";
-import EntrySearchField, { SearchHighlight } from "../components/EntrySearchField.jsx";
+import EntrySearchField from "../components/EntrySearchField.jsx";
+import SearchHighlight from "../components/SearchHighlight.jsx";
 import { searchEntries, searchHighlightPattern } from "../utils/entrySearch.js";
 
 const fmtYearMonth = formatYearMonth;
