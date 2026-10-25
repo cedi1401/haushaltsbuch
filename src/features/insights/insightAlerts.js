@@ -25,10 +25,10 @@ export function budgetAlert(budgetItems) {
 }
 
 /**
- * Prognose: rot, wenn der laufende Monat überzogen wird. Vergangene Monate
- * sind abgeschlossen, zukünftige haben noch keine Ist-Daten.
+ * Prognose: rot, wenn der Monat überzogen wird (laufend) oder überzogen wurde
+ * (abgeschlossen). Zukünftige Monate haben noch keine Ist-Daten.
  */
 export function forecastAlert(forecast) {
-  if (!forecast?.hasMonth || !forecast.isCurrentMonth) return null;
+  if (!forecast?.hasMonth) return null;
   return forecastHeroState(forecast) === "over" ? "error" : null;
 }
