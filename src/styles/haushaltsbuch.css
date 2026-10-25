@@ -8011,3 +8011,60 @@ select.hb-input option {
 .hb-overflow-item.hb-overflow-danger:active {
   background: color-mix(in srgb, var(--red) 16%, transparent);
 }
+
+/* Dev-Tools: Typografie-Übersicht (src/features/dev/TypographyView.jsx) */
+.hb-dev-type-intro {
+  margin: 0 0 8px;
+}
+.hb-dev-type-row {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 24px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+.hb-dev-type-row--compact {
+  grid-template-columns: 130px minmax(0, 1fr);
+  padding: 12px 0;
+}
+.hb-dev-type-name {
+  font-size: var(--type-body-strong-size);
+  font-weight: var(--type-body-strong-weight);
+}
+.hb-dev-type-token,
+.hb-dev-type-classes {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: var(--type-caption-size);
+  color: var(--accent);
+}
+.hb-dev-type-classes {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+.hb-dev-type-values {
+  margin-top: 4px;
+  font-size: var(--type-caption-size);
+  color: var(--muted);
+}
+.hb-dev-type-sample {
+  overflow-wrap: anywhere;
+}
+.hb-dev-type-use {
+  margin-top: 6px;
+  font-size: var(--type-body-sm-size);
+  color: var(--muted);
+}
+.hb-dev-type-subhead {
+  margin-top: 24px;
+}
+.hb-dev-type-phrases td {
+  vertical-align: top;
+}
+@media (max-width: 900px) {
+  .hb-dev-type-row,
+  .hb-dev-type-row--compact {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+}

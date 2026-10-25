@@ -6,6 +6,7 @@ import {
   IconFixed,
   IconTrend,
   IconCostGroups,
+  IconTypography,
 } from "../components/icons.jsx";
 
 import DashboardView from "./DashboardView.jsx";
@@ -15,6 +16,11 @@ import FixedCostsView from "./FixedCostsView.jsx";
 import SavingsView from "./SavingsView.jsx";
 import TrendView from "./TrendView.jsx";
 import CostGroupsView from "./CostGroupsView.jsx";
+import TypographyView from "./dev/TypographyView.jsx";
+
+// Dev-Tools nur im Dev-Server (`npm run dev`); im Release-Build ist
+// `import.meta.env.DEV` false, Gruppe und Views fallen dort weg.
+const IS_DEV = import.meta.env.DEV;
 
 export const DEFAULT_VIEW_ID = "book";
 
@@ -23,6 +29,7 @@ export const VIEW_GROUPS = [
   { id: "daily", label: "Alltag" },
   { id: "planning", label: "Planung" },
   { id: "analysis", label: "Analyse" },
+  ...(IS_DEV ? [{ id: "dev", label: "Dev-Tools" }] : []),
 ];
 
 /**
@@ -193,6 +200,19 @@ export const VIEWS = [
       onCustomRangeChange: ctx.setCostGroupRange,
     }),
   },
+  ...(IS_DEV
+    ? [
+        {
+          id: "dev-typography",
+          label: "Typografie",
+          Icon: IconTypography,
+          group: "dev",
+          usesMonth: false,
+          Component: TypographyView,
+          getProps: () => ({}),
+        },
+      ]
+    : []),
 ];
 
 const VIEWS_BY_ID = Object.fromEntries(VIEWS.map((v) => [v.id, v]));

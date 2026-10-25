@@ -402,3 +402,15 @@ export function IconCalendar(props) {
     </svg>
   );
 }
+
+export function IconTypography(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <polyline points="4 7 4 4 16 4 16 7" />
+      <line x1="10" y1="4" x2="10" y2="20" />
+      <line x1="7" y1="20" x2="13" y2="20" />
+      <polyline points="15 13 15 11 21 11 21 13" />
+      <line x1="18" y1="11" x2="18" y2="20" />
+    </svg>
+  );
+}
