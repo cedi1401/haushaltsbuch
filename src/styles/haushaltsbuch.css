@@ -3396,8 +3396,11 @@ select.hb-input option {
   max-width: none;
 }
 
+/* Breit genug für vierstellige Beträge mit Rappen („−CHF 1’234.56“); der
+   Platz geht Kategorie und Notiz ab. */
 .hb-bankimport-table .hb-col-amount {
-  width: 110px;
+  width: 140px;
+  white-space: nowrap;
 }
 
 .hb-bankimport-text {
