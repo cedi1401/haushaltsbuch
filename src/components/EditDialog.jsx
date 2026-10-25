@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useEffectEvent, useId, useRef } from "react";
 import { Button } from "./ui.jsx";
 import { IconClose } from "./icons.jsx";
 
@@ -26,6 +26,7 @@ export default function EditDialog({
   bodyScroll = true,
 }) {
   const panelRef = useRef(null);
+  const titleId = useId();
   // Stabile Identität dieser Dialoginstanz im Stack
   const stackTokenRef = useRef({});
 
@@ -65,19 +66,23 @@ export default function EditDialog({
     return () => { document.body.style.overflow = prev; };
   }, [open]);
 
+  // Effect-Event: liest immer die aktuellen Props, ohne dass der Listener bei
+  // jedem neuen onClose/onSave (Inline-Callbacks der Aufrufer) neu angemeldet wird.
+  const onKey = useEffectEvent((e) => {
+    // Nur der oberste Dialog reagiert
+    if (dialogStack[dialogStack.length - 1] !== stackTokenRef.current) return;
+    if (e.key === "Escape") onClose();
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      if (canSave) onSave?.();
+    }
+  });
+
   useEffect(() => {
     if (!open) return;
-    const onKey = (e) => {
-      // Nur der oberste Dialog reagiert
-      if (dialogStack[dialogStack.length - 1] !== stackTokenRef.current) return;
-      if (e.key === "Escape") onClose();
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-        if (canSave) onSave?.();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, onSave, canSave]);
+    const listener = (e) => onKey(e);
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  }, [open]);
 
   if (!open) return null;
 
@@ -86,6 +91,7 @@ export default function EditDialog({
       className="hb-modal"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={titleId}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -99,7 +105,7 @@ export default function EditDialog({
       >
         <div className="hb-modal-head">
           <div>
-            <div className="hb-modal-title">{title}</div>
+            <div className="hb-modal-title" id={titleId}>{title}</div>
           </div>
           <button
             className="hb-icon-btn"
