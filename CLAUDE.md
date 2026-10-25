@@ -7,6 +7,7 @@ These rules must never be broken, regardless of what seems convenient:
 - **Dev-Server nie starten**: `npm run dev` läuft nur im Windows-Terminal (Rollup-Binary-Problem in WSL). Nie automatisch via Bash starten — nach UI-Änderungen den Nutzer bitten, es selbst zu starten.
 - **Kein TypeScript**: Das Projekt ist und bleibt JSX/JS. Keine `.ts`/`.tsx`-Dateien, keine TS-Typen einführen.
 - **Kein CSS-Framework**: Styling ausschließlich via CSS (eigene Klassen/Variablen). Kein Tailwind, kein Bootstrap, keine Utility-Klassen.
+- **Inline-Styles nur für Laufzeitwerte**: `style={{…}}` nur, wenn der Wert erst zur Laufzeit feststeht (Kategoriefarbe, Balkenbreite, Tooltip-Position). Feste Werte (Abstände, Layout) gehören in CSS-Klassen. Wer eine Datei ohnehin ändert, zieht deren feste Inline-Styles in Klassen — aber kein eigenes Aufräum-Paket und nur ohne sichtbaren Unterschied (z.B. bleibt `marginTop: 14` in der PotsView als Wert erhalten).
 - **Kein automatisiertes Browser-Testing**: Kein Python, kein Playwright, kein webapp-testing-Skill. Der Nutzer testet selbst manuell über den Dev-Server.
 - **Keine hardcodierten Währungen**: Immer `fmt`/`baseCurrency` aus dem aktiven Buch verwenden — nie `CHF` oder ein Symbol fest im Code hinterlegen.
 - **DAL-Pattern einhalten**: Jeder Datenzugriff läuft über `src/dal/storage.js` — nie direkt `localStorage` oder SQLite ansprechen.
