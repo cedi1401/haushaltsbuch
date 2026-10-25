@@ -1,0 +1,19 @@
+// React Doctor — Regeln, die zum Projekt nicht passen.
+// Begründungen: docs/react-doctor-altlasten-plan.md, Entscheidungen E3–E7.
+// Einzelne Fehlalarme stehen nicht hier, sondern als
+// `react-doctor-disable-next-line <regel> -- <Grund>` direkt im Code.
+{
+  "rules": {
+    // E3: autoFocus auf dem ersten Feld modaler Dialoge ist gewollt.
+    "react-doctor/no-autofocus": "off",
+    // E4: Electron lädt lokal, das Dashboard braucht Recharts sofort.
+    "react-doctor/prefer-dynamic-import": "off",
+    // E5: Modals bleiben eigene Komponenten, kein Umbau auf <dialog>.
+    "react-doctor/prefer-html-dialog": "off",
+    // E6: Aufteilen nur gezielt, wenn eine Datei ohnehin umgebaut wird.
+    "react-doctor/no-giant-component": "off",
+    "react-doctor/no-high-complexity-react-function": "off",
+    // E7: Gleiches Markup (Leerzustände, Tabellenkopf) ist gewolltes Stilmuster.
+    "react-doctor/duplicate-jsx-subtree": "off"
+  }
+}
