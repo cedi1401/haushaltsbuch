@@ -20,11 +20,15 @@ export function useBookManager({ toast, confirm }) {
   });
 
   useEffect(() => {
+    // StrictMode startet den Effect im Dev doppelt: nur der zuletzt gestartete
+    // Ladevorgang darf den State setzen.
+    let ignore = false;
     async function load() {
       const [savedBooks, savedActive] = await Promise.all([
         loadBooks(),
         getSetting("activeBookId"),
       ]);
+      if (ignore) return;
       if (Array.isArray(savedBooks) && savedBooks.length) {
         const needsMigration = savedBooks.some(bookNeedsMigration);
         if (needsMigration) {
@@ -49,6 +53,7 @@ export function useBookManager({ toast, confirm }) {
           normalized = [];
         }
 
+        if (ignore) return;
         setBooks(normalized.length ? normalized : [makeDefaultBook()]);
         setActiveBookId(savedActive || normalized[0]?.id || null);
       } else {
@@ -58,6 +63,7 @@ export function useBookManager({ toast, confirm }) {
       }
     }
     load();
+    return () => { ignore = true; };
     // toast ist stabil (memoisiert), daher läuft dieser Initial-Load genau einmal.
   }, [toast]);
 
