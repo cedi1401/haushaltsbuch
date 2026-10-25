@@ -145,6 +145,83 @@
   --bar-track-bg: rgba(128, 128, 128, 0.12);
   --selection-bg: rgba(0, 120, 212, 0.2);
   --app-font-family: 'Inter Variable', sans-serif;
+
+  /* Typografie (Type Ramp, an WinUI 3 angelehnt). Je Stufe Größe, Gewicht und
+     Zeilenhöhe; Übersicht im Dev-Tools-View „Typografie“ (nur `npm run dev`).
+     Eine line-height setzen Klassen nur, wo sie schon eine hatten — sonst
+     bleibt die geerbte, damit sich die Dichte nicht verschiebt. */
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  /* Labels in Großbuchstaben, Badges, Chips, Status-/Trend-Pills */
+  --type-overline-size: 11px;
+  --type-overline-weight: var(--fw-semibold);
+  --type-overline-lh: 1.2;
+  /* Hinweise unter Feldern, Meta, Unterzeilen, Fehlertext */
+  --type-caption-size: 12px;
+  --type-caption-weight: var(--fw-regular);
+  --type-caption-lh: 1.4;
+  /* Formular-Labels, Tabellenköpfe, Namenslabels in Karten */
+  --type-label-size: 12px;
+  --type-label-weight: var(--fw-semibold);
+  --type-label-lh: 1.2;
+  /* Sekundärer Fließtext, .hb-muted, Notizen, kleine Buttons */
+  --type-body-sm-size: 13px;
+  --type-body-sm-weight: var(--fw-regular);
+  --type-body-sm-lh: 1.5;
+  /* Tabs, Tag-Chips, DataTable-Kopf, Tile-Labels */
+  --type-body-sm-strong-size: 13px;
+  --type-body-sm-strong-weight: var(--fw-semibold);
+  --type-body-sm-strong-lh: 1.5;
+  /* Standardtext, Inputs, Listen */
+  --type-body-size: 14px;
+  --type-body-weight: var(--fw-regular);
+  --type-body-lh: 1.5;
+  /* Buttons, Namen, Meldungstitel */
+  --type-body-strong-size: 14px;
+  --type-body-strong-weight: var(--fw-semibold);
+  --type-body-strong-lh: 1.5;
+  /* Listenzeilen in DataTable, Fixkosten, Kostenrechner */
+  --type-row-size: 15px;
+  --type-row-weight: var(--fw-semibold);
+  --type-row-lh: 1.3;
+  /* Karten- und Abschnittstitel */
+  --type-subtitle-size: 16px;
+  --type-subtitle-weight: var(--fw-semibold);
+  --type-subtitle-lh: 1.3;
+  /* Gruppen- und Bereichsköpfe */
+  --type-subtitle-lg-size: 18px;
+  --type-subtitle-lg-weight: var(--fw-semibold);
+  --type-subtitle-lg-lh: 1.3;
+  /* Dialogtitel */
+  --type-title-sm-size: 20px;
+  --type-title-sm-weight: var(--fw-semibold);
+  --type-title-sm-lh: 1.3;
+  /* Seitentitel in der Toolbar */
+  --type-title-size: 28px;
+  --type-title-weight: var(--fw-semibold);
+  --type-title-lh: 1.2;
+  /* Summen in Zeilen und Köpfen */
+  --type-number-sm-size: 18px;
+  --type-number-sm-weight: var(--fw-bold);
+  --type-number-sm-lh: 1.3;
+  /* Topf-Beträge, Insight-Kacheln, Donut-Mitte */
+  --type-number-md-size: 24px;
+  --type-number-md-weight: var(--fw-bold);
+  --type-number-md-lh: 1.2;
+  /* KPI-Pills, Hero-Zahl */
+  --type-number-lg-size: 26px;
+  --type-number-lg-weight: var(--fw-bold);
+  --type-number-lg-lh: 1.15;
+  /* Sparziel-Prozent */
+  --type-number-xl-size: 28px;
+  --type-number-xl-weight: var(--fw-bold);
+  --type-number-xl-lh: 1;
+  /* Budget-Gauge */
+  --type-number-display-size: 32px;
+  --type-number-display-weight: var(--fw-bold);
+  --type-number-display-lh: 1.1;
 }
 
 :root.dark {
@@ -239,8 +316,8 @@ body {
   font-family: var(--app-font-family);
   font-variant-numeric: tabular-nums;
   color: var(--text);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-lh);
   background: var(--bg);
 }
 
@@ -294,7 +371,7 @@ button, input, select, textarea {
   background: var(--accent-soft);
   border: 1px solid var(--accent);
   border-radius: var(--radius-md);
-  font-size: 14px;
+  font-size: var(--type-body-size);
   color: var(--text);
 }
 
@@ -316,14 +393,14 @@ button, input, select, textarea {
 }
 
 .hb-infobar-title {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--type-body-strong-weight);
+  font-size: var(--type-body-strong-size);
 }
 
 .hb-infobar-message {
   color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-lh);
 }
 
 .hb-infobar-actions {
@@ -342,7 +419,7 @@ button, input, select, textarea {
   margin-bottom: 0;
   padding: 10px 12px;
   gap: 10px;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
 }
 
 /*
@@ -482,8 +559,8 @@ button.hb-alert:hover .hb-alert-chevron {
 .hb-stack--lg { gap: var(--card-gap); }
 
 .hb-title {
-  font-size: 28px;
-  font-weight: 600;
+  font-size: var(--type-title-size);
+  font-weight: var(--type-title-weight);
   margin: 0;
   letter-spacing: -0.3px;
   color: var(--text);
@@ -491,8 +568,8 @@ button.hb-alert:hover .hb-alert-chevron {
 
 /* Card/sub-section heading (16px) — replaces ad-hoc inline `fontSize:16` on <h3>. */
 .hb-card-title {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--type-subtitle-size);
+  font-weight: var(--type-subtitle-weight);
   margin: 0;
   color: var(--text);
 }
@@ -628,8 +705,8 @@ button.hb-alert:hover .hb-alert-chevron {
 }
 
 .hb-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
   color: var(--muted);
   letter-spacing: 0.2px;
 }
@@ -639,7 +716,7 @@ button.hb-alert:hover .hb-alert-chevron {
   border-radius: var(--radius-sm);
   padding: 8px 12px;
   background: var(--input-bg);
-  font-size: 14px;
+  font-size: var(--type-body-size);
   min-width: 160px;
   color: var(--text);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
@@ -800,8 +877,8 @@ select.hb-input option {
 }
 
 .hb-datepicker-month-label {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--type-body-strong-weight);
+  font-size: var(--type-body-strong-size);
   color: var(--text);
   letter-spacing: 0.1px;
 }
@@ -833,8 +910,8 @@ select.hb-input option {
 
 .hb-datepicker-weekday {
   text-align: center;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--type-overline-size);
+  font-weight: var(--type-overline-weight);
   color: var(--muted);
   padding: 4px 0 6px;
   letter-spacing: 0.3px;
@@ -851,7 +928,7 @@ select.hb-input option {
   justify-content: center;
   margin: 0 auto;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   color: var(--text);
   transition: background var(--transition-fast), color var(--transition-fast);
 }
@@ -865,13 +942,13 @@ select.hb-input option {
 .hb-datepicker-day--selected:hover {
   background: var(--accent);
   color: var(--text-on-accent);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .hb-datepicker-day--today {
   border: 1.5px solid var(--accent);
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 /* Footer with "Heute" link */
@@ -889,11 +966,11 @@ select.hb-input option {
   border: none;
   background: transparent;
   color: var(--accent);
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   cursor: pointer;
   padding: 3px 6px;
   border-radius: var(--radius-sm);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   transition: background var(--transition-fast);
 }
 
@@ -905,11 +982,11 @@ select.hb-input option {
   border: none;
   background: transparent;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   cursor: pointer;
   padding: 3px 6px;
   border-radius: var(--radius-sm);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
@@ -935,7 +1012,7 @@ select.hb-input option {
   border-radius: var(--radius-sm);
   padding: 9px 4px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   color: var(--text);
   text-align: center;
   transition: background var(--transition-fast), color var(--transition-fast);
@@ -949,14 +1026,14 @@ select.hb-input option {
 .hb-monthpicker-month.hb-datepicker-day--selected {
   background: var(--accent);
   color: var(--text-on-accent);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   border-radius: var(--radius-sm);
 }
 
 .hb-monthpicker-month.hb-datepicker-day--today {
   border: 1.5px solid var(--accent);
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   border-radius: var(--radius-sm);
 }
 
@@ -970,8 +1047,8 @@ select.hb-input option {
   border-radius: var(--radius-sm);
   padding: 8px 16px;
   cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--type-body-strong-weight);
+  font-size: var(--type-body-strong-size);
   transition: background var(--transition-fast), opacity var(--transition-fast);
   display: inline-flex;
   align-items: center;
@@ -1035,7 +1112,7 @@ select.hb-input option {
 /* Small button variant */
 .hb-btn-sm {
   padding: 6px 12px;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   border-radius: var(--radius-sm);
 }
 
@@ -1045,8 +1122,8 @@ select.hb-input option {
   background: transparent;
   color: var(--accent);
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--type-body-sm-size);
+  font-weight: var(--fw-medium);
   padding: 6px 14px;
   border-radius: var(--radius-sm);
   transition: background var(--transition-fast), color var(--transition-fast);
@@ -1067,8 +1144,8 @@ select.hb-input option {
   background: transparent;
   color: var(--accent);
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--type-body-sm-size);
+  font-weight: var(--fw-medium);
   padding: 0;
   text-align: left;
   transition: color var(--transition-fast);
@@ -1265,7 +1342,7 @@ select.hb-input option {
   background: transparent;
   text-align: left;
   padding: 8px 12px;
-  font-size: 14px;
+  font-size: var(--type-body-size);
   color: var(--text);
   cursor: pointer;
   border-radius: var(--radius-sm);
@@ -1399,7 +1476,7 @@ select.hb-input option {
    spacing deltas stay on the individual classes. */
 .hb-stat-pill-value,
 .hb-fct-kpi-value {
-  font-weight: 700;
+  font-weight: var(--type-number-lg-weight);
 }
 
 /* Stat pills (used e.g. in Pots highlights) */
@@ -1501,25 +1578,25 @@ select.hb-input option {
 
 .hb-stat-pill-label,
 .hb-fct-kpi-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--type-overline-size);
+  font-weight: var(--type-overline-weight);
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  line-height: 1.2;
+  line-height: var(--type-overline-lh);
 }
 
 .hb-stat-pill-value {
-  font-size: 26px;
+  font-size: var(--type-number-lg-size);
   letter-spacing: -0.3px;
   color: var(--text);
-  line-height: 1.15;
+  line-height: var(--type-number-lg-lh);
   margin-top: 2px;
 }
 
 .hb-stat-pill-sub,
 .hb-fct-kpi-sub {
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   color: var(--muted);
   line-height: 1.3;
   margin-top: 1px;
@@ -1532,14 +1609,14 @@ select.hb-input option {
   align-items: center;
   gap: 4px;
   margin-top: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.2;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-lh);
 }
 
 .hb-stat-pill-delta-note {
   color: var(--muted);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 
 .hb-stat-pill-gauge-track {
@@ -1582,8 +1659,8 @@ select.hb-input option {
 
 .hb-fct-title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--type-subtitle-lg-size);
+  font-weight: var(--type-subtitle-lg-weight);
 }
 
 /* KPI-Strip */
@@ -1597,7 +1674,7 @@ select.hb-input option {
    von .hb-stat-pill (siehe dort); die Farbe setzt KpiCard je Kennzahl per
    --pill-edge. Eigen ist nur die Größe des Werts. */
 .hb-fct-kpi-value {
-  font-size: 24px;
+  font-size: var(--type-number-lg-size);
   letter-spacing: -0.3px;
   color: var(--text);
   line-height: 1.2;
@@ -1608,7 +1685,7 @@ select.hb-input option {
    700 von .hb-ok/.hb-bad. */
 .hb-fct-kpi-sub .hb-ok,
 .hb-fct-kpi-sub .hb-bad {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 /* Positionen-Übersicht: 5-Spalten-Grid in der Lesereihenfolge der Zeile —
@@ -1635,8 +1712,8 @@ select.hb-input option {
 }
 
 .hb-fct-col-head {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
   letter-spacing: 0.2px;
   color: var(--muted);
   padding-bottom: 10px;
@@ -1668,8 +1745,8 @@ select.hb-input option {
   flex-shrink: 0;
   width: 20px;
   text-align: right;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
   color: var(--muted);
   opacity: 0.75;
 }
@@ -1682,10 +1759,10 @@ select.hb-input option {
 }
 
 .hb-fct-overview-name {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--type-row-size);
+  font-weight: var(--type-row-weight);
   letter-spacing: -0.01em;
-  line-height: 1.3;
+  line-height: var(--type-row-lh);
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -1701,8 +1778,8 @@ select.hb-input option {
   border-radius: var(--radius-sm);
   background: var(--bg-subtle);
   border: 1px solid var(--border-light);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--type-caption-size);
+  font-weight: var(--fw-medium);
   color: var(--muted);
   line-height: 18px;
   white-space: nowrap;
@@ -1740,7 +1817,7 @@ select.hb-input option {
 .hb-fct-overview-cat--free {
   background: transparent;
   color: var(--muted);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 
 /* Der Turnus-Hinweisstreifen ist Flex-Kind der Sektion; deren gap regelt den
@@ -1776,13 +1853,13 @@ select.hb-input option {
 }
 
 .hb-fct-overview-amount {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--type-row-size);
+  font-weight: var(--type-row-weight);
   color: var(--text);
 }
 
 .hb-fct-overview-pct {
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   color: var(--muted);
 }
 
@@ -1810,13 +1887,13 @@ select.hb-input option {
 }
 
 .hb-fct-annual-amount {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--type-row-size);
+  font-weight: var(--type-row-weight);
   color: var(--text);
 }
 
 .hb-fct-annual-label {
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   color: var(--muted);
 }
 
@@ -1830,16 +1907,16 @@ select.hb-input option {
 }
 
 .hb-fct-annual-total-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--type-overline-size);
+  font-weight: var(--type-overline-weight);
   text-transform: uppercase;
   letter-spacing: 0.6px;
   color: var(--muted);
 }
 
 .hb-fct-annual-total-value {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--type-number-sm-size);
+  font-weight: var(--type-number-sm-weight);
   color: var(--text);
 }
 
@@ -1878,17 +1955,17 @@ select.hb-input option {
 .hb-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: var(--type-body-size);
   table-layout: fixed;
 }
 
 .hb-table th {
   text-align: left;
   color: var(--muted);
-  font-weight: 600;
+  font-weight: var(--type-label-weight);
   border-bottom: 1px solid var(--border);
   padding: 10px 10px;
-  font-size: 12px;
+  font-size: var(--type-label-size);
   letter-spacing: 0.2px;
   white-space: nowrap;
 }
@@ -2011,7 +2088,7 @@ select.hb-input option {
   width: 100%;
   /* Eine Stufe über dem Fließtext der App (14 px): die Tabelle ist die
      Lesefläche ihres Views, nicht Beiwerk. */
-  font-size: 15px;
+  font-size: var(--type-row-size);
   /* separate statt collapse (anders als .hb-table): Die Linien gehören so
      den einzelnen Zellen — Band, Detail- und Summenzeile setzen ihre eigenen. */
   border-collapse: separate;
@@ -2027,8 +2104,8 @@ select.hb-input option {
   padding: 11px 12px;
   border-bottom: 1px solid var(--border);
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--type-body-sm-strong-size);
+  font-weight: var(--type-body-sm-strong-weight);
   letter-spacing: 0.2px;
   white-space: nowrap;
 }
@@ -2139,7 +2216,7 @@ select.hb-input option {
   padding-top: 6px;
   padding-bottom: 6px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
 }
 
 .hb-dt-remainder-label {
@@ -2165,17 +2242,17 @@ select.hb-input option {
   gap: 8px;
   /* Gleich groß wie die Datenzeilen (.hb-dt-table: 15 px) — die Hierarchie
      trägt das Gewicht des Namens, nicht eine kleinere Schrift. */
-  font-size: 15px;
+  font-size: var(--type-row-size);
 }
 
 .hb-dt-band-name {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--text);
 }
 
 .hb-dt-band-count {
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--type-body-size);
 }
 
 /* Rechter Teil des Bands (`section.aside`): Kennzahl und Aktionen, die der
@@ -2191,7 +2268,7 @@ select.hb-input option {
 /* Bandsumme (`section.total`). In der geteilten Form schiebt sie sich an die
    rechte Kante der ersten Bandzelle und damit in die Flucht ihrer Spalte. */
 .hb-dt-band-total {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--text);
   white-space: nowrap;
 }
@@ -2207,7 +2284,7 @@ select.hb-input option {
 
 .hb-dt-band-aside .hb-btn-sm {
   padding: 4px 10px;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
 }
 
 .hb-dt-band-aside .hb-icon-btn--sm {
@@ -2361,7 +2438,7 @@ select.hb-input option {
 .hb-dt-table tfoot td {
   border-top: 1px solid var(--border);
   padding: 11px 12px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   white-space: nowrap;
 }
 
@@ -2376,7 +2453,7 @@ select.hb-input option {
    mit seinem font-weight: 600. */
 .hb-dt-summary .hb-dt-summary-label {
   color: var(--muted);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 
 /* Toolbar-Streifen über der Tabelle. Sitzt bewusst AUSSERHALB von
@@ -2423,8 +2500,8 @@ select.hb-input option {
 .hb-dt-columns-title {
   flex-shrink: 0;
   padding: 6px 12px 8px;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--type-overline-size);
+  font-weight: var(--type-overline-weight);
   letter-spacing: 0.5px;
   text-transform: uppercase;
   color: var(--muted);
@@ -2456,8 +2533,8 @@ select.hb-input option {
   background: transparent;
   text-align: left;
   padding: 8px 12px;
-  font-size: 14px;
-  font-weight: 400;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
   color: var(--text);
   cursor: pointer;
   border-radius: var(--radius-sm);
@@ -2490,7 +2567,7 @@ select.hb-input option {
 }
 
 .hb-dt-columns-item--active {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .hb-dt-columns-item-check {
@@ -2508,7 +2585,7 @@ select.hb-input option {
 .hb-dt-columns-item--reset {
   flex-shrink: 0;
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .hb-dt-columns-item--reset:hover,
@@ -2529,12 +2606,12 @@ select.hb-input option {
 /* Farbe nur, wo sie etwas aussagt: das Vorzeichen der Differenz. */
 .hb-dt-delta--neg {
   color: var(--red);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .hb-dt-delta--pos {
   color: var(--green);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 /* Mehrere .hb-tag-pill in einer Zelle */
@@ -2566,7 +2643,7 @@ select.hb-input option {
   min-width: 38px;
   text-align: right;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--type-body-size);
 }
 
 /* Die ganze Zeile schaltet den Detailbereich — der Zeiger sagt das an. Nur
@@ -2747,10 +2824,10 @@ select.hb-input option {
 }
 
 .hb-res-fact-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
   letter-spacing: 0.2px;
-  line-height: 1.25;
+  line-height: var(--type-label-lh);
   color: var(--muted);
 }
 
@@ -2760,9 +2837,9 @@ select.hb-input option {
 .hb-res-fact-value {
   margin-top: auto;
   min-width: 0;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.3;
+  font-size: var(--type-subtitle-size);
+  font-weight: var(--type-subtitle-weight);
+  line-height: var(--type-subtitle-lh);
   color: var(--text);
   overflow-wrap: anywhere;
 }
@@ -2774,7 +2851,7 @@ select.hb-input option {
 }
 
 .hb-res-fact--empty .hb-res-fact-value {
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 
 /* Fortschritt-Spalte im Kachelkontext. Der Spaltenrenderer liefert Balken und
@@ -2791,8 +2868,8 @@ select.hb-input option {
 .hb-res-fact .hb-dt-progress-value {
   min-width: 0;
   text-align: left;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--type-subtitle-size);
+  font-weight: var(--type-subtitle-weight);
   color: var(--text);
 }
 
@@ -2820,9 +2897,9 @@ select.hb-input option {
 }
 
 .hb-res-dlg-name {
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.3;
+  font-size: var(--type-subtitle-size);
+  font-weight: var(--type-subtitle-weight);
+  line-height: var(--type-subtitle-lh);
   color: var(--text);
 }
 
@@ -2842,8 +2919,8 @@ select.hb-input option {
 /* Erklärsatz im Dialog: normale Fließtextgröße statt Hinweisstufe. */
 .hb-res-dlg-text {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-lh);
   color: var(--text-secondary);
 }
 
@@ -2872,8 +2949,8 @@ select.hb-input option {
 
 .hb-res-note-title {
   margin: 0 0 6px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--type-body-strong-size);
+  font-weight: var(--type-body-strong-weight);
   color: var(--text);
 }
 
@@ -2886,8 +2963,8 @@ select.hb-input option {
 .hb-res-note-text {
   margin: 0;
   max-width: 78ch;
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-lh);
   color: var(--text-secondary);
 }
 
@@ -2896,8 +2973,8 @@ select.hb-input option {
 .hb-res-note-hint {
   margin: 6px 0 0;
   max-width: 78ch;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-lh);
   color: var(--muted);
 }
 
@@ -2961,13 +3038,13 @@ select.hb-input option {
    BADGES
    ===================================================== */
 .hb-badge {
-  font-size: 11px;
+  font-size: var(--type-overline-size);
   padding: 2px 8px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--bg-subtle);
   color: var(--muted);
-  font-weight: 600;
+  font-weight: var(--type-overline-weight);
 }
 
 /* Status-Pille der Rückstellungs-Tabelle. Geometrie, Neutralfarbe und Rahmen kommen
@@ -3219,8 +3296,8 @@ select.hb-input option {
 */
 .hb-tpl-picker-title,
 .hb-entry-form__aside .hb-hcat-picker > .hb-label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--type-body-sm-strong-size);
+  font-weight: var(--type-body-sm-strong-weight);
   letter-spacing: 0.2px;
   color: var(--text);
 }
@@ -3262,8 +3339,8 @@ select.hb-input option {
 }
 
 .hb-modal-title {
-  font-weight: 600;
-  font-size: 20px;
+  font-weight: var(--type-title-sm-weight);
+  font-size: var(--type-title-sm-size);
   color: var(--text);
 }
 
@@ -3404,7 +3481,7 @@ select.hb-input option {
 }
 
 .hb-bankimport-text {
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3438,7 +3515,7 @@ select.hb-input option {
 
 .hb-bankimport-apply {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--type-caption-size);
 }
 
 .hb-bankimport-row--locked td {
@@ -3507,8 +3584,8 @@ select.hb-input option {
 .hb-nav-group-title {
   margin: 0;
   padding: 16px 12px 6px 15px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--type-overline-size);
+  font-weight: var(--type-overline-weight);
   text-transform: uppercase;
   letter-spacing: 0.6px;
   color: var(--muted);
@@ -3546,8 +3623,8 @@ select.hb-input option {
   cursor: pointer;
   text-align: left;
   color: var(--text);
-  font-weight: 500;
-  font-size: 14px;
+  font-weight: var(--fw-medium);
+  font-size: var(--type-body-size);
   letter-spacing: 0;
   display: flex;
   align-items: center;
@@ -3610,7 +3687,7 @@ select.hb-input option {
 .hb-nav-item-active {
   background: var(--accent-soft);
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .hb-nav-item-active::before {
@@ -3634,17 +3711,17 @@ select.hb-input option {
    ===================================================== */
 .hb-muted {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
 }
 
 /* Kleinere Stufe für Hinweise unter Feldern und Kennzahlen. */
 .hb-muted--sm {
-  font-size: 12px;
+  font-size: var(--type-caption-size);
 }
 
 /* Abschnittsüberschrift im Einstellungs-Dialog */
 .hb-settings-heading {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   margin-bottom: 6px;
 }
 
@@ -3663,7 +3740,7 @@ select.hb-input option {
   border-radius: var(--radius-sm);
   background: var(--bg-subtle);
   border: 1px solid var(--border-light);
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   line-height: 1.4;
   color: var(--muted);
   white-space: nowrap;
@@ -3676,8 +3753,8 @@ select.hb-input option {
 }
 
 .hb-info-pill--title {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--type-subtitle-size);
+  font-weight: var(--type-subtitle-weight);
   color: var(--accent);
   background: var(--accent-soft);
   border-color: transparent;
@@ -3685,32 +3762,32 @@ select.hb-input option {
 
 .hb-ok {
   color: var(--green);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 .hb-bad {
   color: var(--red);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 .hb-transfer {
   color: var(--blue);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 .hb-teal {
   color: var(--teal);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 .hb-purple {
   color: var(--purple);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 .hb-withdrawal {
   color: var(--red);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 .hb-full {
@@ -3718,10 +3795,10 @@ select.hb-input option {
 }
 
 .hb-note {
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   color: var(--muted);
   margin-top: 22px;
-  line-height: 1.5;
+  line-height: var(--type-body-sm-lh);
 }
 
 /* =====================================================
@@ -3741,7 +3818,7 @@ select.hb-input option {
 .hb-goal-section-title {
   margin: 0;
   font-size: 24px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   letter-spacing: -0.2px;
   color: var(--text);
 }
@@ -3755,10 +3832,10 @@ select.hb-input option {
 }
 .hb-goal-title {
   margin: 0;
-  font-size: 20px;
-  font-weight: 600;
+  font-size: var(--type-title-sm-size);
+  font-weight: var(--type-title-sm-weight);
   color: var(--text);
-  line-height: 1.3;
+  line-height: var(--type-title-sm-lh);
   word-break: break-word;
 }
 .hb-goal-badges {
@@ -3774,9 +3851,9 @@ select.hb-input option {
   border-radius: var(--radius-sm);
   background: var(--bg-subtle);
   border: 1px solid var(--border-light);
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   line-height: 1.4;
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   color: var(--muted);
 }
 .hb-goal-badge--deadline {
@@ -3797,21 +3874,21 @@ select.hb-input option {
   gap: 2px;
 }
 .hb-goal-amount-current {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--type-number-sm-size);
+  font-weight: var(--type-number-sm-weight);
   letter-spacing: -0.3px;
   color: var(--text);
 }
 .hb-goal-amount-target {
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   color: var(--muted);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 .hb-goal-percent {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: var(--type-number-xl-size);
+  font-weight: var(--type-number-xl-weight);
   letter-spacing: -0.5px;
-  line-height: 1;
+  line-height: var(--type-number-xl-lh);
   color: var(--text);
   flex-shrink: 0;
 }
@@ -3831,15 +3908,15 @@ select.hb-input option {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
 }
 .hb-goal-prognosis-label {
   color: var(--muted);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   flex-shrink: 0;
 }
 .hb-goal-prognosis-value {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--text);
   text-align: right;
 }
@@ -3863,8 +3940,8 @@ select.hb-input option {
   background: var(--green-soft);
   border-radius: var(--radius-md);
   color: var(--green);
-  font-weight: 500;
-  font-size: 15px;
+  font-weight: var(--fw-medium);
+  font-size: var(--type-row-size);
   /* Translucent statt voll gesättigter Border — ruhiger, Fluent-typischer
      Chip, der den grünen Akzent trotzdem klar trägt. */
   border: 1px solid var(--green-border);
@@ -3889,7 +3966,7 @@ select.hb-input option {
   flex: 1 1 auto;
   justify-content: center;
   padding: 6px 12px;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   border-radius: var(--radius-sm);
 }
 .hb-goal-success-row .hb-btn {
@@ -3944,7 +4021,7 @@ select.hb-input option {
   gap: 12px;
   padding: 8px 0;
   border-bottom: 1px solid var(--border-light);
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
 }
 .hb-goal-archive-stat:last-child {
   border-bottom: none;
@@ -3952,10 +4029,10 @@ select.hb-input option {
 }
 .hb-goal-archive-stat-label {
   color: var(--muted);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 .hb-goal-archive-stat-value {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--text);
   text-align: right;
 }
@@ -4021,15 +4098,15 @@ select.hb-input option {
 }
 
 .hb-fixed-total-label {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--type-body-strong-size);
+  font-weight: var(--type-body-strong-weight);
   color: var(--text);
 }
 
 .hb-fixed-total-value {
   margin-left: auto;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--type-subtitle-size);
+  font-weight: var(--type-subtitle-weight);
   color: var(--text);
   white-space: nowrap;
 }
@@ -4037,17 +4114,17 @@ select.hb-input option {
 /* Nebenzeile: erklärt die Differenz zur Summe der beiden Summenzeilen und
    den Buchungsstand. Der Tooltip nennt die Kostenregel. */
 .hb-fixed-total-meta {
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-lh);
   color: var(--muted);
 }
 
 /* Tabellentitel links im Toolbar-Streifen der DataTable */
 .hb-fixed-table-title {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.4;
+  font-size: var(--type-subtitle-size);
+  font-weight: var(--type-subtitle-weight);
+  line-height: var(--type-subtitle-lh);
   color: var(--text);
 }
 
@@ -4062,7 +4139,7 @@ select.hb-input option {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   white-space: nowrap;
 }
 
@@ -4078,7 +4155,7 @@ select.hb-input option {
   min-height: 28px;
   margin-left: 4px;
   padding: 3px 10px;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   line-height: 1.4;
 }
 
@@ -4180,23 +4257,23 @@ select.hb-input option {
 
 /* Hinweiszeile unter einem Feld */
 .hb-field-hint {
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   color: var(--muted);
-  line-height: 1.4;
+  line-height: var(--type-caption-lh);
 }
 
 /* Hervorgehobener Wert in einer Hinweiszeile (z.B. die abgeleitete Monatsrate) */
 .hb-field-hint strong {
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--text-secondary);
 }
 
 /* Fehlerzeile unter einem Feld — gleiche Rolle wie der Hinweis, aber
    blockierend: solange sie steht, ist das Speichern gesperrt. */
 .hb-field-error {
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   color: var(--red);
-  line-height: 1.4;
+  line-height: var(--type-caption-lh);
 }
 
 /* Ungültiges Eingabefeld; dazu gehört aria-invalid am Feld. */
@@ -4215,8 +4292,8 @@ select.hb-input option {
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
   border: 1px solid var(--accent-border);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--type-body-sm-strong-size);
+  font-weight: var(--type-body-sm-strong-weight);
   color: var(--accent);
   white-space: nowrap;
 }
@@ -4232,8 +4309,8 @@ select.hb-input option {
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
   border: 1px solid var(--accent-border);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--type-body-sm-strong-size);
+  font-weight: var(--type-body-sm-strong-weight);
   color: var(--accent);
   white-space: nowrap;
 }
@@ -4281,7 +4358,7 @@ select.hb-input option {
   border: none;
   background: transparent;
   outline: none;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   color: var(--text);
   min-width: 80px;
   flex: 1;
@@ -4309,8 +4386,8 @@ select.hb-input option {
   border-radius: var(--radius-sm);
   background: transparent;
   border: 1px solid var(--border-light);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--type-body-sm-size);
+  font-weight: var(--fw-medium);
   color: var(--muted);
   cursor: pointer;
   transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
@@ -4347,7 +4424,7 @@ select.hb-input option {
 }
 
 .hb-tpl-picker-hint {
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   color: var(--muted);
 }
 
@@ -4459,8 +4536,8 @@ select.hb-input option {
   align-items: center;
   gap: 8px;
   min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--type-body-strong-size);
+  font-weight: var(--type-body-strong-weight);
   color: var(--text);
 }
 
@@ -4475,7 +4552,7 @@ select.hb-input option {
   align-items: baseline;
   gap: 4px;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   color: var(--muted);
   overflow: hidden;
   white-space: nowrap;
@@ -4483,14 +4560,14 @@ select.hb-input option {
 
 .hb-tpl-card-amount {
   flex-shrink: 0;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--text-secondary);
 }
 
 /* „Betrag offen" ist kein Zahlenwert — deshalb ohne die numerische
    Betonung, sonst konkurriert der Platzhalter mit echten Beträgen. */
 .hb-tpl-card-amount--open {
-  font-weight: 400;
+  font-weight: var(--fw-regular);
   color: var(--muted);
 }
 
@@ -4529,8 +4606,8 @@ select.hb-input option {
   align-items: center;
   gap: 8px;
   min-height: 30px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--type-body-strong-size);
+  font-weight: var(--type-body-strong-weight);
   color: var(--text);
 }
 
@@ -4557,9 +4634,9 @@ select.hb-input option {
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-light);
   background: var(--bg-subtle);
-  font-size: 12px;
+  font-size: var(--type-label-size);
   line-height: 16px;
-  font-weight: 600;
+  font-weight: var(--type-label-weight);
   color: var(--text);
   white-space: nowrap;
 }
@@ -4576,7 +4653,7 @@ select.hb-input option {
 .hb-tpl-pill--open {
   background: transparent;
   color: var(--muted);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 
 /* inline-block statt inline-flex: nur so greift text-overflow bei langen Notizen */
@@ -4587,7 +4664,7 @@ select.hb-input option {
   text-overflow: ellipsis;
   background: transparent;
   color: var(--muted);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 
 .hb-tpl-pill--warn {
@@ -4604,7 +4681,7 @@ select.hb-input option {
 
 /* Filter-Hinweis im TrendView */
 .hb-fct-filter-hint {
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   color: var(--muted);
 }
 
@@ -4916,14 +4993,14 @@ select.hb-input option {
    nur zur Einordnung ihrer eigenen Unterkategorien angezeigt wird. Zurück-
    haltend über das Schriftgewicht gedämpft, damit der Kontrast trägt. */
 .hb-cat-accordion-header--context .hb-cat-name {
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   color: var(--text-secondary);
 }
 
 .hb-cat-name {
   flex: 1;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--type-body-strong-size);
+  font-weight: var(--type-body-strong-weight);
   color: var(--text);
   white-space: normal;
   word-break: break-word;
@@ -5009,7 +5086,7 @@ select.hb-input option {
 
 .hb-cat-subitem-name {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   color: var(--text-secondary);
   white-space: normal;
   word-break: break-word;
@@ -5018,8 +5095,8 @@ select.hb-input option {
 /* Kategorien-Dialog: Chip mit dem gesetzten Budget (reine Anzeige, gepflegt
    wird im Budget-View) */
 .hb-cat-budget-chip {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--type-overline-size);
+  font-weight: var(--type-overline-weight);
   color: var(--accent);
   background: var(--accent-soft);
   border-radius: var(--radius-sm);
@@ -5055,16 +5132,16 @@ select.hb-input option {
 .hb-empty-icon svg { width: 28px; height: 28px; }
 
 .hb-empty-title {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--type-subtitle-size);
+  font-weight: var(--type-subtitle-weight);
   color: var(--text);
 }
 
 .hb-empty-text {
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--type-body-size);
   max-width: 420px;
-  line-height: 1.5;
+  line-height: var(--type-body-lh);
 }
 
 /* =====================================================
@@ -5156,15 +5233,15 @@ select.hb-input option {
 }
 
 .hb-toast-title {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--type-body-strong-weight);
+  font-size: var(--type-body-strong-size);
   color: var(--text);
 }
 
 .hb-toast-message {
   color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-lh);
   word-break: break-word;
 }
 
@@ -5246,7 +5323,7 @@ select.hb-input option {
 
 .hb-hcat-empty {
   padding: 16px 12px;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   color: var(--muted);
   text-align: center;
 }
@@ -5283,14 +5360,14 @@ select.hb-input option {
   min-width: 0;
   padding: 8px 8px 8px 12px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--type-body-size);
   color: var(--text);
   line-height: 1.3;
 }
 
 .hb-hcat-parent-row--selected .hb-hcat-radio-label {
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .hb-hcat-parent-name {
@@ -5401,7 +5478,7 @@ select.hb-input option {
   gap: 8px;
   padding: 6px 12px 6px 36px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   color: var(--text);
   transition: background var(--transition-fast);
   border-bottom: 1px solid var(--border-light);
@@ -5420,7 +5497,7 @@ select.hb-input option {
 .hb-hcat-sub-row--selected {
   background: var(--accent-soft);
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .hb-hcat-sub-name {
@@ -5434,8 +5511,8 @@ select.hb-input option {
    durch die normale Gruppenlinie. */
 .hb-hcat-section-label {
   padding: 8px 12px 4px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
   color: var(--muted);
 }
 
@@ -5640,8 +5717,8 @@ select.hb-input option {
 }
 
 .hb-pot-card-name {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
   color: var(--muted);
   letter-spacing: 0.2px;
   margin-bottom: 4px;
@@ -5651,8 +5728,8 @@ select.hb-input option {
 }
 
 .hb-pot-card-amount {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: var(--type-number-md-size);
+  font-weight: var(--type-number-md-weight);
   letter-spacing: -0.5px;
   line-height: 1.1;
   color: var(--text);
@@ -5661,8 +5738,8 @@ select.hb-input option {
 /* --- Spar-Indikator: dezentes, monochromes Akzent-Pill --- */
 .hb-pot-savings-tag {
   flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--type-overline-size);
+  font-weight: var(--type-overline-weight);
   letter-spacing: 0.4px;
   text-transform: uppercase;
   color: var(--accent);
@@ -5684,31 +5761,31 @@ select.hb-input option {
 }
 
 .hb-pot-card-foot-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
   color: var(--muted);
   white-space: nowrap;
 }
 
 .hb-pot-card-foot-value {
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   text-align: right;
   white-space: nowrap;
 }
 
-.hb-pot-foot-in  { color: var(--green); font-weight: 600; }
-.hb-pot-foot-out { color: var(--red);   font-weight: 600; }
+.hb-pot-foot-in  { color: var(--green); font-weight: var(--fw-semibold); }
+.hb-pot-foot-out { color: var(--red);   font-weight: var(--fw-semibold); }
 
 .hb-pot-card-foot-date {
   color: var(--muted);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 
 .hb-pot-card-foot--empty {
   justify-content: flex-start;
 }
 .hb-pot-card-foot--empty span {
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   color: var(--muted);
 }
 
@@ -5737,8 +5814,8 @@ select.hb-input option {
 }
 
 .hb-pot-placeholder span {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
   color: var(--muted);
   letter-spacing: 0.2px;
   transition: color var(--transition-fast);
@@ -5788,8 +5865,8 @@ select.hb-input option {
   padding: 6px 14px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--type-body-sm-size);
+  font-weight: var(--fw-medium);
   color: var(--muted);
   white-space: nowrap;
   transition: background var(--transition-fast), color var(--transition-fast);
@@ -5800,11 +5877,11 @@ select.hb-input option {
 .hb-segmented__item--active {
   background: var(--card);
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   box-shadow: var(--shadow-sm);
 }
 
-.hb-segmented--md .hb-segmented__item { padding: 8px 14px; font-size: 14px; }
+.hb-segmented--md .hb-segmented__item { padding: 8px 14px; font-size: var(--type-body-size); }
 
 /* Eigene Regel nötig: der Schatten des aktiven Eintrags verdrängte sonst den
    globalen Ring. */
@@ -5892,8 +5969,8 @@ select.hb-input option {
 }
 
 .hb-legend-section-title {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
   letter-spacing: 0.02em;
   color: var(--muted);
   padding: 4px 10px 6px;
@@ -5905,8 +5982,8 @@ select.hb-input option {
   justify-content: space-between;
   align-items: center;
   padding: 8px 10px;
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: var(--type-body-strong-weight);
+  font-size: var(--type-body-strong-size);
   border-bottom: 1px solid var(--border);
   margin-bottom: 4px;
   flex-shrink: 0;
@@ -5918,7 +5995,7 @@ select.hb-input option {
   align-items: center;
   padding: 6px 10px;
   border-radius: var(--radius-sm);
-  font-size: 14px;
+  font-size: var(--type-body-size);
 }
 
 .hb-chart-legend .hb-legend-row-clickable { cursor: pointer; }
@@ -5947,10 +6024,10 @@ select.hb-input option {
 
 .hb-legend-name { white-space: normal; word-break: break-word; }
 
-.hb-legend-count { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+.hb-legend-count { font-size: var(--type-caption-size); color: var(--muted); flex-shrink: 0; }
 /* Ziffern gleich breit, damit die rechtsbündigen Beträge an den
    Dezimalstellen untereinander stehen. */
-.hb-legend-value { font-size: 14px; font-weight: 600; flex-shrink: 0; margin-left: 8px; font-variant-numeric: tabular-nums; }
+.hb-legend-value { font-size: var(--type-body-strong-size); font-weight: var(--type-body-strong-weight); flex-shrink: 0; margin-left: 8px; font-variant-numeric: tabular-nums; }
 .hb-legend-total-value { font-variant-numeric: tabular-nums; }
 
 /* Betrag + Pfeil-Platz; der Platz ist in jeder Zeile gleich breit. */
@@ -5985,15 +6062,15 @@ select.hb-input option {
 }
 
 .hb-pie-total-value {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: var(--type-number-md-size);
+  font-weight: var(--type-number-md-weight);
   letter-spacing: -0.5px;
   color: var(--text);
   white-space: nowrap;
 }
 
 .hb-pie-total-label {
-  font-size: 11px;
+  font-size: var(--type-overline-size);
   color: var(--muted);
   margin-top: 2px;
 }
@@ -6017,8 +6094,8 @@ select.hb-input option {
   background: transparent;
   padding: 10px 14px 12px;
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--type-body-sm-strong-size);
+  font-weight: var(--type-body-sm-strong-weight);
   line-height: 1.2;
   letter-spacing: 0.1px;
   color: var(--muted);
@@ -6125,11 +6202,11 @@ select.hb-input option {
 }
 
 .hb-insight-cat-empty-overlay .hb-empty-title {
-  font-size: 14px;
+  font-size: var(--type-body-strong-size);
 }
 
 .hb-insight-cat-empty-overlay .hb-empty-text {
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
 }
 
 .hb-insight-cat-empty-overlay .hb-empty-icon {
@@ -6164,11 +6241,11 @@ select.hb-input option {
 }
 
 .hb-empty--sm .hb-empty-title {
-  font-size: 14px;
+  font-size: var(--type-body-strong-size);
 }
 
 .hb-empty--sm .hb-empty-text {
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
 }
 
 /* Category rows with mini-bar */
@@ -6188,22 +6265,22 @@ select.hb-input option {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 14px;
+  font-size: var(--type-body-size);
 }
 
 .hb-insight-cat-name {
   flex: 1;
   min-width: 0;
   color: var(--text);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .hb-insight-cat-amt {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--type-body-strong-size);
+  font-weight: var(--type-body-strong-weight);
   color: var(--text-secondary);
   margin-right: 6px;
 }
@@ -6246,33 +6323,33 @@ select.hb-input option {
 }
 
 .hb-insight-tile-label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--type-body-sm-strong-size);
+  font-weight: var(--type-body-sm-strong-weight);
   color: var(--muted);
   line-height: 1.3;
 }
 
 .hb-insight-tile-value {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: var(--type-number-md-size);
+  font-weight: var(--type-number-md-weight);
   letter-spacing: -0.3px;
   color: var(--text);
-  line-height: 1.2;
+  line-height: var(--type-number-md-lh);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .hb-insight-tile-sub {
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   color: var(--muted);
   line-height: 1.3;
 }
 
 /* Typography */
 .hb-insight-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
   letter-spacing: 0.2px;
   color: var(--muted);
 }
@@ -6284,8 +6361,8 @@ select.hb-input option {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
   color: var(--text);
   box-shadow: var(--shadow-sm);
   display: flex;
@@ -6324,13 +6401,13 @@ select.hb-input option {
 }
 .hb-chart-tooltip-key {
   color: var(--muted);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   white-space: nowrap;
 }
 /* Monats-Überschrift im gestapelten Cashflow-Tooltip */
 .hb-chart-tooltip-title {
   color: var(--muted);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   padding-bottom: 4px;
   margin-bottom: 1px;
   border-bottom: 1px solid var(--border);
@@ -6352,7 +6429,7 @@ select.hb-input option {
   margin-top: 4px;
   padding-top: 4px;
   border-top: 1px solid var(--border);
-  font-size: 11px;
+  font-size: var(--type-overline-size);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -6372,7 +6449,7 @@ select.hb-input option {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   line-height: 16px;
   color: var(--muted);
   white-space: nowrap;
@@ -6451,9 +6528,9 @@ select.hb-input option {
   /* 16px = 2×8px Mindestabstand zum Fensterrand (vgl. EDGE_GAP in HbTooltip) */
   max-width: min(300px, calc(100vw - 16px));
   padding: 10px 14px;
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 1.5;
+  font-size: var(--type-body-sm-size);
+  font-weight: var(--type-body-sm-weight);
+  line-height: var(--type-body-sm-lh);
   text-align: left;
   white-space: normal;
   /* Die Blase hängt im Auslöser und erbt sonst dessen Schriftbild
@@ -6579,8 +6656,8 @@ select.hb-input option {
 }
 
 .hb-spark-caption {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--type-overline-size);
+  font-weight: var(--type-overline-weight);
   letter-spacing: 0.02em;
   color: var(--muted);
 }
@@ -6606,8 +6683,8 @@ select.hb-input option {
   gap: 4px;
   padding: 2px 8px;
   border-radius: var(--radius-pill);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--type-overline-size);
+  font-weight: var(--type-overline-weight);
   background: var(--bg-subtle);
   color: var(--muted);
 }
@@ -6619,15 +6696,15 @@ select.hb-input option {
 /* Größere Variante (z.B. neben dem Forecast-Hero-Betrag) */
 .hb-trend-pill--lg {
   padding: 4px 12px;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
 }
 
 /* Hero KPI (Forecast) */
 .hb-insight-hero {
-  font-size: 26px;
-  font-weight: 700;
+  font-size: var(--type-number-lg-size);
+  font-weight: var(--type-number-lg-weight);
   letter-spacing: -0.5px;
-  line-height: 1.15;
+  line-height: var(--type-number-lg-lh);
   color: var(--text);
 }
 
@@ -6650,13 +6727,13 @@ select.hb-input option {
   justify-content: center;
   padding: 40px 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
 }
 
 /* MoM-Delta Indikator */
 .hb-insight-mom {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--type-overline-size);
+  font-weight: var(--type-overline-weight);
   min-width: 44px;
   text-align: right;
   flex-shrink: 0;
@@ -6706,7 +6783,7 @@ select.hb-input option {
 }
 
 .hb-behavior-chart-empty .hb-empty-text {
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   max-width: 170px;
 }
 
@@ -6817,17 +6894,17 @@ select.hb-input option {
 }
 
 .hb-budget-gauge-value {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: var(--type-number-display-size);
+  font-weight: var(--type-number-display-weight);
   letter-spacing: -0.5px;
-  line-height: 1.1;
+  line-height: var(--type-number-display-lh);
   color: var(--text);
   white-space: nowrap;
 }
 
 .hb-budget-gauge-sub {
   margin-top: 2px;
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -6860,14 +6937,14 @@ select.hb-input option {
 }
 
 .hb-budget-insight-kpi dt {
-  font-size: 14px;
+  font-size: var(--type-body-size);
   color: var(--text-secondary);
 }
 
 .hb-budget-insight-kpi dd {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--type-number-sm-size);
+  font-weight: var(--type-number-sm-weight);
   color: var(--text);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -6903,7 +6980,7 @@ select.hb-input option {
 .hb-budget-gauge-link {
   gap: 8px;
   padding: 10px 22px;
-  font-size: 15px;
+  font-size: var(--type-row-size);
 }
 
 .hb-budget-gauge-link svg {
@@ -6914,11 +6991,11 @@ select.hb-input option {
 /* Kopf- und Zähler-Label sowie die Pillen sind in dieser Card größer als
    im Budget-View, der dieselben Klassen nutzt. */
 .hb-budget-insight .hb-insight-label {
-  font-size: 14px;
+  font-size: var(--type-body-size);
 }
 
 .hb-budget-insight .hb-budget-status-pill {
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   padding: 3px 10px;
 }
 
@@ -6949,8 +7026,8 @@ select.hb-input option {
 
 /* Status-Pill */
 .hb-budget-status-pill {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--type-overline-size);
+  font-weight: var(--type-overline-weight);
   padding: 1px 7px;
   border-radius: var(--radius-pill);
   flex-shrink: 0;
@@ -7006,7 +7083,7 @@ select.hb-input option {
 }
 
 .hb-budget-card-of {
-  font-size: 14px;
+  font-size: var(--type-body-size);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -7038,8 +7115,8 @@ select.hb-input option {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
   color: var(--muted);
 }
 
@@ -7062,7 +7139,7 @@ select.hb-input option {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: var(--type-body-size);
 }
 
 .hb-budget-sub-name {
@@ -7148,8 +7225,8 @@ select.hb-input option {
    Punkt, Name, Ist und Plus. Bewusst flacher als die Budget-Karten. */
 .hb-budget-section-title {
   margin: 0 0 12px;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--type-subtitle-size);
+  font-weight: var(--type-subtitle-weight);
   color: var(--text);
 }
 
@@ -7180,7 +7257,7 @@ select.hb-input option {
 .hb-budget-free-name {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--type-body-size);
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -7189,7 +7266,7 @@ select.hb-input option {
 
 .hb-budget-free-amount {
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: var(--type-body-size);
   color: var(--muted);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -7210,8 +7287,8 @@ select.hb-input option {
 }
 
 .hb-budget-edit-hint {
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-lh);
   color: var(--muted);
 }
 
@@ -7235,7 +7312,7 @@ select.hb-input option {
 }
 
 .hb-budget-edit-subs-name {
-  font-size: 14px;
+  font-size: var(--type-body-size);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -7292,9 +7369,9 @@ select.hb-input option {
 }
 
 .hb-cg-group-trigger-name {
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.3;
+  font-size: var(--type-subtitle-lg-size);
+  font-weight: var(--type-subtitle-lg-weight);
+  line-height: var(--type-subtitle-lg-lh);
 }
 
 .hb-cg-group-chevron {
@@ -7335,8 +7412,8 @@ select.hb-input option {
   background: transparent;
   text-align: left;
   padding: 8px 12px;
-  font-size: 14px;
-  font-weight: 400;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
   color: var(--text);
   cursor: pointer;
   border-radius: var(--radius-sm);
@@ -7358,7 +7435,7 @@ select.hb-input option {
 }
 
 .hb-cg-group-item--active {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .hb-cg-group-item-check {
@@ -7374,7 +7451,7 @@ select.hb-input option {
 
 .hb-cg-group-item--add {
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .hb-cg-group-item--add:hover,
@@ -7421,7 +7498,7 @@ select.hb-input option {
 
 .hb-cg-range-error {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   color: var(--red);
 }
 
@@ -7517,16 +7594,16 @@ select.hb-input option {
 /* Section-Titel auf das in der App übliche Card-Heading-Niveau (vgl. .hb-card-title) */
 .hb-cg-section-title {
   margin: 0 0 16px;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--type-subtitle-size);
+  font-weight: var(--type-subtitle-weight);
   color: var(--text);
 }
 
 .hb-cg-picker-hint {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   color: var(--muted);
-  line-height: 1.4;
+  line-height: var(--type-caption-lh);
 }
 
 /* Geplante Kosten (Soll) */
@@ -7570,8 +7647,8 @@ select.hb-input option {
 }
 
 .hb-cg-planned-name {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--type-row-size);
+  font-weight: var(--type-row-weight);
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -7579,7 +7656,7 @@ select.hb-input option {
 }
 
 .hb-cg-planned-meta {
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -7587,8 +7664,8 @@ select.hb-input option {
 }
 
 .hb-cg-planned-monthly {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--type-row-size);
+  font-weight: var(--type-row-weight);
   color: var(--text);
   white-space: nowrap;
   text-align: right;
@@ -7604,15 +7681,15 @@ select.hb-input option {
   padding: 14px 0 0;
   /* etwas größer als die Postenzeilen (15px): die Summe ist der Abschluss
      der Liste und darf sich davon abheben */
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--type-number-sm-size);
+  font-weight: var(--type-number-sm-weight);
 }
 
 /* Kategorien im Zeitraum — Ist-Aufschlüsselung mit Anteilsbalken.
    Ist-Gesamtsumme dezent im Sektionskopf. */
 .hb-cg-catlist-total {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--type-body-sm-strong-size);
+  font-weight: var(--type-body-sm-strong-weight);
   color: var(--muted);
 }
 
@@ -7654,8 +7731,8 @@ select.hb-input option {
 }
 
 .hb-cg-breakdown-name {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--type-row-size);
+  font-weight: var(--type-row-weight);
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -7663,7 +7740,7 @@ select.hb-input option {
 }
 
 .hb-cg-breakdown-parent {
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -7678,14 +7755,14 @@ select.hb-input option {
 }
 
 .hb-cg-breakdown-amount {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--type-row-size);
+  font-weight: var(--type-row-weight);
   color: var(--text);
 }
 
 .hb-cg-breakdown-share {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--type-body-size);
+  font-weight: var(--fw-medium);
   color: var(--muted);
   text-align: right;
   min-width: 42px;
@@ -7775,7 +7852,7 @@ select.hb-input option {
 
 /* Vorschau des Rücklagenbedarfs im Posten-Dialog */
 .hb-cg-plan-expected {
-  font-size: 13px;
+  font-size: var(--type-body-sm-size);
   color: var(--muted);
 }
 
