@@ -3336,6 +3336,10 @@ select.hb-input option {
   transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
+.hb-bankimport-formats {
+  justify-content: center;
+}
+
 .hb-bankimport-drop--over {
   border-color: var(--accent);
   background: var(--accent-soft);

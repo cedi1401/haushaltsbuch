@@ -4,7 +4,8 @@ import { AlertBar, Button, RangeTabs } from "../components/ui.jsx";
 import { IconUpload } from "../components/icons.jsx";
 import { useBaseCurrency, useFmt } from "../contexts/CurrencyContext.jsx";
 import { useUndo } from "../contexts/UndoContext.js";
-import { CamtParseError, parseCamt } from "../utils/camtParser.js";
+import { CamtParseError } from "../utils/camtParser.js";
+import { parseStatement } from "../utils/statementParser.js";
 import {
   ROW_HINTS,
   buildEntriesFromRows,
@@ -27,6 +28,8 @@ const ERROR_TITLES = {
   "not-xml": "Keine XML-Datei",
   "not-camt": "Kein camt.053-Kontoauszug",
   "multiple-accounts": "Mehrere Konten in einer Datei",
+  "not-csv-profile": "Unbekanntes CSV-Format",
+  "not-statement": "Kein Kontoauszug",
 };
 
 // Titel der Parser-Warnungen im Dialogkopf (gelb, blockieren nichts).
@@ -35,7 +38,14 @@ const WARNING_TITLES = {
   "pending-skipped": "Vorgemerkte Buchungen",
   "missing-ref": "Bankreferenz fehlt",
   "missing-amount": "Betrag fehlt",
+  "rows-skipped": "Zeilen weggelassen",
+  "invalid-date": "Datum ungültig",
 };
+
+// Ohne IBAN (CSV-Export) trägt das Konto einen festen Schlüssel „CSV:…“.
+function accountLabel(iban) {
+  return String(iban || "").startsWith("CSV:") ? "CSV" : shortIban(iban);
+}
 
 // Hinweis-Chips einer Zeile: Text und Färbung über die Modifier der Status-Pille.
 const HINT_CHIPS = {
@@ -98,7 +108,7 @@ function categoryLabel(categories, row) {
 }
 
 /**
- * Bankimport (F1): camt-Datei einlesen, Zeilen prüfen und nur die angehakten als
+ * Bankimport (F1): Kontoauszug (camt oder Yuh-CSV) einlesen, Zeilen prüfen und nur die angehakten als
  * Ausgaben/Einnahmen ins aktive Buch schreiben — ein Undo-Schritt.
  * Wird nur gemountet, solange er offen ist; Schließen verwirft alles.
  */
@@ -136,7 +146,7 @@ export default function BankImportDialog({ open, onClose, books, activeBook, pat
     if (!file) return;
     try {
       const text = await file.text();
-      const parsed = parseCamt(text);
+      const parsed = parseStatement(text);
       setStatement(parsed);
       setRows(buildImportRows(parsed, activeBook));
       setError(null);
@@ -182,7 +192,7 @@ export default function BankImportDialog({ open, onClose, books, activeBook, pat
   const allVisibleSelected = visibleSelectable.length > 0 && visibleSelected === visibleSelectable.length;
 
   // Eine Datei, die neben der Ablagefläche landet, darf das Fenster nicht auf
-  // die XML-Datei umleiten (Electron erlaubt file://-Navigation).
+  // die Datei umleiten (Electron erlaubt file://-Navigation).
   useEffect(() => {
     const block = (e) => e.preventDefault();
     window.addEventListener("dragover", block);
@@ -364,10 +374,14 @@ export default function BankImportDialog({ open, onClose, books, activeBook, pat
           }}
         >
           <div className="hb-empty-icon"><IconUpload /></div>
-          <div className="hb-empty-title">camt.053-Datei hierher ziehen</div>
+          <div className="hb-empty-title">Kontoauszug hierher ziehen</div>
           <div className="hb-empty-text">
-            oder eine Datei auswählen. Den Kontoauszug als camt.053 (XML) exportierst du im E-Banking.
-            Nichts wird gespeichert, bevor du die Buchungen geprüft und bestätigt hast.
+            oder Datei auswählen. Nichts wird gespeichert, bevor du die Buchungen geprüft und bestätigt hast.
+          </div>
+          <div className="hb-info-pills hb-bankimport-formats">
+            <span className="hb-muted">Unterstützte Formate:</span>
+            <span className="hb-info-pill">camt.053 (.xml)</span>
+            <span className="hb-info-pill">.csv</span>
           </div>
           <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
             Datei auswählen
@@ -386,7 +400,7 @@ export default function BankImportDialog({ open, onClose, books, activeBook, pat
         <div className="hb-bankimport-head">
           <div className="hb-info-pills">
             {account.bankName && <span className="hb-info-pill">{account.bankName}</span>}
-            {account.iban && <span className="hb-info-pill">{shortIban(account.iban)}</span>}
+            {account.iban && <span className="hb-info-pill">{accountLabel(account.iban)}</span>}
             {formatPeriod(period) && <span className="hb-info-pill">{formatPeriod(period)}</span>}
             <span className="hb-info-pill">
               {rows.length === 1 ? "1 Buchung" : `${rows.length} Buchungen`}
@@ -498,7 +512,7 @@ export default function BankImportDialog({ open, onClose, books, activeBook, pat
         <input
           ref={fileInputRef}
           type="file"
-          accept=".xml,application/xml,text/xml"
+          accept=".xml,.csv,application/xml,text/xml,text/csv"
           style={{ display: "none" }}
           onChange={(e) => readFile(e.target.files?.[0])}
         />
