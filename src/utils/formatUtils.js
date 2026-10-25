@@ -5,15 +5,28 @@
 
 import { MONTHS_LONG } from "./constants.js";
 
+// Intl.NumberFormat ist teuer im Aufbau; formatCurrency läuft aber pro
+// Tabellenzeile und Chart-Tick. Deshalb ein Formatter je Locale + Optionen.
+const numberFormats = new Map();
+
+function numberFormat(locale, options) {
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let nf = numberFormats.get(key);
+  if (!nf) {
+    nf = new Intl.NumberFormat(locale, options);
+    numberFormats.set(key, nf);
+  }
+  return nf;
+}
+
+function fractionDigitsOptions(fractionDigits) {
+  return { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits };
+}
+
 // Internal legacy CHF formatter — used as fallback by formatCurrency below.
 function toCHF(n) {
   try {
-    return new Intl.NumberFormat("de-CH", {
-      style: "currency",
-      currency: "CHF",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(Number(n || 0));
+    return numberFormat("de-CH", { style: "currency", currency: "CHF", ...fractionDigitsOptions(2) }).format(Number(n || 0));
   } catch {
     return `${Number(n || 0).toFixed(2)} CHF`;
   }
@@ -32,51 +45,29 @@ export function formatCurrency(n, currency = "CHF", fractionDigits = 2) {
     if (cur === "CHF") {
       // style:"currency" erzwingt U+0027 als Tausendertrennzeichen (schmales Apostroph)
       // Plain-Number-Format nutzt in Chromium U+2019 (breiter)
-      return new Intl.NumberFormat("de-CH", {
+      return numberFormat("de-CH", {
         style: "currency",
         currency: "CHF",
         currencyDisplay: "code",
-        minimumFractionDigits: fractionDigits,
-        maximumFractionDigits: fractionDigits,
+        ...fractionDigitsOptions(fractionDigits),
       }).format(amount);
     }
     if (cur === "EUR") {
       // 1.250,50 € (deutsches Format, Symbol nach Betrag)
-      const formatted = new Intl.NumberFormat("de-DE", {
-        minimumFractionDigits: fractionDigits,
-        maximumFractionDigits: fractionDigits,
-      }).format(amount);
-      return `${formatted} €`;
+      return `${numberFormat("de-DE", fractionDigitsOptions(fractionDigits)).format(amount)} €`;
     }
     if (cur === "USD") {
       // $1,250.50 (US-Format, Symbol vor Betrag)
-      const formatted = new Intl.NumberFormat("en-US", {
-        minimumFractionDigits: fractionDigits,
-        maximumFractionDigits: fractionDigits,
-      }).format(amount);
-      return `$${formatted}`;
+      return `$${numberFormat("en-US", fractionDigitsOptions(fractionDigits)).format(amount)}`;
     }
     if (cur === "GBP") {
-      const formatted = new Intl.NumberFormat("en-GB", {
-        minimumFractionDigits: fractionDigits,
-        maximumFractionDigits: fractionDigits,
-      }).format(amount);
-      return `£${formatted}`;
+      return `£${numberFormat("en-GB", fractionDigitsOptions(fractionDigits)).format(amount)}`;
     }
     if (cur === "JPY") {
-      const formatted = new Intl.NumberFormat("ja-JP", {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(amount);
-      return `¥${formatted}`;
+      return `¥${numberFormat("ja-JP", fractionDigitsOptions(0)).format(amount)}`;
     }
     // Fallback für andere Währungen
-    return new Intl.NumberFormat("de-CH", {
-      style: "currency",
-      currency: cur,
-      minimumFractionDigits: fractionDigits,
-      maximumFractionDigits: fractionDigits,
-    }).format(amount);
+    return numberFormat("de-CH", { style: "currency", currency: cur, ...fractionDigitsOptions(fractionDigits) }).format(amount);
   } catch {
     return toCHF(n);
   }
@@ -108,10 +99,7 @@ export function formatPercent(value, { digits = 1, sign = true } = {}) {
   if (value === null || value === undefined || !Number.isFinite(Number(value))) return "—";
   const n = Number(value);
   const rounded = Number(n.toFixed(digits));
-  const text = new Intl.NumberFormat("de-CH", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(Math.abs(n));
+  const text = numberFormat("de-CH", fractionDigitsOptions(digits)).format(Math.abs(n));
   const prefix = rounded < 0 ? "−" : sign && rounded > 0 ? "+" : "";
   return `${prefix}${text} %`;
 }
