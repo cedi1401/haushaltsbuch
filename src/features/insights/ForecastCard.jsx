@@ -17,6 +17,7 @@ import { formatCurrencyCompact, formatPercent, formatSigned } from "../../utils/
 import { CHART_STROKE, CHART_DASH, AXIS_FONT_SIZE, axisProps, zeroLineProps, lineCursorProps } from "../../utils/chartStyle.js";
 import { IconInbox } from "../../components/icons.jsx";
 import InsightTile from "./InsightTile.jsx";
+import { forecastHeroState } from "./insightAlerts.js";
 
 const ForecastCard = memo(function ForecastCard({ analytics }) {
   const fmt = useFmt();
@@ -47,16 +48,9 @@ const ForecastCard = memo(function ForecastCard({ analytics }) {
 
   const isPastMonth = !isCurrentMonth && !isFutureMonth;
 
-  // Ampel-Status für das voraussichtliche/tatsächliche Frei.
-  // Logik „erst ausgeben, dann fegen": ein positiver Rest ist der erwünschte
-  // Überschuss (wird gespart) → grün; nur ein Minus ist schlecht → rot.
-  // Schwellen relativ zum Frei-Budget.
-  let heroState = null;
-  if (!isFutureMonth && freiBudget > 0) {
-    if (projectedBalance < -0.05 * freiBudget) heroState = "over";
-    else if (projectedBalance > 0.1 * freiBudget) heroState = "surplus";
-    else heroState = "good";
-  }
+  // Ampel-Status für das voraussichtliche/tatsächliche Frei (Herleitung in
+  // insightAlerts.js; dieselbe Bedingung setzt das Symbol am Tab).
+  const heroState = forecastHeroState(analytics);
   const heroLabel =
     heroState === "over" ? "überzogen"
     : heroState === "surplus" ? "Überschuss"
