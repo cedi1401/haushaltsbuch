@@ -16,8 +16,8 @@ export default function TrendToggle({ checked, onChange, subject }) {
         style={{ accentColor: "var(--accent)" }}
       />
       <div>
-        <div style={{ fontWeight: 600, fontSize: 13 }}>Im Trend auflisten</div>
-        <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+        <div style={{ fontWeight: "var(--type-body-sm-strong-weight)", fontSize: "var(--type-body-sm-strong-size)" }}>Im Trend auflisten</div>
+        <div style={{ fontSize: "var(--type-caption-size)", color: "var(--muted)", marginTop: 2 }}>
           {subject} erscheint in der Liste unter „Fixkosten-Entwicklung“. Auf die Kennzahlen hat
           das keinen Einfluss.
         </div>

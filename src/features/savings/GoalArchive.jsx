@@ -82,7 +82,7 @@ export default function GoalArchive({ goals, potNameById, fmt, onReactivate, onD
                       <span className="hb-goal-archive-stat-label">Angespart</span>
                       <span className="hb-goal-archive-stat-value">
                         {fmt(arch?.savedAmount ?? 0)}
-                        <span className="hb-muted" style={{ fontWeight: 500 }}>
+                        <span className="hb-muted" style={{ fontWeight: "var(--fw-medium)" }}>
                           {" "}von {fmt(arch?.target ?? 0)}
                         </span>
                       </span>

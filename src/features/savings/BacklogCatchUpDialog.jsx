@@ -86,7 +86,7 @@ export default function BacklogCatchUpDialog({
             eingetragenen Fälligkeit: wer „Apr 2025 … Mär 2027" und 24 Raten
             liest, stutzt. Deshalb steht sie ausgeschrieben da und nicht nur als
             Zahl im Button. */}
-        <div style={{ fontWeight: 600 }}>
+        <div style={{ fontWeight: "var(--fw-semibold)" }}>
           {n === 1 ? "1 Rate" : `${n} Raten`} · Summe {fmt(sum)} · Ist-Stand danach{" "}
           {fmt(newActual)}
           {target !== null && target !== undefined ? ` · Soll ${fmt(target)}` : ""}

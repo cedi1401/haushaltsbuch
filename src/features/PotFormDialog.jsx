@@ -84,8 +84,8 @@ export default function PotFormDialog({ open, pot, pots = EMPTY_ARRAY, onClose, 
             style={{ accentColor: "var(--accent)" }}
           />
           <div>
-            <div style={{ fontWeight: 600, fontSize: 13 }}>Als Spar-Topf zählen</div>
-            <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+            <div style={{ fontWeight: "var(--type-body-sm-strong-weight)", fontSize: "var(--type-body-sm-strong-size)" }}>Als Spar-Topf zählen</div>
+            <div style={{ fontSize: "var(--type-caption-size)", color: "var(--muted)", marginTop: 2 }}>
               Einzahlungen in diesen Topf zählen als Sparbetrag und fließen in die Sparquote ein.
               Ausgenommen sind Rückstellungen: Sie sind für eine feste Rechnung zurückgelegt und
               zählen deshalb unter Rücklagen.

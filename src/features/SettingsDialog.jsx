@@ -142,7 +142,7 @@ export default function SettingsDialog({
 
           {update.ready ? (
             <div>
-              <div style={{ color: "var(--green)", fontSize: 13, marginBottom: 10 }}>
+              <div style={{ color: "var(--green)", fontSize: "var(--type-body-sm-size)", marginBottom: 10 }}>
                 Update <strong>v{update.ready.version}</strong> wurde heruntergeladen und ist bereit.
               </div>
               <Button variant="solid" onClick={update.install}>
@@ -160,7 +160,7 @@ export default function SettingsDialog({
               </Button>
               {update.available && !update.downloading && (
                 <>
-                  <span style={{ color: "var(--accent)", fontSize: 13 }}>
+                  <span style={{ color: "var(--accent)", fontSize: "var(--type-body-sm-size)" }}>
                     Version <strong>v{update.available.version}</strong> verfügbar
                   </span>
                   <Button variant="outline" onClick={update.download}>
@@ -179,7 +179,7 @@ export default function SettingsDialog({
                 </span>
               )}
               {update.checkStatus === "error" && (
-                <span style={{ color: "var(--green)", fontSize: 13 }}>
+                <span style={{ color: "var(--green)", fontSize: "var(--type-body-sm-size)" }}>
                   App ist auf dem aktuellsten Stand.
                 </span>
               )}
@@ -236,7 +236,7 @@ export default function SettingsDialog({
       {/* MONATSBEGINN */}
       <div className="hb-field" style={{ marginTop: 24 }}>
         <div className="hb-title-with-help" style={{ marginBottom: 10 }}>
-          <div style={{ fontWeight: 600 }}>Monatsbeginn</div>
+          <div style={{ fontWeight: "var(--fw-semibold)" }}>Monatsbeginn</div>
           <HbTooltip text="Einträge ab diesem Tag werden dem Folgemonat zugerechnet. Standard ist der 1. (Kalendermonat). Maximum ist der 28." placement="right" />
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>

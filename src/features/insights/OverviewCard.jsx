@@ -39,7 +39,7 @@ const OverviewCard = memo(function OverviewCard({ analytics }) {
                   <span className="hb-dot" style={{ background: cat.color || "var(--muted)" }} />
                   <span className="hb-insight-cat-name">{cat.name}</span>
                   <span className="hb-insight-cat-amt">{fmt(cat.value)}</span>
-                  <MomDelta momDelta={cat.momDelta} fontSize={14} />
+                  <MomDelta momDelta={cat.momDelta} fontSize="var(--type-body-size)" />
                 </div>
                 <div
                   className={`hb-meter hb-meter--lg${cat.color ? " hb-meter--tinted hb-meter--cat" : ""}`}

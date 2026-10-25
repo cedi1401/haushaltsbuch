@@ -107,7 +107,7 @@ export function ChartScrollNav({ offset, maxOffset, onOffsetChange, label, style
         title="Älteren Bereich anzeigen"
         aria-label="Älteren Bereich anzeigen"
       ><IconChevronLeft /></button>
-      <span className="hb-muted" style={{ fontSize: 11, whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{label}</span>
+      <span className="hb-muted" style={{ fontSize: "var(--type-overline-size)", whiteSpace: "nowrap", minWidth: 116, textAlign: "center" }}>{label}</span>
       <button
         type="button"
         className="hb-icon-btn"

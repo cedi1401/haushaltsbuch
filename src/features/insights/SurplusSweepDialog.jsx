@@ -67,9 +67,9 @@ export default function SurplusSweepDialog({
             onChange={(e) => setAmount(e.target.value)}
           />
           {defaultAmount != null && (
-            <div style={{ fontSize: 15, marginTop: 8, color: "var(--muted)" }}>
+            <div style={{ fontSize: "var(--type-row-size)", marginTop: 8, color: "var(--muted)" }}>
               Verfügbarer Überschuss:{" "}
-              <span style={{ fontWeight: 600, color: "var(--text)" }}>
+              <span style={{ fontWeight: "var(--fw-semibold)", color: "var(--text)" }}>
                 {fmt(defaultAmount)}
               </span>
             </div>
@@ -94,9 +94,9 @@ export default function SurplusSweepDialog({
             )}
           </select>
           {showProjectedBalance && (
-            <div style={{ fontSize: 15, marginTop: 8, color: "var(--muted)" }}>
+            <div style={{ fontSize: "var(--type-row-size)", marginTop: 8, color: "var(--muted)" }}>
               Topf-Stand nachher:{" "}
-              <span style={{ fontWeight: 600, color: "var(--text)" }}>
+              <span style={{ fontWeight: "var(--fw-semibold)", color: "var(--text)" }}>
                 {fmt(selectedPot.balance + numericAmount)}
               </span>
             </div>

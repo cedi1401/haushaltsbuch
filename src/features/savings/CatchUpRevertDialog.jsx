@@ -73,7 +73,7 @@ export default function CatchUpRevertDialog({
           </table>
         </div>
 
-        <div style={{ fontWeight: 600 }}>
+        <div style={{ fontWeight: "var(--fw-semibold)" }}>
           {n === 1 ? "1 Rate" : `${n} Raten`} · Summe {fmt(sum)} · Ist-Stand danach{" "}
           {fmt(Number(actual || 0) - sum)}
         </div>

@@ -132,8 +132,8 @@ const BehaviorCard = memo(function BehaviorCard({ analytics }) {
                     }
                   >
                     <span style={{
-                      fontSize: 12,
-                      fontWeight: 600,
+                      fontSize: "var(--type-label-size)",
+                      fontWeight: "var(--type-label-weight)",
                       color: dailyTrendPct > 0 ? themeColors.red : dailyTrendPct < 0 ? themeColors.green : themeColors.muted,
                     }}>
                       {formatPercent(dailyTrendPct, { digits: 0 })}

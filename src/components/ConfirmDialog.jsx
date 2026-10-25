@@ -130,7 +130,7 @@ function ConfirmModal({ title, message, confirmLabel, cancelLabel, danger, confi
           </button>
         </div>
         <div className="hb-modal-body">
-          <div style={{ whiteSpace: "pre-wrap", fontSize: 14, color: "var(--text)", lineHeight: 1.5 }}>
+          <div style={{ whiteSpace: "pre-wrap", fontSize: "var(--type-body-size)", color: "var(--text)", lineHeight: "var(--type-body-lh)" }}>
             {message}
           </div>
           {confirmText && (
