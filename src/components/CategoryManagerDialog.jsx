@@ -404,30 +404,24 @@ export default function CategoryManagerDialog({
 
       return (
         <div key={cat.id} className={`hb-cat-accordion-item${isOpen ? " hb-cat-accordion-open" : ""}`}>
-          {/* Accordion Header */}
-          <div
-            className={`hb-cat-accordion-header${isContextRow ? " hb-cat-accordion-header--context" : ""}`}
-            onClick={() => toggleAccordion(cat.id)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") toggleAccordion(cat.id);
-            }}
-          >
+          {/* Accordion Header. Auf- und Zuklappen übernimmt ein leerer
+              Button, der als Fläche über der ganzen Zeile liegt. Hinweis,
+              Budget-Chip und Bearbeiten-Button sind positioniert und liegen
+              darüber, so klappt ein Klick darauf nichts mit um. */}
+          <div className={`hb-cat-accordion-header${isContextRow ? " hb-cat-accordion-header--context" : ""}`}>
+            <button
+              type="button"
+              className="hb-cat-accordion-toggle"
+              onClick={() => toggleAccordion(cat.id)}
+              aria-expanded={hasSubs ? isOpen : undefined}
+              aria-label={cat.name}
+            />
             <span className="hb-cat-dot" style={{ background: cat.color || CHART_COLORS.transfer }} />
             <span className="hb-cat-name">
               {cat.name}
-              {/* Hinweis direkt am Namen. Der Wrapper fängt Klick sowie Enter
-                  und Leertaste ab, sonst klappt das Fragezeichen das Accordion
-                  mit um. Escape muss durch, damit der Dialog schließt. */}
+              {/* Hinweis direkt am Namen */}
               {cat.countsAsSavings && (
-                <span
-                  className="hb-cat-name-help"
-                  onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") e.stopPropagation();
-                  }}
-                >
+                <span className="hb-cat-name-help">
                   <HbTooltip
                     size={16}
                     text="Buchungen in dieser Kategorie erscheinen im Ausgaben-Diagramm, zählen aber als Sparen und fließen in die Sparquote ein — nicht in die Ausgaben."
@@ -450,7 +444,7 @@ export default function CategoryManagerDialog({
               <button
                 type="button"
                 className="hb-cat-edit-btn"
-                onClick={(e) => { e.stopPropagation(); openEditForParent(cat); }}
+                onClick={() => openEditForParent(cat)}
                 aria-label={`${cat.name} bearbeiten`}
                 title="Bearbeiten"
               >

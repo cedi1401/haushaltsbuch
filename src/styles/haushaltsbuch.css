@@ -4977,6 +4977,7 @@ select.hb-input option {
 }
 
 .hb-cat-accordion-header {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -5009,8 +5010,27 @@ select.hb-input option {
   word-break: break-word;
 }
 
-/* Fragezeichen direkt hinter dem Namen, nicht am rechten Zeilenende */
+/* Der Klapp-Button ist eine leere Fläche über der ganzen Kopfzeile
+   (positioniert an .hb-cat-accordion-header) und trägt dort den Fokusring
+   der globalen :focus-visible-Regel, wie zuvor die ganze Zeile. Der Name
+   bleibt reiner Text, damit das Fragezeichen beim Umbruch dahinter steht. */
+.hb-cat-accordion-toggle {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: inherit;
+}
+
+/* Fragezeichen direkt hinter dem Namen, nicht am rechten Zeilenende.
+   Liegt wie Budget-Chip und Bearbeiten-Button über der Klickfläche des
+   Klapp-Buttons: alle sind positioniert und stehen im DOM danach. Bewusst
+   ohne z-index, der würde die Tooltip-Blase in einen eigenen Stapelkontext
+   sperren. */
 .hb-cat-name-help {
+  position: relative;
   display: inline-flex;
   vertical-align: middle;
   margin-left: 6px;
@@ -5018,6 +5038,7 @@ select.hb-input option {
 }
 
 .hb-cat-edit-btn {
+  position: relative;
   border: none;
   background: transparent;
   padding: 4px 6px;
@@ -5098,6 +5119,8 @@ select.hb-input option {
 /* Kategorien-Dialog: Chip mit dem gesetzten Budget (reine Anzeige, gepflegt
    wird im Budget-View) */
 .hb-cat-budget-chip {
+  /* über dem Klapp-Button, sonst erscheint der title nicht */
+  position: relative;
   font-size: var(--type-overline-size);
   font-weight: var(--type-overline-weight);
   color: var(--accent);
