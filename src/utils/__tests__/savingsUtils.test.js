@@ -84,6 +84,15 @@ describe('buildSavingsModel', () => {
     expect(kpis.goalRates).toBe(0);
   });
 
+  it('zählt Rückstellungen im Plan, freie Rücklagen nicht', () => {
+    const funded = [...ENTRIES, transfer('2026-05-01', 1100, 'pot_r', 'tc_steuern')];
+    const { kpis, sections } = buildSavingsModel(book, funded, opts);
+    expect(sections[0].rows[0].status).toBe('onTrack');
+    expect(sections[0].rows[1].rule).toBe('free');
+    expect(kpis.onTrack).toBe(1);
+    expect(kpis.behind).toBe(0);
+  });
+
   it('zählt Rückstand und Fälligkeit als Handlungsbedarf', () => {
     const due = { ...STEUERN, faelligkeit: '2026-05-15' };
     const { kpis, sections } = buildSavingsModel({ ...book, transferCategories: [due] }, [], opts);

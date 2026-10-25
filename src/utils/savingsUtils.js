@@ -97,7 +97,7 @@ function buildRow(purpose, entries, opts) {
  *   activeGoals: Array,
  *   archivedGoals: Array,
  *   kpis: { saved: number, potCount: number, rates: number, goalRates: number,
- *           overdue: number, behind: number, due: number }
+ *           overdue: number, behind: number, due: number, onTrack: number }
  * }}
  */
 export function buildSavingsModel(book, entries, opts = {}) {
@@ -151,6 +151,7 @@ export function buildSavingsModel(book, entries, opts = {}) {
   let overdue = 0;
   let behind = 0;
   let due = 0;
+  let onTrack = 0;
   for (const section of sections) {
     for (const row of [...section.rows, ...section.goalRows]) {
       saved += Number(row.actual) || 0;
@@ -164,6 +165,7 @@ export function buildSavingsModel(book, entries, opts = {}) {
       if (row.status === "overdue") overdue += 1;
       else if (row.status === "due") due += 1;
       else if (row.status === "behind") behind += 1;
+      else if (row.status === "onTrack") onTrack += 1;
     }
   }
 
@@ -179,6 +181,7 @@ export function buildSavingsModel(book, entries, opts = {}) {
       overdue,
       behind,
       due,
+      onTrack,
     },
   };
 }
