@@ -42,3 +42,38 @@ export function reservesAlert(kpis) {
   if (kpis?.behind > 0) return "warning";
   return null;
 }
+
+// So viele Positionen nennt die Rücklagen-Warnung beim Namen.
+const RESERVES_ALERT_NAMES = 3;
+
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+/**
+ * Text der Warnung im Rücklagen-Tab, zu `reservesAlert` passend: überfällige
+ * Rückstellungen (rot) gehen vor Rückstand (gelb). Überfällig: die älteste
+ * Fälligkeit zuerst. Rückstand: die größte Lücke zuerst, mit Betrag.
+ * Liefert { title, message, tone } oder null.
+ */
+export function reservesAlertText(rows, fmt) {
+  const name = (row) => row.purpose?.name || "Ohne Namen";
+  const overdueRows = (rows || [])
+    .filter((r) => r.status === "overdue")
+    .sort((a, b) => String(a.nextDate).localeCompare(String(b.nextDate)));
+  const behindRows = (rows || []).filter((r) => r.status === "behind").sort((a, b) => a.delta - b.delta);
+
+  const isOverdue = overdueRows.length > 0;
+  const alertRows = isOverdue ? overdueRows : behindRows;
+  if (alertRows.length === 0) return null;
+
+  const names = alertRows
+    .slice(0, RESERVES_ALERT_NAMES)
+    .map((r) => (isOverdue ? name(r) : `${name(r)} −${fmt(-r.delta)}`))
+    .join(", ");
+  const rest = alertRows.length - RESERVES_ALERT_NAMES;
+  const count = plural(alertRows.length, "Rückstellung", "Rückstellungen");
+  return {
+    title: isOverdue ? `${count} überfällig` : `${count} im Rückstand`,
+    message: rest > 0 ? `${names} und ${rest} weitere` : names,
+    tone: isOverdue ? undefined : "warning",
+  };
+}

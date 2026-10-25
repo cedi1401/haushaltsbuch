@@ -5,13 +5,10 @@ import { useThemeColors } from "../../hooks/themeColors.js";
 import { IconChevronRight, IconInbox } from "../../components/icons.jsx";
 import { AlertBar } from "../../components/ui.jsx";
 import { STATUS_LABEL } from "../savings/savingsColumns.jsx";
+import { reservesAlertText } from "./insightAlerts.js";
 
 // Reihenfolge nach Dringlichkeit — wie die Sortierung im Rücklagen-View.
 const STATUS_ORDER = ["overdue", "behind", "due", "onTrack"];
-// So viele Positionen nennt die Warnung beim Namen.
-const ALERT_NAMES = 3;
-
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /**
  * Insights-Tab „Rücklagen“ — wie stehen die Rückstellungen heute?
@@ -63,29 +60,7 @@ const ReservesCard = memo(function ReservesCard({ rows, counts, onNavigateToSavi
   };
   const ringData = STATUS_ORDER.filter((s) => counts[s] > 0).map((s) => ({ key: s, value: counts[s] }));
   const headStatus = STATUS_ORDER.find((s) => counts[s] > 0);
-
-  const name = (row) => row.purpose?.name || "Ohne Namen";
-  // Überfällig: die älteste Fälligkeit zuerst. Rückstand: die größte Lücke zuerst.
-  const overdueRows = rows
-    .filter((r) => r.status === "overdue")
-    .sort((a, b) => String(a.nextDate).localeCompare(String(b.nextDate)));
-  const behindRows = rows.filter((r) => r.status === "behind").sort((a, b) => a.delta - b.delta);
-
-  let alert = null;
-  if (overdueRows.length > 0 || behindRows.length > 0) {
-    const isOverdue = overdueRows.length > 0;
-    const alertRows = isOverdue ? overdueRows : behindRows;
-    const names = alertRows
-      .slice(0, ALERT_NAMES)
-      .map((r) => (isOverdue ? name(r) : `${name(r)} −${fmt(-r.delta)}`))
-      .join(", ");
-    const rest = alertRows.length - ALERT_NAMES;
-    const title = isOverdue
-      ? `${plural(alertRows.length, "Rückstellung", "Rückstellungen")} überfällig`
-      : `${plural(alertRows.length, "Rückstellung", "Rückstellungen")} im Rückstand`;
-    const message = rest > 0 ? `${names} und ${rest} weitere` : names;
-    alert = { title, message, tone: isOverdue ? undefined : "warning" };
-  }
+  const alert = reservesAlertText(rows, fmt);
 
   return (
     <div className="hb-insights-pane hb-insights-pane--active hb-budget-insight">
