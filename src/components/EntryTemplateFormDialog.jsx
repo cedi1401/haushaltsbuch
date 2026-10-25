@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import EditDialog from "./EditDialog.jsx";
 import { HierarchicalCategoryPicker } from "./HierarchicalCategoryPicker.jsx";
 import PurposeSelect from "./PurposeSelect.jsx";
@@ -74,6 +74,7 @@ export default function EntryTemplateFormDialog({
   onSave,
 }) {
   const baseCurrency = useBaseCurrency();
+  const fieldId = useId();
   const [draft, setDraft] = useState(() =>
     draftFromTemplate(template, { pots })
   );
@@ -167,8 +168,9 @@ export default function EntryTemplateFormDialog({
       <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, width: "100%" }}>
           <div className="hb-field">
-            <div className="hb-label">Name</div>
+            <label className="hb-label" htmlFor={`${fieldId}-name`}>Name</label>
             <input
+              id={`${fieldId}-name`}
               className={`hb-input${nameError ? " hb-input--invalid" : ""}`}
               style={{ width: "100%", minWidth: 0 }}
               type="text"
@@ -183,8 +185,9 @@ export default function EntryTemplateFormDialog({
             {nameError && <div id="hb-tpl-name-error" className="hb-field-error">{nameError}</div>}
           </div>
           <div className="hb-field">
-            <div className="hb-label">Betrag ({baseCurrency})</div>
+            <label className="hb-label" htmlFor={`${fieldId}-amount`}>Betrag ({baseCurrency})</label>
             <input
+              id={`${fieldId}-amount`}
               className="hb-input"
               style={{ width: "100%", minWidth: 0 }}
               type="text"
@@ -197,8 +200,9 @@ export default function EntryTemplateFormDialog({
         </div>
 
         <div className="hb-field">
-          <div className="hb-label">Art</div>
+          <label className="hb-label" htmlFor={`${fieldId}-kind`}>Art</label>
           <select
+            id={`${fieldId}-kind`}
             className="hb-input"
             value={draft.kind}
             onChange={(e) => setKind(e.target.value)}
@@ -211,8 +215,9 @@ export default function EntryTemplateFormDialog({
         </div>
 
         <div className="hb-field">
-          <div className="hb-label">Notiz (optional)</div>
+          <label className="hb-label" htmlFor={`${fieldId}-note`}>Notiz (optional)</label>
           <input
+            id={`${fieldId}-note`}
             className="hb-input"
             style={{ width: "100%", minWidth: 0 }}
             type="text"
@@ -236,8 +241,11 @@ export default function EntryTemplateFormDialog({
         {isTransferKind && (
           <>
             <div className="hb-field">
-              <div className="hb-label">{draft.kind === "transfer" ? "In Topf" : "Aus Topf"}</div>
+              <label className="hb-label" htmlFor={`${fieldId}-pot`}>
+                {draft.kind === "transfer" ? "In Topf" : "Aus Topf"}
+              </label>
               <select
+                id={`${fieldId}-pot`}
                 className="hb-input"
                 value={draft.potId}
                 onChange={(e) =>

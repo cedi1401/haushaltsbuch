@@ -230,6 +230,7 @@ export default function EntryTemplateManagerDialog({
                 className="hb-input"
                 type="text"
                 placeholder="Vorlage suchen..."
+                aria-label="Vorlagen durchsuchen"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 autoComplete="off"

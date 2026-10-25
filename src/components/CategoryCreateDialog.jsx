@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import EditDialog from "./EditDialog.jsx";
 import { RangeTabs } from "./ui.jsx";
 import { CUSTOM_CATEGORY_PALETTE } from "../utils/hbPalette.js";
@@ -18,6 +18,7 @@ export default function CategoryCreateDialog({
   const [name, setName] = useState("");
   const [color, setColor] = useState(CUSTOM_CATEGORY_PALETTE[0]);
   const [parentId, setParentId] = useState("");
+  const fieldId = useId();
 
   // State beim Öffnen zurücksetzen — abgeleitet aus dem open-Übergang statt via
   // Effekt (vermeidet set-state-in-effect und den zusätzlichen Render-Durchlauf).
@@ -69,8 +70,9 @@ export default function CategoryCreateDialog({
 
       {/* Kategoriename */}
       <div className="hb-field" style={{ marginTop: 16 }}>
-        <label className="hb-label">Kategoriename</label>
+        <label className="hb-label" htmlFor={`${fieldId}-name`}>Kategoriename</label>
         <input
+          id={`${fieldId}-name`}
           className="hb-input hb-full"
           type="text"
           placeholder="Name eingeben..."
@@ -82,8 +84,13 @@ export default function CategoryCreateDialog({
 
       {/* Farbauswahl (nur bei Oberkategorie) */}
       {mode === "parent" && (
-        <div className="hb-field" style={{ marginTop: 16 }}>
-          <label className="hb-label">Farbe</label>
+        <div
+          className="hb-field"
+          style={{ marginTop: 16 }}
+          role="group"
+          aria-labelledby={`${fieldId}-color`}
+        >
+          <div className="hb-label" id={`${fieldId}-color`}>Farbe</div>
           <div className="hb-color-picker">
             {CUSTOM_CATEGORY_PALETTE.map((c) => (
               <button
@@ -103,8 +110,9 @@ export default function CategoryCreateDialog({
       {/* Oberkategorie-Dropdown (nur bei Unterkategorie) */}
       {mode === "sub" && (
         <div className="hb-field" style={{ marginTop: 16 }}>
-          <label className="hb-label">Oberkategorie wählen</label>
+          <label className="hb-label" htmlFor={`${fieldId}-parent`}>Oberkategorie wählen</label>
           <select
+            id={`${fieldId}-parent`}
             className="hb-input hb-full"
             value={parentId}
             onChange={(e) => setParentId(e.target.value)}

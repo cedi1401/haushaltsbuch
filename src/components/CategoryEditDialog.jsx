@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import EditDialog from "./EditDialog.jsx";
 import { CUSTOM_CATEGORY_PALETTE } from "../utils/hbPalette.js";
 import { useConfirm } from "./ConfirmDialog.jsx";
@@ -14,6 +14,7 @@ export default function CategoryEditDialog({
   const [name, setName] = useState("");
   const [color, setColor] = useState(CUSTOM_CATEGORY_PALETTE[0]);
   const { confirm } = useConfirm();
+  const fieldId = useId();
 
   // Felder beim Öffnen vorausfüllen — abgeleitet aus dem open-Übergang statt via
   // Effekt (vermeidet set-state-in-effect und den zusätzlichen Render-Durchlauf).
@@ -61,8 +62,9 @@ export default function CategoryEditDialog({
     >
       {/* Kategoriename */}
       <div className="hb-field">
-        <label className="hb-label">Kategoriename</label>
+        <label className="hb-label" htmlFor={`${fieldId}-name`}>Kategoriename</label>
         <input
+          id={`${fieldId}-name`}
           className="hb-input hb-full"
           type="text"
           placeholder="Name eingeben..."
@@ -74,8 +76,13 @@ export default function CategoryEditDialog({
 
       {/* Farbauswahl: nur bei eigenen Oberkategorien (nicht bei Default-Kategorien) */}
       {!isSubcategory && !category?.isDefault && (
-        <div className="hb-field" style={{ marginTop: 16 }}>
-          <label className="hb-label">Farbe</label>
+        <div
+          className="hb-field"
+          style={{ marginTop: 16 }}
+          role="group"
+          aria-labelledby={`${fieldId}-color`}
+        >
+          <div className="hb-label" id={`${fieldId}-color`}>Farbe</div>
           <div className="hb-color-picker">
             {CUSTOM_CATEGORY_PALETTE.map((c) => (
               <button

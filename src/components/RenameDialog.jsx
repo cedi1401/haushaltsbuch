@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import EditDialog from "./EditDialog.jsx";
 
 /**
@@ -14,6 +14,7 @@ export default function RenameDialog({
   onSave,
 }) {
   const [value, setValue] = useState(initialValue);
+  const inputId = useId();
 
   // Draft beim Öffnen zurücksetzen — abgeleitet aus dem open-Übergang statt via
   // Effekt (vermeidet set-state-in-effect und den zusätzlichen Render-Durchlauf).
@@ -36,8 +37,9 @@ export default function RenameDialog({
       saveLabel={saveLabel}
     >
       <div className="hb-field">
-        <div className="hb-label">{label}</div>
+        <label className="hb-label" htmlFor={inputId}>{label}</label>
         <input
+          id={inputId}
           className="hb-input hb-full"
           type="text"
           value={value}

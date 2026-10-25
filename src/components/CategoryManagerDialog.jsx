@@ -636,6 +636,7 @@ export default function CategoryManagerDialog({
                     className="hb-input"
                     type="text"
                     placeholder="Kategorie suchen..."
+                    aria-label="Kategorien durchsuchen"
                     value={search}
                     onChange={(e) => changeSearch(e.target.value)}
                     autoComplete="off"
@@ -679,6 +680,7 @@ export default function CategoryManagerDialog({
                     className="hb-input"
                     type="text"
                     placeholder="Sparposition suchen..."
+                    aria-label="Sparpositionen durchsuchen"
                     value={transferSearch}
                     onChange={(e) => setTransferSearch(e.target.value)}
                     autoComplete="off"

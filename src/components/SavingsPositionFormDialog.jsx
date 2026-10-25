@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import EditDialog from "./EditDialog.jsx";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 import {
@@ -22,6 +22,7 @@ export default function SavingsPositionFormDialog({
   onClose,
   onSave,
 }) {
+  const fieldId = useId();
   const [name, setName] = useState(position?.name || "");
   const [potId, setPotId] = useState(position?.potId || pots[0]?.id || "");
 
@@ -66,8 +67,9 @@ export default function SavingsPositionFormDialog({
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
         <div className="hb-field">
-          <div className="hb-label">Name</div>
+          <label className="hb-label" htmlFor={`${fieldId}-name`}>Name</label>
           <input
+            id={`${fieldId}-name`}
             className={`hb-input hb-full${nameError ? " hb-input--invalid" : ""}`}
             type="text"
             maxLength={MAX_TRANSFER_NAME_LENGTH}
@@ -88,8 +90,9 @@ export default function SavingsPositionFormDialog({
         </div>
 
         <div className="hb-field">
-          <div className="hb-label">Topf</div>
+          <label className="hb-label" htmlFor={`${fieldId}-pot`}>Topf</label>
           <select
+            id={`${fieldId}-pot`}
             className="hb-input hb-full"
             value={potId}
             disabled={Boolean(position)}

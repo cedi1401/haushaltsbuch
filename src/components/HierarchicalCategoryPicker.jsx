@@ -187,6 +187,7 @@ export function HierarchicalCategoryPicker({
             className="hb-input"
             type="text"
             placeholder="Kategorie filtern..."
+            aria-label="Kategorien filtern"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             disabled={disabled}
