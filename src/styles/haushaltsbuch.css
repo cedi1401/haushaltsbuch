@@ -155,39 +155,39 @@
   --fw-semibold: 600;
   --fw-bold: 700;
   /* Labels in Großbuchstaben, Badges, Chips, Status-/Trend-Pills */
-  --type-overline-size: 11px;
+  --type-overline-size: 12px;
   --type-overline-weight: var(--fw-semibold);
   --type-overline-lh: 1.2;
   /* Hinweise unter Feldern, Meta, Unterzeilen, Fehlertext */
-  --type-caption-size: 12px;
+  --type-caption-size: 13px;
   --type-caption-weight: var(--fw-regular);
   --type-caption-lh: 1.4;
   /* Formular-Labels, Tabellenköpfe, Namenslabels in Karten */
-  --type-label-size: 12px;
+  --type-label-size: 13px;
   --type-label-weight: var(--fw-semibold);
   --type-label-lh: 1.2;
   /* Sekundärer Fließtext, .hb-muted, Notizen, kleine Buttons */
-  --type-body-sm-size: 13px;
+  --type-body-sm-size: 14px;
   --type-body-sm-weight: var(--fw-regular);
   --type-body-sm-lh: 1.5;
   /* Tabs, Tag-Chips, DataTable-Kopf, Tile-Labels */
-  --type-body-sm-strong-size: 13px;
+  --type-body-sm-strong-size: 14px;
   --type-body-sm-strong-weight: var(--fw-semibold);
   --type-body-sm-strong-lh: 1.5;
   /* Standardtext, Inputs, Listen */
-  --type-body-size: 14px;
+  --type-body-size: 15px;
   --type-body-weight: var(--fw-regular);
   --type-body-lh: 1.5;
   /* Buttons, Namen, Meldungstitel */
-  --type-body-strong-size: 14px;
+  --type-body-strong-size: 15px;
   --type-body-strong-weight: var(--fw-semibold);
   --type-body-strong-lh: 1.5;
   /* Listenzeilen in DataTable, Fixkosten, Kostenrechner */
-  --type-row-size: 15px;
+  --type-row-size: 16px;
   --type-row-weight: var(--fw-semibold);
   --type-row-lh: 1.3;
   /* Karten- und Abschnittstitel */
-  --type-subtitle-size: 16px;
+  --type-subtitle-size: 17px;
   --type-subtitle-weight: var(--fw-semibold);
   --type-subtitle-lh: 1.3;
   /* Gruppen- und Bereichsköpfe */
