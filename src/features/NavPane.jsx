@@ -113,7 +113,7 @@ export default function NavPane({ view, onChangeView, expanded, onExpandedChange
             return (
               <div key={group.id} className="hb-nav-group">
                 {collapsed ? (
-                  groupIndex > 0 && <div className="hb-nav-group-sep" role="separator" />
+                  groupIndex > 0 && <hr className="hb-nav-group-sep" />
                 ) : (
                   <h2 id={headingId} className="hb-nav-group-title">{group.label}</h2>
                 )}

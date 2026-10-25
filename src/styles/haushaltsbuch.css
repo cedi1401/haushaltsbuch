@@ -1359,6 +1359,8 @@ select.hb-input option {
 
 /* Trennlinie im Menü; -6px gleicht das Padding von .hb-overflow-menu aus. */
 .hb-overflow-sep {
+  /* <hr>: Browser-Rahmen weg, die Linie kommt allein aus dem Hintergrund */
+  border: 0;
   height: 1px;
   background: var(--border-light);
   margin: 4px -6px;
@@ -3597,6 +3599,7 @@ select.hb-input option {
 }
 
 .hb-nav-group-sep {
+  border: 0;
   height: 1px;
   background: var(--border-light);
   margin: 8px;

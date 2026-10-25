@@ -86,7 +86,7 @@ export default function BookPicker({ books, activeBookId, onBookChange, onCreate
               );
             })}
           </div>
-          <div className="hb-overflow-sep" role="separator" />
+          <hr className="hb-overflow-sep" />
           <button
             type="button"
             role="menuitem"
