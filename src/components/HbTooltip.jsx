@@ -115,6 +115,22 @@ export default function HbTooltip({
   }, [state]);
 
   const isOpen = state !== null;
+
+  // Escape schließt die Blase, solange sie offen ist — auch wenn sie per Maus
+  // aufging und der Fokus woanders liegt. Kein stopPropagation: ein Dialog
+  // drumherum schließt wie bisher mit.
+  useEffect(() => {
+    if (!isOpen) return;
+    function onKey(e) {
+      if (e.key === "Escape") {
+        clearTimeout(timerRef.current);
+        setState(null);
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen]);
+
   const cls = [
     "hb-tooltip",
     wraps && "hb-tooltip--wrap",
@@ -136,7 +152,6 @@ export default function HbTooltip({
           onMouseEnter={openDelayed}
           onFocus={open}
           onBlur={close}
-          onKeyDown={(e) => e.key === "Escape" && close()}
         >
           {children}
         </span>
@@ -151,7 +166,6 @@ export default function HbTooltip({
           onFocus={open}
           onBlur={close}
           onClick={open}
-          onKeyDown={(e) => e.key === "Escape" && close()}
         >
           <IconHelp width={size} height={size} />
         </button>
