@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import { Card, CardContent, Button } from "../components/ui.jsx";
 import HbTooltip from "../components/HbTooltip.jsx";
 import EditDialog from "../components/EditDialog.jsx";
@@ -84,6 +84,7 @@ export default function FixedCostsView({
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
+  const fieldId = useId();
   // Seit Schema 7 stehen hier nur Ausgaben; die Transfer-Positionen sind die
   // Zwecke mit Rate (transferCategoryUtils.purposeToFixedItem).
   const recurringExpenses = activeBook?.recurringExpenses || EMPTY_ARRAY;
@@ -795,8 +796,9 @@ export default function FixedCostsView({
         <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, width: "100%" }}>
             <div className="hb-field">
-              <div className="hb-label">Name</div>
+              <label className="hb-label" htmlFor={`${fieldId}-name`}>Name</label>
               <input
+                id={`${fieldId}-name`}
                 className="hb-input"
                 style={{ width: "100%", minWidth: 0 }}
                 type="text"
@@ -807,8 +809,9 @@ export default function FixedCostsView({
               />
             </div>
             <div className="hb-field">
-              <div className="hb-label">Betrag ({baseCurrency})</div>
+              <label className="hb-label" htmlFor={`${fieldId}-amount`}>Betrag ({baseCurrency})</label>
               <input
+                id={`${fieldId}-amount`}
                 className="hb-input"
                 style={{ width: "100%", minWidth: 0 }}
                 type="text"
@@ -830,8 +833,9 @@ export default function FixedCostsView({
           />
 
           <div className="hb-field">
-            <div className="hb-label">Gruppe</div>
+            <label className="hb-label" htmlFor={`${fieldId}-group`}>Gruppe</label>
             <select
+              id={`${fieldId}-group`}
               className="hb-input"
               value={draft.groupId || ""}
               onChange={(e) => setDraft((d) => ({ ...d, groupId: e.target.value || null }))}

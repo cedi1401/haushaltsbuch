@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -101,6 +101,7 @@ export default function CostGroupsView({
   const undo = useUndo();
   const themeColors = useThemeColors();
   const avgLine = averageLineProps(themeColors);
+  const fieldId = useId();
 
   const costGroups = activeBook?.costGroups || EMPTY_ARRAY;
   const expenseCategories = activeBook?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES;
@@ -1049,8 +1050,9 @@ export default function CostGroupsView({
           </div>
 
           <div className="hb-field">
-            <div className="hb-label">Name</div>
+            <label className="hb-label" htmlFor={`${fieldId}-plan-name`}>Name</label>
             <input
+              id={`${fieldId}-plan-name`}
               className="hb-input hb-full"
               style={{ minWidth: 0 }}
               type="text"
@@ -1062,8 +1064,9 @@ export default function CostGroupsView({
 
           <div className="hb-two hb-two--dialog">
             <div className="hb-field">
-              <div className="hb-label">Betrag ({baseCurrency})</div>
+              <label className="hb-label" htmlFor={`${fieldId}-plan-amount`}>Betrag ({baseCurrency})</label>
               <input
+                id={`${fieldId}-plan-amount`}
                 className="hb-input"
                 type="text"
                 inputMode="decimal"
@@ -1073,8 +1076,9 @@ export default function CostGroupsView({
               />
             </div>
             <div className="hb-field">
-              <div className="hb-label">Intervall</div>
+              <label className="hb-label" htmlFor={`${fieldId}-plan-interval`}>Intervall</label>
               <select
+                id={`${fieldId}-plan-interval`}
                 className="hb-input"
                 value={planItemDraft.intervalMonths}
                 onChange={(e) => setPlanItemDraft((d) => ({ ...d, intervalMonths: Number(e.target.value) }))}
@@ -1110,8 +1114,9 @@ export default function CostGroupsView({
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
           <div className="hb-field">
-            <div className="hb-label">Name</div>
+            <label className="hb-label" htmlFor={`${fieldId}-group-name`}>Name</label>
             <input
+              id={`${fieldId}-group-name`}
               className="hb-input"
               style={{ width: "100%", minWidth: 0 }}
               type="text"

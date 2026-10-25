@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
 import { HbDatePicker } from "../components/HbDatePicker.jsx";
@@ -22,6 +22,7 @@ export default function EditEntryDialog({
   allTransferCategories,
   purposes,
 }) {
+  const fieldId = useId();
   const selectedPurposeId = editDraft.transferCategoryId || "";
   const purposeOptions = getTransferCategoryOptions(allTransferCategories, selectedPurposeId, purposes);
 
@@ -79,8 +80,9 @@ export default function EditEntryDialog({
               </div>
 
               <div className="hb-field">
-                <div className="hb-label">Betrag</div>
+                <label className="hb-label" htmlFor={`${fieldId}-amount`}>Betrag</label>
                 <input
+                  id={`${fieldId}-amount`}
                   className="hb-input"
                   type="text"
                   inputMode="decimal"
@@ -95,8 +97,9 @@ export default function EditEntryDialog({
             </div>
 
             <div className="hb-field">
-              <div className="hb-label">Notiz (optional)</div>
+              <label className="hb-label" htmlFor={`${fieldId}-note`}>Notiz (optional)</label>
               <input
+                id={`${fieldId}-note`}
                 className="hb-input"
                 type="text"
                 placeholder="z.B. Migros, Abo, ..."
@@ -139,8 +142,9 @@ export default function EditEntryDialog({
             ) : editDraft.kind === "withdrawal" ? (
               <>
                 <div className="hb-field">
-                  <div className="hb-label">Aus Topf</div>
+                  <label className="hb-label" htmlFor={`${fieldId}-pot`}>Aus Topf</label>
                   <select
+                    id={`${fieldId}-pot`}
                     className="hb-input"
                     value={editDraft.potId}
                     onChange={(e) => setEditDraft((d) => withPurposeFor({ ...d, potId: e.target.value }, Boolean(d.transferCategoryId)))}
@@ -155,8 +159,9 @@ export default function EditEntryDialog({
             ) : editDraft.kind === "transfer" ? (
               <>
                 <div className="hb-field">
-                  <div className="hb-label">In Topf</div>
+                  <label className="hb-label" htmlFor={`${fieldId}-pot`}>In Topf</label>
                   <select
+                    id={`${fieldId}-pot`}
                     className="hb-input"
                     value={editDraft.potId}
                     onChange={(e) => setEditDraft((d) => withPurposeFor({ ...d, potId: e.target.value }, Boolean(d.transferCategoryId)))}

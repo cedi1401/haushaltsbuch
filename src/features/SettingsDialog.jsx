@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useId } from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import { Button } from "../components/ui.jsx";
 import { exportBackupFile, importBackupFile as importBackupNative } from "../dal/storage.js";
@@ -29,6 +29,7 @@ export default function SettingsDialog({
   update,
 }) {
   const backupInputRef = useRef(null);
+  const fieldId = useId();
 
   const toast = useToast();
   const undo = useUndo();
@@ -216,8 +217,9 @@ export default function SettingsDialog({
 
       {/* BASISWÄHRUNG */}
       <div className="hb-field" style={{ marginTop: 24 }}>
-        <div className="hb-settings-heading">Basiswährung</div>
+        <div className="hb-settings-heading" id={`${fieldId}-currency`}>Basiswährung</div>
         <select
+          aria-labelledby={`${fieldId}-currency`}
           className="hb-input"
           style={{ width: 90, minWidth: 0 }}
           value={activeBook?.baseCurrency || "CHF"}
@@ -236,11 +238,12 @@ export default function SettingsDialog({
       {/* MONATSBEGINN */}
       <div className="hb-field" style={{ marginTop: 24 }}>
         <div className="hb-title-with-help" style={{ marginBottom: 10 }}>
-          <div style={{ fontWeight: "var(--fw-semibold)" }}>Monatsbeginn</div>
+          <div id={`${fieldId}-month-start`} style={{ fontWeight: "var(--fw-semibold)" }}>Monatsbeginn</div>
           <HbTooltip text="Einträge ab diesem Tag werden dem Folgemonat zugerechnet. Standard ist der 1. (Kalendermonat). Maximum ist der 28." placement="right" />
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <input
+            aria-labelledby={`${fieldId}-month-start`}
             className="hb-input"
             type="number"
             min="1"

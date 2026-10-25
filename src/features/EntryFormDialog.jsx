@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import { Button } from "../components/ui.jsx";
 import { HierarchicalCategoryPicker } from "../components/HierarchicalCategoryPicker.jsx";
@@ -42,6 +42,7 @@ export default function EntryFormDialog({
   const pickerRef = useRef(null);
   const moreToggleRef = useRef(null);
   const [showMore, setShowMore] = useState(false);
+  const fieldId = useId();
   const purposeOptions = availablePurposes.map((c) => ({ id: c.id, label: c.name }));
 
   // Meistgenutzte Vorlagen zuerst; bei Gleichstand alphabetisch, damit die
@@ -217,8 +218,9 @@ export default function EntryFormDialog({
             </div>
 
             <div className="hb-field">
-              <div className="hb-label">Betrag</div>
+              <label className="hb-label" htmlFor={`${fieldId}-amount`}>Betrag</label>
               <input
+                id={`${fieldId}-amount`}
                 ref={amountInputRef}
                 className="hb-input"
                 type="text"
@@ -234,8 +236,9 @@ export default function EntryFormDialog({
           </div>
 
           <div className="hb-field">
-            <div className="hb-label">Notiz (optional)</div>
+            <label className="hb-label" htmlFor={`${fieldId}-note`}>Notiz (optional)</label>
             <input
+              id={`${fieldId}-note`}
               className="hb-input"
               type="text"
               placeholder="z.B. Migros, Abo, ..."
@@ -280,8 +283,8 @@ export default function EntryFormDialog({
           ) : kind === "withdrawal" ? (
             <>
               <div className="hb-field">
-                <div className="hb-label">Aus Topf</div>
-                <select className="hb-input" value={potId} onChange={(e) => setField("potId", e.target.value)}>
+                <label className="hb-label" htmlFor={`${fieldId}-pot`}>Aus Topf</label>
+                <select id={`${fieldId}-pot`} className="hb-input" value={potId} onChange={(e) => setField("potId", e.target.value)}>
                   {pots.map((pot) => (
                     <option key={pot.id} value={pot.id}>{pot.name}</option>
                   ))}
@@ -296,8 +299,8 @@ export default function EntryFormDialog({
           ) : kind === "transfer" ? (
             <>
               <div className="hb-field">
-                <div className="hb-label">In Topf</div>
-                <select className="hb-input" value={potId} onChange={(e) => setField("potId", e.target.value)}>
+                <label className="hb-label" htmlFor={`${fieldId}-pot`}>In Topf</label>
+                <select id={`${fieldId}-pot`} className="hb-input" value={potId} onChange={(e) => setField("potId", e.target.value)}>
                   {pots.map((pot) => (
                     <option key={pot.id} value={pot.id}>{pot.name}</option>
                   ))}

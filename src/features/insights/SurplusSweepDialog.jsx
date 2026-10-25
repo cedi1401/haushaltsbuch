@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import EditDialog from "../../components/EditDialog.jsx";
 import HbTooltip from "../../components/HbTooltip.jsx";
 import { useFmt, useBaseCurrency } from "../../contexts/CurrencyContext.jsx";
@@ -20,6 +20,7 @@ export default function SurplusSweepDialog({
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
   const hasSavingsPots = savingsPots.length > 0;
+  const fieldId = useId();
   const [amount, setAmount] = useState(() =>
     defaultAmount != null ? String(Math.round(defaultAmount * 100) / 100) : ""
   );
@@ -57,8 +58,9 @@ export default function SurplusSweepDialog({
     >
       <div className="hb-form hb-form-stack">
         <div className="hb-field">
-          <div className="hb-label">Betrag ({baseCurrency})</div>
+          <label className="hb-label" htmlFor={`${fieldId}-amount`}>Betrag ({baseCurrency})</label>
           <input
+            id={`${fieldId}-amount`}
             className="hb-input"
             type="text"
             inputMode="decimal"
@@ -77,8 +79,9 @@ export default function SurplusSweepDialog({
         </div>
 
         <div className="hb-field">
-          <div className="hb-label">Spar-Topf</div>
+          <label className="hb-label" htmlFor={`${fieldId}-pot`}>Spar-Topf</label>
           <select
+            id={`${fieldId}-pot`}
             className="hb-input"
             value={potId}
             onChange={(e) => setPotId(e.target.value)}

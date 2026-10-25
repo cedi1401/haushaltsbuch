@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import HbSwitch from "../components/HbSwitch.jsx";
 import { IconClose, IconSun, IconMoon } from "../components/icons.jsx";
@@ -27,6 +27,7 @@ export default function AppToolbar({
   const [newBookOpen, setNewBookOpen] = useState(false);
   const [newBookName, setNewBookName] = useState("Neues Haushaltsbuch");
   const [manageBookOpen, setManageBookOpen] = useState(false);
+  const newBookNameId = useId();
 
   function handleCreateBook() {
     onCreateBook(newBookName);
@@ -99,8 +100,9 @@ export default function AppToolbar({
         saveLabel="Erstellen"
       >
         <div className="hb-field">
-          <div className="hb-label">Name</div>
+          <label className="hb-label" htmlFor={newBookNameId}>Name</label>
           <input
+            id={newBookNameId}
             className="hb-input"
             value={newBookName}
             onChange={(e) => setNewBookName(e.target.value)}

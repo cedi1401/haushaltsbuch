@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import { EMPTY_ARRAY } from "../utils/constants.js";
 
@@ -12,6 +12,7 @@ export const POT_NAME_MAX = 50;
 export default function PotFormDialog({ open, pot, pots = EMPTY_ARRAY, onClose, onSave }) {
   const [name, setName] = useState(pot?.name || "");
   const [isSavings, setIsSavings] = useState(pot?.isSavings ?? false);
+  const nameId = useId();
 
   // Draft beim Öffnen aus dem Topf ableiten — aus dem open/pot-Übergang
   // statt via Effekt (vermeidet set-state-in-effect).
@@ -55,8 +56,9 @@ export default function PotFormDialog({ open, pot, pots = EMPTY_ARRAY, onClose, 
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
         <div className="hb-field">
-          <div className="hb-label">Name</div>
+          <label className="hb-label" htmlFor={nameId}>Name</label>
           <input
+            id={nameId}
             className={`hb-input hb-full${nameError ? " hb-input--invalid" : ""}`}
             type="text"
             maxLength={POT_NAME_MAX}

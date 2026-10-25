@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Card, CardContent, Button, RangeTabs, ChartScrollNav } from "../components/ui.jsx";
 import { MONTH_RANGE_OPTIONS } from "../utils/constants.js";
 import EditDialog from "../components/EditDialog.jsx";
@@ -98,6 +98,7 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
   const [showAllEntries, setShowAllEntries] = useState(false);
   const [entryQuery, setEntryQuery] = useState("");
   const entrySearchRef = useRef(null);
+  const fieldId = useId();
   const [showAllPurposes, setShowAllPurposes] = useState(false);
   // Hover-Tooltip über dem Zusammensetzungsbalken: { seg, x, y } in
   // Viewport-Koordinaten (das Panel liegt fixed, siehe .hb-potcomp-tip).
@@ -934,8 +935,9 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
             </div>
 
             <div className="hb-field">
-              <div className="hb-label">Betrag ({baseCurrency})</div>
+              <label className="hb-label" htmlFor={`${fieldId}-amount`}>Betrag ({baseCurrency})</label>
               <input
+                id={`${fieldId}-amount`}
                 className="hb-input"
                 type="text"
                 inputMode="decimal"
@@ -953,8 +955,9 @@ export default function PotsView({ activeBook, selectedPotId, onSelectPot, entri
           />
 
           <div className="hb-field">
-            <div className="hb-label">Notiz (optional)</div>
+            <label className="hb-label" htmlFor={`${fieldId}-note`}>Notiz (optional)</label>
             <input
+              id={`${fieldId}-note`}
               className="hb-input"
               type="text"
               placeholder="z.B. Anfangsbestand, Übertrag..."

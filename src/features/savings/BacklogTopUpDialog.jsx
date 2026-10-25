@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 import EditDialog from "../../components/EditDialog.jsx";
 import { HbDatePicker } from "../../components/HbDatePicker.jsx";
 import { parseAmount } from "../../utils/formatUtils.js";
@@ -30,6 +30,7 @@ export default function BacklogTopUpDialog({
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
+  const fieldId = useId();
 
   if (!item) return null;
 
@@ -85,8 +86,9 @@ export default function BacklogTopUpDialog({
           </div>
 
           <div className="hb-field">
-            <div className="hb-label">Betrag ({baseCurrency})</div>
+            <label className="hb-label" htmlFor={`${fieldId}-amount`}>Betrag ({baseCurrency})</label>
             <input
+              id={`${fieldId}-amount`}
               className="hb-input"
               type="text"
               inputMode="decimal"
@@ -97,8 +99,9 @@ export default function BacklogTopUpDialog({
         </div>
 
         <div className="hb-field">
-          <div className="hb-label">Notiz (optional)</div>
+          <label className="hb-label" htmlFor={`${fieldId}-note`}>Notiz (optional)</label>
           <input
+            id={`${fieldId}-note`}
             className="hb-input"
             type="text"
             value={draft?.note ?? ""}

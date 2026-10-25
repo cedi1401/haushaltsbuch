@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import EditDialog from "../../components/EditDialog.jsx";
 import { AlertBar, Button, RangeTabs } from "../../components/ui.jsx";
 import { HbDatePicker } from "../../components/HbDatePicker.jsx";
@@ -124,6 +124,7 @@ export default function SavingsPositionDialog({
 }) {
   const fmt = useFmt();
   const baseCurrency = useBaseCurrency();
+  const fieldId = useId();
   const [draft, setDraft] = useState(() => {
     if (initialDraft) return initialDraft;
     // Kopie: alle Werte des Originals, nur mit freiem „(Kopie)“-Namen
@@ -241,8 +242,9 @@ export default function SavingsPositionDialog({
 
         <div className="hb-two hb-two--dialog" style={{ width: "100%" }}>
           <div className="hb-field">
-            <div className="hb-label">Name</div>
+            <label className="hb-label" htmlFor={`${fieldId}-name`}>Name</label>
             <input
+              id={`${fieldId}-name`}
               className={`hb-input${nameError ? " hb-input--invalid" : ""}`}
               type="text"
               placeholder="z.B. Steuern, Notgroschen, Velo"
@@ -255,8 +257,9 @@ export default function SavingsPositionDialog({
             {nameError && <div id="hb-savings-name-error" className="hb-field-error">{nameError}</div>}
           </div>
           <div className="hb-field">
-            <div className="hb-label">Topf</div>
+            <label className="hb-label" htmlFor={`${fieldId}-pot`}>Topf</label>
             <select
+              id={`${fieldId}-pot`}
               className="hb-input"
               value={draft.potId}
               disabled={potLocked}
@@ -292,8 +295,9 @@ export default function SavingsPositionDialog({
           <>
             <div className="hb-two hb-two--dialog" style={{ width: "100%" }}>
               <div className="hb-field">
-                <div className="hb-label">Rechnungsbetrag ({baseCurrency})</div>
+                <label className="hb-label" htmlFor={`${fieldId}-amount`}>Rechnungsbetrag ({baseCurrency})</label>
                 <input
+                  id={`${fieldId}-amount`}
                   className="hb-input"
                   type="text"
                   inputMode="decimal"
@@ -303,8 +307,9 @@ export default function SavingsPositionDialog({
                 />
               </div>
               <div className="hb-field">
-                <div className="hb-label">Turnus</div>
+                <label className="hb-label" htmlFor={`${fieldId}-turnus`}>Turnus</label>
                 <select
+                  id={`${fieldId}-turnus`}
                   className="hb-input"
                   value={draft.turnus}
                   onChange={(e) => set({ turnus: e.target.value })}
@@ -332,8 +337,9 @@ export default function SavingsPositionDialog({
         {draft.rule === "goal" && (
           <div className="hb-two hb-two--dialog" style={{ width: "100%" }}>
             <div className="hb-field">
-              <div className="hb-label">Zielbetrag ({baseCurrency})</div>
+              <label className="hb-label" htmlFor={`${fieldId}-target`}>Zielbetrag ({baseCurrency})</label>
               <input
+                id={`${fieldId}-target`}
                 className="hb-input"
                 type="text"
                 inputMode="decimal"
@@ -357,8 +363,9 @@ export default function SavingsPositionDialog({
         <div className="hb-two hb-two--dialog" style={{ width: "100%" }}>
           {draft.rule !== "reserve" ? (
             <div className="hb-field">
-              <div className="hb-label">Monatsrate (optional, {baseCurrency})</div>
+              <label className="hb-label" htmlFor={`${fieldId}-rate`}>Monatsrate (optional, {baseCurrency})</label>
               <input
+                id={`${fieldId}-rate`}
                 className="hb-input"
                 type="text"
                 inputMode="decimal"
@@ -391,8 +398,9 @@ export default function SavingsPositionDialog({
             </div>
           )}
           <div className="hb-field">
-            <div className="hb-label">Gruppe</div>
+            <label className="hb-label" htmlFor={`${fieldId}-group`}>Gruppe</label>
             <select
+              id={`${fieldId}-group`}
               className="hb-input"
               value={draft.groupId || ""}
               onChange={(e) => set({ groupId: e.target.value || null })}

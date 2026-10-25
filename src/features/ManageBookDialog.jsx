@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import EditDialog from "../components/EditDialog.jsx";
 import { Button } from "../components/ui.jsx";
 
@@ -9,6 +9,7 @@ import { Button } from "../components/ui.jsx";
  */
 export default function ManageBookDialog({ open, bookName, canDelete, onClose, onRename, onDelete }) {
   const [name, setName] = useState(bookName);
+  const nameId = useId();
 
   // Entwurf beim Öffnen zurücksetzen (wie RenameDialog, ohne Effekt).
   const [prevOpen, setPrevOpen] = useState(open);
@@ -48,8 +49,9 @@ export default function ManageBookDialog({ open, bookName, canDelete, onClose, o
       }
     >
       <div className="hb-field">
-        <div className="hb-label">Name</div>
+        <label className="hb-label" htmlFor={nameId}>Name</label>
         <input
+          id={nameId}
           className="hb-input hb-full"
           type="text"
           value={name}
