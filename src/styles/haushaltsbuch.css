@@ -2798,6 +2798,12 @@ select.hb-input option {
   grid-column: 1;
 }
 
+/* Der Block ist nur so breit wie sein Text (der ch-Deckel an Text und Hinweis),
+   statt als leerer Streifen über die ganze Tabelle zu laufen. */
+.hb-res-detail--free .hb-res-note {
+  align-self: flex-start;
+}
+
 /* ---------- Zone A: Faktenkacheln ---------- */
 /* auto-fill statt fester Spurenzahl: die Zahl der abgewählten Spalten reicht von
    0 bis 16. Das frühere Raster hatte drei feste Paar-Spuren und damit beide
